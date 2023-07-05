@@ -8,8 +8,6 @@
 
 export interface Experiments {
   "autopropagation.enabled": boolean;
-  "connector.inviteUsersHint.visible": boolean;
-  "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
   "connector.shortSetupGuides": boolean;
@@ -21,15 +19,15 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
   "connection.searchableJobLogs": boolean;
   "connector.showRequestSchemabutton": boolean;
-  "connection.syncCatalogConfig.disabledStreams": boolean;
+  "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connector.allowlistIpBanner": boolean;
+  "settings.emailNotifications": boolean;
 }

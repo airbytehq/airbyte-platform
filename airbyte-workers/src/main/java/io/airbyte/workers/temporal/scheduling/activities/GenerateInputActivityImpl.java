@@ -24,6 +24,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.DestinationConnection;
@@ -41,9 +42,9 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.CommitStatsAsap;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.DestinationDefinition;
@@ -73,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +92,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private final ConfigInjector configInjector;
 
@@ -103,7 +106,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
                                    final FeatureFlags featureFlags,
                                    final FeatureFlagClient featureFlagClient,
                                    final OAuthConfigSupplier oAuthConfigSupplier,
-                                   final ConfigInjector configInjector) {
+                                   final ConfigInjector configInjector,
+                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.stateApi = stateApi;
@@ -112,6 +116,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   private Optional<State> getCurrentConnectionState(final UUID connectionId) {
@@ -138,9 +143,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private IntegrationLauncherConfig getSourceIntegrationLauncherConfig(final long jobId,
                                                                        final int attempt,
-                                                                       final ConfigType configType,
                                                                        final JobSyncConfig config,
-                                                                       final StandardSourceDefinition sourceDefinition,
+                                                                       @Nullable final ActorDefinitionVersion sourceVersion,
                                                                        final JsonNode sourceConfiguration)
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
@@ -152,8 +156,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         .withProtocolVersion(config.getSourceProtocolVersion())
         .withIsCustomConnector(config.getIsSourceCustomConnector());
 
-    if (!ConfigType.RESET_CONNECTION.equals(configType)) {
-      sourceLauncherConfig.setAllowedHosts(configReplacer.getAllowedHosts(sourceDefinition.getAllowedHosts(), sourceConfiguration));
+    if (sourceVersion != null) {
+      sourceLauncherConfig.setAllowedHosts(configReplacer.getAllowedHosts(sourceVersion.getAllowedHosts(), sourceConfiguration));
     }
 
     return sourceLauncherConfig;
@@ -178,17 +182,17 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private IntegrationLauncherConfig getDestinationIntegrationLauncherConfig(final long jobId,
                                                                             final int attempt,
                                                                             final JobSyncConfig config,
-                                                                            final StandardDestinationDefinition destinationDefinition,
+                                                                            final ActorDefinitionVersion destinationVersion,
                                                                             final JsonNode destinationConfiguration,
                                                                             final Map<String, String> additionalEnviornmentVariables)
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
-    final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
-        ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
-            + destinationDefinition.getNormalizationConfig().getNormalizationTag()
+    final String destinationNormalizationDockerImage = destinationVersion.getNormalizationConfig() != null
+        ? destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
+            + destinationVersion.getNormalizationConfig().getNormalizationTag()
         : null;
     final String normalizationIntegrationType =
-        destinationDefinition.getNormalizationConfig() != null ? destinationDefinition.getNormalizationConfig().getNormalizationIntegrationType()
+        destinationVersion.getNormalizationConfig() != null ? destinationVersion.getNormalizationConfig().getNormalizationIntegrationType()
             : null;
 
     return new IntegrationLauncherConfig()
@@ -198,9 +202,9 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         .withProtocolVersion(config.getDestinationProtocolVersion())
         .withIsCustomConnector(config.getIsDestinationCustomConnector())
         .withNormalizationDockerImage(destinationNormalizationDockerImage)
-        .withSupportsDbt(destinationDefinition.getSupportsDbt())
+        .withSupportsDbt(destinationVersion.getSupportsDbt())
         .withNormalizationIntegrationType(normalizationIntegrationType)
-        .withAllowedHosts(configReplacer.getAllowedHosts(destinationDefinition.getAllowedHosts(), destinationConfiguration))
+        .withAllowedHosts(configReplacer.getAllowedHosts(destinationVersion.getAllowedHosts(), destinationConfiguration))
         .withAdditionalEnvironmentVariables(additionalEnviornmentVariables);
   }
 
@@ -226,6 +230,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withResourceRequirements(resetConnection.getResourceRequirements())
           .withIsSourceCustomConnector(resetConnection.getIsSourceCustomConnector())
           .withIsDestinationCustomConnector(resetConnection.getIsDestinationCustomConnector())
+          .withWebhookOperationConfigs(resetConnection.getWebhookOperationConfigs())
           .withWorkspaceId(resetConnection.getWorkspaceId());
     } else {
       throw new IllegalStateException(
@@ -252,10 +257,14 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
       final StandardDestinationDefinition destinationDefinition =
           configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(), destination.getDestinationId());
 
       final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
       final StandardSourceDefinition sourceDefinition =
           configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
 
       final JsonNode sourceConfiguration = getSourceConfiguration(source);
       final JsonNode destinationConfiguration = getDestinationConfiguration(destination);
@@ -263,9 +272,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attemptNumber,
-          jobConfig.getConfigType(),
           jobSyncConfig,
-          sourceDefinition,
+          sourceVersion,
           sourceConfiguration);
 
       final IntegrationLauncherConfig destinationLauncherConfig =
@@ -273,7 +281,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
               jobId,
               attemptNumber,
               jobSyncConfig,
-              destinationDefinition,
+              destinationVersion,
               destinationConfiguration,
               Collections.emptyMap());
 
@@ -317,8 +325,14 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
       final ConfigType jobConfigType = job.getConfig().getConfigType();
 
+      ActorDefinitionVersion sourceVersion = null;
+
       if (ConfigType.SYNC.equals(jobConfigType)) {
         final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
+        sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
+            configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()),
+            source.getWorkspaceId(),
+            source.getSourceId());
         final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
             source.getSourceDefinitionId(),
             source.getSourceId(),
@@ -335,18 +349,17 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(
+              configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId()),
+              destination.getWorkspaceId(),
+              destination.getDestinationId());
       final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
           destination.getDestinationDefinitionId(),
           destination.getDestinationId(),
           destination.getWorkspaceId(),
           destination.getConfiguration());
       attemptSyncConfig.setDestinationConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()));
-
-      final StandardSourceDefinition sourceDefinition =
-          configRepository.getSourceDefinitionFromSource(standardSync.getSourceId());
-
-      final StandardDestinationDefinition destinationDefinition =
-          configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
 
       final List<Context> normalizationInDestinationContext = List.of(
           new DestinationDefinition(destination.getDestinationDefinitionId()),
@@ -364,16 +377,15 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attempt,
-          jobConfigType,
           config,
-          sourceDefinition,
+          sourceVersion,
           attemptSyncConfig.getSourceConfiguration());
 
       final IntegrationLauncherConfig destinationLauncherConfig = getDestinationIntegrationLauncherConfig(
           jobId,
           attempt,
           config,
-          destinationDefinition,
+          destinationVersion,
           attemptSyncConfig.getDestinationConfiguration(),
           NormalizationInDestinationHelper.getAdditionalEnvironmentVariables(shouldNormalizeInDestination));
 
@@ -400,8 +412,6 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
           .withConnectionId(standardSync.getConnectionId())
           .withWorkspaceId(config.getWorkspaceId())
-          .withCommitStateAsap(true)
-          .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, new Multi(featureFlagContext)))
           .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
           .withIsReset(ConfigType.RESET_CONNECTION.equals(jobConfigType));
 

@@ -1,21 +1,18 @@
-import React, { Suspense, useMemo } from "react";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
+import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
+import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import {
-  useCurrentWorkspace,
-  WorkspaceServiceProvider,
-  usePrefetchCloudWorkspaceData,
-  useCurrentWorkspaceId,
-} from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -38,14 +35,14 @@ const AllDestinationsPage = React.lazy(() => import("pages/destination/AllDestin
 const CreateDestinationPage = React.lazy(() => import("pages/destination/CreateDestinationPage"));
 const SelectDestinationPage = React.lazy(() => import("pages/destination/SelectDestinationPage"));
 const DestinationItemPage = React.lazy(() => import("pages/destination/DestinationItemPage"));
-const DestinationOverviewPage = React.lazy(() => import("pages/destination/DestinationOverviewPage"));
+const DestinationConnectionsPage = React.lazy(() => import("pages/destination/DestinationConnectionsPage"));
 const DestinationSettingsPage = React.lazy(() => import("pages/destination/DestinationSettingsPage"));
 
 const AllSourcesPage = React.lazy(() => import("pages/source/AllSourcesPage"));
 const CreateSourcePage = React.lazy(() => import("pages/source/CreateSourcePage"));
 const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
-const SourceOverviewPage = React.lazy(() => import("pages/source/SourceOverviewPage"));
+const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
@@ -71,8 +68,8 @@ const MainRoutes: React.FC = () => {
           <Route path={DestinationPaths.SelectDestinationNew} element={<SelectDestinationPage />} />
           <Route path={DestinationPaths.DestinationNew} element={<CreateDestinationPage />} />
           <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
-            <Route index element={<DestinationOverviewPage />} />
-            <Route path={DestinationPaths.Settings} element={<DestinationSettingsPage />} />
+            <Route index element={<DestinationSettingsPage />} />
+            <Route path={DestinationPaths.Connections} element={<DestinationConnectionsPage />} />
           </Route>
         </Route>
         <Route path={RoutePaths.Source}>
@@ -80,8 +77,8 @@ const MainRoutes: React.FC = () => {
           <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
           <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
-            <Route index element={<SourceOverviewPage />} />
-            <Route path={SourcePaths.Settings} element={<SourceSettingsPage />} />
+            <Route index element={<SourceSettingsPage />} />
+            <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />
           </Route>
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
@@ -109,9 +106,11 @@ const CloudMainViewRoutes = () => {
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
-          <CloudMainView>
-            <MainRoutes />
-          </CloudMainView>
+          <CloudWorkspaceDataPrefetcher>
+            <CloudMainView>
+              <MainRoutes />
+            </CloudMainView>
+          </CloudWorkspaceDataPrefetcher>
         }
       />
       <Route path="*" element={<DefaultView />} />
@@ -119,9 +118,9 @@ const CloudMainViewRoutes = () => {
   );
 };
 
-const CloudWorkspaceDataPrefetcher = () => {
+const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   usePrefetchCloudWorkspaceData();
-  return null;
+  return <>{children}</>;
 };
 
 export const Routing: React.FC = () => {
@@ -130,6 +129,9 @@ export const Routing: React.FC = () => {
   const { pathname } = useLocation();
 
   useBuildUpdateCheck();
+
+  // invalidate everything in the workspace scope when the workspaceId changes
+  useInvalidateAllWorkspaceScopeOnChange(workspaceId);
 
   const analyticsContext = useMemo(
     () =>
@@ -154,51 +156,48 @@ export const Routing: React.FC = () => {
   }
 
   return (
-    <WorkspaceServiceProvider>
-      <LDExperimentServiceProvider>
-        {workspaceId && user && <CloudWorkspaceDataPrefetcher />}
-        <Suspense fallback={<LoadingPage />}>
-          <Routes>
-            {/*
-              The firebase callback action route is available no matter wheter a user is logged in or not, since
-              the verify email action need to work in both cases.
-            */}
-            <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
-            <Route
-              path="*"
-              element={
-                <>
-                  {/* All routes for non logged in users */}
-                  {!user && (
-                    <AuthLayout>
-                      <Suspense fallback={<LoadingPage />}>
-                        <Routes>
-                          <Route path={CloudRoutes.Login} element={<LoginPage />} />
-                          <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                          <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
-                          {/* In case a not logged in user tries to access anything else navigate them to login */}
-                          <Route
-                            path="*"
-                            element={
-                              <Navigate
-                                to={`${CloudRoutes.Login}${
-                                  loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                                }`}
-                              />
-                            }
-                          />
-                        </Routes>
-                      </Suspense>
-                    </AuthLayout>
-                  )}
-                  {/* Allow all regular routes if the user is logged in */}
-                  {user && <CloudMainViewRoutes />}
-                </>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </LDExperimentServiceProvider>
-    </WorkspaceServiceProvider>
+    <LDExperimentServiceProvider>
+      <Suspense fallback={<LoadingPage />}>
+        <Routes>
+          {/*
+            The firebase callback action route is available no matter wheter a user is logged in or not, since
+            the verify email action need to work in both cases.
+          */}
+          <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
+          <Route
+            path="*"
+            element={
+              <>
+                {/* All routes for non logged in users */}
+                {!user && (
+                  <AuthLayout>
+                    <Suspense fallback={<LoadingPage />}>
+                      <Routes>
+                        <Route path={CloudRoutes.Login} element={<LoginPage />} />
+                        <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+                        <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
+                        {/* In case a not logged in user tries to access anything else navigate them to login */}
+                        <Route
+                          path="*"
+                          element={
+                            <Navigate
+                              to={`${CloudRoutes.Login}${
+                                loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
+                              }`}
+                            />
+                          }
+                        />
+                      </Routes>
+                    </Suspense>
+                  </AuthLayout>
+                )}
+                {/* Allow all regular routes if the user is logged in */}
+                {user && <CloudMainViewRoutes />}
+              </>
+            }
+          />
+        </Routes>
+      </Suspense>
+    </LDExperimentServiceProvider>
   );
 };

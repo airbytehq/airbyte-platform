@@ -13,6 +13,7 @@ import io.airbyte.api.generated.SourceDefinitionApi;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
+import io.airbyte.api.model.generated.ScopeType;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
@@ -49,6 +50,11 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
+    // legacy calls contain workspace id instead of scope id and scope type
+    if (customSourceDefinitionCreate.getWorkspaceId() != null) {
+      customSourceDefinitionCreate.setScopeType(ScopeType.WORKSPACE);
+      customSourceDefinitionCreate.setScopeId(customSourceDefinitionCreate.getWorkspaceId());
+    }
     return ApiHelper.execute(() -> sourceDefinitionsHandler.createCustomSourceDefinition(customSourceDefinitionCreate));
   }
 

@@ -60,7 +60,6 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -101,6 +100,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -110,6 +111,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SchedulerHandler {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerHandler.class);
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
   private static final ImmutableSet<ErrorCode> VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET =
@@ -194,11 +196,9 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
-    final Version protocolVersion = new Version(sourceDef.getProtocolVersion());
 
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, imageName, protocolVersion, isCustomConnector));
+    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceCreate(final SourceCoreConfig sourceConfig)
@@ -218,11 +218,8 @@ public class SchedulerHandler {
         .withConfiguration(partialConfig)
         .withWorkspaceId(sourceConfig.getWorkspaceId());
 
-    final Version protocolVersion = new Version(sourceDef.getProtocolVersion());
-
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, imageName, protocolVersion, isCustomConnector));
+    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceIdForUpdate(final SourceUpdate sourceUpdate)
@@ -250,11 +247,9 @@ public class SchedulerHandler {
     final StandardDestinationDefinition destinationDef = configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
-    final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
     final boolean isCustomConnector = destinationDef.getCustom();
-    final Version protocolVersion = new Version(destinationDef.getProtocolVersion());
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationCreate(final DestinationCoreConfig destinationConfig)
@@ -274,10 +269,8 @@ public class SchedulerHandler {
         .withDestinationDefinitionId(destinationConfig.getDestinationDefinitionId())
         .withConfiguration(partialConfig)
         .withWorkspaceId(destinationConfig.getWorkspaceId());
-    final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
-    final Version protocolVersion = new Version(destDef.getProtocolVersion());
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationIdForUpdate(final DestinationUpdate destinationUpdate)
@@ -306,7 +299,6 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
 
     final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
@@ -319,11 +311,9 @@ public class SchedulerHandler {
       final SynchronousResponse<UUID> persistedCatalogId =
           synchronousSchedulerClient.createDiscoverSchemaJob(
               source,
-              imageName,
-              connectorVersion,
-              new Version(sourceDef.getProtocolVersion()),
+              sourceVersion,
               isCustomConnector);
-      final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceDef);
+      final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
         // modify discoveredSchema object to add CatalogDiff, containsBreakingChange, and connectionStatus
@@ -342,7 +332,7 @@ public class SchedulerHandler {
         .logs(new LogRead().logLines(new ArrayList<>()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceDef))
+        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
         .jobInfo(emptyJob)
         .catalogId(currentCatalog.get().getId());
   }
@@ -372,12 +362,12 @@ public class SchedulerHandler {
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
       final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
-      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
+      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog syncCatalog =
           connectionRead.getSyncCatalog();
       final CatalogDiff diff =
-          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog),
+          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
               sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
+              CatalogConverter.toConfiguredProtocol(syncCatalog));
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
@@ -385,12 +375,14 @@ public class SchedulerHandler {
       if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
         applySchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
-            currentAirbyteCatalog,
+            syncCatalog,
             sourceAutoPropagateChange.getCatalog(),
             diff.getTransforms(),
             sourceAutoPropagateChange.getCatalogId(),
             connectionRead.getNonBreakingChangesPreference());
         connectionsHandler.updateConnection(updateObject);
+        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
       }
     }
   }
@@ -404,7 +396,6 @@ public class SchedulerHandler {
         sourceCreate.getConnectionConfiguration(),
         sourceVersion.getSpec());
 
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
     // todo (cgardens) - narrow the struct passed to the client. we are not setting fields that are
     // technically declared as required.
@@ -414,15 +405,12 @@ public class SchedulerHandler {
         .withWorkspaceId(sourceCreate.getWorkspaceId());
     final SynchronousResponse<UUID> response = synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
-        imageName,
-        sourceVersion.getDockerImageTag(),
-        new Version(
-            sourceDef.getProtocolVersion()),
+        sourceVersion,
         isCustomConnector);
-    return retrieveDiscoveredSchema(response, sourceDef);
+    return retrieveDiscoveredSchema(response, sourceVersion);
   }
 
-  private SourceDiscoverSchemaRead retrieveDiscoveredSchema(final SynchronousResponse<UUID> response, final StandardSourceDefinition sourceDef)
+  private SourceDiscoverSchemaRead retrieveDiscoveredSchema(final SynchronousResponse<UUID> response, final ActorDefinitionVersion sourceVersion)
       throws ConfigNotFoundException, IOException {
     final SourceDiscoverSchemaRead sourceDiscoverSchemaRead = new SourceDiscoverSchemaRead()
         .jobInfo(jobConverter.getSynchronousJobRead(response));
@@ -431,7 +419,7 @@ public class SchedulerHandler {
       final ActorCatalog catalog = configRepository.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
           io.airbyte.protocol.models.AirbyteCatalog.class);
-      sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceDef));
+      sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceVersion));
       sourceDiscoverSchemaRead.catalogId(response.getOutput());
     }
 
@@ -585,7 +573,8 @@ public class SchedulerHandler {
 
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
+        final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
+        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), sourceName, url, containsBreakingChange);
       }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
@@ -606,7 +595,7 @@ public class SchedulerHandler {
 
   private void applySchemaChange(final UUID connectionId,
                                  final ConnectionUpdate updateObject,
-                                 final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
                                  final UUID sourceCatalogId,
@@ -614,7 +603,7 @@ public class SchedulerHandler {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     final io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
-        currentAirbyteCatalog,
+        currentSyncCatalog,
         newCatalog,
         transformations,
         nonBreakingChangesPreference);

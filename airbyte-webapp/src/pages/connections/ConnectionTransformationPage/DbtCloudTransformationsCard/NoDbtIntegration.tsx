@@ -3,15 +3,15 @@ import { FieldArray, Form, Formik, FormikHelpers } from "formik";
 import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Card } from "components/ui/Card";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useDbtIntegration } from "core/api/cloud";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useDbtIntegration } from "packages/cloud/services/dbtCloud";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { DbtJobListValues } from "./DbtJobsForm";
 import { JobsList } from "./JobsList";

@@ -49,7 +49,7 @@
       flex: 2 0 0;
     }
 
-    .control__input {
+    .control__field {
       flex: 1 0 0;
       display: flex;
       justify-content: flex-end;
@@ -58,5 +58,11 @@
     .control__errorMessage {
       text-align: right;
     }
+  }
+
+  &__optional {
+    color: colors.$grey-300;
+    font-style: oblique;
+    padding-left: variables.$spacing-sm;
   }
 }

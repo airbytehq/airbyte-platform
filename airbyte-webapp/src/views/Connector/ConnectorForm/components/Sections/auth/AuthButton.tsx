@@ -11,7 +11,7 @@ import { ConnectorIds } from "utils/connectors";
 import styles from "./AuthButton.module.scss";
 import GoogleAuthButton from "./GoogleAuthButton";
 import QuickBooksAuthButton from "./QuickBooksAuthButton";
-import { useFormikOauthAdapter } from "./useOauthFlowAdapter";
+import { useFormOauthAdapter } from "./useOauthFlowAdapter";
 import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
@@ -60,7 +60,7 @@ export const AuthButton: React.FC<{
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run } = useFormikOauthAdapter(
+  const { loading, done, run } = useFormOauthAdapter(
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition
   );

@@ -2,9 +2,9 @@ import { JobWithAttempts } from "components/JobItem/types";
 import { didJobSucceed, getJobStatus } from "components/JobItem/utils";
 import { StatusIcon } from "components/ui/StatusIcon";
 
-import { AttemptInfoRead, JobStatus } from "core/request/AirbyteClient";
+import { AttemptInfoRead, JobStatus, AttemptStatus } from "core/request/AirbyteClient";
 
-import { partialSuccessCheck } from "./NewJobItem";
+import { isPartialSuccess } from "./isPartialSuccess";
 
 interface JobStatusIconProps {
   job: JobWithAttempts;
@@ -13,9 +13,9 @@ interface JobStatusIconProps {
 export const JobStatusIcon: React.FC<JobStatusIconProps> = ({ job }) => {
   const didSucceed = didJobSucceed(job);
   const jobStatus = getJobStatus(job);
-  const isPartialSuccess = job.attempts && partialSuccessCheck(job.attempts);
+  const jobIsPartialSuccess = isPartialSuccess(job.attempts);
 
-  if (!isPartialSuccess && !didSucceed) {
+  if (!jobIsPartialSuccess && !didSucceed) {
     return <StatusIcon status="error" />;
   } else if (jobStatus === JobStatus.cancelled) {
     return <StatusIcon status="cancelled" />;
@@ -23,7 +23,7 @@ export const JobStatusIcon: React.FC<JobStatusIconProps> = ({ job }) => {
     return <StatusIcon status="loading" />;
   } else if (jobStatus === JobStatus.succeeded) {
     return <StatusIcon status="success" />;
-  } else if (isPartialSuccess) {
+  } else if (jobIsPartialSuccess) {
     return <StatusIcon status="warning" />;
   }
   return null;
@@ -34,5 +34,12 @@ interface AttemptStatusIconProps {
 }
 
 export const AttemptStatusIcon: React.FC<AttemptStatusIconProps> = ({ attempt }) => {
-  return attempt.attempt.status === JobStatus.failed ? <StatusIcon status="error" /> : <StatusIcon status="success" />;
+  if (attempt.attempt.status === AttemptStatus.failed) {
+    return <StatusIcon status="error" />;
+  } else if (attempt.attempt.status === AttemptStatus.running) {
+    return <StatusIcon status="loading" />;
+  } else if (attempt.attempt.status === AttemptStatus.succeeded) {
+    return <StatusIcon status="success" />;
+  }
+  return null;
 };

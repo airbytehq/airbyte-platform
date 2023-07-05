@@ -1,6 +1,9 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
@@ -9,16 +12,17 @@ import {
   SourceDefinitionIdBody,
 } from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
+import { useConnectorBuilderService } from "./ConnectorBuilderApiService";
 import { SCOPE_WORKSPACE } from "../Scope";
 
 const connectorBuilderProjectsKeys = {
   all: [SCOPE_WORKSPACE, "connectorBuilderProjects"] as const,
   detail: (projectId: string) => [...connectorBuilderProjectsKeys.all, "details", projectId] as const,
+  version: (projectId: string, version?: number) =>
+    [...connectorBuilderProjectsKeys.all, "version", projectId, version] as const,
   versions: (projectId?: string) => [...connectorBuilderProjectsKeys.all, "versions", projectId] as const,
   list: (workspaceId: string) => [...connectorBuilderProjectsKeys.all, "list", workspaceId] as const,
 };
@@ -157,6 +161,32 @@ export const useProject = (projectId: string) => {
     {
       cacheTime: 0,
       retry: false,
+    }
+  );
+};
+
+export const useResolvedProjectVersion = (projectId: string, version?: number) => {
+  const projectsService = useConnectorBuilderProjectsService();
+  const builderService = useConnectorBuilderService();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useQuery(
+    connectorBuilderProjectsKeys.version(projectId, version),
+    async () => {
+      if (version === undefined) {
+        return null;
+      }
+      const project = await projectsService.getConnectorBuilderProject(workspaceId, projectId, version);
+      if (!project.declarativeManifest?.manifest) {
+        return null;
+      }
+      return (await builderService.resolveManifest({ manifest: project.declarativeManifest?.manifest }))
+        .manifest as DeclarativeComponentSchema;
+    },
+    {
+      retry: false,
+      cacheTime: Infinity,
+      staleTime: Infinity,
     }
   );
 };

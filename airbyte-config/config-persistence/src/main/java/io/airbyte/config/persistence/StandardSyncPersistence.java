@@ -6,6 +6,7 @@ package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
@@ -31,6 +32,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.Actor;
 import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinition;
+import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinitionVersion;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -412,16 +414,20 @@ public class StandardSyncPersistence {
     final Actor destination = ACTOR.as("destination");
     final ActorDefinition sourceDef = ACTOR_DEFINITION.as("sourceDef");
     final ActorDefinition destDef = ACTOR_DEFINITION.as("destDef");
+    final ActorDefinitionVersion sourceDefVersion = ACTOR_DEFINITION_VERSION.as("sourceDefVersion");
+    final ActorDefinitionVersion destDefVersion = ACTOR_DEFINITION_VERSION.as("destDefVersion");
 
     // Retrieve all the connections currently disabled due to a bad protocol version
     // where the actor definition is matching the one provided to this function
     final Stream<StandardSyncIdsWithProtocolVersions> results = ctx
-        .select(CONNECTION.ID, sourceDef.ID, sourceDef.PROTOCOL_VERSION, destDef.ID, destDef.PROTOCOL_VERSION)
+        .select(CONNECTION.ID, sourceDef.ID, sourceDefVersion.PROTOCOL_VERSION, destDef.ID, destDefVersion.PROTOCOL_VERSION)
         .from(CONNECTION)
         .join(source).on(CONNECTION.SOURCE_ID.eq(source.ID))
         .join(sourceDef).on(source.ACTOR_DEFINITION_ID.eq(sourceDef.ID))
+        .join(sourceDefVersion).on(sourceDef.DEFAULT_VERSION_ID.eq(sourceDefVersion.ID))
         .join(destination).on(CONNECTION.DESTINATION_ID.eq(destination.ID))
         .join(destDef).on(destination.ACTOR_DEFINITION_ID.eq(destDef.ID))
+        .join(destDefVersion).on(destDef.DEFAULT_VERSION_ID.eq(destDefVersion.ID))
         .where(
             CONNECTION.UNSUPPORTED_PROTOCOL_VERSION.eq(true).and(
                 (actorType == ActorType.DESTINATION ? destDef : sourceDef).ID.eq(actorDefId)))
@@ -430,9 +436,9 @@ public class StandardSyncPersistence {
         .map(r -> new StandardSyncIdsWithProtocolVersions(
             r.get(CONNECTION.ID),
             r.get(sourceDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(sourceDef.PROTOCOL_VERSION)),
+            AirbyteProtocolVersion.getWithDefault(r.get(sourceDefVersion.PROTOCOL_VERSION)),
             r.get(destDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(destDef.PROTOCOL_VERSION))));
+            AirbyteProtocolVersion.getWithDefault(r.get(destDefVersion.PROTOCOL_VERSION))));
     return results;
   }
 

@@ -26,7 +26,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
     <>
       {connectorDefinitions.length === 0 && (
         <div className={styles.connectorGrid__noMatches}>
-          <Text align="center">
+          <Text size="lg" align="center">
             <FormattedMessage id="connector.noSearchResults" />
           </Text>
         </div>

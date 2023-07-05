@@ -12,6 +12,7 @@ import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.HealthApi;
+import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.OperationApi;
 import io.airbyte.api.client.generated.SourceApi;
@@ -53,6 +54,7 @@ public class AirbyteApiClient {
   private final DestinationApi destinationApi;
   private final DestinationDefinitionSpecificationApi destinationSpecificationApi;
   private final JobsApi jobsApi;
+  private final JobRetryStatesApi jobRetryStatesApi;
   private final PatchedLogsApi logsApi;
   private final OperationApi operationApi;
   private final SourceDefinitionApi sourceDefinitionApi;
@@ -71,6 +73,7 @@ public class AirbyteApiClient {
     destinationApi = new DestinationApi(apiClient);
     destinationSpecificationApi = new DestinationDefinitionSpecificationApi(apiClient);
     jobsApi = new JobsApi(apiClient);
+    jobRetryStatesApi = new JobRetryStatesApi(apiClient);
     logsApi = new PatchedLogsApi(apiClient);
     operationApi = new OperationApi(apiClient);
     sourceDefinitionApi = new SourceDefinitionApi(apiClient);
@@ -105,6 +108,10 @@ public class AirbyteApiClient {
 
   public JobsApi getJobsApi() {
     return jobsApi;
+  }
+
+  public JobRetryStatesApi getJobRetryStatesApi() {
+    return jobRetryStatesApi;
   }
 
   public SourceDefinitionApi getSourceDefinitionApi() {
@@ -183,7 +190,7 @@ public class AirbyteApiClient {
                                       final int maxTries) {
     try {
       return retryWithJitterThrows(call, desc, jitterMaxIntervalSecs, finalIntervalSecs, maxTries);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // Swallowing exception on purpose
       return null;
     }

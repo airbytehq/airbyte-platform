@@ -10,11 +10,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useUpdateWorkspace } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 import { trackError } from "utils/datadog";
 import { links } from "utils/links";
 

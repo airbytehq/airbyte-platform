@@ -6,6 +6,7 @@ package io.airbyte.persistence.job.errorreporter;
 
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.FailureReason;
@@ -42,15 +43,19 @@ class JobErrorReporterTest {
   private static final String NORMALIZATION_IMAGE = "airbyte/normalization";
   private static final String NORMALIZATION_VERSION = "0.2.24";
   private static final String NORMALIZATION_INTEGRATION_TYPE = "snowflake";
+  private static final String DOCKER_IMAGE_TAG = "1.2.3";
+
   private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID = UUID.randomUUID();
   private static final String SOURCE_DEFINITION_NAME = "stripe";
   private static final String SOURCE_DOCKER_REPOSITORY = "airbyte/source-stripe";
-  private static final String SOURCE_DOCKER_IMAGE = "airbyte/source-stripe:1.2.3";
+  private static final String SOURCE_DOCKER_IMAGE = SOURCE_DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG;
   private static final ReleaseStage SOURCE_RELEASE_STAGE = ReleaseStage.BETA;
   private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID = UUID.randomUUID();
   private static final String DESTINATION_DEFINITION_NAME = "snowflake";
   private static final String DESTINATION_DOCKER_REPOSITORY = "airbyte/destination-snowflake";
-  private static final String DESTINATION_DOCKER_IMAGE = "airbyte/destination-snowflake:1.2.3";
+  private static final String DESTINATION_DOCKER_IMAGE = DESTINATION_DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG;
   private static final ReleaseStage DESTINATION_RELEASE_STAGE = ReleaseStage.BETA;
   private static final String FROM_TRACE_MESSAGE = "from_trace_message";
   private static final String JOB_ID_KEY = "job_id";
@@ -95,7 +100,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailure() throws ConfigNotFoundException {
+  void testReportSyncJobFailure() throws ConfigNotFoundException, IOException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
 
     final FailureReason sourceFailureReason = new FailureReason()
@@ -126,26 +131,34 @@ class JobErrorReporterTest {
     final long syncJobId = 1L;
     final SyncJobReportingContext jobReportingContext = new SyncJobReportingContext(
         syncJobId,
-        SOURCE_DOCKER_IMAGE,
-        DESTINATION_DOCKER_IMAGE);
+        SOURCE_DEFINITION_VERSION_ID,
+        DESTINATION_DEFINITION_VERSION_ID);
 
     Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
     Mockito.when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardDestinationDefinition()
-            .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
-            .withReleaseStage(DESTINATION_RELEASE_STAGE)
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+            .withName(DESTINATION_DEFINITION_NAME));
+
+    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
+            .withDockerImageTag(DOCKER_IMAGE_TAG)
+            .withReleaseStage(SOURCE_RELEASE_STAGE));
+
+    Mockito.when(configRepository.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
+            .withDockerImageTag(DOCKER_IMAGE_TAG)
+            .withReleaseStage(DESTINATION_RELEASE_STAGE)
             .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
                 .withNormalizationTag(NORMALIZATION_VERSION)
                 .withNormalizationRepository(NORMALIZATION_IMAGE)
-                .withNormalizationIntegrationType(NORMALIZATION_INTEGRATION_TYPE))
-            .withName(DESTINATION_DEFINITION_NAME));
+                .withNormalizationIntegrationType(NORMALIZATION_INTEGRATION_TYPE)));
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
@@ -214,9 +227,9 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
-    final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DOCKER_IMAGE, DESTINATION_DOCKER_IMAGE);
+    final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID);
 
     final FailureReason sourceFailureReason = new FailureReason()
         .withMetadata(new Metadata().withAdditionalProperty(FROM_TRACE_MESSAGE, true))
@@ -227,10 +240,14 @@ class JobErrorReporterTest {
 
     Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
+
+    Mockito.when(configRepository.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
+            .withDockerImageTag(DOCKER_IMAGE_TAG)
+            .withReleaseStage(SOURCE_RELEASE_STAGE));
 
     final StandardWorkspace mWorkspace = Mockito.mock(StandardWorkspace.class);
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
@@ -255,12 +272,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
@@ -297,12 +312,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
@@ -333,12 +346,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
         .thenReturn(new StandardDestinationDefinition()
-            .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
-            .withReleaseStage(DESTINATION_RELEASE_STAGE)
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
 
@@ -375,12 +386,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
         .thenReturn(new StandardDestinationDefinition()
-            .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
-            .withReleaseStage(DESTINATION_RELEASE_STAGE)
             .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
             .withName(DESTINATION_DEFINITION_NAME));
 
@@ -411,12 +420,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
@@ -453,12 +460,10 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
 
     Mockito.when(configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
@@ -489,7 +494,7 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.SYSTEM_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, null);
 
     jobErrorReporter.reportSpecJobFailure(failureReason, jobContext);
 
@@ -529,7 +534,7 @@ class JobErrorReporterTest {
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withFailureType(FailureType.CONFIG_ERROR);
 
-    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE);
+    final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
 
     jobErrorReporter.reportSpecJobFailure(readFailureReason, jobContext);
     jobErrorReporter.reportSpecJobFailure(discoverFailureReason, jobContext);

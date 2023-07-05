@@ -9,6 +9,7 @@ global:
   ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
   deploymentMode: "oss"
 
+  env_vars: {}
   ##  database [object] -- Object used to overrite database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
   ##  database.secretValue -- secret value for database password
@@ -828,7 +829,7 @@ worker:
 
   debug:
     enabled: false
-    remoteDebugPort: 
+    remoteDebugPort:
 
   ## Container Orchestrator
   ## enabled -- Enable or disable Orchestrator

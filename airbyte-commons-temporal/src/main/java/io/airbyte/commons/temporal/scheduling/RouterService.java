@@ -9,6 +9,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ShouldRunOnExpandedGkeDataplane;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
@@ -47,7 +48,11 @@ public class RouterService {
     final Geography geography = configRepository.getGeographyForConnection(connectionId);
     final UUID workspaceId = configRepository.getStandardWorkspaceFromConnection(connectionId, false).getWorkspaceId();
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
-      return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      if (featureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
+        return taskQueueMapper.getTaskQueueExpanded(geography, jobType);
+      } else {
+        return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      }
     } else {
       return taskQueueMapper.getTaskQueue(geography, jobType);
     }
@@ -69,10 +74,16 @@ public class RouterService {
 
     final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
-      return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      // Routing logic to route dataplane jobs to expanded dataplane
+      if (featureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
+        return taskQueueMapper.getTaskQueueExpanded(geography, jobType);
+      } else {
+        return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      }
     } else {
       return taskQueueMapper.getTaskQueue(geography, jobType);
     }
+
   }
 
 }

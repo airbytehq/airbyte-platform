@@ -12,10 +12,18 @@
     border: variables.$border-thick solid colors.$yellow-200;
   }
 
+  &__main {
+    min-width: 0;
+    flex-grow: 1;
+  }
+
+  &__summary {
+    overflow: hidden;
+  }
+
   &__modalLoading {
-    position: absolute;
-    height: 100%;
-    width: 100%;
+    position: relative;
+    flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;

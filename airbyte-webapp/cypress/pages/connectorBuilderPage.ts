@@ -131,6 +131,10 @@ export const getSlicesFromDropdown = () => {
   return cy.get(`${sliceDropdown} li`);
 };
 
+export const openStreamConfigurationTab = () => {
+  cy.get('[data-testid="tag-tab-stream-configuration"]').click();
+};
+
 export const openStreamSchemaTab = () => {
   cy.get('[data-testid="tag-tab-stream-schema"]').click();
 };
@@ -141,6 +145,12 @@ export const openDetectedSchemaTab = () => {
 
 export const getDetectedSchemaElement = () => {
   return cy.get('pre[class*="SchemaDiffView"]');
+};
+
+export const disableAutoImportSchema = () => {
+  openStreamSchemaTab();
+  cy.get("label").contains("Automatically import detected schema").click();
+  openStreamConfigurationTab();
 };
 
 export const addStream = () => {

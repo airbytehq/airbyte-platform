@@ -24,7 +24,7 @@ interface BuilderOneOfProps {
   options: OneOfOption[];
   path: string; // path to the oneOf component in the json schema
   label?: string;
-  tooltip?: string;
+  tooltip?: string | React.ReactNode;
   manifestPath?: string;
   manifestOptionPaths?: string[];
   onSelect?: (type: string) => void;
@@ -39,7 +39,7 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
   manifestOptionPaths,
   onSelect,
 }) => {
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, unregister } = useFormContext();
   const { field } = useController({ name: `${path}.type` });
 
   const selectedOption = options.find((option) => option.typeValue === field.value);
@@ -54,8 +54,6 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
 
   return (
     <GroupControls
-      /* Make sure the sub-form re-renders when switching  */
-      key={field.value}
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <DropDown
@@ -68,13 +66,12 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
             if (selectedOption.value === field.value) {
               return;
             }
+            unregister(path, { keepValue: true, keepDefaultValue: true });
             // clear all values for this oneOf and set selected option and default values
             setValue(path, {
               type: selectedOption.value,
               ...selectedOption.default,
             });
-            // clear errors at the path so that the fields for the newly selected option are treated as "fresh"
-            clearErrors(path);
 
             onSelect?.(selectedOption.value);
           }}

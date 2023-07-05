@@ -1,7 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
+import { useInvalidateWorkspaceStateQuery, useSuspenseQuery } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
@@ -9,7 +12,6 @@ import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
@@ -31,7 +33,6 @@ import {
   WebBackendConnectionReadList,
   WebBackendConnectionUpdate,
 } from "../../core/request/AirbyteClient";
-import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
@@ -121,7 +122,9 @@ export const useSyncConnection = () => {
 export const useResetConnection = () => {
   const service = useConnectionService();
 
-  return useMutation((connectionId: string) => service.reset(connectionId));
+  const mutation = useMutation(["useResetConnection"], (connectionId: string) => service.reset(connectionId));
+  const activeMutationsCount = useIsMutating(["useResetConnection"]);
+  return { ...mutation, isLoading: activeMutationsCount > 0 };
 };
 
 export const useResetConnectionStream = (connectionId: string) => {

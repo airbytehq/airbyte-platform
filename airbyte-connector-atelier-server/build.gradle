@@ -124,8 +124,6 @@ tasks.named("buildDockerImage") {
             project.projectDir.parentFile,
             'airbyte-connector-builder-resources/CDK_VERSION').text.trim()
     buildArgs['CDK_VERSION'] = cdkVersion
-    // Current Python version used by the CDK image
-    buildArgs['PYTHON_VERSION'] = System.getenv('PYTHON_VERSION') ?: '3.9.11'
 
     dependsOn copyPythonDependencies
     dependsOn generateOpenApiServer

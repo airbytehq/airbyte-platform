@@ -10,7 +10,9 @@ import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
 import { StepsTypes } from "components/ConnectorBlocks";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
+import { useDestinationDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
@@ -18,13 +20,12 @@ import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErro
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
-import { useGetDestinationFromParams } from "../useGetDestinationFromParams";
-
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);
   const params = useParams<{ workspaceId: string; "*": StepsTypes | "" | undefined }>();
   const destination = useGetDestinationFromParams();
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
+  const actorDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const { formatMessage } = useIntl();
 
   const { trackError } = useAppMonitoringService();
@@ -44,7 +45,11 @@ export const DestinationItemPage: React.FC = () => {
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
         <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-          <ConnectorTitleBlock connector={destination} connectorDefinition={destinationDefinition} />
+          <ConnectorTitleBlock
+            connector={destination}
+            connectorDefinition={destinationDefinition}
+            actorDefinitionVersion={actorDefinitionVersion}
+          />
           <ConnectorNavigationTabs connectorType="destination" connector={destination} id={destination.destinationId} />
         </NextPageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>

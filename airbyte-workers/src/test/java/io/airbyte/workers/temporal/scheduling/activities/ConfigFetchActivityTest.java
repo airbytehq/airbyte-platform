@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.generated.ConnectionApi;
@@ -23,7 +24,10 @@ import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
+import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
 import java.io.IOException;
@@ -56,6 +60,11 @@ class ConfigFetchActivityTest {
 
   @Mock
   private ConnectionApi mConnectionApi;
+
+  @Mock
+  private ScheduleJitterHelper mScheduleJitterHelper;
+
+  private FeatureFlagClient mFeatureFlagClient;
 
   private ConfigFetchActivityImpl configFetchActivity;
 
@@ -102,13 +111,19 @@ class ConfigFetchActivityTest {
 
   @BeforeEach
   void setup() {
+    mFeatureFlagClient = mock(TestClient.class);
     configFetchActivity =
         new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-            () -> Instant.now().getEpochSecond(), mConnectionApi);
+            () -> Instant.now().getEpochSecond(), mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
   }
 
   @Nested
   class TimeToWaitTest {
+
+    @BeforeEach
+    void setupTimeToWait() throws ApiException {
+      when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+    }
 
     @Test
     @DisplayName("Test that the job gets scheduled if it is not manual and if it is the first run with legacy schedule schema")
@@ -173,7 +188,8 @@ class ConfigFetchActivityTest {
     @DisplayName("Test we will wait the required amount of time with legacy config")
     void testWait() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
       configFetchActivity =
-          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi);
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi, mFeatureFlagClient,
+              mScheduleJitterHelper);
 
       when(mJobRead.getStartedAt())
           .thenReturn(60L);
@@ -196,7 +212,8 @@ class ConfigFetchActivityTest {
     @DisplayName("Test we will not wait if we are late in the legacy schedule schema")
     void testNotWaitIfLate() throws IOException, ApiException {
       configFetchActivity =
-          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mConnectionApi);
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mConnectionApi, mFeatureFlagClient,
+              mScheduleJitterHelper);
 
       when(mJobRead.getStartedAt())
           .thenReturn(60L);
@@ -215,149 +232,146 @@ class ConfigFetchActivityTest {
           .isZero();
     }
 
-  }
+    @Test
+    @DisplayName("Test that the job will wait a long time if it is MANUAL scheduleType")
+    void testManualScheduleType() throws ApiException {
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithManualScheduleType);
 
-  @Test
-  @DisplayName("Test that the job will wait a long time if it is MANUAL scheduleType")
-  void testManualScheduleType() throws ApiException {
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithManualScheduleType);
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
+      Assertions.assertThat(output.getTimeToWait())
+          .hasDays(100 * 365);
+    }
 
-    Assertions.assertThat(output.getTimeToWait())
-        .hasDays(100 * 365);
-  }
+    @Test
+    @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
+    void testBasicScheduleTypeFirstRun() throws IOException, ApiException {
+      when(mJobsApi.getLastReplicationJob(any()))
+          .thenReturn(new JobOptionalRead());
 
-  @Test
-  @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
-  void testBasicScheduleTypeFirstRun() throws IOException, ApiException {
-    when(mJobsApi.getLastReplicationJob(any()))
-        .thenReturn(new JobOptionalRead());
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithBasicScheduleType);
 
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithBasicScheduleType);
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
+      Assertions.assertThat(output.getTimeToWait())
+          .isZero();
+    }
 
-    Assertions.assertThat(output.getTimeToWait())
-        .isZero();
-  }
+    @Test
+    @DisplayName("Test that we will wait the required amount of time with a BASIC_SCHEDULE type on a subsequent run")
+    void testBasicScheduleSubsequentRun() throws IOException, ApiException {
+      configFetchActivity = new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi,
+          mFeatureFlagClient, mScheduleJitterHelper);
 
-  @Test
-  @DisplayName("Test that we will wait the required amount of time with a BASIC_SCHEDULE type on a subsequent run")
-  void testBasicScheduleSubsequentRun() throws IOException, ApiException {
-    configFetchActivity = new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi);
+      when(mJobRead.getStartedAt())
+          .thenReturn(60L);
 
-    when(mJobRead.getStartedAt())
-        .thenReturn(60L);
+      when(mJobsApi.getLastReplicationJob(any()))
+          .thenReturn(new JobOptionalRead().job(mJobRead));
 
-    when(mJobsApi.getLastReplicationJob(any()))
-        .thenReturn(new JobOptionalRead().job(mJobRead));
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithBasicScheduleType);
 
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithBasicScheduleType);
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
+      Assertions.assertThat(output.getTimeToWait())
+          .hasMinutes(3);
+    }
 
-    Assertions.assertThat(output.getTimeToWait())
-        .hasMinutes(3);
-  }
+    @Test
+    @DisplayName("Test that the job will wait to be scheduled if it is a CRON type")
+    void testCronScheduleSubsequentRun() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
+      mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
+      mockRightNow.set(Calendar.MINUTE, 0);
+      mockRightNow.set(Calendar.SECOND, 0);
+      mockRightNow.set(Calendar.MILLISECOND, 0);
 
-  @Test
-  @DisplayName("Test that the job will wait to be scheduled if it is a CRON type")
-  void testCronScheduleSubsequentRun() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
-    final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
-    mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
-    mockRightNow.set(Calendar.MINUTE, 0);
-    mockRightNow.set(Calendar.SECOND, 0);
-    mockRightNow.set(Calendar.MILLISECOND, 0);
+      configFetchActivity =
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
+              () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
 
-    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+      when(mJobsApi.getLastReplicationJob(any()))
+          .thenReturn(new JobOptionalRead().job(mJobRead));
 
-    configFetchActivity =
-        new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-            () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi);
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithCronScheduleType);
 
-    when(mJobsApi.getLastReplicationJob(any()))
-        .thenReturn(new JobOptionalRead().job(mJobRead));
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithCronScheduleType);
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+      Assertions.assertThat(output.getTimeToWait())
+          .hasHours(12);
+    }
 
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
+    @Test
+    @DisplayName("Test that the job will only be scheduled once per minimum cron interval")
+    void testCronScheduleMinimumInterval() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
+      mockRightNow.set(Calendar.HOUR_OF_DAY, 12);
+      mockRightNow.set(Calendar.MINUTE, 0);
+      mockRightNow.set(Calendar.SECOND, 0);
+      mockRightNow.set(Calendar.MILLISECOND, 0);
 
-    Assertions.assertThat(output.getTimeToWait())
-        .hasHours(12);
-  }
+      configFetchActivity =
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
+              () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
 
-  @Test
-  @DisplayName("Test that the job will only be scheduled once per minimum cron interval")
-  void testCronScheduleMinimumInterval() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
-    final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
-    mockRightNow.set(Calendar.HOUR_OF_DAY, 12);
-    mockRightNow.set(Calendar.MINUTE, 0);
-    mockRightNow.set(Calendar.SECOND, 0);
-    mockRightNow.set(Calendar.MILLISECOND, 0);
+      when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
+      when(mJobsApi.getLastReplicationJob(any()))
+          .thenReturn(new JobOptionalRead().job(mJobRead));
 
-    when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead().workspaceId(UUID.randomUUID()));
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithCronScheduleType);
 
-    configFetchActivity =
-        new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-            () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi);
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
-    when(mJobsApi.getLastReplicationJob(any()))
-        .thenReturn(new JobOptionalRead().job(mJobRead));
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithCronScheduleType);
+      Assertions.assertThat(output.getTimeToWait())
+          .hasHours(24);
+    }
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
+    @Test
+    @DisplayName("Test that for specific workspace ids, we add some noise in the cron scheduling")
+    void testCronSchedulingNoise() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
+      final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
+      mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
+      mockRightNow.set(Calendar.MINUTE, 0);
+      mockRightNow.set(Calendar.SECOND, 0);
+      mockRightNow.set(Calendar.MILLISECOND, 0);
 
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
+      when(mWorkspaceApi.getWorkspaceByConnectionId(any()))
+          .thenReturn(new WorkspaceRead().workspaceId(UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d")));
 
-    Assertions.assertThat(output.getTimeToWait())
-        .hasHours(24);
-  }
+      configFetchActivity =
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
+              () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
 
-  @Test
-  @DisplayName("Test that for specific workspace ids, we add some noise in the cron scheduling")
-  void testCronSchedulingNoise() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
-    final Calendar mockRightNow = Calendar.getInstance(TimeZone.getTimeZone(UTC));
-    mockRightNow.set(Calendar.HOUR_OF_DAY, 0);
-    mockRightNow.set(Calendar.MINUTE, 0);
-    mockRightNow.set(Calendar.SECOND, 0);
-    mockRightNow.set(Calendar.MILLISECOND, 0);
+      when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
+      when(mJobsApi.getLastReplicationJob(any()))
+          .thenReturn(new JobOptionalRead().job(mJobRead));
 
-    when(mWorkspaceApi.getWorkspaceByConnectionId(any()))
-        .thenReturn(new WorkspaceRead().workspaceId(UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d")));
+      when(mConnectionApi.getConnection(any()))
+          .thenReturn(connectionReadWithCronScheduleType);
 
-    configFetchActivity =
-        new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
-            () -> mockRightNow.getTimeInMillis() / 1000L, mConnectionApi);
+      final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
 
-    when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
-    when(mJobsApi.getLastReplicationJob(any()))
-        .thenReturn(new JobOptionalRead().job(mJobRead));
+      final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-    when(mConnectionApi.getConnection(any()))
-        .thenReturn(connectionReadWithCronScheduleType);
+      // Note: compareTo returns positive if the left side is greater than the right.
+      Assertions.assertThat(output.getTimeToWait().compareTo(Duration.ofHours(12)) > 0).isTrue();
+    }
 
-    final ScheduleRetrieverInput input = new ScheduleRetrieverInput(connectionId);
-
-    final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
-
-    // Note: compareTo returns positive if the left side is greater than the right.
-    Assertions.assertThat(output.getTimeToWait().compareTo(Duration.ofHours(12)) > 0).isTrue();
   }
 
   @Nested
@@ -368,7 +382,8 @@ class ConfigFetchActivityTest {
     void testGetMaxAttempt() {
       final int maxAttempt = 15031990;
       configFetchActivity =
-          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, maxAttempt, () -> Instant.now().getEpochSecond(), mConnectionApi);
+          new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, maxAttempt, () -> Instant.now().getEpochSecond(), mConnectionApi, mFeatureFlagClient,
+              mScheduleJitterHelper);
       Assertions.assertThat(configFetchActivity.getMaxAttempt().getMaxAttempt())
           .isEqualTo(maxAttempt);
     }

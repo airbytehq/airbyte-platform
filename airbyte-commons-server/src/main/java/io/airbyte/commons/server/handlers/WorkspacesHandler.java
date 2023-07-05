@@ -14,6 +14,9 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.NotificationItem;
+import io.airbyte.api.model.generated.NotificationSettings;
+import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
@@ -26,6 +29,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
+import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -102,6 +106,9 @@ public class WorkspacesHandler {
         ? Enums.convertTo(workspaceCreate.getDefaultGeography(), io.airbyte.config.Geography.class)
         : io.airbyte.config.Geography.AUTO;
 
+    // NotificationSettings from input will be patched with default values.
+    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreate);
+
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(uuidSupplier.get())
         .withCustomerId(uuidSupplier.get())
@@ -114,6 +121,7 @@ public class WorkspacesHandler {
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
+        .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier));
 
@@ -145,6 +153,38 @@ public class WorkspacesHandler {
     }
     persistedWorkspace.withTombstone(true);
     persistStandardWorkspace(persistedWorkspace);
+  }
+
+  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
+    NotificationSettings notificationSettings = new NotificationSettings()
+        .sendOnSuccess(new NotificationItem().notificationType(List.of()))
+        .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdate(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdateActionRequired(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
+    if (workspaceCreate.getNotificationSettings() != null) {
+      NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
+      if (inputNotificationSettings.getSendOnSuccess() != null) {
+        notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
+      }
+      if (inputNotificationSettings.getSendOnFailure() != null) {
+        notificationSettings.setSendOnFailure(inputNotificationSettings.getSendOnFailure());
+      }
+      if (inputNotificationSettings.getSendOnConnectionUpdate() != null) {
+        notificationSettings.setSendOnConnectionUpdate(inputNotificationSettings.getSendOnConnectionUpdate());
+      }
+      if (inputNotificationSettings.getSendOnConnectionUpdateActionRequired() != null) {
+        notificationSettings.setSendOnConnectionUpdateActionRequired(inputNotificationSettings.getSendOnConnectionUpdateActionRequired());
+      }
+      if (inputNotificationSettings.getSendOnSyncDisabled() != null) {
+        notificationSettings.setSendOnSyncDisabled(inputNotificationSettings.getSendOnSyncDisabled());
+      }
+      if (inputNotificationSettings.getSendOnSyncDisabledWarning() != null) {
+        notificationSettings.setSendOnSyncDisabledWarning(inputNotificationSettings.getSendOnSyncDisabledWarning());
+      }
+    }
+    return notificationSettings;
   }
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
@@ -284,6 +324,7 @@ public class WorkspacesHandler {
         .news(workspace.getNews())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class));
     // Add read-only webhook configs.
     if (workspace.getWebhookOperationConfigs() != null) {
@@ -317,6 +358,9 @@ public class WorkspacesHandler {
     }
     if (workspacePatch.getNotifications() != null) {
       workspace.setNotifications(NotificationConverter.toConfigList(workspacePatch.getNotifications()));
+    }
+    if (workspacePatch.getNotificationSettings() != null) {
+      workspace.setNotificationSettings(NotificationSettingsConverter.toConfig(workspacePatch.getNotificationSettings()));
     }
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));

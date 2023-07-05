@@ -1,27 +1,60 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useExperiment } from "hooks/services/Experiment";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { cancelJob, getJobDebugInfo, listJobsFor } from "../generated/AirbyteClient";
-import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = true) => {
   const requestOptions = useRequestOptions();
-  const result = useQuery(
-    [SCOPE_WORKSPACE, "jobs", "list", listParams.configId, listParams.includingJobId, listParams.pagination],
-    () => listJobsFor(listParams, requestOptions),
-    {
-      // 2.5 second refresh
-      refetchInterval: 2500,
-      keepPreviousData,
-      suspense: true,
-    }
-  );
-  // cast to JobReadList because (suspense: true) means we will never get undefined
-  const jobReadList = result.data as JobReadList;
-  return { jobs: jobReadList.jobs, totalJobCount: jobReadList.totalJobCount, isPreviousData: result.isPreviousData };
+  const queryKey = [
+    SCOPE_WORKSPACE,
+    "jobs",
+    "list",
+    listParams.configId,
+    listParams.includingJobId,
+    listParams.pagination,
+  ];
+
+  const result = useQuery(queryKey, () => listJobsFor(listParams, requestOptions), {
+    refetchInterval: (data) => {
+      return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+    },
+    keepPreviousData,
+    suspense: true,
+  });
+
+  return {
+    data: result.data as JobReadList, // cast to JobReadList because (suspense: true) means we will never get undefined
+    isPreviousData: result.isPreviousData,
+  };
+};
+
+export const useListJobsForConnectionStatus = (connectionId: string) => {
+  return useListJobs({
+    configId: connectionId,
+    configTypes: ["sync", "reset_connection"],
+    pagination: {
+      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
+    },
+  });
+};
+
+export const useSetConnectionJobsData = (connectionId: string) => {
+  const queryClient = useQueryClient();
+  return (data: Updater<JobReadList | undefined, JobReadList>) =>
+    queryClient.setQueriesData([SCOPE_WORKSPACE, "jobs", "list", connectionId], data);
+};
+
+// A disabled useQuery that can be called manually to download job logs
+export const useGetDebugInfoJobManual = (id: number) => {
+  const requestOptions = useRequestOptions();
+  return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
+    enabled: false,
+  });
 };
 
 export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunning = false) => {
@@ -52,5 +85,8 @@ export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunni
 
 export const useCancelJob = () => {
   const requestOptions = useRequestOptions();
-  return useMutation((id: number) => cancelJob({ id }, requestOptions));
+  const mutation = useMutation(["useCancelJob"], (id: number) => cancelJob({ id }, requestOptions));
+  const activeMutationsCount = useIsMutating(["useCancelJob"]);
+
+  return { ...mutation, isLoading: activeMutationsCount > 0 };
 };

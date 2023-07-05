@@ -31,7 +31,6 @@ export const getExcludedConnectorIds = (workspaceId?: string): string[] =>
         ConnectorIds.Destinations.RabbitMq, // hide RabbitMQ Destination https://github.com/airbytehq/airbyte/issues/16315
         ConnectorIds.Destinations.AmazonSqs, // hide Amazon SQS Destination https://github.com/airbytehq/airbyte/issues/16316
         ConnectorIds.Sources.Drift, // hide Source Drift https://github.com/airbytehq/airbyte/issues/24270
-        ConnectorIds.Sources.AmazonSellerPartner, // hide Source Amazon Seller Partner Source https://github.com/airbytehq/oncall/issues/2017
         // revert me
         ...(workspaceId !== "d705a766-e9e3-4689-85cb-52143422317d" // `oauth-testing` workspace for review
           ? [] // add actor_difinition_id here, once needed

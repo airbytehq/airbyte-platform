@@ -19,7 +19,7 @@ import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, useBuilderWatch } from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface AddStreamValues {
@@ -72,6 +72,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         ...otherStreamValues,
         name: values.streamName,
         urlPath: values.urlPath,
+        schema: DEFAULT_SCHEMA,
         id,
       }),
     ]);
@@ -150,7 +151,13 @@ const AddStreamForm = ({
     defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
     resolver: yupResolver(
       yup.object().shape({
-        streamName: yup.string().required("form.empty.error"),
+        streamName: yup
+          .string()
+          .required("form.empty.error")
+          .notOneOf(
+            streams.map((stream) => stream.name),
+            "connectorBuilder.duplicateStreamName"
+          ),
         urlPath: yup.string().required("form.empty.error"),
       })
     ),

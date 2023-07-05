@@ -6,12 +6,14 @@ import {
   ConnectionStatusIndicator,
 } from "components/connection/ConnectionStatusIndicator";
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
+
+import { JobStatus } from "core/request/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./ConnectionStatusOverview.module.scss";
 
@@ -23,27 +25,28 @@ const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string
   error: "connection.status.error",
   actionRequired: "connection.status.actionRequired",
   disabled: "connection.status.disabled",
-  cancelled: "connection.status.cancelled",
 };
 
 export const ConnectionStatusOverview: React.FC = () => {
-  const { nextSync, jobSyncRunning, jobResetRunning } = useConnectionSyncContext();
+  const { connection } = useConnectionEditService();
+  const { jobSyncRunning, jobResetRunning } = useConnectionSyncContext();
 
   const isLoading = jobSyncRunning || jobResetRunning;
 
-  const status = useConnectionStatus();
-  const { connectionStatus } = useConnectionSyncContext();
+  const { status, lastSyncJobStatus, nextSync } = useConnectionStatus(connection.connectionId);
 
   return (
     <FlexContainer alignItems="center" gap="sm">
       <ConnectionStatusIndicator status={status} withBox loading={isLoading} />
       <Box ml="md">
-        <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        <span data-testid="connection-status-text">
+          <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        </span>
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
           <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
             <FormattedMessage
               id={
-                connectionStatus === ConnectionSyncStatus.FAILED
+                lastSyncJobStatus === JobStatus.failed
                   ? "connection.status.onTrack.failureDescription"
                   : "connection.status.onTrack.delayedDescription"
               }

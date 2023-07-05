@@ -9,7 +9,6 @@ import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.context.ReplicationContext;
 import io.micronaut.context.event.ApplicationEventListener;
-import io.micronaut.scheduling.annotation.Async;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,6 @@ public class AirbyteControlMessageEventListener implements ApplicationEventListe
   }
 
   @Override
-  @Async("control-message")
   public void onApplicationEvent(final ReplicationAirbyteMessageEvent event) {
     switch (event.airbyteMessageOrigin()) {
       case DESTINATION -> acceptDstControlMessage(event.airbyteMessage().getControl(), event.replicationContext());

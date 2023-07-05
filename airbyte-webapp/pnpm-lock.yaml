@@ -16,7 +16,11 @@ specifiers:
   '@babel/preset-env': ^7.20.2
   '@babel/preset-react': ^7.18.6
   '@babel/preset-typescript': ^7.21.0
+  '@cfworker/json-schema': ^1.12.5
   '@datadog/browser-rum': ^4.21.2
+  '@dnd-kit/core': ^6.0.8
+  '@dnd-kit/sortable': ^7.0.2
+  '@dnd-kit/utilities': ^3.2.1
   '@floating-ui/react-dom': ^1.0.0
   '@formatjs/icu-messageformat-parser': ^2.4.0
   '@fortawesome/fontawesome-svg-core': ^6.1.1
@@ -131,12 +135,12 @@ specifiers:
   react-paginate: ^8.1.3
   react-reflex: ^4.0.9
   react-resize-detector: ^8.0.3
+  react-rnd: ^10.4.1
   react-router-dom: 6.3.0
   react-select: ^5.4.0
   react-select-event: ^5.5.0
   react-slick: ^0.29.0
   react-use: ^17.4.0
-  react-use-intercom: ^1.5.2
   react-virtualized-auto-sizer: ^1.0.17
   react-widgets: ^4.6.1
   react-window: ^1.8.9
@@ -159,7 +163,6 @@ specifiers:
   stylelint-config-standard: ^26.0.0
   stylelint-config-standard-scss: ^5.0.0
   tar: ^6.1.11
-  timezone-mock: ^1.3.4
   tmpl: ^1.0.5
   ts-node: ^10.8.1
   ts-pattern: ^4.2.1
@@ -177,7 +180,11 @@ specifiers:
   yup: ^0.32.11
 
 dependencies:
+  '@cfworker/json-schema': 1.12.5
   '@datadog/browser-rum': 4.30.1
+  '@dnd-kit/core': 6.0.8_sfoxds7t5ydpegc3knd667wn6m
+  '@dnd-kit/sortable': 7.0.2_t27c2n57fgirhmvux7d536sgxm
+  '@dnd-kit/utilities': 3.2.1_react@17.0.2
   '@floating-ui/react-dom': 1.2.1_sfoxds7t5ydpegc3knd667wn6m
   '@fortawesome/fontawesome-svg-core': 6.2.1
   '@fortawesome/free-brands-svg-icons': 6.2.1
@@ -228,11 +235,11 @@ dependencies:
   react-paginate: 8.1.4_react@17.0.2
   react-reflex: 4.0.9_sfoxds7t5ydpegc3knd667wn6m
   react-resize-detector: 8.0.3_sfoxds7t5ydpegc3knd667wn6m
+  react-rnd: 10.4.1_sfoxds7t5ydpegc3knd667wn6m
   react-router-dom: 6.3.0_sfoxds7t5ydpegc3knd667wn6m
   react-select: 5.7.0_ro4ku5z46nsxvn4dbg2mnhgwbu
   react-slick: 0.29.0_sfoxds7t5ydpegc3knd667wn6m
   react-use: 17.4.0_sfoxds7t5ydpegc3knd667wn6m
-  react-use-intercom: 1.5.2_sfoxds7t5ydpegc3knd667wn6m
   react-virtualized-auto-sizer: 1.0.17_sfoxds7t5ydpegc3knd667wn6m
   react-widgets: 4.6.1_sfoxds7t5ydpegc3knd667wn6m
   react-window: 1.8.9_sfoxds7t5ydpegc3knd667wn6m
@@ -334,7 +341,6 @@ devDependencies:
   stylelint-config-standard: 26.0.0_stylelint@14.16.1
   stylelint-config-standard-scss: 5.0.0_stylelint@14.16.1
   tar: 6.1.13
-  timezone-mock: 1.3.6
   tmpl: 1.0.5
   ts-node: 10.9.1_wwdbwuxduxlabpscokuvnp4pyi
   typescript: 5.0.2
@@ -2046,6 +2052,10 @@ packages:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
     dev: true
 
+  /@cfworker/json-schema/1.12.5:
+    resolution: {integrity: sha512-k+ungOs1TxSfNfmfOxkwaiNL2EgRQjhk2SRweMYoKkBJZUYsGsY+XYpe2KpuS9EyjZWjZhq8QvVM+gwi3g1+hQ==}
+    dev: false
+
   /@colors/colors/1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
@@ -2130,6 +2140,49 @@ packages:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
     dev: true
+
+  /@dnd-kit/accessibility/3.0.1_react@17.0.2:
+    resolution: {integrity: sha512-HXRrwS9YUYQO9lFRc/49uO/VICbM+O+ZRpFDe9Pd1rwVv2PCNkRiTZRdxrDgng/UkvdC3Re9r2vwPpXXrWeFzg==}
+    peerDependencies:
+      react: '>=16.8.0'
+    dependencies:
+      react: 17.0.2
+      tslib: 2.5.2
+    dev: false
+
+  /@dnd-kit/core/6.0.8_sfoxds7t5ydpegc3knd667wn6m:
+    resolution: {integrity: sha512-lYaoP8yHTQSLlZe6Rr9qogouGUz9oRUj4AHhDQGQzq/hqaJRpFo65X+JKsdHf8oUFBzx5A+SJPUvxAwTF2OabA==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+    dependencies:
+      '@dnd-kit/accessibility': 3.0.1_react@17.0.2
+      '@dnd-kit/utilities': 3.2.1_react@17.0.2
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+      tslib: 2.5.2
+    dev: false
+
+  /@dnd-kit/sortable/7.0.2_t27c2n57fgirhmvux7d536sgxm:
+    resolution: {integrity: sha512-wDkBHHf9iCi1veM834Gbk1429bd4lHX4RpAwT0y2cHLf246GAvU2sVw/oxWNpPKQNQRQaeGXhAVgrOl1IT+iyA==}
+    peerDependencies:
+      '@dnd-kit/core': ^6.0.7
+      react: '>=16.8.0'
+    dependencies:
+      '@dnd-kit/core': 6.0.8_sfoxds7t5ydpegc3knd667wn6m
+      '@dnd-kit/utilities': 3.2.1_react@17.0.2
+      react: 17.0.2
+      tslib: 2.5.2
+    dev: false
+
+  /@dnd-kit/utilities/3.2.1_react@17.0.2:
+    resolution: {integrity: sha512-OOXqISfvBw/1REtkSK2N3Fi2EQiLMlWUlqnOK/UpOISqBZPWpE6TqL+jcPtMOkE8TqYGiURvRdPSI9hltNUjEA==}
+    peerDependencies:
+      react: '>=16.8.0'
+    dependencies:
+      react: 17.0.2
+      tslib: 2.5.2
+    dev: false
 
   /@emotion/babel-plugin/11.10.5_@babel+core@7.21.3:
     resolution: {integrity: sha512-xE7/hyLHJac7D2Ve9dKroBBZqBT7WuPQmWcq7HSGb84sUuP4mlOWoB8dvVfD9yk5DHkU1m6RW7xSoDtnQHNQeA==}
@@ -2525,7 +2578,7 @@ packages:
       '@firebase/app-compat': 0.2.0
       '@firebase/component': 0.6.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
     dev: false
@@ -2544,7 +2597,7 @@ packages:
       '@firebase/installations': 0.6.0_@firebase+app@0.9.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/app-check-compat/0.3.0_5z7svkifsmkn6ro3hru7lnxwrq:
@@ -2558,7 +2611,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
     dev: false
@@ -2580,7 +2633,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/app-compat/0.2.0:
@@ -2590,7 +2643,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/app-types/0.9.0:
@@ -2604,7 +2657,7 @@ packages:
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
       idb: 7.0.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/auth-compat/0.3.0_z6klzwxqggigirvqix3ggnu6f4:
@@ -2618,7 +2671,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/util': 1.8.0
       node-fetch: 2.6.7
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
       - '@firebase/app-types'
@@ -2655,7 +2708,7 @@ packages:
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
       node-fetch: 2.6.7
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - encoding
     dev: false
@@ -2664,7 +2717,7 @@ packages:
     resolution: {integrity: sha512-9hyNc4OmrXMtthDJq6zyJHll/UIYBWYmMG3rXty2eMeWxHWB0vlsq3AOI+k14PL15aSBAQolv0EZJWVJv/gCEg==}
     dependencies:
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/database-compat/0.3.0_@firebase+app-types@0.9.0:
@@ -2675,7 +2728,7 @@ packages:
       '@firebase/database-types': 0.10.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app-types'
     dev: false
@@ -2695,7 +2748,7 @@ packages:
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
       faye-websocket: 0.11.4
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app-types'
     dev: false
@@ -2710,7 +2763,7 @@ packages:
       '@firebase/firestore': 3.8.0_@firebase+app@0.9.0
       '@firebase/firestore-types': 2.5.1_ymjb4f6a56kabcdqyfm4cet2ly
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
       - '@firebase/app-types'
@@ -2741,7 +2794,7 @@ packages:
       '@grpc/grpc-js': 1.7.3
       '@grpc/proto-loader': 0.6.13
       node-fetch: 2.6.7
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - encoding
     dev: false
@@ -2756,7 +2809,7 @@ packages:
       '@firebase/functions': 0.9.0_mw76ib4woycgbhoj6pqh7xkrde
       '@firebase/functions-types': 0.6.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
       - '@firebase/app-types'
@@ -2779,7 +2832,7 @@ packages:
       '@firebase/messaging-interop-types': 0.2.0
       '@firebase/util': 1.8.0
       node-fetch: 2.6.7
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app-types'
       - encoding
@@ -2795,7 +2848,7 @@ packages:
       '@firebase/installations': 0.6.0_@firebase+app@0.9.0
       '@firebase/installations-types': 0.5.0_@firebase+app-types@0.9.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
       - '@firebase/app-types'
@@ -2818,13 +2871,13 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/util': 1.8.0
       idb: 7.0.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/logger/0.4.0:
     resolution: {integrity: sha512-eRKSeykumZ5+cJPdxxJRgAC3G5NknY2GwEbKfymdnXtnT0Ucm4pspfR6GT4MUQEDuJwRVbVcSx85kgJulMoFFA==}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/messaging-compat/0.2.0_5z7svkifsmkn6ro3hru7lnxwrq:
@@ -2836,7 +2889,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/messaging': 0.12.0_@firebase+app@0.9.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
     dev: false
@@ -2856,7 +2909,7 @@ packages:
       '@firebase/messaging-interop-types': 0.2.0
       '@firebase/util': 1.8.0
       idb: 7.0.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/performance-compat/0.2.0_5z7svkifsmkn6ro3hru7lnxwrq:
@@ -2870,7 +2923,7 @@ packages:
       '@firebase/performance': 0.6.0_@firebase+app@0.9.0
       '@firebase/performance-types': 0.2.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
     dev: false
@@ -2889,7 +2942,7 @@ packages:
       '@firebase/installations': 0.6.0_@firebase+app@0.9.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/remote-config-compat/0.2.0_5z7svkifsmkn6ro3hru7lnxwrq:
@@ -2903,7 +2956,7 @@ packages:
       '@firebase/remote-config': 0.4.0_@firebase+app@0.9.0
       '@firebase/remote-config-types': 0.3.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
     dev: false
@@ -2922,7 +2975,7 @@ packages:
       '@firebase/installations': 0.6.0_@firebase+app@0.9.0
       '@firebase/logger': 0.4.0
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/storage-compat/0.2.0_z6klzwxqggigirvqix3ggnu6f4:
@@ -2935,7 +2988,7 @@ packages:
       '@firebase/storage': 0.10.0_@firebase+app@0.9.0
       '@firebase/storage-types': 0.7.0_ymjb4f6a56kabcdqyfm4cet2ly
       '@firebase/util': 1.8.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - '@firebase/app'
       - '@firebase/app-types'
@@ -2961,7 +3014,7 @@ packages:
       '@firebase/component': 0.6.0
       '@firebase/util': 1.8.0
       node-fetch: 2.6.7
-      tslib: 2.5.0
+      tslib: 2.5.2
     transitivePeerDependencies:
       - encoding
     dev: false
@@ -2969,7 +3022,7 @@ packages:
   /@firebase/util/1.8.0:
     resolution: {integrity: sha512-clK6pTTxIiLMYz4UrvDTVAs2rIaOiroAuFdX67C0JalvEwzi6Vv8li6xAGj38tkj7Qax06mosM1fQkxf2h4VTg==}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@firebase/webchannel-wrapper/0.9.0:
@@ -3035,20 +3088,20 @@ packages:
     resolution: {integrity: sha512-SlsbRC/RX+/zg4AApWIFNDdkLtFbkq3LNoZWXZCE/nHVKqoIJyaoQyge/I0Y38vLxowUn9KTtXgusLD91+orbg==}
     dependencies:
       '@formatjs/intl-localematcher': 0.2.32
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/ecma402-abstract/1.15.0:
     resolution: {integrity: sha512-7bAYAv0w4AIao9DNg0avfOLTCPE9woAgs6SpXuMq11IN3A+l+cq8ghczwqSZBM11myvPSJA7vLn72q0rJ0QK6Q==}
     dependencies:
       '@formatjs/intl-localematcher': 0.2.32
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /@formatjs/fast-memoize/1.2.7:
     resolution: {integrity: sha512-hPeM5LXUUjtCKPybWOUAWpv8lpja8Xz+uKprFPJcg5F2Rd+/bf1E0UUsLRpaAgOReAf5HMRtoIgv/UcyPICrTQ==}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/icu-messageformat-parser/2.1.14:
@@ -3056,7 +3109,7 @@ packages:
     dependencies:
       '@formatjs/ecma402-abstract': 1.14.3
       '@formatjs/icu-skeleton-parser': 1.3.18
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/icu-messageformat-parser/2.4.0:
@@ -3071,14 +3124,14 @@ packages:
     resolution: {integrity: sha512-ND1ZkZfmLPcHjAH1sVpkpQxA+QYfOX3py3SjKWMUVGDow18gZ0WPqz3F+pJLYQMpS2LnnQ5zYR2jPVYTbRwMpg==}
     dependencies:
       '@formatjs/ecma402-abstract': 1.14.3
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/icu-skeleton-parser/1.4.0:
     resolution: {integrity: sha512-Qq347VM616rVLkvN6QsKJELazRyNlbCiN47LdH0Mc5U7E2xV0vatiVhGqd3KFgbc055BvtnUXR7XX60dCGFuWg==}
     dependencies:
       '@formatjs/ecma402-abstract': 1.15.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /@formatjs/intl-displaynames/6.2.3:
@@ -3086,7 +3139,7 @@ packages:
     dependencies:
       '@formatjs/ecma402-abstract': 1.14.3
       '@formatjs/intl-localematcher': 0.2.32
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/intl-listformat/7.1.7:
@@ -3094,13 +3147,13 @@ packages:
     dependencies:
       '@formatjs/ecma402-abstract': 1.14.3
       '@formatjs/intl-localematcher': 0.2.32
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@formatjs/intl-localematcher/0.2.32:
     resolution: {integrity: sha512-k/MEBstff4sttohyEpXxCmC3MqbUn9VvHGlZ8fauLzkbwXmVrEeyzS+4uhrvAk9DWU9/7otYWxyDox4nT/KVLQ==}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
 
   /@formatjs/intl/2.6.3_typescript@5.0.2:
     resolution: {integrity: sha512-JaVZk14U/GypVfCZPevQ0KdruFkq16FXx7g398/Dm+YEx/W7sRiftbZeDy4wQ7WGryb45e763XycxD9o/vm9BA==}
@@ -3116,7 +3169,7 @@ packages:
       '@formatjs/intl-displaynames': 6.2.3
       '@formatjs/intl-listformat': 7.1.7
       intl-messageformat: 10.2.5
-      tslib: 2.5.0
+      tslib: 2.5.2
       typescript: 5.0.2
     dev: false
 
@@ -3656,7 +3709,7 @@ packages:
       '@motionone/easing': 10.15.1
       '@motionone/types': 10.15.1
       '@motionone/utils': 10.15.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@motionone/dom/10.12.0:
@@ -3667,14 +3720,14 @@ packages:
       '@motionone/types': 10.15.1
       '@motionone/utils': 10.15.1
       hey-listen: 1.0.8
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@motionone/easing/10.15.1:
     resolution: {integrity: sha512-6hIHBSV+ZVehf9dcKZLT7p5PEKHGhDwky2k8RKkmOvUoYP3S+dXsKupyZpqx5apjd9f+php4vXk4LuS+ADsrWw==}
     dependencies:
       '@motionone/utils': 10.15.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@motionone/generators/10.15.1:
@@ -3682,7 +3735,7 @@ packages:
     dependencies:
       '@motionone/types': 10.15.1
       '@motionone/utils': 10.15.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@motionone/types/10.15.1:
@@ -3694,7 +3747,7 @@ packages:
     dependencies:
       '@motionone/types': 10.15.1
       hey-listen: 1.0.8
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /@ndelangen/get-tarball/3.0.7:
@@ -3837,7 +3890,7 @@ packages:
       open: 8.4.0
       picocolors: 1.0.0
       tiny-glob: 0.2.9
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /@popperjs/core/2.11.6:
@@ -6138,7 +6191,7 @@ packages:
       esbuild: '>=0.10.0'
     dependencies:
       esbuild: 0.17.12
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /abab/2.0.6:
@@ -6395,7 +6448,7 @@ packages:
     resolution: {integrity: sha512-xcLxITLe2HYa1cnYnwCjkOO1PqUHQpozB8x9AR0OgWN2woOBi5kSDVxKfd0b7sb1hw5qFeJhXm9H1nu3xSfLeQ==}
     engines: {node: '>=10'}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /aria-query/5.1.3:
@@ -6521,21 +6574,21 @@ packages:
     resolution: {integrity: sha512-O0yuUDnZeQDL+ncNGlJ78BiO4jnYI3bvMsD5prT0/nsgijG/LpNBIr63gTjVTNsiGkgQhiyCShTgxt8oXOrklA==}
     engines: {node: '>=4'}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /ast-types/0.15.2:
     resolution: {integrity: sha512-c27loCv9QkZinsa5ProX751khO9DJl/AcB5c2KNtA6NRvHKS0PgLfcftz72KVq504vB0Gku5s2kUZzDBvQWvHg==}
     engines: {node: '>=4'}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /ast-types/0.16.1:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /astral-regex/2.0.0:
@@ -9263,7 +9316,6 @@ packages:
 
   /fast-memoize/2.5.2:
     resolution: {integrity: sha512-Ue0LwpDYErFbmNnZSF0UH6eImUwDmogUO1jyE+JbN2gsQz/jICm1Ve7t9QT0rNSsfJt+Hs4/S3GnsDVjL4HVrw==}
-    dev: true
 
   /fast-safe-stringify/2.1.1:
     resolution: {integrity: sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==}
@@ -9585,7 +9637,7 @@ packages:
   /framesync/6.0.1:
     resolution: {integrity: sha512-fUY88kXvGiIItgNC7wcTOl0SNRCVXMKSWW2Yzfmn7EKNc+MpCzcz9DhdHcdjbrtN3c6R4H5dTY2jiCpPdysEjA==}
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /fresh/0.5.2:
@@ -10405,7 +10457,7 @@ packages:
       '@formatjs/ecma402-abstract': 1.14.3
       '@formatjs/fast-memoize': 1.2.7
       '@formatjs/icu-messageformat-parser': 2.1.14
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /invariant/2.2.4:
@@ -11634,7 +11686,7 @@ packages:
     dependencies:
       copy-anything: 2.0.6
       parse-node-version: 1.0.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     optionalDependencies:
       errno: 0.1.8
       graceful-fs: 4.2.11
@@ -13380,7 +13432,7 @@ packages:
       framesync: 6.0.1
       hey-listen: 1.0.8
       style-value-types: 5.0.0
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /postcss-load-config/3.1.4_aesdjsunmf4wiehhujt67my7tu:
@@ -13818,6 +13870,17 @@ packages:
       unpipe: 1.0.0
     dev: true
 
+  /re-resizable/6.9.6_sfoxds7t5ydpegc3knd667wn6m:
+    resolution: {integrity: sha512-0xYKS5+Z0zk+vICQlcZW+g54CcJTTmHluA7JUUgvERDxnKAnytylcyPsA+BSFi759s5hPlHmBRegFrwXs2FuBQ==}
+    peerDependencies:
+      react: ^16.13.1 || ^17.0.0 || ^18.0.0
+      react-dom: ^16.13.1 || ^17.0.0 || ^18.0.0
+    dependencies:
+      fast-memoize: 2.5.2
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+    dev: false
+
   /react-colorful/5.6.1_sfoxds7t5ydpegc3knd667wn6m:
     resolution: {integrity: sha512-1exovf0uGTGyq5mXQT0zgQ80uvj2PCwvF8zY1RN9/vbJVSjSo3fsB/4L3ObbF7u70NduSiK4xu4Y6q1MHoUGEw==}
     peerDependencies:
@@ -13892,6 +13955,18 @@ packages:
       object-assign: 4.1.1
       react: 17.0.2
       scheduler: 0.20.2
+
+  /react-draggable/4.4.5_sfoxds7t5ydpegc3knd667wn6m:
+    resolution: {integrity: sha512-OMHzJdyJbYTZo4uQE393fHcqqPYsEtkjfMgvCHr6rejT+Ezn4OZbNyGH50vv+SunC1RMvwOTSWkEODQLzw1M9g==}
+    peerDependencies:
+      react: '>= 16.3.0'
+      react-dom: '>= 16.3.0'
+    dependencies:
+      clsx: 1.2.1
+      prop-types: 15.8.1
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+    dev: false
 
   /react-element-to-jsx-string/15.0.0_sfoxds7t5ydpegc3knd667wn6m:
     resolution: {integrity: sha512-UDg4lXB6BzlobN60P8fHWVPX3Kyw8ORrTeBtClmIlGdkOOE+GYQSFvmEU5iLLpwp/6v42DINwNcwOhOLfQ//FQ==}
@@ -14136,6 +14211,19 @@ packages:
       react-dom: 17.0.2_react@17.0.2
     dev: false
 
+  /react-rnd/10.4.1_sfoxds7t5ydpegc3knd667wn6m:
+    resolution: {integrity: sha512-0m887AjQZr6p2ADLNnipquqsDq4XJu/uqVqI3zuoGD19tRm6uB83HmZWydtkilNp5EWsOHbLGF4IjWMdd5du8Q==}
+    peerDependencies:
+      react: '>=16.3.0'
+      react-dom: '>=16.3.0'
+    dependencies:
+      re-resizable: 6.9.6_sfoxds7t5ydpegc3knd667wn6m
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
+      react-draggable: 4.4.5_sfoxds7t5ydpegc3knd667wn6m
+      tslib: 2.3.1
+    dev: false
+
   /react-router-dom/6.3.0_sfoxds7t5ydpegc3knd667wn6m:
     resolution: {integrity: sha512-uaJj7LKytRxZNQV8+RbzJWnJ8K2nPsOOEuX7aQstlMZKQT0164C+X2w6bnkqU3sjtLvpd5ojrezAyfZ1+0sStw==}
     peerDependencies:
@@ -14256,17 +14344,6 @@ packages:
     dependencies:
       react: 17.0.2
       tslib: 2.4.1
-    dev: false
-
-  /react-use-intercom/1.5.2_sfoxds7t5ydpegc3knd667wn6m:
-    resolution: {integrity: sha512-5bK3TtsZ9S18vWuagncc1tJA/+2WouIjMHtVlgcrvECYbDhOwFNMb1h1XDDcOIk4gZv+eDx/oiWLbNHFAR7lIA==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: '>=16.8.0'
-      react-dom: '>=16.8.0'
-    dependencies:
-      react: 17.0.2
-      react-dom: 17.0.2_react@17.0.2
     dev: false
 
   /react-use/17.4.0_sfoxds7t5ydpegc3knd667wn6m:
@@ -14454,7 +14531,7 @@ packages:
       ast-types: 0.15.2
       esprima: 4.0.1
       source-map: 0.6.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /recast/0.23.1:
@@ -14465,7 +14542,7 @@ packages:
       ast-types: 0.16.1
       esprima: 4.0.1
       source-map: 0.6.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /recharts-scale/0.4.5:
@@ -15549,7 +15626,7 @@ packages:
     resolution: {integrity: sha512-08yq36Ikn4kx4YU6RD7jWEv27v4V+PUsOGa4n/as8Et3CuODMJQ00ENeAVXAeydX4Z2j1XHZF1K2sX4mGl18fA==}
     dependencies:
       hey-listen: 1.0.8
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: false
 
   /styled-components/5.3.9_sfoxds7t5ydpegc3knd667wn6m:
@@ -15808,7 +15885,7 @@ packages:
     engines: {node: ^14.18.0 || >=16.0.0}
     dependencies:
       '@pkgr/utils': 2.3.1
-      tslib: 2.5.0
+      tslib: 2.5.2
     dev: true
 
   /tabbable/6.1.2:
@@ -15927,10 +16004,6 @@ packages:
     dependencies:
       readable-stream: 2.3.7
       xtend: 4.0.2
-    dev: true
-
-  /timezone-mock/1.3.6:
-    resolution: {integrity: sha512-YcloWmZfLD9Li5m2VcobkCDNVaLMx8ohAb/97l/wYS3m+0TIEK5PFNMZZfRcusc6sFjIfxu8qcJT0CNnOdpqmg==}
     dev: true
 
   /tiny-glob/0.2.9:
@@ -16120,15 +16193,19 @@ packages:
   /tslib/1.14.1:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
 
+  /tslib/2.3.1:
+    resolution: {integrity: sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==}
+    dev: false
+
   /tslib/2.4.1:
     resolution: {integrity: sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==}
 
   /tslib/2.5.0:
     resolution: {integrity: sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg==}
+    dev: true
 
   /tslib/2.5.2:
     resolution: {integrity: sha512-5svOrSA2w3iGFDs1HibEVBGbDrAY82bFQ3HZ3ixB+88nsbsWQoKqDRb5UBYAUPEzbBn6dAp5gRNXglySbx1MlA==}
-    dev: true
 
   /tsutils/3.21.0_typescript@5.0.2:
     resolution: {integrity: sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==}

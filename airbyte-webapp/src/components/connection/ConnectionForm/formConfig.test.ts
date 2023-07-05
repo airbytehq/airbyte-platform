@@ -14,7 +14,7 @@ import { ConnectionScheduleTimeUnit, OperationRead } from "core/request/AirbyteC
 import { mapFormPropsToOperation, useFrequencyDropdownData, useInitialValues } from "./formConfig";
 import { frequencyConfig } from "./frequencyConfig";
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 

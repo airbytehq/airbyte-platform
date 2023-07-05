@@ -32,7 +32,7 @@ dependencies {
     testImplementation libs.flyway.core
     testImplementation libs.mockito.inline
     testImplementation project(':airbyte-test-utils')
-    testImplementation "org.testcontainers:vault:1.17.2"
+    testImplementation "org.testcontainers:vault:1.18.3"
     integrationTestJavaImplementation project(':airbyte-config:config-persistence')
 }
 

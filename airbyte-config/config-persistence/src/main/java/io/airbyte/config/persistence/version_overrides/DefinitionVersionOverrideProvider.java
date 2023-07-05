@@ -11,7 +11,9 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 /**
- * Defines the interface for a class that can provide overrides for actor definition versions.
+ * Defines the interface for a class that can provide overrides for actor definition versions. This
+ * interface is used to allow for a different implementation of the FF override provider in Cloud
+ * and OSS, namely for adding additional contexts that are only available in Cloud.
  */
 public interface DefinitionVersionOverrideProvider {
 

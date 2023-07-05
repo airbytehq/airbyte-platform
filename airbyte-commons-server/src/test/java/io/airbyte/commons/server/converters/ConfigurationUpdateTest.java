@@ -53,9 +53,9 @@ class ConfigurationUpdateTest {
       .put(JdbcUtils.USERNAME_KEY, "airbyte")
       .put(JdbcUtils.PASSWORD_KEY, "xyz")
       .build());
-  private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition()
-      .withDockerRepository(IMAGE_REPOSITORY);
+  private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition();
   private static final ActorDefinitionVersion DEFINITION_VERSION = new ActorDefinitionVersion()
+      .withDockerRepository(IMAGE_REPOSITORY)
       .withDockerImageTag(IMAGE_TAG)
       .withSpec(CONNECTOR_SPECIFICATION);
   private static final SourceConnection ORIGINAL_SOURCE_CONNECTION = new SourceConnection()
@@ -68,10 +68,7 @@ class ConfigurationUpdateTest {
       .withSourceDefinitionId(UUID2)
       .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(NEW_CONFIGURATION);
-  private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition()
-      .withDockerRepository(IMAGE_REPOSITORY)
-      .withDockerImageTag(IMAGE_TAG)
-      .withSpec(CONNECTOR_SPECIFICATION);
+  private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition();
   private static final DestinationConnection ORIGINAL_DESTINATION_CONNECTION = new DestinationConnection()
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)

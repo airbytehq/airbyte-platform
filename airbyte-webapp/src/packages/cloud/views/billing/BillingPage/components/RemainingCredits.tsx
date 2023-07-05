@@ -14,15 +14,12 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useStripeCheckout } from "core/api/cloud";
+import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/cloud";
+import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { CloudWorkspace } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import {
-  useGetCloudWorkspace,
-  useInvalidateCloudWorkspace,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { links } from "utils/links";
 
 import { EmailVerificationHint } from "./EmailVerificationHint";
@@ -35,7 +32,7 @@ const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
 /**
  * Checks whether the given cloud workspace had a recent increase in credits.
  */
-function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspace): boolean {
+function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspaceRead): boolean {
   const lastIncrement = cloudWorkspace.lastCreditPurchaseIncrementTimestamp;
   return lastIncrement ? Date.now() - lastIncrement < 30000 : false;
 }
@@ -124,7 +121,7 @@ export const RemainingCredits: React.FC = () => {
 
             <Text size="xl" bold>
               <FormattedNumber
-                value={cloudWorkspace.remainingCredits}
+                value={cloudWorkspace.remainingCredits ?? 0}
                 maximumFractionDigits={2}
                 minimumFractionDigits={2}
               />

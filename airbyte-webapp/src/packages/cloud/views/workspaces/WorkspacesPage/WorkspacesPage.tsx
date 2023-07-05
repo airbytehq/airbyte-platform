@@ -1,22 +1,19 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
-import { useCreateCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 
 import logoUrl from "./components/workspaceHeaderLogo.svg";
-import { WorkspacesControl } from "./components/WorkspacesControl";
+import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
 
 const WorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
-  useIntercom();
-  const { mutateAsync: createCloudWorkspace } = useCreateCloudWorkspace();
 
   return (
     <div className={styles.container}>
@@ -27,8 +24,10 @@ const WorkspacesPage: React.FC = () => {
       <Text align="center" className={styles.subtitle}>
         <FormattedMessage id="workspaces.subtitle" />
       </Text>
-      <WorkspacesList />
-      <WorkspacesControl onSubmit={createCloudWorkspace} />
+      <WorkspacesCreateControl />
+      <Box pb="2xl">
+        <WorkspacesList />
+      </Box>
     </div>
   );
 };

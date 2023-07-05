@@ -1,8 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import GroupControls from "components/GroupControls";
-import { ControlLabels } from "components/LabeledControl";
+import { LabelInfo } from "components/Label";
 
 import { RequestOption } from "core/request/ConnectorManifest";
 import { links } from "utils/links";
@@ -29,9 +28,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
   return (
     <BuilderCard
       docLink={links.connectorBuilderPagination}
-      label={
-        <ControlLabels label="Pagination" infoTooltipContent="Configure how pagination is handled by your connector" />
-      }
+      label="Pagination"
+      tooltip="Configure how pagination is handled by your connector"
       toggleConfig={{
         path: streamFieldPath("paginator"),
         defaultValue: {
@@ -75,8 +73,9 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   type="number"
                   manifestPath="OffsetIncrement.properties.page_size"
                   path={streamFieldPath("paginator.strategy.page_size")}
+                  optional
                 />
-                <PageSizeOption label="limit" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="limit" streamFieldPath={streamFieldPath} /> : null}
                 <PageTokenOption label="offset" streamFieldPath={streamFieldPath} />
               </>
             ),
@@ -94,6 +93,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
                   manifestPath="PageIncrement.properties.page_size"
+                  optional
                 />
                 <BuilderField
                   type="number"
@@ -101,7 +101,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="PageIncrement.properties.start_from_page"
                   optional
                 />
-                <PageSizeOption label="page size" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
                 <PageTokenOption label="page number" streamFieldPath={streamFieldPath} />
               </>
             ),
@@ -121,7 +121,28 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <BuilderOneOf
                   path={streamFieldPath("paginator.strategy.cursor")}
                   label="Next page cursor"
-                  tooltip="Specify how to select the next page"
+                  tooltip={
+                    <LabelInfo
+                      description="Specify how to select the next page"
+                      options={[
+                        {
+                          title: "Response",
+                          description:
+                            "Pointer to a field in the raw response body that will be used as the cursor token for fetching the next page of data",
+                        },
+                        {
+                          title: "Header",
+                          description:
+                            "Pointer to a field in the raw response headers that will be used as the cursor token for fetching the next page of data",
+                        },
+                        {
+                          title: "Custom",
+                          description:
+                            "Define a custom cursor token for fetching the next page of data which supports interpolated values, and a stop condition describing when to stop fetching more pages",
+                        },
+                      ]}
+                    />
+                  }
                   options={[
                     {
                       label: "Response",
@@ -208,16 +229,18 @@ const PageTokenOption = ({
   streamFieldPath: (fieldPath: string) => string;
 }): JSX.Element => {
   return (
-    <GroupControls
-      label={
-        <ControlLabels
-          label={`Inject ${label} into outgoing HTTP request`}
-          infoTooltipContent={`Configures how the ${label} will be sent in requests to the source API`}
-        />
-      }
+    <ToggleGroupField<RequestOption>
+      label={`Inject ${label} into outgoing HTTP request`}
+      tooltip={`Configures how the ${label} will be sent in requests to the source API`}
+      fieldPath={streamFieldPath("paginator.pageTokenOption")}
+      initialValues={{
+        inject_into: "request_parameter",
+        type: "RequestOption",
+        field_name: "",
+      }}
     >
       <RequestOptionFields path={streamFieldPath("paginator.pageTokenOption")} descriptor={label} />
-    </GroupControls>
+    </ToggleGroupField>
   );
 };
 

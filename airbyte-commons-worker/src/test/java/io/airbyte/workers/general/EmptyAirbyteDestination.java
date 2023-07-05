@@ -15,9 +15,11 @@ import java.util.Optional;
  */
 public class EmptyAirbyteDestination implements AirbyteDestination {
 
+  private volatile boolean isFinished;
+
   @Override
   public void start(WorkerDestinationConfig destinationConfig, Path jobRoot) throws Exception {
-
+    isFinished = false;
   }
 
   @Override
@@ -27,12 +29,12 @@ public class EmptyAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void notifyEndOfInput() throws Exception {
-
+    isFinished = true;
   }
 
   @Override
   public boolean isFinished() {
-    return true;
+    return isFinished;
   }
 
   @Override

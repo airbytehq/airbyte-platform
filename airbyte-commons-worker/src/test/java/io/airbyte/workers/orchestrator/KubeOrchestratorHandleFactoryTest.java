@@ -29,17 +29,17 @@ class KubeOrchestratorHandleFactoryTest {
 
     @Test
     void shouldInjectIfConnectionIdIsIncluded() {
-      var correctUuid = UUID.randomUUID();
-      var expImage = "image 1";
-      var expNamespace = "ns1";
-      var expSecret = "secret";
+      final var correctUuid = UUID.randomUUID();
+      final var expImage = "image 1";
+      final var expNamespace = "ns1";
+      final var expSecret = "secret";
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(correctUuid))).thenReturn(expImage);
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(correctUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig(expNamespace, null, Map.of("a", "b"), null, expSecret,
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null);
+              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
 
@@ -51,14 +51,14 @@ class KubeOrchestratorHandleFactoryTest {
 
     @Test
     void shouldNotInjectIfConnectionIdIsNotIncluded() {
-      var badUuid = UUID.randomUUID();
+      final var badUuid = UUID.randomUUID();
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(badUuid))).thenReturn("");
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(badUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null);
+              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
 
@@ -72,22 +72,22 @@ class KubeOrchestratorHandleFactoryTest {
 
     @Test
     void shouldInjectIfConnectionIdIsIncluded() {
-      var correctUuid = UUID.randomUUID();
-      var expOptsString = "-Xmx1g -Xms1g";
-      var expNamespace = "ns1";
-      var expSecret = "secret";
+      final var correctUuid = UUID.randomUUID();
+      final var expOptsString = "-Xmx1g -Xms1g";
+      final var expNamespace = "ns1";
+      final var expSecret = "secret";
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(correctUuid))).thenReturn(expOptsString);
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(correctUuid))).thenReturn("");
 
-      var orgMap = Map.of("a", "b", "JAVA_OPTS", "bad");
+      final var orgMap = Map.of("a", "b", "JAVA_OPTS", "bad");
       final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig(expNamespace, null, orgMap, null, expSecret,
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null);
+              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
 
-      var expMap = Map.of("a", "b", "JAVA_OPTS", expOptsString);
+      final var expMap = Map.of("a", "b", "JAVA_OPTS", expOptsString);
       assertEquals(expMap, actual.environmentVariables());
       // Spot check non image fields to make sure they remain the same.
       assertEquals(expNamespace, actual.namespace());
@@ -96,14 +96,14 @@ class KubeOrchestratorHandleFactoryTest {
 
     @Test
     void shouldNotInjectIfConnectionIdIsNotIncluded() {
-      var badUuid = UUID.randomUUID();
+      final var badUuid = UUID.randomUUID();
       when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(badUuid))).thenReturn("");
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(badUuid))).thenReturn("");
 
       final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
               "path", "dataplane secrets", "dataplane path",
-              "image 0", "pull policy", "gcp creds", null);
+              "image 0", "pull policy", "gcp creds", null, "airbyte-admin");
 
       final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
 

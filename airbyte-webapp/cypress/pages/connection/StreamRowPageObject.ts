@@ -1,4 +1,4 @@
-import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
+import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
 
 import { getTestId, getTestIds, joinTestIds } from "utils/selectors";
 
@@ -84,10 +84,22 @@ export class StreamRowPageObject {
     });
   }
 
+  checkSyncToggleDisabled() {
+    cy.get(this.stream).within(() => {
+      cy.get(streamSyncSwitch).should("be.disabled");
+    });
+  }
+
   hasRemovedStyle(expectedValue: boolean) {
     cy.get(this.stream)
       .invoke("attr", "class")
       .should(`${expectedValue ? "" : "not."}match`, /removed/);
+  }
+
+  hasAddedStyle(expectedValue: boolean) {
+    cy.get(this.stream)
+      .invoke("attr", "class")
+      .should(`${expectedValue ? "" : "not."}match`, /added/);
   }
 
   checkSourceNamespace() {
@@ -110,11 +122,17 @@ export class StreamRowPageObject {
     cy.get(this.stream).within(() => cy.get(destinationNamespaceCell).click());
   }
 
-  selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+  selectSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     cy.get(this.stream).scrollIntoView();
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
       cy.get(`.react-select__option`).contains(`${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`).click();
+    });
+  }
+
+  checkSyncModeDropdownDisabled() {
+    cy.get(this.stream).within(() => {
+      cy.get(syncModeSelectButton).should("be.disabled");
     });
   }
 
@@ -126,7 +144,7 @@ export class StreamRowPageObject {
     this.selectFieldOption("primary-key", primaryKeyValues);
   }
 
-  hasSelectedSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+  hasSelectedSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[source]}`);
       cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[dest]}`);

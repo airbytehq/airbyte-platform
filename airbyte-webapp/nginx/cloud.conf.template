@@ -7,7 +7,7 @@ server {
     gzip_types text/html text/css text/plain application/javascript;
     gzip_proxied any;
 
-    add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src self blob:;";
+    add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src 'self' blob:;";
     
     location / {
         root   /usr/share/nginx/html;

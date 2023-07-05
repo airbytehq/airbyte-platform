@@ -26,7 +26,7 @@ const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) =>
       id="form.tooLong"
       values={{
         lnk: (...lnk: React.ReactNode[]) => (
-          <ExternalLink href={isCloudApp() ? links.supportTicketLink : links.technicalSupport}>{lnk}</ExternalLink>
+          <ExternalLink href={isCloudApp() ? links.supportPortal : links.technicalSupport}>{lnk}</ExternalLink>
         ),
       }}
     />

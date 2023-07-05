@@ -9,7 +9,7 @@ import {
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { removeEmptyStrings } from "utils/form";
+import { removeEmptyProperties } from "utils/form";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
 import { FormRootProps, FormRoot } from "./FormRoot";
@@ -54,7 +54,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
 
   const castValues = useCallback(
     (values: ConnectorFormValues) =>
-      validationSchema.cast(removeEmptyStrings(values), {
+      validationSchema.cast(removeEmptyProperties(values), {
         stripUnknown: true,
       }),
     [validationSchema]

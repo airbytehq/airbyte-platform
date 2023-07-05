@@ -14,6 +14,7 @@ interface CodeEditorProps {
   height?: string;
   lineNumberCharacterWidth?: number;
   onMount?: (editor: editor.IStandaloneCodeEditor) => void;
+  automaticLayout?: boolean;
 }
 
 // Converts 3-character hex values into 6-character ones.
@@ -42,6 +43,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   height,
   lineNumberCharacterWidth,
   onMount,
+  automaticLayout,
 }) => {
   const setAirbyteTheme = (monaco: Monaco) => {
     monaco.editor.defineTheme("airbyte-dark", {
@@ -96,6 +98,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       options={{
         lineNumbersMinChars: lineNumberCharacterWidth ?? 2,
         readOnly: readOnly ?? false,
+        automaticLayout,
         matchBrackets: "always",
         minimap: {
           enabled: false,

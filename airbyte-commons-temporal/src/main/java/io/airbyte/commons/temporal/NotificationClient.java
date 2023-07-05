@@ -12,12 +12,11 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseNotificationWorkflow;
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.validation.json.JsonValidationException;
 import io.temporal.client.WorkflowClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,6 +29,8 @@ public class NotificationClient {
 
   private final FeatureFlagClient featureFlagClient;
   private final WorkflowClient client;
+
+  private static final String SCHEMA_CHANGE_SUBJECT = "Schema Change Detected";
 
   public NotificationClient(final FeatureFlagClient featureFlagClient, WorkflowClient client) {
     this.featureFlagClient = featureFlagClient;
@@ -44,17 +45,19 @@ public class NotificationClient {
    * @param url url to the connection in the airbyte web app
    */
   public void sendSchemaChangeNotification(final UUID connectionId,
+                                           final String sourceName,
                                            final String url,
                                            final boolean containsBreakingChange) {
 
     if (featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId))) {
-      callNotificationWorkflow(connectionId, url, containsBreakingChange);
+      callNotificationWorkflow(connectionId, sourceName, url, containsBreakingChange);
     } else {
       callLegacyWorkflow(connectionId, url);
     }
   }
 
   private void callNotificationWorkflow(final UUID connectionId,
+                                        final String sourceName,
                                         final String url,
                                         final boolean containsBreakingChange) {
     final NotificationWorkflow notificationWorkflow =
@@ -65,14 +68,15 @@ public class NotificationClient {
       message = renderTemplate(
           containsBreakingChange ? "slack/breaking_schema_change_slack_notification_template.txt"
               : "slack/non_breaking_schema_change_slack_notification_template.txt",
-          connectionId.toString(), url);
+          connectionId.toString(), sourceName, url);
 
     } catch (final IOException e) {
       log.error("There was an error while rendering a Schema Change Notification", e);
       throw new RuntimeException(e);
     }
     try {
-      notificationWorkflow.sendNotification(connectionId, "", message, List.of(NotificationType.webhook, NotificationType.customerio));
+      notificationWorkflow.sendNotification(connectionId, SCHEMA_CHANGE_SUBJECT, message,
+          containsBreakingChange ? NotificationEvent.onBreakingChange : NotificationEvent.onNonBreakingChange);
     } catch (final RuntimeException e) {
       log.error("There was an error while sending a Schema Change Notification", e);
       throw e;

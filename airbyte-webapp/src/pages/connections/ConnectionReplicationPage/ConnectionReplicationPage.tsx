@@ -4,6 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
 import EditControls from "components/connection/ConnectionForm/EditControls";
 import {
@@ -31,7 +32,6 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 import { useConnectionService, ValuesProps } from "hooks/services/useConnectionHook";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { equal } from "utils/objects";
 
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -239,7 +239,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                     <EditControls
                       hidden={!status.editControlsVisible}
                       isSubmitting={isSubmitting}
-                      submitDisabled={!isValid}
+                      submitDisabled={!isValid || mode === "readonly"}
                       dirty={dirty}
                       resetForm={async () => {
                         resetForm();

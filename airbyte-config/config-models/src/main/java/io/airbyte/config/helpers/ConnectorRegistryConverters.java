@@ -28,21 +28,12 @@ public class ConnectorRegistryConverters {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
-        .withDockerRepository(def.getDockerRepository())
-        .withDockerImageTag(def.getDockerImageTag())
-        .withDocumentationUrl(def.getDocumentationUrl())
         .withIcon(def.getIcon())
         .withSourceType(toStandardSourceType(def.getSourceType()))
-        .withSpec(def.getSpec())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
-        .withReleaseDate(def.getReleaseDate())
-        .withReleaseStage(def.getReleaseStage())
         .withResourceRequirements(def.getResourceRequirements())
-        .withProtocolVersion(def.getProtocolVersion())
-        .withAllowedHosts(def.getAllowedHosts())
-        .withSuggestedStreams(def.getSuggestedStreams())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
   }
 
@@ -57,21 +48,11 @@ public class ConnectorRegistryConverters {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
-        .withDockerRepository(def.getDockerRepository())
-        .withDockerImageTag(def.getDockerImageTag())
-        .withDocumentationUrl(def.getDocumentationUrl())
         .withIcon(def.getIcon())
-        .withSpec(def.getSpec())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
-        .withReleaseDate(def.getReleaseDate())
-        .withReleaseStage(def.getReleaseStage())
-        .withResourceRequirements(def.getResourceRequirements())
-        .withProtocolVersion(def.getProtocolVersion())
-        .withAllowedHosts(def.getAllowedHosts())
-        .withNormalizationConfig(def.getNormalizationConfig())
-        .withSupportsDbt(def.getSupportsDbt());
+        .withResourceRequirements(def.getResourceRequirements());
   }
 
   /**

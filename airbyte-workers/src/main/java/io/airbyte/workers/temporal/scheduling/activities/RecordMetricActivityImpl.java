@@ -82,6 +82,8 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId());
     if (workspaceId != null) {
       metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId));
+    } else {
+      log.warn("unable to find a workspace for connectionId {}", connectionUpdaterInput.getConnectionId());
     }
     log.debug("generated metric attributes for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
     return metricAttributes;

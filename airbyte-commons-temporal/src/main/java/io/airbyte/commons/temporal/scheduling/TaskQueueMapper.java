@@ -19,4 +19,8 @@ public interface TaskQueueMapper {
     return getTaskQueue(geography, jobType);
   }
 
+  default String getTaskQueueExpanded(Geography geography, TemporalJobType jobType) {
+    return getTaskQueue(geography, jobType);
+  }
+
 }

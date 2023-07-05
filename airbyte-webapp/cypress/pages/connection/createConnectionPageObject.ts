@@ -26,10 +26,14 @@ export const isNewConnectorTypeSelected = (connectorType: ConnectorType) => {
   cy.get(getNewConnectorTypeOption(connectorType)).should("be.checked");
 };
 
+export const getNoStreamsSelectedError = () => cy.contains("Select at least 1 stream to sync.");
 /*
  Route checking
  */
 export const isAtNewConnectionPage = () => cy.url().should("include", `/connections/new-connection`);
+
+export const isAtConnectionConfigurationStep = () =>
+  cy.url().should("include", `/connections/new-connection/configure`);
 export const isAtConnectionOverviewPage = (connectionId: string) =>
   cy.url().should("include", `connections/${connectionId}/status`);
 

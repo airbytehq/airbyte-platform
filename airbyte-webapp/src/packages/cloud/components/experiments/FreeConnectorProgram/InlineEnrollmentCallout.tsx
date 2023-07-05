@@ -5,8 +5,9 @@ import { FormattedMessage } from "react-intl";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useFreeConnectorProgram } from "core/api/cloud";
+
 import { useShowEnrollmentModal } from "./EnrollmentModal";
-import { useFreeConnectorProgram } from "./hooks/useFreeConnectorProgram";
 import styles from "./InlineEnrollmentCallout.module.scss";
 
 export const EnrollLink: React.FC<PropsWithChildren<unknown>> = ({ children }) => {

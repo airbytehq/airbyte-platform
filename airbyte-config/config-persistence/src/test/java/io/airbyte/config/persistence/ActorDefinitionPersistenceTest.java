@@ -10,7 +10,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -19,7 +18,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -139,53 +137,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(allSourceDefinitions, returnedSrcDefsWithTombstone);
   }
 
-  // todo add test for protocol version behavior
-  @Test
-  void testListDestinationDefinitionsWithVersion() throws JsonValidationException, IOException {
-    final List<StandardDestinationDefinition> allDestDefs = List.of(
-        createBaseDestDef().withProtocolVersion(null),
-        createBaseDestDef().withProtocolVersion(null).withSpec(new ConnectorSpecification().withProtocolVersion("0.3.1")),
-        createBaseDestDef().withProtocolVersion("0.4.0").withSpec(new ConnectorSpecification().withProtocolVersion("0.4.1")),
-        createBaseDestDef().withProtocolVersion("0.5.0").withSpec(new ConnectorSpecification()));
-
-    for (final StandardDestinationDefinition destDef : allDestDefs) {
-      configRepository.writeStandardDestinationDefinition(destDef);
-    }
-
-    final List<StandardDestinationDefinition> destinationDefinitions = configRepository.listStandardDestinationDefinitions(false);
-    final List<String> protocolVersions = destinationDefinitions.stream().map(StandardDestinationDefinition::getProtocolVersion).toList();
-    assertEquals(
-        List.of(
-            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
-            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
-            "0.4.0",
-            "0.5.0"),
-        protocolVersions);
-  }
-
-  @Test
-  void testListSourceDefinitionsWithVersion() throws JsonValidationException, IOException {
-    final List<StandardSourceDefinition> allSrcDefs = List.of(
-        createBaseSourceDef().withProtocolVersion(null),
-        createBaseSourceDef().withProtocolVersion(null).withSpec(new ConnectorSpecification().withProtocolVersion("0.6.0")),
-        createBaseSourceDef().withProtocolVersion("0.7.0").withSpec(new ConnectorSpecification().withProtocolVersion("0.7.1")),
-        createBaseSourceDef().withProtocolVersion("0.8.0").withSpec(new ConnectorSpecification()));
-
-    for (final StandardSourceDefinition srcDef : allSrcDefs) {
-      configRepository.writeStandardSourceDefinition(srcDef);
-    }
-
-    final List<StandardSourceDefinition> sourceDefinitions = configRepository.listStandardSourceDefinitions(false);
-    final List<String> protocolVersions = sourceDefinitions.stream().map(StandardSourceDefinition::getProtocolVersion).toList();
-    assertEquals(
-        List.of(
-            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
-            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
-            "0.7.0",
-            "0.8.0"),
-        protocolVersions);
-  }
-
   @Test
   void testDestinationDefinitionWithNullTombstone() throws JsonValidationException, ConfigNotFoundException, IOException {
     assertReturnsDestDef(createBaseDestDef());
@@ -263,31 +214,41 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testUpdateImageTag() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testUpdateAllImageTagsForDeclarativeSourceDefinition() throws JsonValidationException, IOException, ConfigNotFoundException {
     final String targetImageTag = "7.6.5";
 
     final StandardSourceDefinition sourceDef1 = createBaseSourceDef();
     final StandardSourceDefinition sourceDef2 = createBaseSourceDef();
-    sourceDef2.setDockerImageTag(targetImageTag);
     final StandardSourceDefinition sourceDef3 = createBaseSourceDef();
 
-    configRepository.writeStandardSourceDefinition(sourceDef1);
-    configRepository.writeStandardSourceDefinition(sourceDef2);
-    configRepository.writeStandardSourceDefinition(sourceDef3);
+    final ActorDefinitionVersion sourceVer1 = createBaseActorDefVersion(sourceDef1.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVer2 = createBaseActorDefVersion(sourceDef2.getSourceDefinitionId());
+    sourceVer2.setDockerImageTag(targetImageTag);
+    final ActorDefinitionVersion sourceVer3 = createBaseActorDefVersion(sourceDef3.getSourceDefinitionId());
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef1, sourceVer1);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef2, sourceVer2);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef3, sourceVer3);
 
     final int updatedDefinitions = configRepository
         .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
 
     assertEquals(1, updatedDefinitions);
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef1 = configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef1.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef2 = configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef2.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
+    assertEquals(DOCKER_IMAGE_TAG, configRepository.getActorDefinitionVersion(newSourceDef3.getDefaultVersionId()).getDockerImageTag());
   }
 
   @Test
   void testWriteSourceDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
-    final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromSourceDef(sourceDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
 
     configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
 
@@ -306,7 +267,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testWriteDestinationDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
-    final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromDestDef(destinationDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
 
     configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
 
@@ -346,12 +307,17 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     return new StandardSourceDefinition()
         .withName("source-def-" + id)
-        .withDockerRepository("source-image-" + id)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSourceDefinitionId(id)
-        .withProtocolVersion("0.2.0")
         .withTombstone(false)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+  }
+
+  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefId)
+        .withDockerRepository("source-image-" + actorDefId)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withProtocolVersion("0.2.0");
   }
 
   private static StandardSourceDefinition createBaseSourceDefWithoutMaxSecondsBetweenMessages() {
@@ -359,10 +325,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     return new StandardSourceDefinition()
         .withName("source-def-" + id)
-        .withDockerRepository("source-image-" + id)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSourceDefinitionId(id)
-        .withProtocolVersion("0.2.0")
         .withTombstone(false);
   }
 
@@ -371,10 +334,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     return new StandardDestinationDefinition()
         .withName("source-def-" + id)
-        .withDockerRepository("source-image-" + id)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withDestinationDefinitionId(id)
-        .withProtocolVersion("0.2.0")
         .withTombstone(false);
   }
 
@@ -386,37 +346,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withInitialSetupComplete(false)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
-  }
-
-  private static ActorDefinitionVersion createActorDefinitionFromSourceDef(final StandardSourceDefinition sourceDef) {
-    // TODO: This method will go away once we move the version-related objects to the ADV.
-    return new ActorDefinitionVersion()
-        .withActorDefinitionId(sourceDef.getSourceDefinitionId())
-        .withDockerRepository(sourceDef.getDockerRepository())
-        .withDockerImageTag(sourceDef.getDockerImageTag())
-        .withSpec(sourceDef.getSpec())
-        .withAllowedHosts(sourceDef.getAllowedHosts())
-        .withDocumentationUrl(sourceDef.getDocumentationUrl())
-        .withProtocolVersion(sourceDef.getProtocolVersion())
-        .withReleaseDate(sourceDef.getReleaseDate())
-        .withReleaseStage(sourceDef.getReleaseStage())
-        .withSuggestedStreams(sourceDef.getSuggestedStreams());
-  }
-
-  private static ActorDefinitionVersion createActorDefinitionFromDestDef(final StandardDestinationDefinition destDef) {
-    // TODO: This method will go away once we move the version-related objects to the ADV.
-    return new ActorDefinitionVersion()
-        .withActorDefinitionId(destDef.getDestinationDefinitionId())
-        .withDockerRepository(destDef.getDockerRepository())
-        .withDockerImageTag(destDef.getDockerImageTag())
-        .withSpec(destDef.getSpec())
-        .withAllowedHosts(destDef.getAllowedHosts())
-        .withDocumentationUrl(destDef.getDocumentationUrl())
-        .withProtocolVersion(destDef.getProtocolVersion())
-        .withReleaseDate(destDef.getReleaseDate())
-        .withReleaseStage(destDef.getReleaseStage())
-        .withNormalizationConfig(destDef.getNormalizationConfig())
-        .withSupportsDbt(destDef.getSupportsDbt());
   }
 
 }

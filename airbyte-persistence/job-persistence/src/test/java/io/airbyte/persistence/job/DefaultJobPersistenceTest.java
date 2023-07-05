@@ -12,17 +12,14 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -49,7 +46,6 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
@@ -61,8 +57,6 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import io.airbyte.test.utils.DatabaseConnectionHelper;
-import io.airbyte.validation.json.JsonSchemaValidator;
-import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -71,16 +65,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -99,7 +90,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
-@DisplayName("DefaultJobPersistance")
+@DisplayName("DefaultJobPersistence")
 class DefaultJobPersistenceTest {
 
   private static final Instant NOW = Instant.now();
@@ -634,7 +625,7 @@ class DefaultJobPersistenceTest {
       final String stream3 = "s3";
       final String namespace3 = null;
 
-      var streamStatsUpdate0 = List.of(
+      final var streamStatsUpdate0 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
@@ -643,17 +634,17 @@ class DefaultJobPersistenceTest {
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, null, null, 1000L, null, streamStatsUpdate0);
 
-      var streamStatsUpdate1 = List.of(
+      final var streamStatsUpdate1 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, streamStatsUpdate1);
 
-      var streamStatsUpdate2 = List.of(
+      final var streamStatsUpdate2 = List.of(
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
               .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, streamStatsUpdate2);
 
-      var streamStatsUpdate3 = List.of(
+      final var streamStatsUpdate3 = List.of(
           new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
               .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, streamStatsUpdate3);
@@ -685,6 +676,33 @@ class DefaultJobPersistenceTest {
     @DisplayName("Retrieving stats for a bad job attempt input should not cause an exception.")
     void testGetStatsForBadJobAttemptInput() throws IOException {
       assertNotNull(jobPersistence.getAttemptStats(-1, -1));
+    }
+
+    @Test
+    @DisplayName("Combined stats can be retrieved without per stream stats.")
+    void testGetAttemptCombinedStats() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+      final var estimatedRecords = 1234L;
+      final var estimatedBytes = 5678L;
+      final var recordsEmitted = 9012L;
+      final var bytesEmitted = 3456L;
+      final var recordsCommitted = 7890L;
+      final var bytesCommitted = 1234L;
+
+      final var streamStats = List.of(
+          new StreamSyncStats().withStreamName("name1").withStreamNamespace("ns")
+              .withStats(new SyncStats().withBytesEmitted(500L).withRecordsEmitted(500L).withEstimatedBytes(10000L).withEstimatedRecords(2000L)));
+      jobPersistence.writeStats(
+          jobId, attemptNumber, estimatedRecords, estimatedBytes, recordsEmitted, bytesEmitted, recordsCommitted, bytesCommitted, streamStats);
+
+      final SyncStats stats = jobPersistence.getAttemptCombinedStats(jobId, attemptNumber);
+      assertEquals(estimatedRecords, stats.getEstimatedRecords());
+      assertEquals(estimatedBytes, stats.getEstimatedBytes());
+      assertEquals(recordsEmitted, stats.getRecordsEmitted());
+      assertEquals(bytesEmitted, stats.getBytesEmitted());
+      assertEquals(recordsCommitted, stats.getRecordsCommitted());
+      assertEquals(bytesCommitted, stats.getBytesCommitted());
     }
 
   }
@@ -719,45 +737,6 @@ class DefaultJobPersistenceTest {
 
     final Job expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond());
     assertEquals(Optional.of(expected), actual);
-  }
-
-  @Test
-  @DisplayName("Should be able to import database that was exported")
-  void testExportImport() throws IOException, SQLException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-    final int attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH);
-    jobPersistence.failAttempt(jobId, attemptNumber0);
-    final Path secondAttemptLogPath = LOG_PATH.resolve("2");
-    final int attemptNumber1 = jobPersistence.createAttempt(jobId, secondAttemptLogPath);
-    jobPersistence.succeedAttempt(jobId, attemptNumber1);
-
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> inputStreams = jobPersistence.exportDatabase();
-
-    // Collect streams to memory for temporary storage
-    final Map<JobsDatabaseSchema, List<JsonNode>> tempData = new HashMap<>();
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> outputStreams = new HashMap<>();
-    for (final Entry<JobsDatabaseSchema, Stream<JsonNode>> entry : inputStreams.entrySet()) {
-      final List<JsonNode> tableData = entry.getValue().collect(Collectors.toList());
-      tempData.put(entry.getKey(), tableData);
-      outputStreams.put(entry.getKey(), tableData.stream());
-    }
-    resetDb();
-
-    jobPersistence.importDatabase("test", outputStreams);
-
-    final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), 9999, 0);
-    final Job actual = actualList.get(0);
-    final Job expected = createJob(
-        jobId,
-        SPEC_JOB_CONFIG,
-        JobStatus.SUCCEEDED,
-        Lists.newArrayList(
-            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
-            createAttempt(1, jobId, AttemptStatus.SUCCEEDED, secondAttemptLogPath)),
-        NOW.getEpochSecond());
-
-    assertEquals(1, actualList.size());
-    assertEquals(expected, actual);
   }
 
   @Test
@@ -896,43 +875,6 @@ class DefaultJobPersistenceTest {
 
     final Supplier<Instant> timeSupplier = () -> startTime.plusSeconds(intArray[0]++);
     return timeSupplier;
-  }
-
-  @SuppressWarnings("LineLength")
-  @Test
-  @DisplayName("Should have valid yaml schemas in exported database")
-  void testYamlSchemas() throws IOException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-    final int attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH);
-    jobPersistence.failAttempt(jobId, attemptNumber0);
-    final Path secondAttemptLogPath = LOG_PATH.resolve("2");
-    final int attemptNumber1 = jobPersistence.createAttempt(jobId, secondAttemptLogPath);
-    jobPersistence.succeedAttempt(jobId, attemptNumber1);
-    final JsonSchemaValidator jsonSchemaValidator = new JsonSchemaValidator();
-
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> inputStreams = jobPersistence.exportDatabase();
-    inputStreams.forEach((tableSchema, tableStream) -> {
-      final String tableName = tableSchema.name();
-      final JsonNode schema = tableSchema.getTableDefinition();
-      assertNotNull(schema,
-          "Json schema files should be created in airbyte-persistence/job-persistence/src/main/resources/tables for every table in the Database to validate its content");
-      tableStream.forEach(row -> {
-        try {
-          jsonSchemaValidator.ensure(schema, row);
-        } catch (final JsonValidationException e) {
-          fail(String.format("JSON Schema validation failed for %s with record %s", tableName, row.toPrettyString()));
-        }
-      });
-    });
-  }
-
-  @Test
-  void testSecretMigrationMetadata() throws IOException {
-    boolean isMigrated = jobPersistence.isSecretMigrated();
-    assertFalse(isMigrated);
-    jobPersistence.setSecretMigrationDone();
-    isMigrated = jobPersistence.isSecretMigrated();
-    assertTrue(isMigrated);
   }
 
   @Test

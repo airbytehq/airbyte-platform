@@ -2,9 +2,9 @@ import { render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffectOnce } from "react-use";
 
-import { useMockIntersectionObserver } from "test-utils/testutils";
+import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { ModalServiceProvider, useModalService } from "./ModalService";
+import { useModalService } from "./ModalService";
 import { ModalResult } from "./types";
 
 const TestComponent: React.FC<{ onModalResult?: (result: ModalResult<unknown>) => void }> = ({ onModalResult }) => {
@@ -32,9 +32,9 @@ const TestComponent: React.FC<{ onModalResult?: (result: ModalResult<unknown>) =
 
 const renderModal = (resultCallback?: (reason: unknown) => void) => {
   return render(
-    <ModalServiceProvider>
+    <TestWrapper>
       <TestComponent onModalResult={resultCallback} />
-    </ModalServiceProvider>
+    </TestWrapper>
   );
 };
 

@@ -91,7 +91,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-type="text"
                       >
-                        Non-breaking schema updates detected
+                        Detect and propagate schema changes
                         :
                       </p>
                       <p
@@ -281,6 +281,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             <input
                               aria-checked="mixed"
                               class="<removed-for-snapshot-test>"
+                              data-testid="all-streams-sync-switch"
                               id="all-streams-sync-switch"
                               type="checkbox"
                               value=""
@@ -294,6 +295,16 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             data-type="text"
                           >
                             Sync
+                          </p>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            Fields
                           </p>
                         </div>
                         <div
@@ -563,6 +574,26 @@ exports[`ConnectionReplicationPage should render 1`] = `
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                          data-testid="field-selection-status"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-testid="field-selection-status-selected-count"
+                              data-type="text"
+                            >
+                              All
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
                         data-testid="source-namespace-cell"
                       >
                         <span
@@ -695,7 +726,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -741,6 +772,26 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         />
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                          data-testid="field-selection-status"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-testid="field-selection-status-selected-count"
+                              data-type="text"
+                            >
+                              All
+                            </p>
+                          </div>
+                        </div>
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
@@ -876,7 +927,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -921,6 +972,26 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         />
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                          data-testid="field-selection-status"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-testid="field-selection-status-selected-count"
+                              data-type="text"
+                            >
+                              All
+                            </p>
+                          </div>
+                        </div>
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
@@ -1056,7 +1127,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -1120,6 +1191,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
         </form>
       </div>
     </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    />
   </div>
 </body>
 `;
@@ -1200,6 +1274,9 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
         </div>
       </div>
     </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    />
   </div>
 </body>
 `;

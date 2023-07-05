@@ -6,7 +6,9 @@ package io.airbyte.test.utils;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,6 +58,7 @@ import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.OperatorConfiguration;
 import io.airbyte.api.client.model.generated.OperatorNormalization;
 import io.airbyte.api.client.model.generated.OperatorType;
+import io.airbyte.api.client.model.generated.Pagination;
 import io.airbyte.api.client.model.generated.SourceCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId;
@@ -65,6 +68,11 @@ import io.airbyte.api.client.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
+import io.airbyte.api.client.model.generated.StreamStatusRead;
+import io.airbyte.api.client.model.generated.StreamStatusReadList;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
@@ -288,7 +296,7 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(sourceDataSource);
         DataSourceFactory.close(destinationDataSource);
       } catch (final Exception e) {
-        LOGGER.warn("Failed to close data sources: {}", e);
+        LOGGER.warn("Failed to close data sources", e);
       }
     }
 
@@ -350,7 +358,7 @@ public class AirbyteAcceptanceTestHarness {
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
     } catch (final Exception e) {
-      LOGGER.error("Error tearing down test fixtures: {}", e);
+      LOGGER.error("Error tearing down test fixtures", e);
     }
   }
 
@@ -1112,10 +1120,10 @@ public class AirbyteAcceptanceTestHarness {
 
   /**
    * Wait until the sync succeeds by polling the Jobs API.
-   *
+   * <p>
    * NOTE: !!! THIS WILL POTENTIALLY POLL FOREVER !!! so make sure the calling code has a deadline;
    * for example, a test timeout.
-   *
+   * <p>
    * TODO: re-work the collection of polling helpers we have here into a sane set that rely on test
    * timeouts instead of implementing their own deadline logic.
    */
@@ -1129,7 +1137,7 @@ public class AirbyteAcceptanceTestHarness {
         sleep(5000);
         continue; // To the top of the loop.
       } catch (final ApiException e) {
-        LOGGER.info("Failed to query for job info: {}. Retrying...", e);
+        LOGGER.info("Failed to query for job info. Retrying...", e);
         sleep(3000);
         continue; // To the top of the loop.
       }
@@ -1142,7 +1150,7 @@ public class AirbyteAcceptanceTestHarness {
         assertEquals(JobStatus.SUCCEEDED, job.getStatus());
         return; // Don't forget to return!
       } catch (final ApiException e) {
-        LOGGER.info("Caught exception {} while waiting for successful sync. Retrying...", e);
+        LOGGER.info("Caught exception while waiting for successful sync. Retrying...", e);
       }
     }
   }
@@ -1163,7 +1171,7 @@ public class AirbyteAcceptanceTestHarness {
     final boolean exceeded60seconds = count >= 60;
     if (exceeded60seconds) {
       // Fail because taking more than 60seconds to start a job is not expected
-      // Returning the current mostRecencSyncJob here could end up hiding some issues
+      // Returning the current mostRecentSyncJob here could end up hiding some issues
       Assertions.fail("unable to find the next job within 60seconds");
     }
 
@@ -1220,6 +1228,103 @@ public class AirbyteAcceptanceTestHarness {
         .status(connection.getStatus())
         .prefix(connection.getPrefix())
         .skipReset(false);
+  }
+
+  /**
+   * Asserts that all streams associated with the most recent job and attempt for the provided
+   * connection are the in expected state.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that just executed a sync or reset.
+   * @param expectedRunState The expected stream status for each stream in the connection for the most
+   *        recent job and attempt.
+   * @param expectedJobType The expected type of the stream status.
+   * @throws ApiException if unable to retrieve the stream status information via the API.
+   */
+  public void assertStreamStatuses(final UUID workspaceId,
+                                   final UUID connectionId,
+                                   final StreamStatusRunState expectedRunState,
+                                   final StreamStatusJobType expectedJobType)
+      throws ApiException {
+    final JobRead jobRead = getMostRecentSyncJobId(connectionId);
+    final JobInfoRead jobInfo = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(jobRead.getId()));
+    assertStreamStatuses(workspaceId, connectionId, jobInfo.getJob().getId(),
+        jobInfo.getAttempts().size() - 1, expectedRunState, expectedJobType);
+  }
+
+  /**
+   * Asserts that all streams associated with the most recent job and attempt for the provided
+   * connection are the in expected state.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that just executed a sync or reset.
+   * @param jobId The job ID associated with the sync execution.
+   * @param attemptNumber The attempt number associated with the sync execution.
+   * @param expectedRunState The expected stream status for each stream in the connection for the most
+   *        recent job and attempt.
+   * @param expectedJobType The expected type of the stream status.
+   * @throws ApiException if unable to retrieve the stream status information via the API.
+   */
+  public void assertStreamStatuses(final UUID workspaceId,
+                                   final UUID connectionId,
+                                   final Long jobId,
+                                   final Integer attemptNumber,
+                                   final StreamStatusRunState expectedRunState,
+                                   final StreamStatusJobType expectedJobType) {
+    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(workspaceId, connectionId, jobId, attemptNumber);
+    assertNotNull(streamStatuses);
+    final List<StreamStatusRead> filteredStreamStatuses = streamStatuses.stream().filter(s -> expectedJobType.equals(s.getJobType())).collect(
+        Collectors.toList());
+    assertFalse(filteredStreamStatuses.isEmpty());
+    filteredStreamStatuses.forEach(status -> assertEquals(expectedRunState, status.getRunState()));
+
+  }
+
+  /**
+   * Fetches the stream status associated with the provided information, retrying for a set amount of
+   * attempts if the status is currently not available.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that has been executed by a test
+   * @param jobId The job ID associated with the sync execution.
+   * @param attempt The attempt number associated with the sync execution.
+   */
+  private List<StreamStatusRead> fetchStreamStatus(final UUID workspaceId,
+                                                   final UUID connectionId,
+                                                   final Long jobId,
+                                                   final Integer attempt) {
+    List<StreamStatusRead> results = List.of();
+    final StreamStatusListRequestBody streamStatusListRequestBody = new StreamStatusListRequestBody()
+        .connectionId(connectionId)
+        .jobId(jobId)
+        .attemptNumber(attempt)
+        .workspaceId(workspaceId)
+        .pagination(new Pagination().pageSize(100).rowOffset(0));
+
+    int count = 0;
+    while (count < 60 && results.isEmpty()) {
+      LOGGER.debug("Fetching stream status for {}...", streamStatusListRequestBody);
+      try {
+        final StreamStatusReadList result = apiClient.getStreamStatusesApi().getStreamStatuses(streamStatusListRequestBody);
+        if (result != null) {
+          LOGGER.debug("Stream status result for connection {}: {}", connectionId, result);
+          results = result.getStreamStatuses();
+        }
+      } catch (final ApiException e) {
+        LOGGER.info("Unable to call stream status API.", e);
+      }
+      count++;
+
+      if (results.isEmpty()) {
+        try {
+          sleep(5000);
+        } catch (final InterruptedException e) {
+          LOGGER.debug("Failed to sleep.", e);
+        }
+      }
+    }
+
+    return results;
   }
 
 }

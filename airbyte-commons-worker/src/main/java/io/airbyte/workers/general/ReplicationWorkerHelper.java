@@ -7,10 +7,11 @@ package io.airbyte.workers.general;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
@@ -19,7 +20,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
@@ -71,13 +70,12 @@ class ReplicationWorkerHelper {
   private final AirbyteMapper mapper;
   private final MessageTracker messageTracker;
   private final SyncPersistence syncPersistence;
-  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
-  private ReplicationFeatureFlags replicationFeatureFlags = null;
+  private ReplicationFeatureFlags replicationFeatureFlags = null; // NOPMD - keeping this as a placeholder
   private WorkerDestinationConfig destinationConfig = null;
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
@@ -92,7 +90,6 @@ class ReplicationWorkerHelper {
                                  final AirbyteMapper mapper,
                                  final MessageTracker messageTracker,
                                  final SyncPersistence syncPersistence,
-                                 final ConnectorConfigUpdater connectorConfigUpdater,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                  final ThreadedTimeTracker timeTracker) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
@@ -100,7 +97,6 @@ class ReplicationWorkerHelper {
     this.mapper = mapper;
     this.messageTracker = messageTracker;
     this.syncPersistence = syncPersistence;
-    this.connectorConfigUpdater = connectorConfigUpdater;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
     this.timeTracker = timeTracker;
 
@@ -128,7 +124,7 @@ class ReplicationWorkerHelper {
 
     try {
       destination.start(destinationConfig, jobRoot);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException(e);
     }
   }
@@ -139,17 +135,16 @@ class ReplicationWorkerHelper {
       fieldSelector.populateFields(sourceConfig.getCatalog());
       timeTracker.trackSourceReadStartTime();
       source.start(sourceConfig, jobRoot);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   public void endOfReplication() {
     // Publish a complete status event for all streams associated with the connection.
-    // This is to ensure that all streams end up in a complete state and is necessary for
+    // This is to ensure that all streams end up in a terminal state and is necessary for
     // connections with destinations that do not emit messages to trigger the completion.
-    replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+    publishEndOfReplicationStreamStatusEvent();
     timeTracker.trackReplicationEndTime();
   }
 
@@ -164,7 +159,7 @@ class ReplicationWorkerHelper {
   public void endOfDestination() {
     // Publish the completed state for the last stream, if present
     final StreamDescriptor currentStream = getCurrentDestinationStream();
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && currentStream != null) {
+    if (currentStream != null) {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
@@ -184,10 +179,8 @@ class ReplicationWorkerHelper {
    *        the reported incomplete replication event.
    */
   private void handleReplicationFailure(final AirbyteMessageOrigin failureOrigin, final Supplier<StreamDescriptor> streamSupplier) {
-    if (replicationFeatureFlags.shouldHandleStreamStatus()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(),
-          replicationContext, failureOrigin);
-    }
+    replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(), replicationContext, failureOrigin,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   /**
@@ -196,7 +189,7 @@ class ReplicationWorkerHelper {
    *
    */
   private void handleStreamStatusFailure() {
-    handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, () -> null);
+    handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, StreamDescriptor::new);
   }
 
   public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {
@@ -207,17 +200,9 @@ class ReplicationWorkerHelper {
 
     messageTracker.acceptFromSource(message);
 
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(airbyteMessage)) {
+    if (shouldPublishMessage(airbyteMessage)) {
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
-    } else {
-      try {
-        if (message.getType() == Type.CONTROL) {
-          acceptSrcControlMessage(replicationContext.sourceId(), message.getControl());
-        }
-      } catch (final Exception e) {
-        LOGGER.error("Error updating source configuration", e);
-      }
     }
 
     recordsRead += 1;
@@ -240,28 +225,20 @@ class ReplicationWorkerHelper {
 
     // If the worker has moved on to the next stream, ensure that a completed status is sent
     // for the previously tracked stream.
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && previousStream != null && !previousStream.equals(currentDestinationStream)) {
+    if (previousStream != null && !previousStream.equals(currentDestinationStream)) {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentDestinationStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
 
     messageTracker.acceptFromDestination(message);
-    if (replicationFeatureFlags.shouldCommitStateAsap() && message.getType() == Type.STATE) {
+    if (message.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), message.getState());
     }
 
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(message)) {
+    if (shouldPublishMessage(message)) {
       LOGGER.debug("Publishing destination event for stream {}:{}...", currentDestinationStream.getNamespace(), currentDestinationStream.getName());
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, message, replicationContext));
-    } else {
-      try {
-        if (message.getType() == Type.CONTROL) {
-          acceptDstControlMessage(replicationContext.destinationId(), message.getControl());
-        }
-      } catch (final Exception e) {
-        LOGGER.error("Error updating destination configuration", e);
-      }
     }
   }
 
@@ -269,7 +246,11 @@ class ReplicationWorkerHelper {
     return currentDestinationStream;
   }
 
-  public ReplicationOutput getReplicationOutput()
+  public ReplicationOutput getReplicationOutput() throws JsonProcessingException {
+    return getReplicationOutput(null);
+  }
+
+  public ReplicationOutput getReplicationOutput(final PerformanceMetrics performanceMetrics)
       throws JsonProcessingException {
     final ReplicationStatus outputStatus;
     // First check if the process was cancelled. Cancellation takes precedence over failures.
@@ -300,7 +281,8 @@ class ReplicationWorkerHelper {
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
-        .withEndTime(System.currentTimeMillis());
+        .withEndTime(System.currentTimeMillis())
+        .withPerformanceMetrics(performanceMetrics);
 
     final ReplicationOutput output = new ReplicationOutput()
         .withReplicationAttemptSummary(summary)
@@ -346,17 +328,18 @@ class ReplicationWorkerHelper {
     return failures;
   }
 
-  private void acceptSrcControlMessage(final UUID sourceId,
-                                       final AirbyteControlMessage controlMessage) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateSource(sourceId, controlMessage.getConnectorConfig().getConfig());
-    }
-  }
-
-  private void acceptDstControlMessage(final UUID destinationId,
-                                       final AirbyteControlMessage controlMessage) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateDestination(destinationId, controlMessage.getConnectorConfig().getConfig());
+  private void publishEndOfReplicationStreamStatusEvent() {
+    /*
+     * If the sync has been cancelled, publish an incomplete event so that any streams in a non-terminal
+     * status will be moved to incomplete/cancelled. Otherwise, publish a complete event to move those
+     * streams to a complete status.
+     */
+    if (cancelled.get()) {
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(new StreamDescriptor(), replicationContext,
+          AirbyteMessageOrigin.INTERNAL, Optional.of(StreamStatusIncompleteRunCause.CANCELED));
+    } else {
+      replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
+          AirbyteMessageOrigin.INTERNAL);
     }
   }
 

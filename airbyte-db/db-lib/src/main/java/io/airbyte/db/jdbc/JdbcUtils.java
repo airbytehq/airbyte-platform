@@ -19,6 +19,7 @@ public class JdbcUtils {
   public static final String USERNAME_KEY = "username";
   public static final String PASSWORD_KEY = "password";
   public static final String SSL_KEY = "ssl";
+  public static final String JDBC_URL_PARAMS = "jdbc_url_params";
 
   private static final JSONFormat defaultJSONFormat = new JSONFormat().recordFormat(JSONFormat.RecordFormat.OBJECT);
 

@@ -5,8 +5,8 @@ import { useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 
-import { useCurrentWorkspaceId, useGetWorkspace } from "services/workspaces/WorkspacesService";
-import { downloadFile, fileizeString } from "utils/file";
+import { useCurrentWorkspace } from "core/api";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
 
 import { CleanedLogLines } from "./useCleanLogs";
 
@@ -17,11 +17,11 @@ interface DownloadButtonProps {
 
 export const DownloadLogsButton: React.FC<DownloadButtonProps> = ({ logLines, fileName }) => {
   const { formatMessage } = useIntl();
-  const { name } = useGetWorkspace(useCurrentWorkspaceId());
+  const { name } = useCurrentWorkspace();
 
   const downloadFileWithLogs = () => {
     const file = new Blob([logLines.map((logLine) => logLine.text).join("\n")], {
-      type: "text/plain;charset=utf-8",
+      type: FILE_TYPE_DOWNLOAD,
     });
     downloadFile(file, fileizeString(`${name}-${fileName}.txt`));
   };

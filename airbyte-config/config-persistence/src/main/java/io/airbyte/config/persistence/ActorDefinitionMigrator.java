@@ -4,8 +4,6 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
@@ -20,8 +18,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.SeedActorDefinitionVersions;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -121,36 +117,8 @@ public class ActorDefinitionMigrator {
   }
 
   /**
-   * The custom connector are not present in the seed and thus it is not relevant to validate their
-   * latest version. This method allows to filter them out.
-   *
-   * @param connectorRepositoryToIdVersionMap connector docker image to connector info
-   * @param configType airbyte config type
-   * @return map of docker image to connector info
-   */
-  @VisibleForTesting
-  Map<String, ConnectorInfo> filterCustomConnector(final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
-                                                   final AirbyteConfig configType) {
-    return connectorRepositoryToIdVersionMap.entrySet().stream()
-        // The validation is based on the of the connector name is based on the seed which doesn't contain
-        // any custom connectors. They can thus be
-        // filtered out.
-        .filter(entry -> {
-          if (configType == ConfigSchema.STANDARD_SOURCE_DEFINITION) {
-            return !Jsons.object(entry.getValue().definition, StandardSourceDefinition.class).getCustom();
-          } else if (configType == ConfigSchema.STANDARD_DESTINATION_DEFINITION) {
-            return !Jsons.object(entry.getValue().definition, StandardDestinationDefinition.class).getCustom();
-          } else {
-            return true;
-          }
-        })
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
-  /**
    * Update connector definitions with new batch.
    *
-   * @param ctx db context
    * @param configType airbyte config type
    * @param latestDefinitions latest definitions
    * @param connectorRepositoriesInUse when a connector is used in any standard sync, its definition
@@ -168,7 +136,7 @@ public class ActorDefinitionMigrator {
                                                   final Set<String> connectorRepositoriesInUse,
                                                   final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
                                                   final boolean updateAll)
-      throws IOException, JsonValidationException {
+      throws IOException {
     int newCount = 0;
     int updatedCount = 0;
 
@@ -176,11 +144,8 @@ public class ActorDefinitionMigrator {
       final JsonNode latestRegistryDefinitionJson = Jsons.jsonNode(latestRegistryDefinition);
       final String repository = latestRegistryDefinitionJson.get("dockerRepository").asText();
 
-      final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMapWithoutCustom = filterCustomConnector(connectorRepositoryToIdVersionMap,
-          configType);
-
       // Add new connector
-      if (!connectorRepositoryToIdVersionMapWithoutCustom.containsKey(repository)) {
+      if (!connectorRepositoryToIdVersionMap.containsKey(repository)) {
         LOGGER.info("Adding new connector {}: {}", repository, latestRegistryDefinitionJson);
         writeOrUpdateConnectorRegistryDefinition(configType, latestRegistryDefinition);
         newCount++;
@@ -188,7 +153,7 @@ public class ActorDefinitionMigrator {
       }
 
       // Handle existing connectors
-      final ConnectorInfo connectorInfo = connectorRepositoryToIdVersionMapWithoutCustom.get(repository);
+      final ConnectorInfo connectorInfo = connectorRepositoryToIdVersionMap.get(repository);
       final String latestImageTag = latestRegistryDefinitionJson.get("dockerImageTag").asText();
       final boolean connectorIsInUse = connectorRepositoriesInUse.contains(repository);
 
@@ -216,31 +181,23 @@ public class ActorDefinitionMigrator {
 
   private <T> void writeOrUpdateConnectorRegistryDefinition(final AirbyteConfig configType,
                                                             final T definition)
-      throws IOException, JsonValidationException {
+      throws IOException {
     if (configType == ConfigSchema.STANDARD_SOURCE_DEFINITION) {
       final ConnectorRegistrySourceDefinition registryDef = (ConnectorRegistrySourceDefinition) definition;
       registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
 
       final StandardSourceDefinition stdSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(registryDef);
 
-      if (featureFlagClient.boolVariation(SeedActorDefinitionVersions.INSTANCE, new Workspace(ANONYMOUS))) {
-        final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
-        configRepository.writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion);
-      } else {
-        configRepository.writeStandardSourceDefinition(stdSourceDef);
-      }
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion);
     } else if (configType == ConfigSchema.STANDARD_DESTINATION_DEFINITION) {
       final ConnectorRegistryDestinationDefinition registryDef = (ConnectorRegistryDestinationDefinition) definition;
       registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
 
       final StandardDestinationDefinition stdDestDef = ConnectorRegistryConverters.toStandardDestinationDefinition(registryDef);
 
-      if (featureFlagClient.boolVariation(SeedActorDefinitionVersions.INSTANCE, new Workspace(ANONYMOUS))) {
-        final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
-        configRepository.writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion);
-      } else {
-        configRepository.writeStandardDestinationDefinition(stdDestDef);
-      }
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion);
     } else {
       throw new IllegalArgumentException(UNKNOWN_CONFIG_TYPE + configType);
     }
@@ -273,15 +230,13 @@ public class ActorDefinitionMigrator {
   static class ConnectorInfo {
 
     final String definitionId;
-    final JsonNode definition;
     final String dockerRepository;
     final String dockerImageTag;
 
-    ConnectorInfo(final String definitionId, final JsonNode definition) {
+    ConnectorInfo(final String definitionId, final String dockerRepository, final String dockerImageTag) {
       this.definitionId = definitionId;
-      this.definition = definition;
-      dockerRepository = definition.get("dockerRepository").asText();
-      dockerImageTag = definition.get("dockerImageTag").asText();
+      this.dockerRepository = dockerRepository;
+      this.dockerImageTag = dockerImageTag;
     }
 
     @Override

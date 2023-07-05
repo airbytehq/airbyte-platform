@@ -7,7 +7,6 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
@@ -74,6 +73,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final ExecutorService executors;
   private final AtomicBoolean cancelled;
   private final AtomicBoolean hasFailed;
+  private final AtomicBoolean shouldStop;
   private final RecordSchemaValidator recordSchemaValidator;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
   private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
@@ -87,7 +87,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final SyncPersistence syncPersistence,
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final FieldSelector fieldSelector,
-                                  final ConnectorConfigUpdater connectorConfigUpdater,
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -95,7 +94,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
@@ -106,6 +105,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
+    this.shouldStop = new AtomicBoolean(false);
   }
 
   /**
@@ -139,11 +139,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
               attempt, syncInput.getWorkspaceId());
       ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationContext, syncInput);
-      LOGGER.info("Committing states from " + (flags.shouldCommitStateAsap() ? "replication" : "persistState") + " activity");
-      if (flags.shouldCommitStatsAsap()) {
-        LOGGER.info("Committing stats from replication activity");
-      }
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
       replicationWorkerHelper.initialize(replicationContext, flags);
 
       replicate(jobRoot, syncInput);
@@ -169,7 +165,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, mdc),
+          readFromDstRunnable(destination, shouldStop, cancelled, replicationWorkerHelper, mdc),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -182,6 +178,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           source,
           destination,
           replicationWorkerHelper,
+          shouldStop,
           cancelled,
           mdc), executors)
           .whenComplete((msg, ex) -> {
@@ -207,7 +204,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       CompletableFuture.allOf(readSrcAndWriteDstThread, readFromDstThread).get();
       LOGGER.info("Source and destination threads complete.");
 
-      replicationWorkerHelper.endOfReplication();
+      if (!cancelled.get()) {
+        replicationWorkerHelper.endOfReplication();
+      }
     } catch (final Exception e) {
       hasFailed.set(true);
       replicationWorkerHelper.markFailed();
@@ -220,6 +219,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
+                                              final AtomicBoolean shouldStop,
                                               final AtomicBoolean cancelled,
                                               final ReplicationWorkerHelper replicationWorkerHelper,
                                               final Map<String, String> mdc) {
@@ -227,7 +227,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
       try {
-        while (!cancelled.get() && !destination.isFinished()) {
+        while (!shouldStop.get() && !cancelled.get() && !destination.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = destination.attemptRead();
@@ -265,6 +265,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromSrcAndWriteToDstRunnable(final AirbyteSource source,
                                                            final AirbyteDestination destination,
                                                            final ReplicationWorkerHelper replicationWorkerHelper,
+                                                           final AtomicBoolean shouldStop,
                                                            final AtomicBoolean cancelled,
                                                            final Map<String, String> mdc) {
     return () -> {
@@ -272,7 +273,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Replication thread started.");
 
       try {
-        while (!cancelled.get() && !source.isFinished()) {
+        while (!shouldStop.get() && !cancelled.get() && !source.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = source.attemptRead();
@@ -315,6 +316,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
         }
       } catch (final Exception e) {
+        // If we exit this function with an exception, we should assume failure and stop the other thread.
+        shouldStop.set(true);
+
         if (!cancelled.get()) {
           // Although this thread is closed first, it races with the source's closure and can attempt one
           // final read after the source is closed before it's terminated.
@@ -361,6 +365,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.info("Error cancelling source: ", e);
     }
+
+    replicationWorkerHelper.endOfReplication();
   }
 
 }

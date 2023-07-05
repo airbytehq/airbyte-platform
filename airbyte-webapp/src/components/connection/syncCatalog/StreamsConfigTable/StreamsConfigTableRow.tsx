@@ -56,7 +56,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   disabled,
   configErrors,
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
   const { defaultCursorField } = stream.stream ?? {};
   const syncSchema = useMemo(

@@ -1,7 +1,7 @@
 import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import React from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -9,6 +9,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import { Action, Namespace } from "core/services/analytics";
@@ -87,14 +88,21 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
-            <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
+            <BuilderField
+              type="array"
+              path={streamFieldPath("primaryKey")}
+              label="Primary key"
+              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              directionalStyle={false}
+              optional
+            />
           </BuilderCard>
+          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
         </>
       ) : (
         <BuilderCard className={styles.schemaEditor}>
@@ -124,15 +132,11 @@ const StreamControls = ({
   const { setValue } = useFormContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setSelectedView } = useConnectorBuilderFormState();
-  const { streamRead: readStream } = useConnectorBuilderTestRead();
-  const schemaPath = streamFieldPath("schema");
-  const schema = useBuilderWatch(schemaPath);
+  const {
+    schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+  } = useConnectorBuilderTestRead();
   const { errors } = useFormState({ name: streamFieldPath("schema") });
   const error = get(errors, streamFieldPath("schema"));
-  const formattedDetectedSchema = useMemo(
-    () => readStream.data?.inferred_schema && formatJson(readStream.data?.inferred_schema, true),
-    [readStream.data?.inferred_schema]
-  );
   const hasSchemaErrors = Boolean(error);
 
   const handleDelete = () => {
@@ -169,7 +173,8 @@ const StreamControls = ({
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
         showErrorIndicator={hasSchemaErrors}
-        showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema !== formattedDetectedSchema)}
+        showSchemaConflictIndicator={schemaDifferences && !streams[streamNum].autoImportSchema}
+        schemaErrors={incompatibleSchemaErrors}
       />
       <AddStreamButton
         onAddStream={(addedStreamNum) => {
@@ -196,6 +201,7 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
+  schemaErrors,
   "data-testid": testId,
 }: {
   selected: boolean;
@@ -203,6 +209,7 @@ const StreamTab = ({
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
+  schemaErrors?: string[];
   "data-testid": string;
 }) => (
   <button
@@ -213,12 +220,14 @@ const StreamTab = ({
   >
     <Text>{label}</Text>
     {showErrorIndicator && <Indicator />}
-    {showSchemaConflictIndicator && <SchemaConflictIndicator />}
+    {showSchemaConflictIndicator && <SchemaConflictIndicator errors={schemaErrors} />}
   </button>
 );
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const analyticsService = useAnalyticsService();
+  const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
+  const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
   const schema = useBuilderWatch(schemaFieldPath);
   const { setValue } = useFormContext();
@@ -227,10 +236,16 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const error = get(errors, path);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
-  const showImportButton = isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
+  const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
 
   return (
     <>
+      <BuilderField
+        label="Automatically import detected schema"
+        path={autoImportSchemaFieldPath}
+        type="boolean"
+        tooltip="Automatically sets the declared schema to the schema that is detected when clicking Test for this stream.<br></br>Disable this in order to manually edit the schema."
+      />
       {showImportButton && (
         <Button
           full
@@ -249,15 +264,24 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
         </Button>
       )}
       <div className={styles.editorContainer}>
-        <CodeEditor
-          key={schemaFieldPath}
-          value={schema || ""}
-          language="json"
-          theme="airbyte-light"
-          onChange={(val: string | undefined) => {
-            setValue(path, val);
-          }}
-        />
+        {autoImportSchema ? (
+          <Pre>{schema}</Pre>
+        ) : (
+          <CodeEditor
+            key={schemaFieldPath}
+            value={schema || ""}
+            language="json"
+            automaticLayout
+            theme="airbyte-light"
+            onChange={(val: string | undefined) => {
+              setValue(path, val, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+        )}
       </div>
       {error && (
         <Text className={styles.errorMessage}>

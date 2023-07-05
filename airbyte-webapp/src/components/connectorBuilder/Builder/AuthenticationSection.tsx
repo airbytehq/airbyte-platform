@@ -1,5 +1,4 @@
-import { ControlLabels } from "components/LabeledControl";
-
+import { OAuthAuthenticatorRefreshTokenUpdater } from "core/request/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "utils/links";
@@ -11,22 +10,25 @@ import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
 import { KeyValueListField } from "./KeyValueListField";
+import { RequestOptionFields } from "./RequestOptionFields";
+import { ToggleGroupField } from "./ToggleGroupField";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
   BEARER_AUTHENTICATOR,
+  extractInterpolatedConfigKey,
   inferredAuthValues,
+  OAUTH_ACCESS_TOKEN_INPUT,
   OAUTH_AUTHENTICATOR,
+  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   useBuilderWatch,
 } from "../types";
 
 export const AuthenticationSection: React.FC = () => {
   const analyticsService = useAnalyticsService();
 
-  const grantType = useBuilderWatch("global.authenticator.grant_type");
-
   return (
-    <BuilderCard docLink={links.connectorBuilderAuthentication} label={<ControlLabels label="Authentication" />}>
+    <BuilderCard docLink={links.connectorBuilderAuthentication} label="Authentication">
       <BuilderOneOf
         path="global.authenticator"
         label="Method"
@@ -50,15 +52,15 @@ export const AuthenticationSection: React.FC = () => {
             typeValue: API_KEY_AUTHENTICATOR,
             default: {
               ...inferredAuthValues("ApiKeyAuthenticator"),
-              header: "",
+              inject_into: {
+                type: "RequestOption",
+                inject_into: "header",
+                field_name: "",
+              },
             },
             children: (
               <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.header"
-                  manifestPath="ApiKeyAuthenticator.properties.header"
-                />
+                <RequestOptionFields path="global.authenticator.inject_into" descriptor="token" excludePathInjection />
                 <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
               </>
             ),
@@ -93,59 +95,85 @@ export const AuthenticationSection: React.FC = () => {
               token_refresh_endpoint: "",
               grant_type: "refresh_token",
             },
-            children: (
-              <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.token_refresh_endpoint"
-                  manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
-                />
-                <BuilderField
-                  type="enum"
-                  path="global.authenticator.grant_type"
-                  options={["refresh_token", "client_credentials"]}
-                  manifestPath="OAuthAuthenticator.properties.grant_type"
-                />
-                <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
-                <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
-                {grantType === "refresh_token" && (
-                  <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
-                )}
-                <BuilderOptional>
-                  <BuilderField
-                    type="array"
-                    path="global.authenticator.scopes"
-                    optional
-                    manifestPath="OAuthAuthenticator.properties.scopes"
-                  />
-                  <BuilderFieldWithInputs
-                    type="string"
-                    path="global.authenticator.token_expiry_date_format"
-                    optional
-                    manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
-                  />
-                  <BuilderFieldWithInputs
-                    type="string"
-                    path="global.authenticator.expires_in_name"
-                    optional
-                    manifestPath="OAuthAuthenticator.properties.expires_in_name"
-                  />
-                  <BuilderFieldWithInputs
-                    type="string"
-                    path="global.authenticator.access_token_name"
-                    optional
-                    manifestPath="OAuthAuthenticator.properties.access_token_name"
-                  />
-                  <KeyValueListField
-                    path="global.authenticator.refresh_request_body"
-                    manifestPath="OAuthAuthenticator.properties.refresh_request_body"
-                  />
-                </BuilderOptional>
-              </>
-            ),
+            children: <OAuthForm />,
           },
         ]}
       />
     </BuilderCard>
+  );
+};
+
+const OAuthForm = () => {
+  const grantType = useBuilderWatch("global.authenticator.grant_type");
+  const refreshToken = useBuilderWatch("global.authenticator.refresh_token");
+  return (
+    <>
+      <BuilderFieldWithInputs
+        type="string"
+        path="global.authenticator.token_refresh_endpoint"
+        manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
+      />
+      <BuilderField
+        type="enum"
+        path="global.authenticator.grant_type"
+        options={["refresh_token", "client_credentials"]}
+        manifestPath="OAuthAuthenticator.properties.grant_type"
+      />
+      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
+      <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
+      {grantType === "refresh_token" && (
+        <>
+          <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
+          <ToggleGroupField<OAuthAuthenticatorRefreshTokenUpdater>
+            label="Overwrite config with refresh token response"
+            tooltip="If enabled, the refresh token response will overwrite the current OAuth config. This is useful if requesting a new access token invalidates the old refresh token."
+            fieldPath="global.authenticator.refresh_token_updater"
+            initialValues={{
+              refresh_token_name: "",
+              access_token_config_path: [OAUTH_ACCESS_TOKEN_INPUT],
+              refresh_token_config_path: [extractInterpolatedConfigKey(refreshToken) || ""],
+              token_expiry_date_config_path: [OAUTH_TOKEN_EXPIRY_DATE_INPUT],
+            }}
+          >
+            <BuilderField
+              type="string"
+              path="global.authenticator.refresh_token_updater.refresh_token_name"
+              optional
+              manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
+            />
+          </ToggleGroupField>
+        </>
+      )}
+      <BuilderOptional>
+        <BuilderField
+          type="array"
+          path="global.authenticator.scopes"
+          optional
+          manifestPath="OAuthAuthenticator.properties.scopes"
+        />
+        <BuilderFieldWithInputs
+          type="string"
+          path="global.authenticator.token_expiry_date_format"
+          optional
+          manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
+        />
+        <BuilderFieldWithInputs
+          type="string"
+          path="global.authenticator.expires_in_name"
+          optional
+          manifestPath="OAuthAuthenticator.properties.expires_in_name"
+        />
+        <BuilderFieldWithInputs
+          type="string"
+          path="global.authenticator.access_token_name"
+          optional
+          manifestPath="OAuthAuthenticator.properties.access_token_name"
+        />
+        <KeyValueListField
+          path="global.authenticator.refresh_request_body"
+          manifestPath="OAuthAuthenticator.properties.refresh_request_body"
+        />
+      </BuilderOptional>
+    </>
   );
 };

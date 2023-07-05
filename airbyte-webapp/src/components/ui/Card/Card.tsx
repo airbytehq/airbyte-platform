@@ -15,6 +15,7 @@ export interface CardProps {
   lightPadding?: boolean;
   withPadding?: boolean;
   roundedBottom?: boolean;
+  inset?: boolean;
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
@@ -26,12 +27,14 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
   lightPadding,
   withPadding,
   roundedBottom,
+  inset = false,
   ...restProps
 }) => (
   <div
     className={classNames(className, styles.container, {
       [styles.fullWidth]: fullWidth,
       [styles.withPadding]: withPadding,
+      [styles.inset]: inset,
     })}
     {...restProps}
   >

@@ -29,6 +29,7 @@ import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCheckConnectionWorker.class);
+  private static final String SECTION_NAME = "CHECK";
 
   private final IntegrationLauncher integrationLauncher;
   private final ConnectorConfigUpdater connectorConfigUpdater;
@@ -61,7 +63,7 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public ConnectorJobOutput run(final StandardCheckConnectionInput input, final Path jobRoot) throws WorkerException {
-    LineGobbler.startSection("CHECK");
+    LineGobbler.startSection(SECTION_NAME);
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ROOT_KEY, jobRoot));
 
     try {
@@ -117,13 +119,19 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
       } else if (failureReason.isEmpty()) {
         WorkerUtils.throwWorkerException("Error checking connection status: no status nor failure reason were outputted", process);
       }
-      LineGobbler.endSection("CHECK");
+      LineGobbler.endSection(SECTION_NAME);
       return jobOutput;
 
+    } catch (final IOException e) {
+      ApmTraceUtils.addExceptionToTrace(e);
+      final String errorMessage = String.format("Lost connection to the %s: ", input.getActorType());
+      LOGGER.error(errorMessage, e);
+      LineGobbler.endSection(SECTION_NAME);
+      throw new WorkerException(errorMessage, e);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Unexpected error while checking connection: ", e);
-      LineGobbler.endSection("CHECK");
+      LineGobbler.endSection(SECTION_NAME);
       throw new WorkerException("Unexpected error while getting checking connection.", e);
     }
   }

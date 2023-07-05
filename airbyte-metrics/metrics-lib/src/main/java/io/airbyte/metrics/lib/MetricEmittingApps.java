@@ -21,12 +21,13 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum MetricEmittingApps implements MetricEmittingApp {
 
+  CRON("cron"),
   METRICS_REPORTER("metrics-reporter"),
   ORCHESTRATOR("orchestrator"),
   SERVER("server"),
   WORKER("worker");
 
-  private String applicationName;
+  private final String applicationName;
 
   @Override
   public String getApplicationName() {

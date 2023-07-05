@@ -30,12 +30,12 @@ function replacer(_key: unknown, value: unknown) {
 const DebugView = () => {
   const values = useWatch();
   // need to destructure to subscribe to changes
-  const { dirtyFields, errors, touchedFields } = useFormState();
+  const { dirtyFields, errors, touchedFields, isValid, isDirty } = useFormState();
 
   return (
     <>
       <pre>{JSON.stringify(values, null, 2)}</pre>
-      <pre>{JSON.stringify({ dirtyFields, errors, touchedFields }, replacer, 2)}</pre>
+      <pre>{JSON.stringify({ dirtyFields, errors, touchedFields, isValid, isDirty }, replacer, 2)}</pre>
     </>
   );
 };

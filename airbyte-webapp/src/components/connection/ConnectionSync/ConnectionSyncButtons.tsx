@@ -58,6 +58,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant="secondary"
             className={buttonClassName}
             isLoading={resetStarting}
+            data-testid="manual-reset-button"
             disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             <FormattedMessage id="connection.resetData" />

@@ -1,4 +1,4 @@
-import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
+import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
 
 import { getTestId, getTestIds } from "utils/selectors";
 
@@ -108,7 +108,7 @@ export class StreamDetailsPageObject {
     cy.get(streamName).should("contain.text", value);
   }
 
-  isSyncMode(sourceSyncMode: SourceSyncMode, destSyncMode: DestinationSyncMode) {
+  isSyncMode(sourceSyncMode: SyncMode, destSyncMode: DestinationSyncMode) {
     cy.get(syncMode).should(
       "contain.text",
       `${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`

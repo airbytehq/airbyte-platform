@@ -1,9 +1,12 @@
+import { ConnectionStatus, WebBackendConnectionRead } from "@src/core/api/generated/AirbyteClient.schemas";
+import { WebBackendConnectionCreate, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
+
 import {
   selectSchedule,
   setupDestinationNamespaceSourceFormat,
   enterConnectionName,
 } from "pages/connection/connectionFormPageObject";
-import { openAddSource } from "pages/destinationPage";
+import { openCreateConnection } from "pages/destinationPage";
 
 import {
   getConnectionCreateRequest,
@@ -17,7 +20,6 @@ import {
   requestSourceDiscoverSchema,
   requestWorkspaceId,
 } from "./api";
-import { Connection, ConnectionCreateRequestBody, Destination, Source } from "./api/types";
 import { appendRandomString, submitButtonClick } from "./common";
 import { createLocalJsonDestination, createPostgresDestination } from "./destination";
 import { createDummyApiSource, createPokeApiSource, createPostgresSource } from "./source";
@@ -58,7 +60,9 @@ export const createTestConnection = (sourceName: string, destinationName: string
   // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(5000);
 
-  openAddSource();
+  cy.get("a[data-testid='connections-step']").click();
+  openCreateConnection();
+
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema");
   enterConnectionName("Connection name");
@@ -74,20 +78,24 @@ export const startManualSync = () => {
   cy.get("[data-testid='manual-sync-button']").click();
 };
 
+export const startManualReset = () => {
+  cy.get("[data-testid='manual-reset-button']").click();
+  cy.get("[data-id='reset']").click();
+};
+
 export const createPokeApiSourceViaApi = () => {
-  let source: Source;
-  const mySource = requestWorkspaceId().then(() => {
+  let source: SourceRead;
+  return requestWorkspaceId().then(() => {
     const sourceRequestBody = getPokeApiCreateSourceBody(appendRandomString("PokeAPI Source"), "luxray");
     requestCreateSource(sourceRequestBody).then((sourceResponse) => {
       source = sourceResponse;
     });
     return source;
   });
-  return mySource;
 };
 
 export const createPostgresSourceViaApi = () => {
-  let source: Source;
+  let source: SourceRead;
   const mySource = requestWorkspaceId().then(() => {
     const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Postgres Source"));
     requestCreateSource(sourceRequestBody).then((sourceResponse) => {
@@ -99,41 +107,51 @@ export const createPostgresSourceViaApi = () => {
 };
 
 export const createJsonDestinationViaApi = () => {
-  let destination: Destination;
-  const myDestination = requestWorkspaceId().then(() => {
+  let destination: DestinationRead;
+  return requestWorkspaceId().then(() => {
     const destinationRequestBody = getLocalJSONCreateDestinationBody(appendRandomString("Local JSON Destination"));
     requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
       destination = destinationResponse;
     });
     return destination;
   });
-  return myDestination;
 };
 
 export const createPostgresDestinationViaApi = () => {
-  let destination: Destination;
-  const myDestination = requestWorkspaceId().then(() => {
+  let destination: DestinationRead;
+  return requestWorkspaceId().then(() => {
     const destinationRequestBody = getPostgresCreateDestinationBody(appendRandomString("Postgres Destination"));
     requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
       destination = destinationResponse;
     });
     return destination;
   });
-  return myDestination;
 };
 
-export const createNewConnectionViaApi = (source: Source, destination: Destination) => {
-  let connection: Connection;
-  let connectionRequestBody: ConnectionCreateRequestBody;
+export const createNewConnectionViaApi = (
+  source: SourceRead,
+  destination: DestinationRead,
+  options: { enableAllStreams?: boolean } = {}
+) => {
+  let connection: WebBackendConnectionRead;
+  let connectionRequestBody: WebBackendConnectionCreate;
 
   const myConnection = requestWorkspaceId().then(() => {
-    requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
+    requestSourceDiscoverSchema({ sourceId: source.sourceId, disable_cache: true }).then(({ catalog, catalogId }) => {
+      if (options.enableAllStreams) {
+        catalog?.streams.forEach((stream) => {
+          if (stream.config) {
+            stream.config.selected = true;
+          }
+        });
+      }
       connectionRequestBody = getConnectionCreateRequest({
         name: appendRandomString(`${source.name} → ${destination.name} Cypress Connection`),
         sourceId: source.sourceId,
         destinationId: destination.destinationId,
         syncCatalog: catalog,
         sourceCatalogId: catalogId,
+        status: ConnectionStatus.active,
       });
       requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
         connection = connectionResponse;

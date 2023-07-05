@@ -11,16 +11,10 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.collect.UnmodifiableIterator;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
@@ -43,12 +37,7 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
-import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -56,8 +45,8 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -66,14 +55,11 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -84,15 +70,11 @@ import java.util.stream.StreamSupport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
-import org.jooq.Field;
-import org.jooq.InsertValuesStepN;
 import org.jooq.JSONB;
-import org.jooq.Named;
+import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
-import org.jooq.Sequence;
-import org.jooq.Table;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 import org.slf4j.Logger;
@@ -114,9 +96,6 @@ public class DefaultJobPersistence implements JobPersistence {
   private static final String WHERE = "WHERE ";
   private static final String AND = " AND ";
   private static final String SCOPE_CLAUSE = "scope = ? AND ";
-
-  protected static final String DEFAULT_SCHEMA = "public";
-  private static final String BACKUP_SCHEMA = "import_backup";
   public static final String DEPLOYMENT_ID_KEY = "deployment_id";
   public static final String METADATA_KEY_COL = "key";
   public static final String METADATA_VAL_COL = "value";
@@ -381,7 +360,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
       if (CollectionUtils.isNotEmpty(streamSyncStats)) {
-        saveToStreamStatsTable(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
+        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
       }
 
       final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
@@ -426,7 +405,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .withBytesCommitted(bytesCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
-      saveToStreamStatsTable(now, streamStats, attemptId, ctx);
+      saveToStreamStatsTableBatch(now, streamStats, attemptId, ctx);
       return null;
     });
 
@@ -477,54 +456,62 @@ public class DefaultJobPersistence implements JobPersistence {
         .execute();
   }
 
-  private static void saveToStreamStatsTable(final OffsetDateTime now,
-                                             final List<StreamSyncStats> perStreamStats,
-                                             final Long attemptId,
-                                             final DSLContext ctx) {
+  private static void saveToStreamStatsTableBatch(final OffsetDateTime now,
+                                                  final List<StreamSyncStats> perStreamStats,
+                                                  final Long attemptId,
+                                                  final DSLContext ctx) {
+    final List<Query> queries = new ArrayList<>();
+
+    // Upserts require the onConflict statement that does not work as the table currently has duplicate
+    // records on the null
+    // namespace value. This is a valid state and not a bug.
+    // Upserts are possible if we upgrade to Postgres 15. However this requires downtime. A simpler
+    // solution to prevent O(N) existence checks, where N in the
+    // number of streams, is to fetch all streams for the attempt. Existence checks are in memory,
+    // letting us do only 2 queries in total.
+    final Set<StreamDescriptor> existingStreams = ctx.select(STREAM_STATS.STREAM_NAME, STREAM_STATS.STREAM_NAMESPACE)
+        .from(STREAM_STATS)
+        .where(STREAM_STATS.ATTEMPT_ID.eq(attemptId))
+        .fetchSet(r -> new StreamDescriptor().withName(r.get(STREAM_STATS.STREAM_NAME)).withNamespace(r.get(STREAM_STATS.STREAM_NAMESPACE)));
+
     Optional.ofNullable(perStreamStats).orElse(Collections.emptyList()).forEach(
         streamStats -> {
-          // todo(davin): remove after p0-workers-db-connection-pool-empty is resolved.
-          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STREAM_STATS_WRITE_NUM_QUERIES, 1,
-              new MetricAttribute(MetricTags.ATTEMPT_ID, attemptId.toString()));
-
-          // We cannot entirely rely on JOOQ's generated SQL for upserts as it does not support null fields
-          // for conflict detection. We are forced to separately check for existence.
-          final var stats = streamStats.getStats();
           final var isExisting =
-              ctx.fetchExists(STREAM_STATS, STREAM_STATS.ATTEMPT_ID.eq(attemptId).and(STREAM_STATS.STREAM_NAME.eq(streamStats.getStreamName()))
-                  .and(PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
+              existingStreams.contains(new StreamDescriptor().withName(streamStats.getStreamName()).withNamespace(streamStats.getStreamNamespace()));
+          final var stats = streamStats.getStats();
           if (isExisting) {
-            ctx.update(STREAM_STATS)
-                .set(STREAM_STATS.UPDATED_AT, now)
-                .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
-                .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
-                .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
-                .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
-                .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
-                .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
-                .where(
-                    STREAM_STATS.ATTEMPT_ID.eq(attemptId),
-                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
-                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace()))
-                .execute();
-            return;
+            queries.add(
+                ctx.update(STREAM_STATS)
+                    .set(STREAM_STATS.UPDATED_AT, now)
+                    .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
+                    .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
+                    .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
+                    .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+                    .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
+                    .where(
+                        STREAM_STATS.ATTEMPT_ID.eq(attemptId),
+                        PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
+                        PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
+          } else {
+            queries.add(
+                ctx.insertInto(STREAM_STATS)
+                    .set(STREAM_STATS.ID, UUID.randomUUID())
+                    .set(STREAM_STATS.ATTEMPT_ID, attemptId)
+                    .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
+                    .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
+                    .set(STREAM_STATS.CREATED_AT, now)
+                    .set(STREAM_STATS.UPDATED_AT, now)
+                    .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
+                    .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
+                    .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
+                    .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+                    .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted()));
           }
-
-          ctx.insertInto(STREAM_STATS)
-              .set(STREAM_STATS.ID, UUID.randomUUID())
-              .set(STREAM_STATS.ATTEMPT_ID, attemptId)
-              .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
-              .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
-              .set(STREAM_STATS.CREATED_AT, now)
-              .set(STREAM_STATS.UPDATED_AT, now)
-              .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
-              .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
-              .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
-              .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
-              .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
-              .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
-              .execute();
         });
+
+    ctx.batch(queries).execute();
   }
 
   @Override
@@ -580,6 +567,17 @@ public class DefaultJobPersistence implements JobPersistence {
       hydrateStreamStats(jobIdsStr, ctx, attemptStats);
       return attemptStats;
     });
+  }
+
+  @Override
+  public SyncStats getAttemptCombinedStats(final long jobId, final int attemptNumber) throws IOException {
+    return jobDatabase
+        .query(ctx -> {
+          final Long attemptId = getAttemptId(jobId, attemptNumber, ctx);
+          return ctx.select(DSL.asterisk()).from(SYNC_STATS).where(SYNC_STATS.ATTEMPT_ID.eq(attemptId))
+              .orderBy(SYNC_STATS.UPDATED_AT.desc())
+              .fetchOne(getSyncStatsRecordMapper());
+        });
   }
 
   private static Map<JobAttemptPair, AttemptStats> hydrateSyncStats(final String jobIdsStr, final DSLContext ctx) {
@@ -745,6 +743,25 @@ public class DefaultJobPersistence implements JobPersistence {
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final List<UUID> workspaceIds, final int limit, final int offset) throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
+          .join(Tables.CONNECTION)
+          .on(Tables.CONNECTION.ID.eq(JOBS.SCOPE.cast(UUID.class)))
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_CREATED_AT_DESC));
     });
   }
 
@@ -1092,18 +1109,6 @@ public class DefaultJobPersistence implements JobPersistence {
     return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
   }
 
-  private static final String SECRET_MIGRATION_STATUS = "secretMigration";
-
-  @Override
-  public boolean isSecretMigrated() throws IOException {
-    return getMetadata(SECRET_MIGRATION_STATUS).count() == 1;
-  }
-
-  @Override
-  public void setSecretMigrationDone() throws IOException {
-    setMetadata(SECRET_MIGRATION_STATUS, "true");
-  }
-
   @Override
   public Optional<String> getVersion() throws IOException {
     return getMetadata(AirbyteVersion.AIRBYTE_VERSION_KEY_NAME).findFirst();
@@ -1120,7 +1125,7 @@ public class DefaultJobPersistence implements JobPersistence {
         METADATA_VAL_COL,
         AirbyteVersion.AIRBYTE_VERSION_KEY_NAME,
         airbyteVersion,
-        current_timestamp(),
+        ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
         airbyteVersion,
         METADATA_KEY_COL,
         METADATA_VAL_COL,
@@ -1222,41 +1227,6 @@ public class DefaultJobPersistence implements JobPersistence {
     }
   }
 
-  private static String current_timestamp() {
-    return ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-  }
-
-  @Override
-  public Map<JobsDatabaseSchema, Stream<JsonNode>> exportDatabase() throws IOException {
-    return exportDatabase(DEFAULT_SCHEMA);
-  }
-
-  private Map<JobsDatabaseSchema, Stream<JsonNode>> exportDatabase(final String schema) throws IOException {
-    final List<String> tables = listTables(schema);
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> result = new HashMap<>();
-
-    for (final String table : tables) {
-      result.put(JobsDatabaseSchema.valueOf(table.toUpperCase()), exportTable(schema, table));
-    }
-
-    return result;
-  }
-
-  /**
-   * List tables from @param schema and @return their names.
-   */
-  private List<String> listTables(final String schema) throws IOException {
-    if (schema != null) {
-      return jobDatabase.query(context -> context.meta().getSchemas(schema).stream()
-          .flatMap(s -> context.meta(s).getTables().stream())
-          .map(Named::getName)
-          .filter(table -> JobsDatabaseSchema.getTableNames().contains(table.toLowerCase()))
-          .collect(Collectors.toList()));
-    } else {
-      return List.of();
-    }
-  }
-
   /**
    * Purge job history from N days ago. Only purge jobs that are not the last job for the connection.
    */
@@ -1284,243 +1254,6 @@ public class DefaultJobPersistence implements JobPersistence {
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private Stream<JsonNode> exportTable(final String schema, final String tableName) throws IOException {
-    final Table<Record> tableSql = getTable(schema, tableName);
-    final Stream<Record> records = jobDatabase.query(ctx -> ctx.select(DSL.asterisk()).from(tableSql).fetch().stream());
-    return records.map(record -> {
-      final Set<String> jsonFieldNames = Arrays.stream(record.fields())
-          .filter(f -> "jsonb".equals(f.getDataType().getTypeName()))
-          .map(Field::getName)
-          .collect(Collectors.toSet());
-      final String json = record.formatJSON(JdbcUtils.getDefaultJsonFormat());
-      final JsonNode row = Jsons.deserialize(json);
-      // for json fields, deserialize them so they are treated as objects instead of strings. this is to
-      // get around that formatJson doesn't handle deserializing them for us.
-      jsonFieldNames.forEach(jsonFieldName -> {
-        // Ensure that missing fields are converted into an empty JSON object in order to pass JSON
-        // validation
-        final String jsonFieldValue = Jsons.serialize(row.get(jsonFieldName));
-        final JsonNode jsonFieldNode =
-            StringUtils.isBlank(jsonFieldValue) ? JsonNodeFactory.instance.objectNode() : Jsons.deserialize(jsonFieldValue);
-        ((ObjectNode) row).replace(jsonFieldName, jsonFieldNode);
-      });
-      return row;
-    });
-  }
-
-  // todo (cgardens) unused?
-
-  /**
-   * Import a jobs database.
-   *
-   * @param airbyteVersion is the version of the files to be imported and should match the Airbyte
-   *        version in the Database.
-   * @param data is a Map of table schemas to the associated streams of records to import.
-   * @throws IOException when accessing db
-   */
-  @Deprecated
-  @Override
-  public void importDatabase(final String airbyteVersion, final Map<JobsDatabaseSchema, Stream<JsonNode>> data) throws IOException {
-    importDatabase(airbyteVersion, DEFAULT_SCHEMA, data, false);
-  }
-
-  /**
-   * Import a jobs database.
-   *
-   * @param airbyteVersion airbyte version at time of import
-   * @param targetSchema schema to put the db in
-   * @param data data to import
-   * @param incrementalImport is increment import
-   * @throws IOException when accessing db
-   */
-  private void importDatabase(final String airbyteVersion,
-                              final String targetSchema,
-                              final Map<JobsDatabaseSchema, Stream<JsonNode>> data,
-                              final boolean incrementalImport)
-      throws IOException {
-    if (!data.isEmpty()) {
-      createSchema(BACKUP_SCHEMA);
-      jobDatabase.transaction(ctx -> {
-        for (final JobsDatabaseSchema tableType : data.keySet()) {
-          if (!incrementalImport) {
-            truncateTable(ctx, targetSchema, tableType.name(), BACKUP_SCHEMA);
-          }
-          importTable(ctx, targetSchema, tableType, data.get(tableType));
-        }
-        registerImportMetadata(ctx, airbyteVersion);
-        return null;
-      });
-    }
-    // TODO write "import success vXX on now()" to audit log table?
-  }
-
-  /**
-   * Create a schema in the db.
-   *
-   * @param schema name of schema
-   * @throws IOException when interacting with db
-   */
-  private void createSchema(final String schema) throws IOException {
-    jobDatabase.query(ctx -> ctx.createSchemaIfNotExists(schema).execute());
-  }
-
-  /**
-   * In a single transaction, truncate all @param tables from @param schema, making backup copies
-   * in @param backupSchema.
-   *
-   * @param ctx db context
-   * @param schema schema of table
-   * @param tableName name of table
-   * @param backupSchema schema to back up table to
-   */
-  private static void truncateTable(final DSLContext ctx, final String schema, final String tableName, final String backupSchema) {
-    final Table<Record> tableSql = getTable(schema, tableName);
-    final Table<Record> backupTableSql = getTable(backupSchema, tableName);
-    ctx.dropTableIfExists(backupTableSql).execute();
-    ctx.createTable(backupTableSql).as(DSL.select(DSL.asterisk()).from(tableSql)).withData().execute();
-    ctx.truncateTable(tableSql).restartIdentity().cascade().execute();
-  }
-
-  // TODO: we need version specific importers to copy data to the database. Issue: #5682.
-  // todo (cgardens) unused?
-
-  /**
-   * Import stream of records into a table.
-   *
-   * @param ctx db context
-   * @param schema schema of table
-   * @param tableType table type
-   * @param jsonStream stream of records
-   */
-  @Deprecated
-  private static void importTable(final DSLContext ctx, final String schema, final JobsDatabaseSchema tableType, final Stream<JsonNode> jsonStream) {
-    LOGGER.info("Importing table {} from archive into database.", tableType.name());
-    final Table<Record> tableSql = getTable(schema, tableType.name());
-    final JsonNode jsonSchema = tableType.getTableDefinition();
-    if (jsonSchema != null) {
-      // Use an ArrayList to mirror the order of columns from the schema file since columns may not be
-      // written consistently in the same order in the stream
-      final List<Field<?>> columns = getFields(jsonSchema);
-      // Build a Stream of List of Values using the same order as columns, filling blanks if needed (when
-      // stream omits them for nullable columns)
-      final Stream<List<?>> data = jsonStream.map(node -> {
-        final List<Object> values = new ArrayList<>();
-        for (final Field<?> column : columns) {
-          values.add(getJsonNodeValue(node, column.getName()));
-        }
-        return values;
-      });
-      // Then insert rows into table in batches, to avoid crashing due to inserting too much data at once
-      final UnmodifiableIterator<List<List<?>>> partitions = Iterators.partition(data.iterator(), 100);
-      partitions.forEachRemaining(values -> {
-        final InsertValuesStepN<Record> insertStep = ctx
-            .insertInto(tableSql)
-            .columns(columns);
-
-        values.forEach(insertStep::values);
-
-        if (insertStep.getBindValues().size() > 0) {
-          // LOGGER.debug("Insert step '{}'.", insertStep);
-          ctx.batch(insertStep).execute();
-        }
-      });
-      final Optional<Field<?>> idColumn = columns.stream().filter(f -> "id".equals(f.getName())).findFirst();
-      if (idColumn.isPresent()) {
-        resetIdentityColumn(ctx, schema, tableType);
-      }
-    }
-  }
-
-  /**
-   * In schema.sql, we create tables with IDENTITY PRIMARY KEY columns named 'id' that will generate
-   * auto-incremented ID for each new record. When importing batch of records from outside of the DB,
-   * we need to update Postgres Internal state to continue auto-incrementing from the latest value or
-   * we would risk to violate primary key constraints by inserting new records with duplicate ids.
-   * <p>
-   * This function reset such Identity states (called SQL Sequence objects).
-   *
-   * @param ctx db context
-   * @param schema schema table is in
-   * @param tableType name of table
-   */
-  private static void resetIdentityColumn(final DSLContext ctx, final String schema, final JobsDatabaseSchema tableType) {
-    final Result<Record> result = ctx.fetch(String.format("SELECT MAX(id) FROM %s.%s", schema, tableType.name()));
-    final Optional<Integer> maxId = result.stream()
-        .map(r -> r.get(0, Integer.class))
-        .filter(Objects::nonNull)
-        .findFirst();
-    if (maxId.isPresent()) {
-      final Sequence<BigInteger> sequenceName = DSL.sequence(DSL.name(schema, String.format("%s_%s_seq", tableType.name().toLowerCase(), "id")));
-      ctx.alterSequenceIfExists(sequenceName).restartWith(BigInteger.valueOf(maxId.get() + 1)).execute();
-    }
-  }
-
-  /**
-   * Insert records into the metadata table to keep track of import Events that were applied on the
-   * database. Update and overwrite the corresponding
-   *
-   * @param ctx db context
-   * @param airbyteVersion to set in the metadata table
-   */
-  private static void registerImportMetadata(final DSLContext ctx, final String airbyteVersion) {
-    ctx.execute(String.format("INSERT INTO %s VALUES('%s_import_db', '%s');", AIRBYTE_METADATA_TABLE, current_timestamp(), airbyteVersion));
-    ctx.execute(String.format("UPDATE %s SET %s = '%s' WHERE %s = '%s';",
-        AIRBYTE_METADATA_TABLE,
-        METADATA_VAL_COL,
-        airbyteVersion,
-        METADATA_KEY_COL,
-        AirbyteVersion.AIRBYTE_VERSION_KEY_NAME));
-  }
-
-  /**
-   * Get top-level field names of an object. Read jsonSchema and @returns a list of properties
-   * (converted as Field objects)
-   *
-   * @param jsonSchema object whose field names to extract
-   * @return top-level field names
-   */
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
-  private static List<Field<?>> getFields(final JsonNode jsonSchema) {
-    final List<Field<?>> result = new ArrayList<>();
-    final JsonNode properties = jsonSchema.get("properties");
-    for (final Iterator<String> it = properties.fieldNames(); it.hasNext();) {
-      final String fieldName = it.next();
-      result.add(DSL.field(fieldName));
-    }
-    return result;
-  }
-
-  /**
-   * Get JSON value from a field in a json object.
-   *
-   * @param jsonNode object from which to extract value
-   * @param columnName name of key to extract
-   * @return Java Values for the @param columnName in jsonNode
-   */
-  private static Object getJsonNodeValue(final JsonNode jsonNode, final String columnName) {
-    if (!jsonNode.has(columnName)) {
-      return null;
-    }
-    final JsonNode valueNode = jsonNode.get(columnName);
-    final JsonNodeType nodeType = valueNode.getNodeType();
-    if (nodeType == JsonNodeType.OBJECT) {
-      return valueNode.toString();
-    } else if (nodeType == JsonNodeType.STRING) {
-      return valueNode.asText();
-    } else if (nodeType == JsonNodeType.NUMBER) {
-      return valueNode.asDouble();
-    } else if (nodeType == JsonNodeType.NULL) {
-      return null;
-    } else if (nodeType == JsonNodeType.MISSING) {
-      return Jsons.serialize(jsonNode);
-    }
-    throw new IllegalArgumentException(String.format("Undefined type '%s' for column %s", nodeType, columnName));
-  }
-
-  private static Table<Record> getTable(final String schema, final String tableName) {
-    return DSL.table(String.format("%s.%s", schema, tableName));
   }
 
   /**

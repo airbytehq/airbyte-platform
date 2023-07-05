@@ -39,6 +39,7 @@ import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -53,6 +54,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CheckWithCatalog;
@@ -97,6 +99,8 @@ public class ConnectionsHandler {
   private final ConnectionHelper connectionHelper;
   @Inject
   FeatureFlagClient featureFlagClient;
+  @Inject
+  ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @VisibleForTesting
   ConnectionsHandler(final ConfigRepository configRepository,
@@ -544,8 +548,11 @@ public class ConnectionsHandler {
     }
     final ActorCatalog catalog = configRepository.getActorCatalogById(connection.getSourceCatalogId());
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(connection.getSourceId());
+    final SourceConnection sourceConnection = configRepository.getSourceConnection(connection.getSourceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
     final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceDefinition));
+    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
   }
 
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)

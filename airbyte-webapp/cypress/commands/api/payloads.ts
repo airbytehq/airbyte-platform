@@ -1,14 +1,10 @@
-import { WebBackendConnectionUpdate } from "@cy/../src/core/api/types/AirbyteClient";
+import { WebBackendConnectionCreate } from "@src/core/api/types/AirbyteClient";
+import { DestinationCreate, SourceCreate, WebBackendConnectionUpdate } from "@src/core/api/types/AirbyteClient";
 import { ConnectorIds } from "@src/utils/connectors";
 
-import { ConnectionCreateRequestBody } from "./types";
 import { getWorkspaceId } from "./workspace";
 
-type RequiredConnectionCreateRequestProps = "name" | "sourceId" | "destinationId" | "syncCatalog" | "sourceCatalogId";
-type CreationConnectRequestParams = Pick<ConnectionCreateRequestBody, RequiredConnectionCreateRequestProps> &
-  Partial<Omit<ConnectionCreateRequestBody, RequiredConnectionCreateRequestProps>>;
-
-export const getConnectionCreateRequest = (params: CreationConnectRequestParams): ConnectionCreateRequestBody => ({
+export const getConnectionCreateRequest = (params: WebBackendConnectionCreate): WebBackendConnectionCreate => ({
   geography: "auto",
   namespaceDefinition: "source",
   namespaceFormat: "${SOURCE_NAMESPACE}",
@@ -16,11 +12,10 @@ export const getConnectionCreateRequest = (params: CreationConnectRequestParams)
   operations: [],
   prefix: "",
   scheduleType: "manual",
-  status: "active",
   ...params,
 });
 
-export const getPostgresCreateSourceBody = (name: string) => ({
+export const getPostgresCreateSourceBody = (name: string): SourceCreate => ({
   name,
   sourceDefinitionId: ConnectorIds.Sources.Postgres,
   workspaceId: getWorkspaceId(),
@@ -51,7 +46,7 @@ export const getE2ETestingCreateDestinationBody = (name: string) => ({
   },
 });
 
-export const getPostgresCreateDestinationBody = (name: string) => ({
+export const getPostgresCreateDestinationBody = (name: string): DestinationCreate => ({
   name,
   workspaceId: getWorkspaceId(),
   destinationDefinitionId: ConnectorIds.Destinations.Postgres,
@@ -68,14 +63,14 @@ export const getPostgresCreateDestinationBody = (name: string) => ({
   },
 });
 
-export const getPokeApiCreateSourceBody = (sourceName: string, pokeName: string) => ({
+export const getPokeApiCreateSourceBody = (sourceName: string, pokeName: string): SourceCreate => ({
   name: sourceName,
   workspaceId: getWorkspaceId(),
   sourceDefinitionId: ConnectorIds.Sources.PokeApi,
   connectionConfiguration: { pokemon_name: pokeName },
 });
 
-export const getLocalJSONCreateDestinationBody = (name: string) => ({
+export const getLocalJSONCreateDestinationBody = (name: string): DestinationCreate => ({
   name,
   destinationDefinitionId: ConnectorIds.Destinations.LocalJson,
   workspaceId: getWorkspaceId(),
@@ -87,7 +82,7 @@ export const getLocalJSONCreateDestinationBody = (name: string) => ({
 export const getPostgresToPostgresUpdateConnectionBody = (
   connectionId: string,
   updateParams: Partial<WebBackendConnectionUpdate>
-) => ({
+): WebBackendConnectionUpdate => ({
   ...updateParams,
   connectionId,
 });
