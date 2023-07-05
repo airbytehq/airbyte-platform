@@ -25,6 +25,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       children: (
         <KeyValueListField
           path={streamFieldPath("requestOptions.requestBody.values")}
+          key="json_list"
           manifestPath="HttpRequester.properties.request_body_json"
           optional
         />
@@ -39,6 +40,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       children: (
         <KeyValueListField
           path={streamFieldPath("requestOptions.requestBody.values")}
+          key="form_list"
           manifestPath="HttpRequester.properties.request_body_data"
           optional
         />
@@ -55,6 +57,21 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
           type="jsoneditor"
           path={streamFieldPath("requestOptions.requestBody.value")}
           manifestPath="HttpRequester.properties.request_body_json"
+        />
+      ),
+    },
+    {
+      label: "Text (Free form)",
+      typeValue: "string_freeform",
+      default: {
+        value: "",
+      },
+      children: (
+        <BuilderField
+          type="textarea"
+          path={streamFieldPath("requestOptions.requestBody.value")}
+          label="Request body as string"
+          manifestPath="HttpRequester.properties.request_body_data"
         />
       ),
     },

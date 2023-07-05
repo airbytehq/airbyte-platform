@@ -70,6 +70,8 @@ tags:
     description: Interactions with attempt related resources.
   - name: state
     description: Interactions with state related resources.
+  - name: actor_definition_version
+    description: Interactions with actor definition version related resources.
 
 paths:
   /v1/workspaces/create:
@@ -519,6 +521,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_source:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a source.
+      operationId: getActorDefinitionVersionForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/source_definition_specifications/get:
     post:
       tags:
@@ -1257,6 +1280,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_destination:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a destination.
+      operationId: getActorDefinitionVersionForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_definition_specifications/get:
     post:
       tags:
@@ -2363,6 +2407,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/list_for_workspaces:
+    post:
+      tags:
+        - jobs
+      summary: Returns recent jobs for a connection. Jobs are returned in descending order by createdAt.
+      operationId: listJobsForWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobListForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/get:
     post:
       tags:
@@ -2737,6 +2804,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StreamStatusRead"
+  /v1/jobs/retry_states/create_or_update:
+    post:
+      summary: Creates or updates a retry state for a job.
+      tags:
+        - job_retry_states
+      operationId: createOrUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRetryStateRequestBody"
+      responses:
+        "204":
+          description: Successfully put retry state.
+  /v1/jobs/retry_states/get:
+    post:
+      summary: Gets a retry state.
+      tags:
+        - job_retry_states
+      operationId: get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved retry state for a job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetryStateRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -4040,7 +4141,17 @@ components:
           type: string
         destinationName:
           type: string
-    # SOURCE / DESTINATION RELEASE STAGE ENUM
+    # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionRead:
+      type: object
+      required:
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ReleaseStage:
       type: string
       enum:
@@ -4825,6 +4936,23 @@ components:
         includingJobId:
           description: If the job with this ID exists for the specified connection, returns the number of pages of jobs necessary to include this job. Returns an empty list if this job is specified and cannot be found in this connection.
           $ref: "#/components/schemas/JobId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    JobListForWorkspacesRequestBody:
+      type: object
+      required:
+        - configTypes
+      properties:
+        configTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobConfigType"
+        configId:
+          type: string
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
         pagination:
           $ref: "#/components/schemas/Pagination"
     JobIdRequestBody:
@@ -6208,6 +6336,57 @@ components:
           $ref: "#/components/schemas/SlackNotificationConfiguration"
         notificationTrigger:
           $ref: "#/components/schemas/NotificationTrigger"
+    RetryStateRead:
+      type: object
+      required:
+        - id
+        - jobId
+        - connectionId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
+    JobRetryStateRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
     InvalidInputProperty:
       type: object
       required:

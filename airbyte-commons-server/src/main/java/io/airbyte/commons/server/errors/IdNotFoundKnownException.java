@@ -38,7 +38,7 @@ public class IdNotFoundKnownException extends KnownException {
   }
 
   /**
-   * Get additional info about the not found rsource.
+   * Get additional info about the not found resource.
    *
    * @return info
    */

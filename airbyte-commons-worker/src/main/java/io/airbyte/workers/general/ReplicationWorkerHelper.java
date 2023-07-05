@@ -11,6 +11,7 @@ import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
@@ -74,7 +75,7 @@ class ReplicationWorkerHelper {
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
-  private ReplicationFeatureFlags replicationFeatureFlags = null;
+  private ReplicationFeatureFlags replicationFeatureFlags = null; // NOPMD - keeping this as a placeholder
   private WorkerDestinationConfig destinationConfig = null;
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
@@ -230,7 +231,7 @@ class ReplicationWorkerHelper {
     }
 
     messageTracker.acceptFromDestination(message);
-    if (replicationFeatureFlags.shouldCommitStateAsap() && message.getType() == Type.STATE) {
+    if (message.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), message.getState());
     }
 
@@ -245,7 +246,11 @@ class ReplicationWorkerHelper {
     return currentDestinationStream;
   }
 
-  public ReplicationOutput getReplicationOutput()
+  public ReplicationOutput getReplicationOutput() throws JsonProcessingException {
+    return getReplicationOutput(null);
+  }
+
+  public ReplicationOutput getReplicationOutput(final PerformanceMetrics performanceMetrics)
       throws JsonProcessingException {
     final ReplicationStatus outputStatus;
     // First check if the process was cancelled. Cancellation takes precedence over failures.
@@ -276,7 +281,8 @@ class ReplicationWorkerHelper {
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
-        .withEndTime(System.currentTimeMillis());
+        .withEndTime(System.currentTimeMillis())
+        .withPerformanceMetrics(performanceMetrics);
 
     final ReplicationOutput output = new ReplicationOutput()
         .withReplicationAttemptSummary(summary)

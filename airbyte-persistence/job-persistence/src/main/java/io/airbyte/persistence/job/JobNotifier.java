@@ -111,13 +111,11 @@ public class JobNotifier {
           TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
       NotificationItem notificationItem = null;
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
-        // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnFailure();
         sendNotification(notificationItem, FAILURE_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector, destinationConnector,
                 standardSync.getName(), jobDescription, logUrl, job.getId()));
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
-        // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnSuccess();
         sendNotification(notificationItem, SUCCESS_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector, destinationConnector,

@@ -20,5 +20,6 @@ To release a new version of this base image, use the following steps:
    ```bash
    FROM airbyte/airbyte-base-java-image:<NEW VERSION>
    ```
+5. Update the [airbyte-base-java-python-image](../airbyte-base-java-python-image/) image to use the new version of this image.
 
 [dockerhub]: https://hub.docker.com/repository/docker/airbyte/airbyte-base-java-image/general

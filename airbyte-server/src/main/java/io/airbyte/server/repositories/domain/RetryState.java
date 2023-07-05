@@ -19,7 +19,7 @@ import lombok.Getter;
 /**
  * DTO for our data access layer.
  */
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @Getter
 @EqualsAndHashCode(exclude = {"id", "createdAt", "updatedAt"})

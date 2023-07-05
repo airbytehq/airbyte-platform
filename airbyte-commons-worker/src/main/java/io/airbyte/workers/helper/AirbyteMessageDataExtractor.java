@@ -39,7 +39,7 @@ public class AirbyteMessageDataExtractor {
       case RECORD:
         return new StreamDescriptor().withName(airbyteMessage.getRecord().getStream()).withNamespace(airbyteMessage.getRecord().getNamespace());
       case STATE:
-        LOGGER.info("Extracting stream from state message: {}", airbyteMessage.getState().getStream());
+        LOGGER.debug("Extracting stream from state message: {}", airbyteMessage.getState().getStream());
         return airbyteMessage.getState().getStream() != null ? airbyteMessage.getState().getStream().getStreamDescriptor() : null;
       case TRACE:
         return getStreamFromTrace(airbyteMessage.getTrace());
@@ -51,13 +51,13 @@ public class AirbyteMessageDataExtractor {
   private StreamDescriptor getStreamFromTrace(final AirbyteTraceMessage airbyteTraceMessage) {
     switch (airbyteTraceMessage.getType()) {
       case STREAM_STATUS:
-        LOGGER.info("Extracting stream from stream status trace message: {}", airbyteTraceMessage.getStreamStatus());
+        LOGGER.debug("Extracting stream from stream status trace message: {}", airbyteTraceMessage.getStreamStatus());
         return airbyteTraceMessage.getStreamStatus().getStreamDescriptor();
       case ERROR:
-        LOGGER.info("Extracting stream from error trace message: {}", airbyteTraceMessage.getError());
+        LOGGER.debug("Extracting stream from error trace message: {}", airbyteTraceMessage.getError());
         return airbyteTraceMessage.getError().getStreamDescriptor();
       case ESTIMATE:
-        LOGGER.info("Extracting stream from estimate trace message: {}", airbyteTraceMessage.getEstimate());
+        LOGGER.debug("Extracting stream from estimate trace message: {}", airbyteTraceMessage.getEstimate());
         return new StreamDescriptor().withName(airbyteTraceMessage.getEstimate().getName())
             .withNamespace(airbyteTraceMessage.getEstimate().getNamespace());
       default:

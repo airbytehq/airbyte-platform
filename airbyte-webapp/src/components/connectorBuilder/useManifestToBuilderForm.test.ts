@@ -1,6 +1,7 @@
 import merge from "lodash/merge";
 
 import { ConnectorManifest, DeclarativeStream } from "core/request/ConnectorManifest";
+import { removeEmptyProperties } from "utils/form";
 
 import { DEFAULT_BUILDER_FORM_VALUES, DEFAULT_CONNECTOR_NAME, OLDEST_SUPPORTED_CDK_VERSION } from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
@@ -196,7 +197,7 @@ describe("Conversion throws error when", () => {
 describe("Conversion successfully results in", () => {
   it("default values if manifest is empty", async () => {
     const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues).toEqual(DEFAULT_BUILDER_FORM_VALUES);
+    expect(formValues).toEqual(removeEmptyProperties(DEFAULT_BUILDER_FORM_VALUES));
   });
 
   it("spec properties converted to inputs if no streams present", async () => {
@@ -390,7 +391,11 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    await expect(() => convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME)).rejects.toThrow();
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].requestOptions.requestBody).toEqual({
+      type: "string_freeform",
+      value: "abc def",
+    });
   });
 
   it("primary key string converted to array", async () => {
@@ -399,9 +404,6 @@ describe("Conversion successfully results in", () => {
       streams: [
         merge({}, stream1, {
           primary_key: "id",
-          retriever: {
-            primary_key: "id",
-          },
         }),
       ],
     };

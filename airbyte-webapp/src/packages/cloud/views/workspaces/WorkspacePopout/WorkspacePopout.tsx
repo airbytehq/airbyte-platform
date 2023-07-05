@@ -1,3 +1,4 @@
+import { useSelectWorkspace } from "area/workspace/utils/useSelectWorkspace";
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { components, MenuListProps } from "react-select";
@@ -6,8 +7,8 @@ import styled from "styled-components";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Popout } from "components/ui/Popout";
 
+import { useCurrentWorkspace } from "core/api";
 import { useListCloudWorkspacesAsync } from "core/api/cloud";
-import { useCurrentWorkspace, useWorkspaceService } from "services/workspaces/WorkspacesService";
 
 import ExitIcon from "./components/ExitIcon";
 
@@ -75,7 +76,7 @@ const WorkspacesList: React.FC<React.PropsWithChildren<MenuWithRequestButtonProp
   selectedWorkspace,
   ...props
 }) => {
-  const { exitWorkspace } = useWorkspaceService();
+  const selectWorkspace = useSelectWorkspace();
 
   return (
     <List>
@@ -84,7 +85,7 @@ const WorkspacesList: React.FC<React.PropsWithChildren<MenuWithRequestButtonProp
       </TopElement>
       <components.MenuList {...props}>{children}</components.MenuList>
       <BottomElement>
-        <Block onClick={exitWorkspace}>
+        <Block onClick={() => selectWorkspace(null)}>
           <ExitIcon />
           <TextBlock data-testid="workspaces.viewAllWorkspaces">
             <FormattedMessage id="workspaces.viewAllWorkspaces" />
@@ -101,7 +102,7 @@ const WorkspacePopout: React.FC<{
 }> = ({ children }) => {
   const { formatMessage } = useIntl();
   const { data: workspaceList, isLoading } = useListCloudWorkspacesAsync();
-  const { selectWorkspace } = useWorkspaceService();
+  const selectWorkspace = useSelectWorkspace();
   const workspace = useCurrentWorkspace();
 
   const options = useMemo(

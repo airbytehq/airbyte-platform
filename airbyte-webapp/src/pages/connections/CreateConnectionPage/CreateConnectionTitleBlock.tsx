@@ -10,13 +10,13 @@ import { Icon } from "components/ui/Icon";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspace } from "core/api";
 import { DestinationRead, ReleaseStage, SourceRead } from "core/request/AirbyteClient";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
 

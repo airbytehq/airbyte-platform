@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -460,18 +461,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(sourceDefId)
         .withSourceType(SourceType.API)
         .withName("random-source-" + sourceDefId)
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
         .withIcon("icon-1")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardSourceDefinition(sourceDef);
+    final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefId)
+        .withDockerImageTag("tag-1")
+        .withDockerRepository("repository-1")
+        .withDocumentationUrl("documentation-url-1")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, sourceDefVersion);
     return sourceDef;
   }
 
@@ -481,18 +484,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(destDefId)
         .withName("random-destination-" + destDefId)
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
         .withIcon("icon-3")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardDestinationDefinition(destDef);
+    final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(destDefId)
+        .withDockerImageTag("tag-3")
+        .withDockerRepository("repository-3")
+        .withDocumentationUrl("documentation-url-3")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, destDefVersion);
     return destDef;
   }
 

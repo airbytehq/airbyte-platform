@@ -37,6 +37,7 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -742,6 +743,25 @@ public class DefaultJobPersistence implements JobPersistence {
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final List<UUID> workspaceIds, final int limit, final int offset) throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
+          .join(Tables.CONNECTION)
+          .on(Tables.CONNECTION.ID.eq(JOBS.SCOPE.cast(UUID.class)))
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_CREATED_AT_DESC));
     });
   }
 

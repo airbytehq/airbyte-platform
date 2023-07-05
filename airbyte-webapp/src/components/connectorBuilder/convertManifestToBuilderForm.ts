@@ -2,6 +2,8 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
 
+import { removeEmptyProperties } from "utils/form";
+
 import {
   authTypeToKeyToInferredInput,
   BuilderFormAuthenticator,
@@ -65,7 +67,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     builderFormValues.inferredInputOverrides = inferredInputOverrides;
     builderFormValues.inputOrder = inputOrder;
 
-    return builderFormValues;
+    return removeEmptyProperties(builderFormValues);
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
@@ -94,7 +96,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.global.authenticator = auth;
   builderFormValues.inputOrder = inputOrder;
 
-  return builderFormValues;
+  return removeEmptyProperties(builderFormValues);
 };
 
 const RELEVANT_AUTHENTICATOR_KEYS = [
@@ -174,7 +176,7 @@ const manifestStreamToBuilder = (
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
-      requestBody: requesterToRequestBody(stream.name, requester),
+      requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
     paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
@@ -194,15 +196,12 @@ const manifestStreamToBuilder = (
   };
 };
 
-function requesterToRequestBody(
-  streamName: string | undefined,
-  requester: HttpRequester
-): BuilderStream["requestOptions"]["requestBody"] {
+function requesterToRequestBody(requester: HttpRequester): BuilderStream["requestOptions"]["requestBody"] {
   if (requester.request_body_data && typeof requester.request_body_data === "object") {
     return { type: "form_list", values: Object.entries(requester.request_body_data) };
   }
   if (requester.request_body_data && typeof requester.request_body_data === "string") {
-    throw new ManifestCompatibilityError(streamName, "request_body_data is a string, but should be an object");
+    return { type: "string_freeform", value: requester.request_body_data };
   }
   if (!requester.request_body_json) {
     return { type: "json_list", values: [] };
@@ -330,17 +329,9 @@ function manifestErrorHandlerToBuilder(
       backoff_strategy: backoffStrategy,
     };
   });
-
-  return handlers as DefaultErrorHandler[];
 }
 
 function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): BuilderStream["primaryKey"] {
-  if (!isEqual(manifestStream.primary_key, manifestStream.primary_key)) {
-    throw new ManifestCompatibilityError(
-      manifestStream.name,
-      "primary_key is not consistent across stream and retriever levels"
-    );
-  }
   if (manifestStream.primary_key === undefined) {
     return [];
   } else if (Array.isArray(manifestStream.primary_key)) {
@@ -429,6 +420,7 @@ function manifestIncrementalSyncToBuilder(
     start_datetime: manifestStartDateTime,
     step,
     cursor_granularity,
+    is_data_feed,
     type,
     $parameters,
     ...regularFields
@@ -470,6 +462,7 @@ function manifestIncrementalSyncToBuilder(
     end_datetime,
     start_datetime,
     slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,
+    filter_mode: is_data_feed ? "no_filter" : manifestEndDateTime ? "range" : "start",
   };
 }
 
@@ -529,19 +522,15 @@ function manifestPaginatorToBuilder(
     return undefined;
   }
 
-  if (manifestPaginator.page_token_option === undefined) {
-    throw new ManifestCompatibilityError(streamName, "paginator does not define a page_token_option");
-  }
-
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
 
-  if (manifestPaginator.page_token_option.type === "RequestPath") {
+  if (manifestPaginator.page_token_option?.type === "RequestPath") {
     pageTokenOption = { inject_into: "path" };
-  } else {
+  } else if (manifestPaginator.page_token_option?.type === "RequestOption") {
     pageTokenOption = {
       inject_into: manifestPaginator.page_token_option.inject_into,
       field_name: manifestPaginator.page_token_option.field_name,

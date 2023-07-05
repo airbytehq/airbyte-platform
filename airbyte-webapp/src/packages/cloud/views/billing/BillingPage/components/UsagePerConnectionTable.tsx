@@ -16,10 +16,10 @@ import { SortableTableHeader } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCurrentWorkspace } from "core/api";
 import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
 import { useQuery } from "hooks/useQuery";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
 import { useCreditsContext } from "./CreditsUsageContext";

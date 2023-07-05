@@ -15,6 +15,7 @@ export enum FeatureItem {
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   FreeConnectorProgram = "FREE_CONNECTOR_PROGRAM",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
+  ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

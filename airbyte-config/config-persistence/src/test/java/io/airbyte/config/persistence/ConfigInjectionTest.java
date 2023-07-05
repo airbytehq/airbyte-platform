@@ -126,10 +126,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
 
     return new StandardSourceDefinition()
         .withName("source-def-" + id)
-        .withDockerRepository("source-image-" + id)
-        .withDockerImageTag("0.0.1")
         .withSourceDefinitionId(id)
-        .withProtocolVersion("0.2.0")
         .withTombstone(false);
   }
 

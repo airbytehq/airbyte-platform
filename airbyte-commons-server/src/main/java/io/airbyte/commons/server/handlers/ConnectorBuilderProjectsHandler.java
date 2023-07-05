@@ -207,16 +207,10 @@ public class ConnectorBuilderProjectsHandler {
     final StandardSourceDefinition source = new StandardSourceDefinition()
         .withSourceDefinitionId(actorDefinitionId)
         .withName(name)
-        .withDockerImageTag(cdkVersionProvider.getCdkVersion())
-        .withDockerRepository("airbyte/source-declarative-manifest")
         .withSourceType(SourceType.CUSTOM)
-        .withSpec(connectorSpecification)
         .withTombstone(false)
-        .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withPublic(false)
-        .withCustom(true)
-        .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
+        .withCustom(true);
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)

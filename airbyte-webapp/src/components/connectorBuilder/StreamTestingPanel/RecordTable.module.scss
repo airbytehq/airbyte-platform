@@ -1,0 +1,19 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+
+.button {
+  padding: 0 !important;
+  height: 16px !important;
+  opacity: 0;
+}
+
+.cell:hover .button {
+  opacity: 1;
+}

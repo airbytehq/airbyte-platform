@@ -1,4 +1,3 @@
-// eslint-disable-next-line jest/no-jest-import
 import type { Config } from "jest";
 
 const jestConfig: Config = {
@@ -17,6 +16,7 @@ const jestConfig: Config = {
     "\\.svg$": "test-utils/mock-data/mockSvg.js",
   },
   setupFilesAfterEnv: ["./src/test-utils/setup-tests.ts"],
+  globalSetup: "./src/test-utils/global-setup.js",
 };
 
 export default jestConfig;

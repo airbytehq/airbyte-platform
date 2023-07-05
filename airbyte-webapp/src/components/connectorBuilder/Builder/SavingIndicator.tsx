@@ -1,8 +1,9 @@
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCaretDown, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -11,8 +12,9 @@ import { Tooltip } from "components/ui/Tooltip";
 import { SavingState, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SavingIndicator.module.scss";
+import { VersionModal } from "../VersionModal";
 
-function getMessage(savingState: SavingState, triggerUpdate: () => void) {
+function getMessage(savingState: SavingState, displayedVersion: number | undefined, triggerUpdate: () => void) {
   if (savingState === "invalid") {
     return (
       <Tooltip
@@ -46,15 +48,16 @@ function getMessage(savingState: SavingState, triggerUpdate: () => void) {
     <FlexContainer gap="sm" alignItems="center">
       <FontAwesomeIcon icon={faCheck} />
       <FlexItem>
-        <FormattedMessage id="connectorBuilder.loadingState.saved" />
+        {displayedVersion ? <>v{displayedVersion}</> : <FormattedMessage id="connectorBuilder.loadingState.saved" />}
       </FlexItem>
     </FlexContainer>
   );
 }
 
 export const SavingIndicator: React.FC = () => {
-  const { savingState, triggerUpdate } = useConnectorBuilderFormState();
+  const { savingState, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
   const [pendingUpdate, setPendingUpdate] = useState(false);
+  const [changeInProgress, setChangeInProgress] = useState(false);
   const timeoutRef = useRef<number>();
 
   useEffect(
@@ -66,9 +69,11 @@ export const SavingIndicator: React.FC = () => {
     []
   );
 
-  return (
+  const isPublished = Boolean(currentProject.sourceDefinitionId);
+
+  const message = (
     <Text size="sm" color="grey" as="div" className={styles.text}>
-      {getMessage(pendingUpdate ? "loading" : savingState, () => {
+      {getMessage(pendingUpdate ? "loading" : savingState, displayedVersion, () => {
         setPendingUpdate(true);
         if (timeoutRef.current) {
           window.clearTimeout(timeoutRef.current);
@@ -81,5 +86,26 @@ export const SavingIndicator: React.FC = () => {
         }, 200);
       })}
     </Text>
+  );
+
+  if (!isPublished || savingState === "error") {
+    return message;
+  }
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="clear"
+        onClick={() => {
+          setChangeInProgress(true);
+        }}
+        icon={<FontAwesomeIcon icon={faCaretDown} />}
+        iconPosition="right"
+      >
+        {message}
+      </Button>
+      {changeInProgress && <VersionModal onClose={() => setChangeInProgress(false)} project={currentProject} />}
+    </>
   );
 };

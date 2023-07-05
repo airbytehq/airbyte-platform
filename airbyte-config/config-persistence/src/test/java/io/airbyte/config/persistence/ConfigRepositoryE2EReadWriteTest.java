@@ -150,8 +150,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withSourceType(SourceType.DATABASE)
-        .withDockerRepository("docker-repo")
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withName("sourceDefinition");
     configRepository.writeStandardSourceDefinition(sourceDefinition);
 

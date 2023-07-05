@@ -77,9 +77,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.commons.server.helpers.DestinationDefinitionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
-import io.airbyte.commons.server.helpers.SourceDefinitionHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
@@ -175,13 +173,17 @@ class WebBackendConnectionsHandlerTest {
         configRepository,
         actorDefinitionVersionHelper);
 
-    final StandardSourceDefinition sourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
-    sourceDefinition.setIcon(SOURCE_ICON);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo")
+        .withIcon(SOURCE_ICON);
     final SourceConnection source = SourceHelpers.generateSource(sourceDefinition.getSourceDefinitionId());
     sourceRead = SourceHelpers.getSourceRead(source, sourceDefinition);
 
-    final StandardDestinationDefinition destinationDefinition = DestinationDefinitionHelpers.generateDestination();
-    destinationDefinition.setIcon(DESTINATION_ICON);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("db2")
+        .withIcon(DESTINATION_ICON);
     final DestinationConnection destination = DestinationHelpers.generateDestination(destinationDefinition.getDestinationDefinitionId());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, destinationDefinition);
 

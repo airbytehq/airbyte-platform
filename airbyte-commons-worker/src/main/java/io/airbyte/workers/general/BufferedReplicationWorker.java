@@ -7,6 +7,8 @@ package io.airbyte.workers.general;
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
+import io.airbyte.commons.timer.Stopwatch;
+import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -76,6 +78,12 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private volatile boolean isReadFromDestRunning;
   private volatile boolean cancelled;
 
+  private final Stopwatch readFromSourceStopwatch;
+  private final Stopwatch processFromSourceStopwatch;
+  private final Stopwatch writeToDestStopwatch;
+  private final Stopwatch readFromDestStopwatch;
+  private final Stopwatch processFromDestStopwatch;
+
   private static final int sourceMaxBufferSize = 1000;
   private static final int destinationMaxBufferSize = 1000;
   private static final int observabilityMetricsPeriodInSeconds = 1;
@@ -113,6 +121,12 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.destMessagesRead = new AtomicLong();
     this.destMessagesSent = new AtomicLong();
     this.sourceMessagesRead = new AtomicLong();
+
+    this.readFromSourceStopwatch = new Stopwatch();
+    this.processFromSourceStopwatch = new Stopwatch();
+    this.writeToDestStopwatch = new Stopwatch();
+    this.readFromDestStopwatch = new Stopwatch();
+    this.processFromDestStopwatch = new Stopwatch();
   }
 
   @Override
@@ -157,7 +171,14 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       if (!cancelled) {
         replicationWorkerHelper.endOfReplication();
       }
-      return replicationWorkerHelper.getReplicationOutput();
+
+      final var perfMetrics = new PerformanceMetrics()
+          .withAdditionalProperty("readFromSource", readFromSourceStopwatch)
+          .withAdditionalProperty("processFromSource", processFromSourceStopwatch)
+          .withAdditionalProperty("writeToDest", writeToDestStopwatch)
+          .withAdditionalProperty("readFromDest", readFromDestStopwatch)
+          .withAdditionalProperty("processFromDest", processFromDestStopwatch);
+      return replicationWorkerHelper.getReplicationOutput(perfMetrics);
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       throw new WorkerException("Sync failed", e);
@@ -249,6 +270,17 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     replicationWorkerHelper.endOfReplication();
   }
 
+  /**
+   * Checks if a source is finished while timing how long the check took. This is needed because the
+   * current Source implementation will read to determine whether the source is finished. As a result,
+   * to track the time spent in a source, we need to track both isFinished and attemptRead.
+   */
+  private boolean sourceIsFinished() {
+    try (final var t = readFromSourceStopwatch.start()) {
+      return source.isFinished();
+    }
+  }
+
   private void readFromSource() {
     // Capture the result of the last source.isFinished read for reporting.
     // We cannot call isFinished in the finally clause as it may throw an error.
@@ -256,7 +288,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("readFromSource: start");
 
-      while (!cancelled && !(sourceIsFinished = source.isFinished()) && !messagesFromSourceQueue.isClosed()) {
+      while (!cancelled && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
         final Optional<AirbyteMessage> messageOptional = source.attemptRead();
         if (messageOptional.isPresent()) {
           sourceMessagesRead.incrementAndGet();
@@ -299,7 +331,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
           continue;
         }
 
-        final Optional<AirbyteMessage> processedMessageOpt = replicationWorkerHelper.processMessageFromSource(message);
+        final Optional<AirbyteMessage> processedMessageOpt;
+        try (final var t = processFromSourceStopwatch.start()) {
+          processedMessageOpt = replicationWorkerHelper.processMessageFromSource(message);
+        }
         if (processedMessageOpt.isPresent()) {
           final AirbyteMessage m = processedMessageOpt.get();
           // TODO this check should move to the processMessageFromSource
@@ -337,7 +372,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
             continue;
           }
 
-          destination.accept(message);
+          try (final var t = writeToDestStopwatch.start()) {
+            destination.accept(message);
+          }
           destMessagesSent.incrementAndGet();
         }
       } finally {
@@ -360,16 +397,18 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!(destinationIsFinished = destination.isFinished())) {
+      while (!(destinationIsFinished = destinationIsFinished())) {
         final Optional<AirbyteMessage> messageOptional;
-        try {
+        try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
         } catch (final Exception e) {
           throw new DestinationException("Destination process read attempt failed", e);
         }
         if (messageOptional.isPresent()) {
           destMessagesRead.incrementAndGet();
-          replicationWorkerHelper.processMessageFromDestination(messageOptional.get());
+          try (final var t = processFromDestStopwatch.start()) {
+            replicationWorkerHelper.processMessageFromDestination(messageOptional.get());
+          }
         }
       }
       if (destination.getExitValue() != 0) {
@@ -384,6 +423,18 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     } finally {
       LOGGER.info("readFromDestination: done. (dest.isFinished:{})", destinationIsFinished);
       isReadFromDestRunning = false;
+    }
+  }
+
+  /**
+   * Checks if a destination is finished while timing how long the check took. This is needed because
+   * the current Destination implementation will read to determine whether the destination is
+   * finished. As a result, to track the time spent in a destination, we need to track both isFinished
+   * and attemptRead.
+   */
+  private boolean destinationIsFinished() {
+    try (final var t = readFromDestStopwatch.start()) {
+      return destination.isFinished();
     }
   }
 

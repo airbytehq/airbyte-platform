@@ -155,7 +155,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
-          standardSyncOutput.setCommitStateAsap(syncInput.getCommitStateAsap());
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -185,6 +184,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStatus(replicationSummary.getStatus());
     syncSummary.setTotalStats(replicationSummary.getTotalStats());
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
+    syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
 
     standardSyncOutput.setState(output.getState());
     standardSyncOutput.setOutputCatalog(output.getOutputCatalog());

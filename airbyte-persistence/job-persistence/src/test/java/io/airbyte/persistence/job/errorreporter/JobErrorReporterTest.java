@@ -240,8 +240,6 @@ class JobErrorReporterTest {
 
     Mockito.when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
         .thenReturn(new StandardSourceDefinition()
-            .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-            .withReleaseStage(SOURCE_RELEASE_STAGE)
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 

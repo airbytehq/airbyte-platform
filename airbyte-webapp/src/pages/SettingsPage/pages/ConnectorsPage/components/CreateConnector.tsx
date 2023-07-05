@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
@@ -13,7 +14,6 @@ import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuil
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { ReactComponent as BuilderIcon } from "./builder-icon.svg";
 import CreateConnectorModal from "./CreateConnectorModal";

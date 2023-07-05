@@ -380,17 +380,11 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
     verify(configRepository, times(1)).writeCustomSourceDefinitionAndDefaultVersion(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withDockerImageTag(CDK_VERSION)
-        .withDockerRepository("airbyte/source-declarative-manifest")
         .withName(A_SOURCE_NAME)
-        .withProtocolVersion("0.2.0")
         .withSourceType(SourceType.CUSTOM)
-        .withSpec(adaptedConnectorSpecification)
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true)
-        .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(
+        .withCustom(true)), eq(
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")

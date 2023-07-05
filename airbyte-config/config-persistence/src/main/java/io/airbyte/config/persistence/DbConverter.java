@@ -9,12 +9,14 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_BREAKING_CHANGE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -22,9 +24,11 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SER
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -39,6 +43,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
@@ -177,6 +182,20 @@ public class DbConverter {
   }
 
   /**
+   * Build organization from db record.
+   *
+   * @param record db record
+   * @return organization
+   */
+  public static Organization buildOrganization(final Record record) {
+    return new Organization()
+        .withOrganizationId(record.get(ORGANIZATION.ID))
+        .withName(record.get(ORGANIZATION.NAME))
+        .withUserId(record.get(ORGANIZATION.USER_ID))
+        .withEmail(record.get(ORGANIZATION.EMAIL));
+  }
+
+  /**
    * Build source from db record.
    *
    * @param record db record
@@ -218,31 +237,16 @@ public class DbConverter {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
-        .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-        .withDocumentationUrl(record.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withSourceType(record.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class))
-        .withProtocolVersion(record.get(ACTOR_DEFINITION.PROTOCOL_VERSION, String.class))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
-        .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
-        .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
-            : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withAllowedHosts(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class))
-        .withSuggestedStreams(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class))
         .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
             ? defaultMaxSecondsBetweenMessages
             : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
@@ -258,37 +262,14 @@ public class DbConverter {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
-        .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-        .withDocumentationUrl(record.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class))
-        .withProtocolVersion(record.get(ACTOR_DEFINITION.PROTOCOL_VERSION, String.class))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
-        .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
-        .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
-            : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
-        .withSupportsDbt(record.get(ACTOR_DEFINITION.SUPPORTS_DBT) == null ? null
-            : record.get(ACTOR_DEFINITION.SUPPORTS_DBT))
-        .withNormalizationConfig(
-            Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_REPOSITORY)) && Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_TAG))
-                &&
-                Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_INTEGRATION_TYPE))
-                    ? new NormalizationDestinationDefinitionConfig()
-                        .withNormalizationRepository(record.get(ACTOR_DEFINITION.NORMALIZATION_REPOSITORY))
-                        .withNormalizationTag(record.get(ACTOR_DEFINITION.NORMALIZATION_TAG))
-                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION.NORMALIZATION_INTEGRATION_TYPE))
-                    : null)
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withAllowedHosts(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
   }
 
   /**
@@ -455,6 +436,21 @@ public class DbConverter {
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
         .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
         .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
+  }
+
+  /**
+   * Actor definition breaking change from db record.
+   *
+   * @param record db record
+   * @return actor definition breaking change
+   */
+  public static ActorDefinitionBreakingChange buildActorDefinitionBreakingChange(final Record record) {
+    return new ActorDefinitionBreakingChange()
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID))
+        .withVersion(new Version(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.VERSION)))
+        .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
+        .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
+        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL));
   }
 
   /**

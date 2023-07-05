@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { getExcludedConnectorIds } from "core/domain/connector/constants";
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 /**
  * Returns a list of destination definitions that are available for the current workspace.

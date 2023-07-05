@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
@@ -14,7 +15,6 @@ import { AppActionCodes } from "hooks/services/AppMonitoringService";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { trackAction } from "utils/datadog";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 

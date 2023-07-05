@@ -29,6 +29,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -76,6 +77,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
+  private final FeatureFlagClient featureFlagClient;
 
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
 
@@ -90,7 +92,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    @Value("${micronaut.server.port}") final Integer serverPort,
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final TemporalUtils temporalUtils,
-                                   final AirbyteApiClient airbyteApiClient) {
+                                   final AirbyteApiClient airbyteApiClient,
+                                   final FeatureFlagClient featureFlagClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -103,6 +106,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -265,7 +269,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         containerOrchestratorConfig.get(),
         activityContext,
         serverPort,
-        temporalUtils);
+        temporalUtils,
+        featureFlagClient);
   }
 
 }
