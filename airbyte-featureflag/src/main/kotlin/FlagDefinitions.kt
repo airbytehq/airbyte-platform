@@ -27,8 +27,6 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
-object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
-
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")

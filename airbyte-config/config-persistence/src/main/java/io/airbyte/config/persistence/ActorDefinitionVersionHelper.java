@@ -10,9 +10,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
-import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -77,10 +75,6 @@ public class ActorDefinitionVersionHelper {
       throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition);
 
-    if (!featureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(workspaceId))) {
-      return defaultVersion;
-    }
-
     final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
         ActorType.SOURCE,
         sourceDefinition.getSourceDefinitionId(),
@@ -116,10 +110,6 @@ public class ActorDefinitionVersionHelper {
                                                       @Nullable final UUID actorId)
       throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition);
-
-    if (!featureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(workspaceId))) {
-      return defaultVersion;
-    }
 
     final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
         ActorType.DESTINATION,
