@@ -420,6 +420,7 @@ function manifestIncrementalSyncToBuilder(
     start_datetime: manifestStartDateTime,
     step,
     cursor_granularity,
+    is_data_feed,
     type,
     $parameters,
     ...regularFields
@@ -461,6 +462,7 @@ function manifestIncrementalSyncToBuilder(
     end_datetime,
     start_datetime,
     slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,
+    filter_mode: is_data_feed ? "no_filter" : manifestEndDateTime ? "range" : "start",
   };
 }
 

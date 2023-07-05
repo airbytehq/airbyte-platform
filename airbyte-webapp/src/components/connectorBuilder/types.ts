@@ -153,6 +153,7 @@ export interface BuilderIncrementalSync
     step?: string;
     cursor_granularity?: string;
   };
+  filter_mode: "range" | "start" | "no_filter";
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -448,7 +449,11 @@ export function hasIncrementalSyncUserInput(
   streams: BuilderFormValues["streams"],
   key: "start_datetime" | "end_datetime"
 ) {
-  return streams.some((stream) => stream.incrementalSync?.[key].type === "user_input");
+  return streams.some(
+    (stream) =>
+      stream.incrementalSync?.[key].type === "user_input" &&
+      (key === "start_datetime" || stream.incrementalSync?.filter_mode === "range")
+  );
 }
 
 export function getInferredInputList(
@@ -528,6 +533,12 @@ const nonPathRequestOptionSchema = yup
 const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+
+const schemaIfNotDataFeed = (schema: yup.AnySchema) =>
+  yup.mixed().when("filter_mode", {
+    is: (val: string) => val !== "no_filter",
+    then: schema,
+  });
 
 const jsonString = yup.string().test({
   test: (val: string | undefined) => {
@@ -772,13 +783,15 @@ export const builderFormValidationSchema = yup.object().shape({
           .object()
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
-            slicer: yup
-              .object()
-              .shape({
-                cursor_granularity: yup.string().required("form.empty.error"),
-                step: yup.string().required("form.empty.error"),
-              })
-              .default(undefined),
+            slicer: schemaIfNotDataFeed(
+              yup
+                .object()
+                .shape({
+                  cursor_granularity: yup.string().required("form.empty.error"),
+                  step: yup.string().required("form.empty.error"),
+                })
+                .default(undefined)
+            ),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
@@ -786,16 +799,18 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            end_datetime: yup.object().shape({
-              value: yup.mixed().when("type", {
-                is: (val: string) => val === "custom",
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
-              }),
-            }),
+            end_datetime: schemaIfNotDataFeed(
+              yup.object().shape({
+                value: yup.mixed().when("type", {
+                  is: (val: string) => val === "custom",
+                  then: yup.string().required("form.empty.error"),
+                  otherwise: (schema) => schema.strip(),
+                }),
+              })
+            ),
             datetime_format: yup.string().required("form.empty.error"),
-            start_time_option: nonPathRequestOptionSchema,
-            end_time_option: nonPathRequestOptionSchema,
+            start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
+            end_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
             stream_state_field_start: yup.string(),
             stream_state_field_end: yup.string(),
             lookback_window: yup.string(),
@@ -891,28 +906,48 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, slicer, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, slicer, start_time_option, end_time_option, filter_mode, ...regularFields } =
+    formValues;
+  const startDatetime = {
+    type: "MinMaxDatetime" as const,
+    datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
+    datetime_format: start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  };
+  if (filter_mode === "range") {
+    return {
+      type: "DatetimeBasedCursor",
+      ...regularFields,
+      start_time_option,
+      end_time_option,
+      start_datetime: startDatetime,
+      end_datetime: {
+        type: "MinMaxDatetime",
+        datetime:
+          end_datetime.type === "custom"
+            ? end_datetime.value
+            : end_datetime.type === "now"
+            ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
+            : `{{ config['end_date'] }}`,
+        datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+      },
+      step: slicer?.step,
+      cursor_granularity: slicer?.cursor_granularity,
+    };
+  }
+  if (filter_mode === "start") {
+    return {
+      type: "DatetimeBasedCursor",
+      ...regularFields,
+      start_time_option,
+      end_time_option,
+      start_datetime: startDatetime,
+    };
+  }
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
-    start_datetime: {
-      type: "MinMaxDatetime",
-      datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
-      datetime_format:
-        start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-    },
-    end_datetime: {
-      type: "MinMaxDatetime",
-      datetime:
-        end_datetime.type === "custom"
-          ? end_datetime.value
-          : end_datetime.type === "now"
-          ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
-          : `{{ config['end_date'] }}`,
-      datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-    },
-    step: slicer?.step,
-    cursor_granularity: slicer?.cursor_granularity,
+    is_data_feed: true,
+    start_datetime: startDatetime,
   };
 }
 

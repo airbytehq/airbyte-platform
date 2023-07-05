@@ -8,8 +8,6 @@
 
 export interface Experiments {
   "autopropagation.enabled": boolean;
-  "connector.inviteUsersHint.visible": boolean;
-  "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
   "connector.shortSetupGuides": boolean;

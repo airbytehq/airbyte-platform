@@ -175,6 +175,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           customInput={<DatepickerButton />}
           popperClassName={styles.popup}
           timeCaption={formatMessage({ id: "form.datepickerTimeCaption" })}
+          portalId="react-datepicker"
+          popperPlacement="bottom-end"
         />
       </div>
     </div>
