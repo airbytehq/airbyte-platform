@@ -1294,6 +1294,8 @@ minio:
   auth:
     rootUser: minio
     rootPassword: minio123
+  storage:
+    volumeClaimValue: 500Mi
 
 ## @section cron parameters
 
