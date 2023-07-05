@@ -103,9 +103,11 @@ create table "public"."actor_definition_version" (
 );
 create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
-  "workspace_id" uuid not null,
-  constraint "actor_definition_workspace_gr_workspace_id_actor_definition_key"
-    unique ("workspace_id", "actor_definition_id")
+  "workspace_id" uuid,
+  "scope_id" uuid,
+  "scope_type" "public"."scope_type" not null default cast('workspace' as scope_type),
+  constraint "actor_definition_workspace_gr_actor_definition_id_scope_id__key"
+    unique ("actor_definition_id", "scope_id", "scope_type")
 );
 create table "public"."actor_oauth_parameter" (
   "id" uuid not null,
@@ -357,10 +359,6 @@ alter table "public"."actor_definition_workspace_grant"
   add constraint "actor_definition_workspace_grant_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
-alter table "public"."actor_definition_workspace_grant"
-  add constraint "actor_definition_workspace_grant_workspace_id_fkey"
-    foreign key ("workspace_id")
-    references "public"."workspace" ("id");
 alter table "public"."connection"
   add constraint "connection_actor_catalog_id_fk"
     foreign key ("source_catalog_id")

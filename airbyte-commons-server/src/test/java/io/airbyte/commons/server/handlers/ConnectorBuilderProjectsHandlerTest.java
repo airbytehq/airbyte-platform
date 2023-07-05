@@ -37,6 +37,7 @@ import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
@@ -393,7 +394,8 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withReleaseStage(ReleaseStage.CUSTOM)
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),
-        eq(workspaceId));
+        eq(workspaceId),
+        eq(ScopeType.WORKSPACE.value()));
     verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 

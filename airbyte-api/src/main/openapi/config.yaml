@@ -3416,14 +3416,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
+    ScopeId:
+      type: string
+      format: uuid
+    ScopeType:
+      type: string
+      enum:
+        - workspace
+        - organization
     CustomSourceDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - sourceDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
         sourceDefinition:
           $ref: "#/components/schemas/SourceDefinitionCreate"
     SourceDefinitionIdWithWorkspaceId:
@@ -3928,13 +3939,16 @@ components:
     CustomDestinationDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - destinationDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         destinationDefinition:
           $ref: "#/components/schemas/DestinationDefinitionCreate"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
     DestinationDefinitionIdWithWorkspaceId:
       type: object
       required:

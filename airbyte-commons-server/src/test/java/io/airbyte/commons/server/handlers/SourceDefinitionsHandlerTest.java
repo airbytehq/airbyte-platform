@@ -48,6 +48,7 @@ import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
@@ -390,7 +391,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition")
-  void testCreateCustomSourceDefinition() throws URISyntaxException, IOException, JsonValidationException {
+  void testCreateCustomSourceDefinition() throws URISyntaxException, IOException {
     final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     final String imageName = sourceDefinitionVersion.getDockerRepository() + ":" + sourceDefinitionVersion.getDockerImageTag();
@@ -444,7 +445,91 @@ class SourceDefinitionsHandlerTest {
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withAllowedHosts(null)
             .withSuggestedStreams(null),
-        workspaceId);
+        workspaceId,
+        ScopeType.WORKSPACE.value());
+  }
+
+  @Test
+  @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition for a workspace and organization using scopes")
+  void testCreateCustomSourceDefinitionUsingScopes() throws URISyntaxException, IOException {
+    final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
+    final String imageName = sourceDefinitionVersion.getDockerRepository() + ":" + sourceDefinitionVersion.getDockerImageTag();
+    final UUID organizationId = UUID.randomUUID();
+
+    when(uuidSupplier.get()).thenReturn(sourceDefinition.getSourceDefinitionId());
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+        sourceDefinitionVersion.getSpec(),
+        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+
+    final SourceDefinitionCreate create = new SourceDefinitionCreate()
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(sourceDefinition.getIcon())
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final CustomSourceDefinitionCreate customCreateForWorkspace = new CustomSourceDefinitionCreate()
+        .sourceDefinition(create)
+        .scopeId(workspaceId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+
+    final SourceDefinitionRead expectedRead = new SourceDefinitionRead()
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .releaseStage(ReleaseStage.CUSTOM)
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final SourceDefinitionRead actualRead = sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForWorkspace);
+
+    assertEquals(expectedRead, actualRead);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+        sourceDefinition
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        sourceDefinitionVersion
+            .withVersionId(null)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withAllowedHosts(null)
+            .withSuggestedStreams(null),
+        workspaceId,
+        ScopeType.WORKSPACE.value());
+
+    final CustomSourceDefinitionCreate customCreateForOrganization = new CustomSourceDefinitionCreate()
+        .sourceDefinition(create)
+        .scopeId(organizationId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+
+    sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForOrganization);
+
+    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+        sourceDefinition
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        sourceDefinitionVersion
+            .withVersionId(null)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withAllowedHosts(null)
+            .withSuggestedStreams(null),
+        organizationId,
+        ScopeType.ORGANIZATION.value());
   }
 
   @Test
@@ -479,7 +564,7 @@ class SourceDefinitionsHandlerTest {
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.createCustomSourceDefinition(customCreate));
 
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any());
+    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any(), any());
   }
 
   @Test

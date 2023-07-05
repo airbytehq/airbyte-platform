@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
@@ -226,10 +227,16 @@ public class DestinationDefinitionsHandler {
           protocolVersionRange.max());
     }
 
-    configRepository.writeCustomDestinationDefinitionAndDefaultVersion(
-        destinationDefinition,
-        actorDefinitionVersion,
-        customDestinationDefinitionCreate.getWorkspaceId());
+    if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
+      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
+          customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE.getValue());
+    } else {
+      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(
+          destinationDefinition,
+          actorDefinitionVersion,
+          customDestinationDefinitionCreate.getScopeId(),
+          customDestinationDefinitionCreate.getScopeType().toString());
+    }
 
     return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion);
   }
@@ -334,6 +341,7 @@ public class DestinationDefinitionsHandler {
     }
   }
 
+  // todo add feature flag here for organizations
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(
                                                                                 final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -349,6 +357,7 @@ public class DestinationDefinitionsHandler {
         .granted(true);
   }
 
+  // todo add feature flag here for organizations
   public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(

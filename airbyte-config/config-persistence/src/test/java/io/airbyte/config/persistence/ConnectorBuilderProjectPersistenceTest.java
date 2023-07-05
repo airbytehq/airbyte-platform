@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.Jsons;
 import io.airbyte.validation.json.JsonValidationException;
@@ -162,7 +163,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
         .withPublic(false),
-        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID);
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE.value());
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
@@ -181,7 +182,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
         .withPublic(true),
-        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID);
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE.value());
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);

@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
@@ -197,6 +198,7 @@ public class SourceDefinitionsHandler {
     return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
   }
 
+  // todo make a second version that takers in SourceDefinitionIdWithScope
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID definitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
@@ -227,8 +229,15 @@ public class SourceDefinitionsHandler {
       throw new UnsupportedProtocolVersionException(actorDefinitionVersion.getProtocolVersion(), protocolVersionRange.min(),
           protocolVersionRange.max());
     }
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
-        customSourceDefinitionCreate.getWorkspaceId());
+
+    // todo add feature flag here for organizations
+    if (customSourceDefinitionCreate.getWorkspaceId() != null) {
+      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+          customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE.getValue());
+    } else {
+      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+          customSourceDefinitionCreate.getScopeId(), customSourceDefinitionCreate.getScopeType().toString());
+    }
 
     return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
   }
@@ -334,8 +343,8 @@ public class SourceDefinitionsHandler {
     }
   }
 
-  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(
-                                                                      final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
+  // todo add feature flag here for organizations
+  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSourceDefinition standardSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
@@ -348,6 +357,7 @@ public class SourceDefinitionsHandler {
         .granted(true);
   }
 
+  // todo add feature flag here for organizations
   public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(

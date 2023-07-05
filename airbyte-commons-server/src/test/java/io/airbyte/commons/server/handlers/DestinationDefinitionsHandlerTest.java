@@ -47,6 +47,7 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -495,7 +496,89 @@ class DestinationDefinitionsHandlerTest {
             .withReleaseDate(null)
             .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withAllowedHosts(null),
-        workspaceId);
+        workspaceId,
+        ScopeType.WORKSPACE.value());
+  }
+
+  @Test
+  @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition for a workspace and organization using scopes")
+  void testCreateCustomDestinationDefinitionUsingScopes() throws URISyntaxException, IOException {
+    final StandardDestinationDefinition destination = generateDestinationDefinition();
+    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destination);
+    final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
+    final UUID organizationId = UUID.randomUUID();
+
+    when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+        destinationDefinitionVersion.getSpec(),
+        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+
+    final DestinationDefinitionCreate create = new DestinationDefinitionCreate()
+        .name(destination.getName())
+        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
+        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .icon(destination.getIcon())
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final CustomDestinationDefinitionCreate customCreateForWorkspace = new CustomDestinationDefinitionCreate()
+        .destinationDefinition(create)
+        .scopeId(workspaceId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+
+    final DestinationDefinitionRead expectedRead = new DestinationDefinitionRead()
+        .name(destination.getName())
+        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
+        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destination.getDestinationDefinitionId())
+        .icon(DestinationDefinitionsHandler.loadIcon(destination.getIcon()))
+        .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .releaseStage(ReleaseStage.CUSTOM)
+        .supportsDbt(false)
+        .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
+
+    assertEquals(expectedRead, actualRead);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+        destination
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        destinationDefinitionVersion
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withAllowedHosts(null),
+        workspaceId,
+        ScopeType.WORKSPACE.value());
+
+    final CustomDestinationDefinitionCreate customCreateForOrganization = new CustomDestinationDefinitionCreate()
+        .destinationDefinition(create)
+        .scopeId(organizationId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+
+    destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForOrganization);
+
+    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+        destination
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        destinationDefinitionVersion
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withAllowedHosts(null),
+        organizationId,
+        ScopeType.ORGANIZATION.value());
   }
 
   @Test
@@ -530,7 +613,7 @@ class DestinationDefinitionsHandlerTest {
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
 
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any());
+    verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
   }
 
   @Test
