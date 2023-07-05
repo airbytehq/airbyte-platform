@@ -680,12 +680,7 @@ abstract class ReplicationWorkerTest {
   void testDestinationRunnableDestinationFailure() throws Exception {
     final String destinationErrorMessage = "the destination had a failure";
 
-    // This test is not ideal:
-    // We check that it fails as expected if notifyEndOfInput fails. however, isFinished is called
-    // from a different thread and is mocked with a finite set of values, last one causing the
-    // thread to terminate.
-    // In practice, the call to isFinished would probably throw an exception as well.
-    when(destination.isFinished()).thenReturn(false, false, false, true);
+    when(destination.isFinished()).thenReturn(false);
     doThrow(new RuntimeException(destinationErrorMessage)).when(destination).notifyEndOfInput();
 
     final ReplicationWorker worker = getDefaultReplicationWorker();

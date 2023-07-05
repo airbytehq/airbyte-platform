@@ -66,7 +66,7 @@ object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.
 
 object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.resources", default = "")
 
-object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
+object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
