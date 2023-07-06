@@ -4,12 +4,6 @@ import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
-import { naturalComparator } from "utils/objects";
-
-import { CDK_VERSION } from "./cdk";
-import { formatJson } from "./utils";
-import { FORM_PATTERN_ERROR } from "../../core/form/types";
-import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -46,7 +40,13 @@ import {
   HttpResponseFilter,
   DefaultPaginator,
   DeclarativeComponentSchemaMetadata,
-} from "../../core/request/ConnectorManifest";
+} from "core/api/types/ConnectorManifest";
+import { naturalComparator } from "utils/objects";
+
+import { CDK_VERSION } from "./cdk";
+import { formatJson } from "./utils";
+import { FORM_PATTERN_ERROR } from "../../core/form/types";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export type EditorView = "ui" | "yaml";
 

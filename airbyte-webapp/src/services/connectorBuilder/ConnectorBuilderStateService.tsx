@@ -20,27 +20,29 @@ import {
 } from "components/connectorBuilder/types";
 import { formatJson } from "components/connectorBuilder/utils";
 
-import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
-import { FormGroupItem } from "core/form/types";
-import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
-import { ConnectorConfig, StreamRead, StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/request/ConnectorManifest";
-import { useBlocker } from "hooks/router/useBlocker";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
-
-import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
-import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import {
   BuilderProject,
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
   NewVersionBody,
-  useProject,
-  usePublishProject,
-  useReleaseNewVersion,
-  useUpdateProject,
-} from "./ConnectorBuilderProjectsService";
+  useBuilderListStreams,
+  useBuilderProject,
+  usePublishBuilderProject,
+  useBuilderReadStream,
+  useReleaseNewBuilderProjectVersion,
+  useBuilderResolvedManifest,
+  useUpdateBuilderProject,
+} from "core/api";
+import { ConnectorConfig, StreamRead, StreamsListReadStreamsItem } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
+import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
+import { FormGroupItem } from "core/form/types";
+import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
+import { useBlocker } from "hooks/router/useBlocker";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
+
+import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { useConnectorBuilderTestInputState } from "./ConnectorBuilderTestInputService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
 import SchemaWorker from "./SchemaWorker?worker";
@@ -275,8 +277,8 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     setPreviousManifestDraft(undefined);
   }, []);
 
-  const { mutateAsync: sendPublishRequest } = usePublishProject();
-  const { mutateAsync: sendNewVersionRequest } = useReleaseNewVersion();
+  const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();
+  const { mutateAsync: sendNewVersionRequest } = useReleaseNewBuilderProjectVersion();
 
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
@@ -410,9 +412,9 @@ function useTestInputDefaultValues(testInputJson: ConnectorConfig | undefined, s
 }
 
 function useInitializedBuilderProject(projectId: string) {
-  const builderProject = useProject(projectId);
-  const { mutateAsync: updateProject, error: updateError } = useUpdateProject(projectId);
-  const resolvedManifest = useResolvedManifest(builderProject.declarativeManifest?.manifest);
+  const builderProject = useBuilderProject(projectId);
+  const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
+  const resolvedManifest = useBuilderResolvedManifest(builderProject.declarativeManifest?.manifest);
   const [initialFormValues, failedInitialFormValueConversion] = useMemo(() => {
     if (!resolvedManifest) {
       // could not resolve manifest, use default form values
@@ -527,7 +529,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     isError: isStreamListError,
     error: streamListError,
     isFetching: isFetchingStreamList,
-  } = useListStreams(
+  } = useBuilderListStreams(
     { manifest, config: testInputWithDefaults },
     Boolean(editorView === "yaml" || manifest.streams?.length)
   );
@@ -551,7 +553,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const streamName =
     editorView === "ui" ? builderFormValues.streams[testStreamIndex]?.name : streams[testStreamIndex]?.name;
 
-  const streamRead = useReadStream(
+  const streamRead = useBuilderReadStream(
     projectId,
     {
       manifest,

@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import { LabelInfo } from "components/Label";
 
-import { RequestOption } from "core/request/ConnectorManifest";
+import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";

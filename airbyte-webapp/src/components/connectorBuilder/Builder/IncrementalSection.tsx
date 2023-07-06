@@ -6,7 +6,7 @@ import { LabelInfo } from "components/Label";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { RequestOption } from "core/request/ConnectorManifest";
+import { RequestOption } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 

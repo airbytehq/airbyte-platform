@@ -1,8 +1,8 @@
 import { Validator } from "@cfworker/json-schema";
 import uniq from "lodash/uniq";
 
-import { StreamReadSlicesItemPagesItemRecordsItem } from "core/request/ConnectorBuilderClient";
-import { InlineSchemaLoaderSchema } from "core/request/ConnectorManifest";
+import { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/ConnectorBuilderClient";
+import { InlineSchemaLoaderSchema } from "core/api/types/ConnectorManifest";
 
 export interface IncomingData {
   schema: string;

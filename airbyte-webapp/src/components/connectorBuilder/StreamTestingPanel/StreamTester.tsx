@@ -8,7 +8,7 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
+import { StreamsListReadStreamsItem } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import {

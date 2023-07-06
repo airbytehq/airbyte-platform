@@ -1,4 +1,4 @@
-import { OAuthAuthenticatorRefreshTokenUpdater } from "core/request/ConnectorManifest";
+import { OAuthAuthenticatorRefreshTokenUpdater } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "utils/links";

@@ -18,12 +18,12 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { useListBuilderProjects } from "core/api";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
-import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 import { links } from "utils/links";
 
 import styles from "./ConnectorBuilderCreatePage.module.scss";
@@ -39,7 +39,7 @@ const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
-  const existingProjects = useListProjects();
+  const existingProjects = useListBuilderProjects();
   const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const navigate = useNavigate();
 
@@ -201,7 +201,7 @@ function getConnectorName(fileName?: string | undefined, formValues?: BuilderFor
 }
 
 export const ConnectorBuilderCreatePage: React.FC = () => {
-  const existingProjects = useListProjects();
+  const existingProjects = useListBuilderProjects();
 
   return (
     <ConnectorBuilderLocalStorageProvider>

@@ -8,7 +8,7 @@ import { load } from "js-yaml";
 import fetch from "node-fetch";
 
 import { convertToBuilderFormValuesSync } from "../src/components/connectorBuilder/convertManifestToBuilderForm";
-import { DeclarativeComponentSchema } from "../src/core/request/ConnectorManifest";
+import { DeclarativeComponentSchema } from "../src/core/api/types/ConnectorManifest";
 
 async function analyze(
   path: string

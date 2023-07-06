@@ -6,7 +6,7 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { StreamReadLogsItem } from "core/request/ConnectorBuilderClient";
+import { StreamReadLogsItem } from "core/api/types/ConnectorBuilderClient";
 
 import styles from "./LogsDisplay.module.scss";
 

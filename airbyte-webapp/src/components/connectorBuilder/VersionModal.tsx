@@ -8,11 +8,7 @@ import { Modal, ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import {
-  BuilderProject,
-  useListVersions,
-  useResolvedProjectVersion,
-} from "services/connectorBuilder/ConnectorBuilderProjectsService";
+import { BuilderProject, useListBuilderProjectVersions, useResolvedBuilderProjectVersion } from "core/api";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
@@ -26,9 +22,9 @@ export const VersionModal: React.FC<{
 }> = ({ onClose, project }) => {
   const { displayedVersion, previousManifestDraft, setDisplayedVersion } = useConnectorBuilderFormState();
   const { setTestStreamIndex } = useConnectorBuilderTestRead();
-  const { data: versions, isLoading: isLoadingVersionList } = useListVersions(project);
+  const { data: versions, isLoading: isLoadingVersionList } = useListBuilderProjectVersions(project);
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(undefined);
-  const { data, isLoading } = useResolvedProjectVersion(project.id, selectedVersion);
+  const { data, isLoading } = useResolvedBuilderProjectVersion(project.id, selectedVersion);
 
   async function onSelect(version: number) {
     setSelectedVersion(version);
