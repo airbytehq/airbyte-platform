@@ -7,8 +7,8 @@ package io.airbyte.db.instance.configs.migrations;
 import static org.jooq.impl.DSL.unique;
 
 import io.airbyte.config.ScopeType;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
@@ -93,19 +93,20 @@ public class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTable extends B
    * the workspace_id and workspace respectively.
    */
   private static void migrateExistingRows(final DSLContext ctx) {
-    final Map<UUID, UUID> actorDefinitionIdToWorkspaceId = new HashMap<>();
+    final List<List<UUID>> actorDefinitionIdToWorkspaceIdList = new ArrayList<>();
     ctx.select(ACTOR_DEFINITION_ID_COLUMN, WORKSPACE_ID_COLUMN)
         .from(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .stream()
-        .forEach(record -> actorDefinitionIdToWorkspaceId.put(record.getValue(ACTOR_DEFINITION_ID_COLUMN), record.getValue(WORKSPACE_ID_COLUMN)));
+        .forEach(record -> actorDefinitionIdToWorkspaceIdList.add(
+            List.of(record.getValue(ACTOR_DEFINITION_ID_COLUMN), record.getValue(WORKSPACE_ID_COLUMN))));
 
-    for (final UUID actorDefinitionId : actorDefinitionIdToWorkspaceId.keySet()) {
-      final UUID workspaceId = actorDefinitionIdToWorkspaceId.get(actorDefinitionId);
+    for (final List<UUID> actorDefinitionWorkspaceIdPair : actorDefinitionIdToWorkspaceIdList) {
+      final UUID actorDefinitionId = actorDefinitionWorkspaceIdPair.get(0);
+      final UUID workspaceId = actorDefinitionWorkspaceIdPair.get(1);
       ctx.update(DSL.table(ACTOR_DEFINITION_WORKSPACE_GRANT))
-          .set(WORKSPACE_ID_COLUMN, workspaceId)
           .set(SCOPE_ID_COLUMN, workspaceId)
           .set(NEW_SCOPE_TYPE_COLUMN, ScopeTypeEnum.workspace)
-          .where(ACTOR_DEFINITION_ID_COLUMN.eq(actorDefinitionId))
+          .where(ACTOR_DEFINITION_ID_COLUMN.eq(actorDefinitionId).and(WORKSPACE_ID_COLUMN.eq(workspaceId)))
           .execute();
     }
 

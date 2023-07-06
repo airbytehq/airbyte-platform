@@ -39,7 +39,7 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
             ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION);
     final ConfigsDatabaseMigrator configsDbMigrator = new ConfigsDatabaseMigrator(database, flyway);
 
-    final BaseJavaMigration previousMigration = new V0_50_5_002__AddOrganizationColumnToWorkspaceTable();
+    final BaseJavaMigration previousMigration = new V0_50_5_004__AddActorDefinitionBreakingChangeTable();
     devConfigsDbMigrator = new DevDatabaseMigrator(configsDbMigrator, previousMigration.getVersion());
     devConfigsDbMigrator.createBaseline();
   }
@@ -56,9 +56,13 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
   void testSimpleMigration() {
     final DSLContext context = getDslContext();
     final UUID actorDefinitionId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
+    final UUID workspaceId1 = UUID.randomUUID();
+    final UUID workspaceId2 = UUID.randomUUID();
 
-    addActorDefinition(context, actorDefinitionId, workspaceId);
+    addWorkspace(context, workspaceId1);
+    addWorkspace(context, workspaceId2);
+
+    addActorDefinition(context, actorDefinitionId);
 
     // Adding initial actor_definition_workspace_grant
     context.insertInto(DSL.table(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE))
@@ -67,14 +71,24 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
             DSL.field(WORKSPACE_ID))
         .values(
             actorDefinitionId,
-            workspaceId)
+            workspaceId1)
+        .execute();
+
+    context.insertInto(DSL.table(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE))
+        .columns(
+            DSL.field(ACTOR_DEFINITION_ID),
+            DSL.field(WORKSPACE_ID))
+        .values(
+            actorDefinitionId,
+            workspaceId2)
         .execute();
 
     // Applying the migration
     devConfigsDbMigrator.migrate();
 
     Assertions.assertTrue(scopeColumnsExists(context));
-    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId));
+    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId1));
+    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId2));
   }
 
   protected static boolean scopeColumnsExists(final DSLContext ctx) {
@@ -99,7 +113,7 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     return record.get(SCOPE_ID).equals(workspaceId) && record.get(SCOPE_TYPE).equals(ScopeTypeEnum.workspace);
   }
 
-  private static void addActorDefinition(final DSLContext ctx, final UUID actorDefinitionId, final UUID workspaceId) {
+  private static void addWorkspace(final DSLContext ctx, final UUID workspaceId) {
     ctx.insertInto(DSL.table("workspace"))
         .columns(
             DSL.field("id"),
@@ -112,7 +126,9 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
             "base_workspace",
             true)
         .execute();
+  }
 
+  private static void addActorDefinition(final DSLContext ctx, final UUID actorDefinitionId) {
     ctx.insertInto(DSL.table("actor_definition"))
         .columns(
             DSL.field("id"),
@@ -134,7 +150,8 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
 
     final DSLContext context = getDslContext();
 
-    addActorDefinition(context, actorDefinitionId, workspaceId);
+    addWorkspace(context, workspaceId);
+    addActorDefinition(context, actorDefinitionId);
 
     context.insertInto(DSL.table(ACTOR_DEFINITION_WORKSPACE_GRANT_TABLE))
         .columns(
