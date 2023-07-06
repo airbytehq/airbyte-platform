@@ -1,10 +1,10 @@
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";

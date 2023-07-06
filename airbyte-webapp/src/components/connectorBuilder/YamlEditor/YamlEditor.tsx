@@ -11,7 +11,7 @@ import { useUpdateEffect } from "react-use";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -154,6 +154,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
           value={yamlValue}
           language="yaml"
           theme="airbyte-light"
+          automaticLayout
           onChange={(value) => setYamlValue(value ?? "")}
           lineNumberCharacterWidth={6}
           onMount={(editor) => {

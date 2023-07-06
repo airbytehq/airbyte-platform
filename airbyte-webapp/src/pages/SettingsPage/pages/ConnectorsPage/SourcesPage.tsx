@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
+import { useListBuilderProjects } from "core/api";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
 
@@ -76,7 +76,7 @@ const SourcesPage: React.FC = () => {
 };
 
 export const WithBuilderProjects: React.FC<Omit<ConnectorsViewProps, "connectorBuilderProjects">> = (props) => {
-  const projects = useListProjects();
+  const projects = useListBuilderProjects();
   return <ConnectorsView {...props} connectorBuilderProjects={projects} />;
 };
 

@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { SCOPE_USER, SCOPE_WORKSPACE } from "services/Scope";
 
 import { getWorkspace, listWorkspaces, updateWorkspace, webBackendGetWorkspaceState } from "../generated/AirbyteClient";

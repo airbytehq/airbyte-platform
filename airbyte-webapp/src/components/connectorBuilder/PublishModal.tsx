@@ -10,11 +10,11 @@ import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
-import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { useListBuilderProjectVersions } from "core/api";
+import { DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
-import { useListVersions } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./Builder/BuilderField";
@@ -30,7 +30,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { projectId, lastValidJsonManifest, currentProject, publishProject, releaseNewVersion } =
     useConnectorBuilderFormState();
-  const { data: versions, isLoading: isLoadingVersions } = useListVersions(currentProject);
+  const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
   const connectorName = useBuilderWatch("global.connectorName");
   const { setValue } = useFormContext();
 

@@ -8,11 +8,11 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 
+import { BuilderProject } from "core/api";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
-import { BuilderProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import ConnectorCell from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";

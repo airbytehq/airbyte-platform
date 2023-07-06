@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
@@ -43,11 +44,11 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
@@ -83,6 +84,7 @@ class SourceDefinitionsHandlerTest {
   private AirbyteRemoteOssCatalog githubStore;
   private SourceHandler sourceHandler;
   private UUID workspaceId;
+  private UUID organizationId;
   private AirbyteProtocolVersionRange protocolVersionRange;
 
   @SuppressWarnings("unchecked")
@@ -94,10 +96,9 @@ class SourceDefinitionsHandlerTest {
     githubStore = mock(AirbyteRemoteOssCatalog.class);
     sourceHandler = mock(SourceHandler.class);
     workspaceId = UUID.randomUUID();
-
+    organizationId = UUID.randomUUID();
     sourceDefinition = generateSourceDefinition();
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
-
     protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
 
     sourceDefinitionsHandler = new SourceDefinitionsHandler(configRepository, uuidSupplier, schedulerSynchronousClient, githubStore, sourceHandler,
@@ -312,8 +313,7 @@ class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should throw an exception for a missing grant")
   void testGetDefinitionWithoutGrantForWorkspace() throws IOException {
-    when(configRepository.workspaceCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId))
-        .thenReturn(false);
+    when(configRepository.workspaceCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId)).thenReturn(false);
 
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId = new SourceDefinitionIdWithWorkspaceId()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -323,14 +323,32 @@ class SourceDefinitionsHandlerTest {
   }
 
   @Test
+  @DisplayName("getSourceDefinitionForScope should throw an exception for a missing grant")
+  void testGetDefinitionWithoutGrantForScope() throws IOException {
+    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value())).thenReturn(
+        false);
+    final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
+        .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .scopeId(workspaceId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+    assertThrows(IdNotFoundKnownException.class, () -> sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForWorkspace));
+
+    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value())).thenReturn(
+        false);
+    final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForOrganization = new ActorDefinitionIdWithScope()
+        .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .scopeId(organizationId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+    assertThrows(IdNotFoundKnownException.class,
+        () -> sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForOrganization));
+  }
+
+  @Test
   @DisplayName("getSourceDefinitionForWorkspace should return the source if the grant exists")
   void testGetDefinitionWithGrantForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(configRepository.workspaceCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId))
-        .thenReturn(true);
-    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
-        .thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
-        .thenReturn(sourceDefinitionVersion);
+    when(configRepository.workspaceCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId)).thenReturn(true);
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -354,6 +372,48 @@ class SourceDefinitionsHandlerTest {
         .getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId);
 
     assertEquals(expectedSourceDefinitionRead, actualSourceDefinitionRead);
+  }
+
+  @Test
+  @DisplayName("getSourceDefinitionForScope should return the source if the grant exists")
+  void testGetDefinitionWithGrantForScope() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value())).thenReturn(true);
+    when(configRepository.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value())).thenReturn(
+        true);
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())).thenReturn(sourceDefinitionVersion);
+
+    final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForWorkspace = new ActorDefinitionIdWithScope()
+        .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .scopeId(workspaceId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+
+    final SourceDefinitionRead actualSourceDefinitionReadForWorkspace = sourceDefinitionsHandler.getSourceDefinitionForScope(
+        actorDefinitionIdWithScopeForWorkspace);
+    assertEquals(expectedSourceDefinitionRead, actualSourceDefinitionReadForWorkspace);
+
+    final ActorDefinitionIdWithScope actorDefinitionIdWithScopeForOrganization = new ActorDefinitionIdWithScope()
+        .actorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .scopeId(organizationId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+
+    final SourceDefinitionRead actualSourceDefinitionReadForOrganization = sourceDefinitionsHandler.getSourceDefinitionForScope(
+        actorDefinitionIdWithScopeForOrganization);
+    assertEquals(expectedSourceDefinitionRead, actualSourceDefinitionReadForOrganization);
   }
 
   @Test
@@ -390,7 +450,7 @@ class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition")
-  void testCreateCustomSourceDefinition() throws URISyntaxException, IOException, JsonValidationException {
+  void testCreateCustomSourceDefinition() throws URISyntaxException, IOException {
     final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     final String imageName = sourceDefinitionVersion.getDockerRepository() + ":" + sourceDefinitionVersion.getDockerImageTag();
@@ -444,11 +504,93 @@ class SourceDefinitionsHandlerTest {
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withAllowedHosts(null)
             .withSuggestedStreams(null),
-        workspaceId);
+        workspaceId,
+        ScopeType.WORKSPACE);
   }
 
   @Test
-  @DisplayName("createCustomSourceDefinition should not create a sourceDefinition with unspported protocol version")
+  @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition for a workspace and organization using scopes")
+  void testCreateCustomSourceDefinitionUsingScopes() throws URISyntaxException, IOException {
+    final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
+    final String imageName = sourceDefinitionVersion.getDockerRepository() + ":" + sourceDefinitionVersion.getDockerImageTag();
+
+    when(uuidSupplier.get()).thenReturn(sourceDefinition.getSourceDefinitionId());
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+        sourceDefinitionVersion.getSpec(), SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+
+    final SourceDefinitionCreate create = new SourceDefinitionCreate()
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(sourceDefinition.getIcon())
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final CustomSourceDefinitionCreate customCreateForWorkspace = new CustomSourceDefinitionCreate()
+        .sourceDefinition(create)
+        .scopeId(workspaceId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+
+    final SourceDefinitionRead expectedRead = new SourceDefinitionRead()
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .releaseStage(ReleaseStage.CUSTOM)
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final SourceDefinitionRead actualRead = sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForWorkspace);
+
+    assertEquals(expectedRead, actualRead);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+        sourceDefinition
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        sourceDefinitionVersion
+            .withVersionId(null)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withAllowedHosts(null)
+            .withSuggestedStreams(null),
+        workspaceId,
+        ScopeType.WORKSPACE);
+
+    final CustomSourceDefinitionCreate customCreateForOrganization = new CustomSourceDefinitionCreate()
+        .sourceDefinition(create)
+        .scopeId(organizationId)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+
+    sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForOrganization);
+
+    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+        sourceDefinition
+            .withCustom(true)
+            .withDefaultVersionId(null),
+        sourceDefinitionVersion
+            .withVersionId(null)
+            .withReleaseDate(null)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withAllowedHosts(null)
+            .withSuggestedStreams(null),
+        organizationId,
+        ScopeType.ORGANIZATION);
+  }
+
+  @Test
+  @DisplayName("createCustomSourceDefinition should not create a sourceDefinition with unsupported protocol version")
   void testCreateCustomSourceDefinitionWithInvalidProtocol() throws URISyntaxException, IOException, JsonValidationException {
     final String invalidVersion = "130.0.0";
     final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
@@ -479,7 +621,7 @@ class SourceDefinitionsHandlerTest {
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.createCustomSourceDefinition(customCreate));
 
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any());
+    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any(), any());
   }
 
   @Test
@@ -514,8 +656,6 @@ class SourceDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, sourceDefinitionUpdateRead.getDockerImageTag());
     verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
     verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion);
-
-    verify(configRepository).clearUnsupportedProtocolVersionFlag(updatedSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
   }
 
   @Test
@@ -594,26 +734,60 @@ class SourceDefinitionsHandlerTest {
         new PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead).granted(true);
 
     final PrivateSourceDefinitionRead actualPrivateSourceDefinitionRead =
-        sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(
-            new SourceDefinitionIdWithWorkspaceId()
-                .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
-                .workspaceId(workspaceId));
+        sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(
+            new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(workspaceId)
+                .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
 
     assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead);
-    verify(configRepository).writeActorDefinitionWorkspaceGrant(
-        sourceDefinition.getSourceDefinitionId(),
-        workspaceId);
+    verify(configRepository).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
   }
 
   @Test
-  @DisplayName("revokeSourceDefinitionFromWorkspace should correctly delete a workspace grant")
-  void testRevokeSourceDefinitionFromWorkspace() throws IOException {
-    sourceDefinitionsHandler.revokeSourceDefinitionFromWorkspace(new SourceDefinitionIdWithWorkspaceId()
+  @DisplayName("grantSourceDefinitionToWorkspace should correctly create an organization grant")
+  void testGrantSourceDefinitionToOrganization() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
+        .thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(sourceDefinitionVersion);
+
+    final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .workspaceId(workspaceId));
-    verify(configRepository).deleteActorDefinitionWorkspaceGrant(
-        sourceDefinition.getSourceDefinitionId(),
-        workspaceId);
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()));
+
+    final PrivateSourceDefinitionRead expectedPrivateSourceDefinitionRead =
+        new PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead).granted(true);
+
+    final PrivateSourceDefinitionRead actualPrivateSourceDefinitionRead =
+        sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(
+            new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(organizationId)
+                .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
+
+    assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead);
+    verify(configRepository).writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION);
+  }
+
+  @Test
+  @DisplayName("revokeSourceDefinition should correctly delete a workspace grant and organization grant")
+  void testRevokeSourceDefinition() throws IOException {
+    sourceDefinitionsHandler.revokeSourceDefinition(
+        new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(workspaceId)
+            .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE));
+    verify(configRepository).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+
+    sourceDefinitionsHandler.revokeSourceDefinition(
+        new ActorDefinitionIdWithScope().actorDefinitionId(sourceDefinition.getSourceDefinitionId()).scopeId(organizationId)
+            .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION));
+    verify(configRepository).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION);
   }
 
   @SuppressWarnings("TypeName")

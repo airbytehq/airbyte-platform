@@ -40,12 +40,12 @@ import com.google.common.hash.Hashing;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -73,7 +73,9 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -106,6 +108,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.InsertSetMoreStep;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
 import org.jooq.Record;
@@ -662,6 +665,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ActorType.source,
         record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()),
@@ -679,8 +683,10 @@ public class ConfigRepository {
   public List<Entry<StandardSourceDefinition, Boolean>> listGrantableSourceDefinitions(final UUID workspaceId,
                                                                                        final boolean includeTombstones)
       throws IOException {
+
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
         record -> actorDefinitionWithGrantStatus(record,
@@ -777,16 +783,18 @@ public class ConfigRepository {
    *
    * @param sourceDefinition source definition
    * @param defaultVersion default version
-   * @param workspaceId workspace id
+   * @param scopeId scope id
+   * @param scopeType enum which defines if the scopeId is a workspace or organization id
    * @throws IOException - you never know when you IO
    */
   public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
                                                            final ActorDefinitionVersion defaultVersion,
-                                                           final UUID workspaceId)
+                                                           final UUID scopeId,
+                                                           final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ctx);
+      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -899,6 +907,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ActorType.destination,
         DbConverter::buildStandardDestinationDefinition,
@@ -918,6 +927,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.destination,
         record -> actorDefinitionWithGrantStatus(record, DbConverter::buildStandardDestinationDefinition),
@@ -931,8 +941,7 @@ public class ConfigRepository {
    * @param destinationDefinition destination definition
    * @throws IOException - you never know when you IO
    */
-  public void writeStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
-      throws JsonValidationException, IOException {
+  public void writeStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition) throws IOException {
     database.transaction(ctx -> {
       ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
       return null;
@@ -1001,16 +1010,18 @@ public class ConfigRepository {
    * Write custom destination definition and its default version.
    *
    * @param destinationDefinition destination definition
-   * @param workspaceId workspace id
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workpsace or organization
    * @throws IOException - you never know when you IO
    */
   public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                                 final ActorDefinitionVersion defaultVersion,
-                                                                final UUID workspaceId)
+                                                                final UUID scopeId,
+                                                                final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId, ctx);
+      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -1029,35 +1040,45 @@ public class ConfigRepository {
    * Write actor definition workspace grant.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param scopeId workspace or organization id
+   * @param scopeType ScopeType of either workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, workspaceId, ctx));
+  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
+    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId, ScopeType.valueOf(scopeType.value()), ctx));
   }
 
-  private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId, final DSLContext ctx) {
-    // todo edit for organizations
-    return ctx.insertInto(ACTOR_DEFINITION_WORKSPACE_GRANT)
+  private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final ScopeType scopeType, final DSLContext ctx) {
+    InsertSetMoreStep<ActorDefinitionWorkspaceGrantRecord> insertStep = ctx.insertInto(
+        ACTOR_DEFINITION_WORKSPACE_GRANT)
         .set(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
-        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, workspaceId)
-        .execute();
+        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
+        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId);
+    // todo remove when we drop the workspace_id column
+    if (scopeType == ScopeType.workspace) {
+      insertStep = insertStep.set(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId);
+    }
+    return insertStep.execute();
+
   }
 
   /**
-   * Test if grant exists for actor definition and workspace.
+   * Test if grant exists for actor definition and scope.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
-   * @return true, if the workspace has access. otherwise, false.
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
+   * @return true, if the scope has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
-  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations
+  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
             .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))));
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))));
     return count == 1;
   }
 
@@ -1065,32 +1086,47 @@ public class ConfigRepository {
    * Delete workspace access to actor definition.
    *
    * @param actorDefinitionId actor definition id to remove
-   * @param workspaceId workspace to remove actor definition from
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations
+  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))
         .execute());
   }
 
   /**
-   * Test if workspace is has access to a connector definition.
+   * Test if workspace id has access to a connector definition.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param workspaceId id of the workspace
    * @return true, if the workspace has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations
+    return scopeCanUseDefinition(actorDefinitionId, workspaceId, ScopeType.workspace.toString());
+  }
+
+  /**
+   * Test if workspace or organization id has access to a connector definition.
+   *
+   * @param actorDefinitionId actor definition id
+   * @param scopeId id of the workspace or organization
+   * @param scopeType enum of workspace or organization
+   * @return true, if the workspace or organization has access. otherwise, false.
+   * @throws IOException - you never know when you IO
+   */
+  public boolean scopeCanUseDefinition(final UUID actorDefinitionId, final UUID scopeId, final String scopeType) throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
-        workspaceId,
+        scopeId,
+        ScopeType.valueOf(scopeType),
         JoinType.LEFT_OUTER_JOIN,
         ACTOR_DEFINITION.ID.eq(actorDefinitionId),
-        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId)));
+        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)));
     return records.isNotEmpty();
   }
 
@@ -1105,6 +1141,7 @@ public class ConfigRepository {
   public boolean workspaceCanUseCustomDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ACTOR_DEFINITION.ID.eq(actorDefinitionId),
         ACTOR_DEFINITION.CUSTOM.eq(true));
@@ -1125,14 +1162,16 @@ public class ConfigRepository {
         .toList();
   }
 
-  private <T> List<T> listActorDefinitionsJoinedWithGrants(final UUID workspaceId,
+  private <T> List<T> listActorDefinitionsJoinedWithGrants(final UUID scopeId,
+                                                           final ScopeType scopeType,
                                                            final JoinType joinType,
                                                            final ActorType actorType,
                                                            final Function<Record, T> recordToReturnType,
                                                            final Condition... conditions)
       throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
-        workspaceId,
+        scopeId,
+        scopeType,
         joinType,
         ArrayUtils.addAll(conditions,
             ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
@@ -1146,20 +1185,37 @@ public class ConfigRepository {
   private <T> Entry<T, Boolean> actorDefinitionWithGrantStatus(final Record outerJoinRecord,
                                                                final Function<Record, T> recordToActorDefinition) {
     final T actorDefinition = recordToActorDefinition.apply(outerJoinRecord);
-    // todo edit for organizations
-    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID) != null;
+    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null;
     return Map.entry(actorDefinition, granted);
   }
 
-  private Result<Record> actorDefinitionsJoinedWithGrants(final UUID workspaceId,
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+    final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
+        .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
+    return optionalRecord.map(Record1::value1);
+  }
+
+  private Result<Record> actorDefinitionsJoinedWithGrants(final UUID scopeId,
+                                                          final ScopeType scopeType,
                                                           final JoinType joinType,
                                                           final Condition... conditions)
       throws IOException {
-    // todo edit for organizations
+    Condition scopeConditional = ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.toString())).and(
+        ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId));
+
+    // if scope type is workspace, get organization id as well and add that into OR conditional
+    if (scopeType == ScopeType.workspace) {
+      final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(scopeId);
+      if (organizationId.isPresent()) {
+        scopeConditional = scopeConditional.or(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.organization).and(
+            ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(organizationId.get())));
+      }
+    }
+
+    final Condition finalScopeConditional = scopeConditional;
     return database.query(ctx -> ctx.select(asterisk()).from(ACTOR_DEFINITION)
         .join(ACTOR_DEFINITION_WORKSPACE_GRANT, joinType)
-        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID),
-            ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
+        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID).and(finalScopeConditional))
         .where(conditions)
         .fetch());
   }
@@ -1494,23 +1550,6 @@ public class ConfigRepository {
    */
   public void writeStandardSync(final StandardSync standardSync) throws IOException {
     standardSyncPersistence.writeStandardSync(standardSync);
-  }
-
-  /**
-   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
-   * if both connectors are now within support range.
-   *
-   * @param actorDefinitionId the actorDefinitionId to query
-   * @param actorType the ActorType of actorDefinitionId
-   * @param supportedRange the supported range of protocol versions
-   */
-  // We have conflicting imports here, ActorType is imported from jooq for most internal uses. Since
-  // this is a public method, we should be using the ActorType from airbyte-config.
-  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
-                                                  final io.airbyte.config.ActorType actorType,
-                                                  final AirbyteProtocolVersionRange supportedRange)
-      throws IOException {
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(actorDefinitionId, actorType, supportedRange);
   }
 
   /**
@@ -2608,7 +2647,7 @@ public class ConfigRepository {
    * workspace has at least one Alpha or Beta connector, users of that workspace will be prompted to
    * sign up for the program. This check is performed on nearly every page load so the query needs to
    * be as efficient as possible.
-   *
+   * <p>
    * This should only be used for efficiently determining eligibility for the Free Connector Program.
    * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
    * the ReleaseStages.
@@ -2637,7 +2676,7 @@ public class ConfigRepository {
    * Program. If a connection has at least one Alpha or Beta connector, it will be free to use as long
    * as the workspace is enrolled in the Free Connector Program. This check is used to allow free
    * connections to continue running even when a workspace runs out of credits.
-   *
+   * <p>
    * This should only be used for efficiently determining eligibility for the Free Connector Program.
    * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
    * the ReleaseStages.
@@ -3383,6 +3422,41 @@ public class ConfigRepository {
         // Ensure version is set. Needed for connectors not upgraded since we added versioning.
         .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Writes a new actor definition breaking change to the database.
+   *
+   * @param breakingChange - ActorDefinitionBreakingChange entry to write
+   * @throws IOException - you never know when you io
+   */
+  public void writeActorDefinitionBreakingChange(final ActorDefinitionBreakingChange breakingChange) throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    database.query(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
+        .execute());
+  }
+
+  /**
+   * Get the list of breaking changes available affecting an actor definition.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @return list of breaking changes
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .where(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionBreakingChange)
+        .collect(Collectors.toList()));
   }
 
 }

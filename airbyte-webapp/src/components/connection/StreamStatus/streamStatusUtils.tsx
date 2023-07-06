@@ -2,7 +2,6 @@ import {
   AirbyteStreamAndConfigurationWithEnforcedStream,
   getStreamKey,
 } from "area/connection/utils/computeStreamStatus";
-
 import { StreamStatusRead } from "core/request/AirbyteClient";
 import { useExperiment } from "hooks/services/Experiment";
 import { naturalComparatorBy } from "utils/objects";

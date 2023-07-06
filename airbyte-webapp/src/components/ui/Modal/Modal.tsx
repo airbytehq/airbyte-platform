@@ -78,7 +78,7 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
                   </button>
                 </FlexContainer>
               </div>
-              <div className={styles.card__content}>{children}</div>
+              {children}
             </div>
           )}
         </Dialog.Panel>

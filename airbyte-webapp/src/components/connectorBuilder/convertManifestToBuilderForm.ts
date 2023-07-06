@@ -2,29 +2,6 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
 
-import { removeEmptyProperties } from "utils/form";
-
-import {
-  authTypeToKeyToInferredInput,
-  BuilderFormAuthenticator,
-  BuilderFormValues,
-  BuilderIncrementalSync,
-  BuilderPaginator,
-  BuilderStream,
-  BuilderTransformation,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_BUILDER_STREAM_VALUES,
-  extractInterpolatedConfigKey,
-  hasIncrementalSyncUserInput,
-  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-  incrementalSyncInferredInputs,
-  isInterpolatedConfigKey,
-  OAUTH_ACCESS_TOKEN_INPUT,
-  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
-  RequestOptionOrPathInject,
-} from "./types";
-import { formatJson } from "./utils";
-import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   DeclarativeStream,
@@ -49,7 +26,30 @@ import {
   DefaultPaginator,
   CursorPagination,
   DeclarativeComponentSchemaMetadata,
-} from "../../core/request/ConnectorManifest";
+} from "core/api/types/ConnectorManifest";
+import { removeEmptyProperties } from "utils/form";
+
+import {
+  authTypeToKeyToInferredInput,
+  BuilderFormAuthenticator,
+  BuilderFormValues,
+  BuilderIncrementalSync,
+  BuilderPaginator,
+  BuilderStream,
+  BuilderTransformation,
+  DEFAULT_BUILDER_FORM_VALUES,
+  DEFAULT_BUILDER_STREAM_VALUES,
+  extractInterpolatedConfigKey,
+  hasIncrementalSyncUserInput,
+  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  incrementalSyncInferredInputs,
+  isInterpolatedConfigKey,
+  OAUTH_ACCESS_TOKEN_INPUT,
+  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
+  RequestOptionOrPathInject,
+} from "./types";
+import { formatJson } from "./utils";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
@@ -420,6 +420,7 @@ function manifestIncrementalSyncToBuilder(
     start_datetime: manifestStartDateTime,
     step,
     cursor_granularity,
+    is_data_feed,
     type,
     $parameters,
     ...regularFields
@@ -461,6 +462,7 @@ function manifestIncrementalSyncToBuilder(
     end_datetime,
     start_datetime,
     slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,
+    filter_mode: is_data_feed ? "no_filter" : manifestEndDateTime ? "range" : "start",
   };
 }
 
@@ -520,19 +522,15 @@ function manifestPaginatorToBuilder(
     return undefined;
   }
 
-  if (manifestPaginator.page_token_option === undefined) {
-    throw new ManifestCompatibilityError(streamName, "paginator does not define a page_token_option");
-  }
-
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
 
-  if (manifestPaginator.page_token_option.type === "RequestPath") {
+  if (manifestPaginator.page_token_option?.type === "RequestPath") {
     pageTokenOption = { inject_into: "path" };
-  } else {
+  } else if (manifestPaginator.page_token_option?.type === "RequestOption") {
     pageTokenOption = {
       inject_into: manifestPaginator.page_token_option.inject_into,
       field_name: manifestPaginator.page_token_option.field_name,

@@ -6,7 +6,7 @@ import { ControlLabels } from "components/LabeledControl";
 import { DropDown } from "components/ui/DropDown";
 import { Text } from "components/ui/Text";
 
-import styles from "./BuilderField.module.scss";
+import styles from "./StreamReferenceField.module.scss";
 import { useBuilderWatch } from "../types";
 
 interface StreamReferenceFieldProps {
@@ -43,7 +43,7 @@ export const StreamReferenceField: React.FC<StreamReferenceFieldProps> = ({
   }, [currentStreamIndex, streams]);
 
   return (
-    <ControlLabels className={styles.container} label={label} infoTooltipContent={tooltip} optional={optional}>
+    <ControlLabels label={label} infoTooltipContent={tooltip} optional={optional}>
       <DropDown
         {...props}
         options={options}

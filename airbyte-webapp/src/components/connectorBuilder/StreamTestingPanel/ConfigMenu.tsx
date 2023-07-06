@@ -11,8 +11,8 @@ import { Modal, ModalBody } from "components/ui/Modal";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {

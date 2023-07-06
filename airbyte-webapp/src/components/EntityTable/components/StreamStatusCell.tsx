@@ -3,8 +3,6 @@ import classNames from "classnames";
 import React, { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { AirbyteStreamAndConfigurationWithEnforcedStream } from "area/connection/utils/computeStreamStatus";
-import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import {
   ConnectionStatusIndicator,
@@ -13,6 +11,9 @@ import {
 import { StreamWithStatus, sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator, StreamStatusLoadingSpinner } from "components/connection/StreamStatusIndicator";
 import { Tooltip } from "components/ui/Tooltip";
+
+import { AirbyteStreamAndConfigurationWithEnforcedStream } from "area/connection/utils/computeStreamStatus";
+import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
 
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";

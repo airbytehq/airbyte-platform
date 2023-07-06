@@ -1,4 +1,6 @@
 export * from "./actorDefinitionVersions";
+export * from "./connectorBuilderApi";
+export * from "./connectorBuilderProject";
 export * from "./geographies";
 export * from "./health";
 export * from "./jobs";

@@ -73,6 +73,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final ExecutorService executors;
   private final AtomicBoolean cancelled;
   private final AtomicBoolean hasFailed;
+  private final AtomicBoolean shouldStop;
   private final RecordSchemaValidator recordSchemaValidator;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
   private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
@@ -104,6 +105,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
+    this.shouldStop = new AtomicBoolean(false);
   }
 
   /**
@@ -163,7 +165,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, mdc),
+          readFromDstRunnable(destination, shouldStop, cancelled, replicationWorkerHelper, mdc),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -176,6 +178,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           source,
           destination,
           replicationWorkerHelper,
+          shouldStop,
           cancelled,
           mdc), executors)
           .whenComplete((msg, ex) -> {
@@ -216,6 +219,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
+                                              final AtomicBoolean shouldStop,
                                               final AtomicBoolean cancelled,
                                               final ReplicationWorkerHelper replicationWorkerHelper,
                                               final Map<String, String> mdc) {
@@ -223,7 +227,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
       try {
-        while (!cancelled.get() && !destination.isFinished()) {
+        while (!shouldStop.get() && !cancelled.get() && !destination.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = destination.attemptRead();
@@ -261,6 +265,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromSrcAndWriteToDstRunnable(final AirbyteSource source,
                                                            final AirbyteDestination destination,
                                                            final ReplicationWorkerHelper replicationWorkerHelper,
+                                                           final AtomicBoolean shouldStop,
                                                            final AtomicBoolean cancelled,
                                                            final Map<String, String> mdc) {
     return () -> {
@@ -268,7 +273,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Replication thread started.");
 
       try {
-        while (!cancelled.get() && !source.isFinished()) {
+        while (!shouldStop.get() && !cancelled.get() && !source.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
           try {
             messageOptional = source.attemptRead();
@@ -311,6 +316,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           throw new SourceException("Source process exited with non-zero exit code " + source.getExitValue());
         }
       } catch (final Exception e) {
+        // If we exit this function with an exception, we should assume failure and stop the other thread.
+        shouldStop.set(true);
+
         if (!cancelled.get()) {
           // Although this thread is closed first, it races with the source's closure and can attempt one
           // final read after the source is closed before it's terminated.

@@ -105,13 +105,9 @@ public class ScheduleJitterHelper {
     }
   }
 
-  private static int getRandomJitter(final Random random, final int plusOrMinusMinutes) {
-    // find a random value between 0 and plusOrMinusMinutes inclusive (hence the + 1)
-    final int jitter = random.nextInt(plusOrMinusMinutes + 1);
-
-    // randomly negate the jitter so that we achieve +/- jitter
-    final boolean negateJitter = random.nextBoolean();
-    return negateJitter ? jitter * -1 : jitter;
+  private static int getRandomJitter(final Random random, final int maxMinutesToAdd) {
+    // return a random value between 0 and maxMinutesToAdd inclusive (hence the + 1)
+    return random.nextInt(maxMinutesToAdd + 1);
   }
 
 }

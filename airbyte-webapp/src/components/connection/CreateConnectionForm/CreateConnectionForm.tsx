@@ -2,7 +2,6 @@ import { Form, Formik, FormikHelpers } from "formik";
 import React, { Suspense, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
 import { CreateControls } from "components/connection/ConnectionForm/CreateControls";
 import {
@@ -12,6 +11,7 @@ import {
 import { OperationsSection } from "components/connection/ConnectionForm/OperationsSection";
 import LoadingSchema from "components/LoadingSchema";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";

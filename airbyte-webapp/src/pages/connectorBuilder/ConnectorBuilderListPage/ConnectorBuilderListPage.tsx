@@ -13,15 +13,15 @@ import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
+import { useListBuilderProjects } from "core/api";
 import { useQuery } from "hooks/useQuery";
-import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 export const ConnectorBuilderListPage: React.FC = () => {
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
-  const projects = useListProjects();
+  const projects = useListBuilderProjects();
 
   const sortBy = query.sortBy || "name";
   const sortOrder = query.order || SortOrderEnum.ASC;

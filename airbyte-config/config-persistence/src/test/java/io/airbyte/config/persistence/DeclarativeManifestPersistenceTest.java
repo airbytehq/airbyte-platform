@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -250,7 +251,8 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeCustomSourceDefinitionAndDefaultVersion(
         MockData.customSourceDefinition().withSourceDefinitionId(sourceDefinitionId),
         MockData.actorDefinitionVersion().withActorDefinitionId(sourceDefinitionId),
-        workspaceId);
+        workspaceId,
+        ScopeType.WORKSPACE);
   }
 
   JsonNode createSpec(final JsonNode connectionSpecification) {

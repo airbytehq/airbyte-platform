@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
-import { JobWithAttempts } from "components/JobItem/types";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
@@ -21,10 +20,9 @@ import { VirtualLogs } from "./VirtualLogs";
 
 interface JobLogsModalContentProps {
   jobId: number;
-  job: JobWithAttempts;
 }
 
-export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId, job }) => {
+export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const debugInfo = useGetDebugInfoJob(jobId, typeof jobId === "number", true);
@@ -149,7 +147,10 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
     [debugInfo, selectedAttemptIndex]
   );
 
-  const selectedAttempt = useMemo(() => job.attempts[selectedAttemptIndex], [job, selectedAttemptIndex]);
+  const selectedAttempt = useMemo(
+    () => debugInfo.attempts[selectedAttemptIndex],
+    [debugInfo.attempts, selectedAttemptIndex]
+  );
 
   return (
     <FlexContainer direction="column" style={{ height: "100%" }}>
@@ -180,13 +181,18 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
       </Box>
       <Box pl="xl" pr="md">
         <FlexContainer>
-          {selectedAttempt.endedAt && (
+          {selectedAttempt.attempt.endedAt && (
             <>
               <Text as="span" color="grey" size="sm">
-                <FormattedTimeParts value={selectedAttempt.createdAt * 1000} hour="numeric" minute="2-digit">
+                <FormattedTimeParts value={selectedAttempt.attempt.createdAt * 1000} hour="numeric" minute="2-digit">
                   {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
                 </FormattedTimeParts>
-                <FormattedDate value={selectedAttempt.createdAt * 1000} month="2-digit" day="2-digit" year="numeric" />
+                <FormattedDate
+                  value={selectedAttempt.attempt.createdAt * 1000}
+                  month="2-digit"
+                  day="2-digit"
+                  year="numeric"
+                />
               </Text>
               <Text as="span" color="grey" size="sm">
                 |
@@ -194,7 +200,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
             </>
           )}
           <Text as="span" color="grey" size="sm">
-            {formatBytes(selectedAttempt.totalStats?.bytesEmitted)}
+            {formatBytes(selectedAttempt.attempt.totalStats?.bytesEmitted)}
           </Text>
           <Text as="span" color="grey" size="sm">
             |
@@ -202,7 +208,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countEmittedRecords"
-              values={{ count: selectedAttempt.totalStats?.recordsEmitted || 0 }}
+              values={{ count: selectedAttempt.attempt.totalStats?.recordsEmitted || 0 }}
             />
           </Text>
           <Text as="span" color="grey" size="sm">
@@ -211,7 +217,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countCommittedRecords"
-              values={{ count: selectedAttempt.totalStats?.recordsCommitted || 0 }}
+              values={{ count: selectedAttempt.attempt.totalStats?.recordsCommitted || 0 }}
             />
           </Text>
         </FlexContainer>

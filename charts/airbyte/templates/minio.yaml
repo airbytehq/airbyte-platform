@@ -21,7 +21,7 @@ spec:
           accessModes: [ "ReadWriteOnce" ]
           resources:
             requests:
-              storage: 500Mi
+              storage: {{ .Values.minio.storage.volumeClaimValue  }}
   template:
     metadata:
       labels:

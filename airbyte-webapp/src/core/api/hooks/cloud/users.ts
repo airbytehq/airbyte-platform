@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { webBackendRevokeUserFromWorkspace } from "core/api/generated/CloudApi";
 import { webBackendResendWithSigninLink } from "core/api/generated/CloudApi";
 import { webBackendInviteUserToWorkspaceWithSignInLink } from "core/api/generated/CloudApi";

@@ -18,13 +18,12 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableMap;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
@@ -39,7 +38,6 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.config.State;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
@@ -72,6 +70,7 @@ import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
+import io.airbyte.workers.internal.SimpleAirbyteDestination;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
@@ -97,7 +96,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -179,7 +177,7 @@ abstract class ReplicationWorkerTest {
 
     source = mock(AirbyteSource.class);
     mapper = mock(NamespacingMapper.class);
-    destination = mock(AirbyteDestination.class);
+    destination = spy(new SimpleAirbyteDestination());
     messageTracker = mock(AirbyteMessageTracker.class);
     syncStatsTracker = mock(SyncStatsTracker.class);
     syncPersistence = mock(SyncPersistence.class);
@@ -197,14 +195,6 @@ abstract class ReplicationWorkerTest {
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(source.isFinished()).thenReturn(false, false, false, true);
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.empty(), Optional.of(RECORD_MESSAGE2));
-
-    final AtomicBoolean isDestinationFinished = new AtomicBoolean(false);
-    when(destination.isFinished()).thenAnswer((invocation) -> isDestinationFinished.get());
-    doAnswer((invocation -> {
-      isDestinationFinished.set(true);
-      return null;
-    })).when(destination).notifyEndOfInput();
-    when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE));
 
     when(mapper.mapCatalog(destinationConfig.getCatalog())).thenReturn(destinationConfig.getCatalog());
     when(mapper.mapMessage(RECORD_MESSAGE1)).thenReturn(RECORD_MESSAGE1);
@@ -680,12 +670,7 @@ abstract class ReplicationWorkerTest {
   void testDestinationRunnableDestinationFailure() throws Exception {
     final String destinationErrorMessage = "the destination had a failure";
 
-    // This test is not ideal:
-    // We check that it fails as expected if notifyEndOfInput fails. however, isFinished is called
-    // from a different thread and is mocked with a finite set of values, last one causing the
-    // thread to terminate.
-    // In practice, the call to isFinished would probably throw an exception as well.
-    when(destination.isFinished()).thenReturn(false, false, false, true);
+    when(destination.isFinished()).thenReturn(false);
     doThrow(new RuntimeException(destinationErrorMessage)).when(destination).notifyEndOfInput();
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
@@ -699,6 +684,10 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationRunnableWorkerFailure() throws Exception {
     final String workerErrorMessage = "the worker had a failure";
+
+    // Force destination to return STATE messages
+    // TODO: this should come naturally from the source
+    when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE));
 
     doThrow(new RuntimeException(workerErrorMessage)).when(messageTracker).acceptFromDestination(any());
 
@@ -752,7 +741,6 @@ abstract class ReplicationWorkerTest {
   void testCancellation() throws InterruptedException {
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     when(source.isFinished()).thenReturn(false);
-    when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(STATE_MESSAGE.getState().getData())));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -784,8 +772,6 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testPopulatesOutputOnSuccess() throws WorkerException {
-    final JsonNode expectedState = Jsons.jsonNode(ImmutableMap.of("updated_at", 10L));
-    when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(expectedState)));
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
     when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);

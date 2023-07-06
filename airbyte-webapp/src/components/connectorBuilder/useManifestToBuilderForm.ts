@@ -1,13 +1,13 @@
-import { useResolveManifest } from "services/connectorBuilder/ConnectorBuilderApiService";
+import { useBuilderResolveManifestQuery } from "core/api";
+import { ResolveManifest } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
 import { convertToBuilderFormValuesSync, ManifestCompatibilityError } from "./convertManifestToBuilderForm";
 import { OLDEST_SUPPORTED_CDK_VERSION, versionSupported } from "./types";
-import { ResolveManifest } from "../../core/request/ConnectorBuilderClient";
-import { ConnectorManifest } from "../../core/request/ConnectorManifest";
 
 export const useManifestToBuilderForm = () => {
-  const { resolve } = useResolveManifest();
+  const resolve = useBuilderResolveManifestQuery();
   return { convertToBuilderFormValues: convertToBuilderFormValues.bind(this, resolve) };
 };
 

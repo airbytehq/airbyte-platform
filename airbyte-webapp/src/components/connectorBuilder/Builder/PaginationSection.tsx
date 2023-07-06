@@ -1,11 +1,9 @@
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import GroupControls from "components/GroupControls";
 import { LabelInfo } from "components/Label";
-import { ControlLabels } from "components/LabeledControl";
 
-import { RequestOption } from "core/request/ConnectorManifest";
+import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -231,16 +229,18 @@ const PageTokenOption = ({
   streamFieldPath: (fieldPath: string) => string;
 }): JSX.Element => {
   return (
-    <GroupControls
-      label={
-        <ControlLabels
-          label={`Inject ${label} into outgoing HTTP request`}
-          infoTooltipContent={`Configures how the ${label} will be sent in requests to the source API`}
-        />
-      }
+    <ToggleGroupField<RequestOption>
+      label={`Inject ${label} into outgoing HTTP request`}
+      tooltip={`Configures how the ${label} will be sent in requests to the source API`}
+      fieldPath={streamFieldPath("paginator.pageTokenOption")}
+      initialValues={{
+        inject_into: "request_parameter",
+        type: "RequestOption",
+        field_name: "",
+      }}
     >
       <RequestOptionFields path={streamFieldPath("paginator.pageTokenOption")} descriptor={label} />
-    </GroupControls>
+    </ToggleGroupField>
   );
 };
 

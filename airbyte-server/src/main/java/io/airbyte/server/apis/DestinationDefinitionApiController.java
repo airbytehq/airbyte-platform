@@ -10,6 +10,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.DestinationDefinitionApi;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -18,6 +19,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionReadList;
 import io.airbyte.api.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
+import io.airbyte.api.model.generated.ScopeType;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
@@ -49,6 +51,11 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate) {
+    // legacy calls contain workspace id instead of scope id and scope type
+    if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
+      customDestinationDefinitionCreate.setScopeType(ScopeType.WORKSPACE);
+      customDestinationDefinitionCreate.setScopeId(customDestinationDefinitionCreate.getWorkspaceId());
+    }
     return ApiHelper.execute(() -> destinationDefinitionsHandler.createCustomDestinationDefinition(customDestinationDefinitionCreate));
   }
 
@@ -72,13 +79,23 @@ public class DestinationDefinitionApiController implements DestinationDefinition
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody));
   }
 
+  @Post("/get_for_scope")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+    return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinitionForScope(actorDefinitionIdWithScope));
+  }
+
   @SuppressWarnings("LineLength")
   @Post(uri = "/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public DestinationDefinitionRead getDestinationDefinitionForWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+  public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
+                                                                        final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(destinationDefinitionIdWithWorkspaceId));
   }
 
@@ -87,9 +104,8 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
-    return ApiHelper
-        .execute(() -> destinationDefinitionsHandler.grantDestinationDefinitionToWorkspace(destinationDefinitionIdWithWorkspaceId));
+  public PrivateDestinationDefinitionRead grantDestinationDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+    return ApiHelper.execute(() -> destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(actorDefinitionIdWithScope));
   }
 
   @Post(uri = "/list")
@@ -129,9 +145,9 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
+  public void revokeDestinationDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     ApiHelper.execute(() -> {
-      destinationDefinitionsHandler.revokeDestinationDefinitionFromWorkspace(destinationDefinitionIdWithWorkspaceId);
+      destinationDefinitionsHandler.revokeDestinationDefinition(actorDefinitionIdWithScope);
       return null;
     });
   }

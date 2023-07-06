@@ -27,8 +27,6 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
-object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
-
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
@@ -66,8 +64,9 @@ object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.
 
 object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.resources", default = "")
 
-object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
+object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
+object CheckReplicationProgress : Temporary<Boolean>(key="check-replication-progress", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {

@@ -8,7 +8,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { StreamReadSlicesItem } from "core/request/ConnectorBuilderClient";
+import { StreamReadSlicesItem } from "core/api/types/ConnectorBuilderClient";
 
 import styles from "./SliceSelector.module.scss";
 import { formatJson } from "../utils";
