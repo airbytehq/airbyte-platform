@@ -1,7 +1,5 @@
-Your source schema has changed for connection ID: %s
-
-Airbyte has disabled this connection because this source schema change will cause broken syncs. Source name: %s
+A schema change for %s was detected and affects the connection %s. Airbyte has automatically disabled this connection because a required field was changed or deleted.
 
 Visit your connection page here: %s
 
-Refresh your source schema and reset your data in order to fix this connection.
+Your review is required. Visit your connection's replication settings to review your source schema and reset your data in order to fix this connection.
