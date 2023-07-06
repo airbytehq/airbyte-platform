@@ -33,7 +33,6 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.EnvConfigs;
@@ -306,7 +305,6 @@ public class SourceDefinitionsHandler {
         .withResourceRequirements(updatedResourceReqs);
 
     configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
-    configRepository.clearUnsupportedProtocolVersionFlag(newSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
 
     return buildSourceDefinitionRead(newSource, newVersion);
   }

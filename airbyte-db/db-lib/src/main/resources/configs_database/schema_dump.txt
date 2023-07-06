@@ -155,7 +155,6 @@ create table "public"."connection" (
   "geography" "public"."geography_type" not null default cast('AUTO' as geography_type),
   "non_breaking_change_preference" varchar(7) not null default cast('ignore' as varchar),
   "breaking_change" boolean not null default false,
-  "unsupported_protocol_version" boolean not null default false,
   "field_selection_data" jsonb,
   constraint "connection_pkey"
     primary key ("id")

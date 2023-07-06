@@ -43,7 +43,6 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -599,8 +598,6 @@ class SourceDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, sourceDefinitionUpdateRead.getDockerImageTag());
     verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
     verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion);
-
-    verify(configRepository).clearUnsupportedProtocolVersionFlag(updatedSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
   }
 
   @Test

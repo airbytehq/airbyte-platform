@@ -40,7 +40,6 @@ import com.google.common.hash.Hashing;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
@@ -1521,23 +1520,6 @@ public class ConfigRepository {
    */
   public void writeStandardSync(final StandardSync standardSync) throws IOException {
     standardSyncPersistence.writeStandardSync(standardSync);
-  }
-
-  /**
-   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
-   * if both connectors are now within support range.
-   *
-   * @param actorDefinitionId the actorDefinitionId to query
-   * @param actorType the ActorType of actorDefinitionId
-   * @param supportedRange the supported range of protocol versions
-   */
-  // We have conflicting imports here, ActorType is imported from jooq for most internal uses. Since
-  // this is a public method, we should be using the ActorType from airbyte-config.
-  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
-                                                  final io.airbyte.config.ActorType actorType,
-                                                  final AirbyteProtocolVersionRange supportedRange)
-      throws IOException {
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(actorDefinitionId, actorType, supportedRange);
   }
 
   /**
