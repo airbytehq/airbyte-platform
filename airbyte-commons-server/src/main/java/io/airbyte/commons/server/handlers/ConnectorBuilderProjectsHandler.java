@@ -222,7 +222,7 @@ public class ConnectorBuilderProjectsHandler {
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE.value());
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();

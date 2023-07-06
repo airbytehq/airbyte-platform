@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client.model.generated.ScopeType;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
@@ -36,6 +36,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -197,7 +198,18 @@ public class SourceDefinitionsHandler {
     return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
   }
 
-  // todo make a second version that takers in SourceDefinitionIdWithScope
+  public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
+    final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
+    final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
+    if (!configRepository.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
+      final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
+      throw new IdNotFoundKnownException(message, definitionId.toString());
+    }
+    return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
+  }
+
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID definitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
@@ -208,8 +220,7 @@ public class SourceDefinitionsHandler {
     return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
   }
 
-  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate)
-      throws IOException {
+  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) throws IOException {
     final UUID id = uuidSupplier.get();
     final SourceDefinitionCreate sourceDefinitionCreate = customSourceDefinitionCreate.getSourceDefinition();
     final ActorDefinitionVersion actorDefinitionVersion = defaultDefinitionVersionFromCreate(sourceDefinitionCreate)
@@ -229,13 +240,13 @@ public class SourceDefinitionsHandler {
           protocolVersionRange.max());
     }
 
-    // todo add feature flag here for organizations
+    // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
       configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
-          customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE.getValue());
+          customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
       configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
-          customSourceDefinitionCreate.getScopeId(), customSourceDefinitionCreate.getScopeType().toString());
+          customSourceDefinitionCreate.getScopeId(), ScopeType.fromValue(customSourceDefinitionCreate.getScopeType().toString()));
     }
 
     return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
@@ -341,26 +352,26 @@ public class SourceDefinitionsHandler {
     }
   }
 
-  // todo add feature flag here for organizations
-  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
+  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSourceDefinition standardSourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
+        configRepository.getStandardSourceDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
     final ActorDefinitionVersion actorDefinitionVersion = configRepository.getActorDefinitionVersion(standardSourceDefinition.getDefaultVersionId());
     configRepository.writeActorDefinitionWorkspaceGrant(
-        sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId(),
-        sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
     return new PrivateSourceDefinitionRead()
         .sourceDefinition(buildSourceDefinitionRead(standardSourceDefinition, actorDefinitionVersion))
         .granted(true);
   }
 
-  // todo add feature flag here for organizations
-  public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
+  public void revokeSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(
-        sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId(),
-        sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
   }
 
 }

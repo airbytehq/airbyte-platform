@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client.model.generated.ScopeType;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
@@ -35,6 +35,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -204,6 +205,18 @@ public class DestinationDefinitionsHandler {
     return getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(definitionId));
   }
 
+  public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
+    final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
+    final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
+    if (!configRepository.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
+      final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
+      throw new IdNotFoundKnownException(message, definitionId.toString());
+    }
+    return getDestinationDefinition(new DestinationDefinitionIdRequestBody().destinationDefinitionId(definitionId));
+  }
+
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate)
       throws IOException {
     final UUID id = uuidSupplier.get();
@@ -226,15 +239,13 @@ public class DestinationDefinitionsHandler {
           protocolVersionRange.max());
     }
 
+    // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
       configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
-          customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE.getValue());
+          customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
-      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(
-          destinationDefinition,
-          actorDefinitionVersion,
-          customDestinationDefinitionCreate.getScopeId(),
-          customDestinationDefinitionCreate.getScopeType().toString());
+      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
+          customDestinationDefinitionCreate.getScopeId(), ScopeType.fromValue(customDestinationDefinitionCreate.getScopeType().toString()));
     }
 
     return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion);
@@ -339,28 +350,27 @@ public class DestinationDefinitionsHandler {
     }
   }
 
-  // todo add feature flag here for organizations
-  public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(
-                                                                                final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
+  public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardDestinationDefinition standardDestinationDefinition =
-        configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+        configRepository.getStandardDestinationDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
     final ActorDefinitionVersion actorDefinitionVersion =
         configRepository.getActorDefinitionVersion(standardDestinationDefinition.getDefaultVersionId());
     configRepository.writeActorDefinitionWorkspaceGrant(
-        destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId(),
-        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
     return new PrivateDestinationDefinitionRead()
         .destinationDefinition(buildDestinationDefinitionRead(standardDestinationDefinition, actorDefinitionVersion))
         .granted(true);
   }
 
-  // todo add feature flag here for organizations
-  public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
+  public void revokeDestinationDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(
-        destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId(),
-        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
   }
 
 }

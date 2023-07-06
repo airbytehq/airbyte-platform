@@ -252,7 +252,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         MockData.customSourceDefinition().withSourceDefinitionId(sourceDefinitionId),
         MockData.actorDefinitionVersion().withActorDefinitionId(sourceDefinitionId),
         workspaceId,
-        ScopeType.WORKSPACE.value());
+        ScopeType.WORKSPACE);
   }
 
   JsonNode createSpec(final JsonNode connectionSpecification) {

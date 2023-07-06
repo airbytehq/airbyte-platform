@@ -10,6 +10,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.SourceDefinitionApi;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
@@ -78,6 +79,15 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody));
   }
 
+  @Post("/get_for_scope")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+    return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScope));
+  }
+
   @Post("/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
@@ -91,8 +101,8 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
-    return ApiHelper.execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(sourceDefinitionIdWithWorkspaceId));
+  public PrivateSourceDefinitionRead grantSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
+    return ApiHelper.execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(actorDefinitionIdWithScope));
   }
 
   @Post("/list_latest")
@@ -133,9 +143,9 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
-  public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
+  public void revokeSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope) {
     ApiHelper.execute(() -> {
-      sourceDefinitionsHandler.revokeSourceDefinitionFromWorkspace(sourceDefinitionIdWithWorkspaceId);
+      sourceDefinitionsHandler.revokeSourceDefinition(actorDefinitionIdWithScope);
       return null;
     });
   }

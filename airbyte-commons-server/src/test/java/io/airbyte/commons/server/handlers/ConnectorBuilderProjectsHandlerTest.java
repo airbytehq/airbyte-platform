@@ -395,7 +395,7 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),
         eq(workspaceId),
-        eq(ScopeType.WORKSPACE.value()));
+        eq(ScopeType.WORKSPACE));
     verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 

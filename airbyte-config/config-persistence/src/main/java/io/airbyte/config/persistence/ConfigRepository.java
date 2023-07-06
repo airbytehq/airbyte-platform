@@ -790,11 +790,11 @@ public class ConfigRepository {
   public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
                                                            final ActorDefinitionVersion defaultVersion,
                                                            final UUID scopeId,
-                                                           final String scopeType)
+                                                           final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType), ctx);
+      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -1017,11 +1017,11 @@ public class ConfigRepository {
   public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                                 final ActorDefinitionVersion defaultVersion,
                                                                 final UUID scopeId,
-                                                                final String scopeType)
+                                                                final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType), ctx);
+      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -1040,11 +1040,13 @@ public class ConfigRepository {
    * Write actor definition workspace grant.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param scopeId workspace or organization id
+   * @param scopeType ScopeType of either workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, workspaceId, ScopeType.workspace, ctx));
+  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
+    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId, ScopeType.valueOf(scopeType.value()), ctx));
   }
 
   private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final ScopeType scopeType, final DSLContext ctx) {
@@ -1062,19 +1064,21 @@ public class ConfigRepository {
   }
 
   /**
-   * Test if grant exists for actor definition and workspace.
+   * Test if grant exists for actor definition and scope.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
-   * @return true, if the workspace has access. otherwise, false.
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
+   * @return true, if the scope has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
-  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations
+  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
             .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))));
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))));
     return count == 1;
   }
 
@@ -1082,33 +1086,47 @@ public class ConfigRepository {
    * Delete workspace access to actor definition.
    *
    * @param actorDefinitionId actor definition id to remove
-   * @param workspaceId workspace to remove actor definition from
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations edit input: final ScopeType scopeType
+  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))
         .execute());
   }
 
   /**
-   * Test if workspace is has access to a connector definition.
+   * Test if workspace id has access to a connector definition.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param workspaceId id of the workspace
    * @return true, if the workspace has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    // todo edit for organizations
+    return scopeCanUseDefinition(actorDefinitionId, workspaceId, ScopeType.workspace.toString());
+  }
+
+  /**
+   * Test if workspace or organization id has access to a connector definition.
+   *
+   * @param actorDefinitionId actor definition id
+   * @param scopeId id of the workspace or organization
+   * @param scopeType enum of workspace or organization
+   * @return true, if the workspace or organization has access. otherwise, false.
+   * @throws IOException - you never know when you IO
+   */
+  public boolean scopeCanUseDefinition(final UUID actorDefinitionId, final UUID scopeId, final String scopeType) throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
-        workspaceId,
-        ScopeType.workspace,
+        scopeId,
+        ScopeType.valueOf(scopeType),
         JoinType.LEFT_OUTER_JOIN,
         ACTOR_DEFINITION.ID.eq(actorDefinitionId),
-        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId)));
+        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)));
     return records.isNotEmpty();
   }
 
@@ -1167,9 +1185,14 @@ public class ConfigRepository {
   private <T> Entry<T, Boolean> actorDefinitionWithGrantStatus(final Record outerJoinRecord,
                                                                final Function<Record, T> recordToActorDefinition) {
     final T actorDefinition = recordToActorDefinition.apply(outerJoinRecord);
-    // todo edit for organizations
-    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID) != null;
+    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null;
     return Map.entry(actorDefinition, granted);
+  }
+
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+    final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
+        .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
+    return optionalRecord.map(Record1::value1);
   }
 
   private Result<Record> actorDefinitionsJoinedWithGrants(final UUID scopeId,
@@ -1177,15 +1200,22 @@ public class ConfigRepository {
                                                           final JoinType joinType,
                                                           final Condition... conditions)
       throws IOException {
-    // todo edit for organizations
-    // if scope type is organization, check table by organization id
-    // if scope type is workspace, check table by workspace id, and then check table by organization id
-    // (found by looking at organization_id column of workspace table)
+    Condition scopeConditional = ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.toString())).and(
+        ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId));
+
+    // if scope type is workspace, get organization id as well and add that into OR conditional
+    if (scopeType == ScopeType.workspace) {
+      final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(scopeId);
+      if (organizationId.isPresent()) {
+        scopeConditional = scopeConditional.or(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.organization).and(
+            ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(organizationId.get())));
+      }
+    }
+
+    final Condition finalScopeConditional = scopeConditional;
     return database.query(ctx -> ctx.select(asterisk()).from(ACTOR_DEFINITION)
         .join(ACTOR_DEFINITION_WORKSPACE_GRANT, joinType)
-        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID),
-            ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId),
-            ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(scopeType))
+        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID).and(finalScopeConditional))
         .where(conditions)
         .fetch());
   }

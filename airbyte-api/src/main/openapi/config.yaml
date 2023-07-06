@@ -440,7 +440,7 @@ paths:
     post:
       tags:
         - source_definition
-      summary: Creates a custom sourceDefinition for the given workspace
+      summary: Creates a custom sourceDefinition for the given workspace or organization
       operationId: createCustomSourceDefinition
       requestBody:
         content:
@@ -479,17 +479,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/source_definitions/grant_definition:
+  /v1/source_definitions/get_for_scope:
     post:
       tags:
         - source_definition
-      summary: grant a private, non-custom sourceDefinition to a given workspace
-      operationId: grantSourceDefinitionToWorkspace
+      summary: Get a sourceDefinition that is configured for the given workspace or organization
+      operationId: getSourceDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definitions/grant_definition:
+    post:
+      tags:
+        - source_definition
+      summary: grant a private, non-custom sourceDefinition to a given workspace or organization
+      operationId: grantSourceDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -506,13 +529,13 @@ paths:
     post:
       tags:
         - source_definition
-      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace
-      operationId: revokeSourceDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace or organization
+      operationId: revokeSourceDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -1238,17 +1261,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/destination_definitions/grant_definition:
+  /v1/destination_definitions/get_for_scope:
     post:
       tags:
         - destination_definition
-      summary: grant a private, non-custom destinationDefinition to a given workspace
-      operationId: grantDestinationDefinitionToWorkspace
+      summary: Get a destinationDefinition that is configured for the given scope
+      operationId: getDestinationDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definitions/grant_definition:
+    post:
+      tags:
+        - destination_definition
+      summary: grant a private, non-custom destinationDefinition to a given workspace or organization
+      operationId: grantDestinationDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -1265,13 +1311,13 @@ paths:
     post:
       tags:
         - destination_definition
-      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace
-      operationId: revokeDestinationDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace or organization
+      operationId: revokeDestinationDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -3447,6 +3493,19 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ActorDefinitionIdWithScope:
+      type: object
+      required:
+        - actorDefinitionId
+        - scopeId
+        - scopeType
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
     ListDeclarativeManifestsRequestBody:
       type: object
       required:
@@ -3926,7 +3985,6 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
-
     DestinationDefinitionReadList:
       type: object
       required:
@@ -5486,6 +5544,10 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionId:
+      description: A unique identifier for an actor definition.
+      type: string
+      format: uuid
     ActorDefinitionRequestBody:
       type: object
       additionalProperties: false
@@ -5494,8 +5556,7 @@ components:
         - actorType
       properties:
         actorDefinitionId:
-          type: string
-          format: uuid
+          $ref: "#/components/schemas/ActorDefinitionId"
         actorType:
           $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
