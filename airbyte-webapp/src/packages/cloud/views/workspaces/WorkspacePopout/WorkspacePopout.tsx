@@ -1,4 +1,3 @@
-import { useSelectWorkspace } from "area/workspace/utils/useSelectWorkspace";
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { components, MenuListProps } from "react-select";
@@ -7,6 +6,7 @@ import styled from "styled-components";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Popout } from "components/ui/Popout";
 
+import { useSelectWorkspace } from "area/workspace/utils";
 import { useCurrentWorkspace } from "core/api";
 import { useListCloudWorkspacesAsync } from "core/api/cloud";
 

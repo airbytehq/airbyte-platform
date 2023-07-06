@@ -1,6 +1,6 @@
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useIntl } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useStripeCheckout } from "core/api/cloud";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";

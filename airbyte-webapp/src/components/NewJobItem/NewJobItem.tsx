@@ -5,7 +5,6 @@ import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
@@ -19,6 +18,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";

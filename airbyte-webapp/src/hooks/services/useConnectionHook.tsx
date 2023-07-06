@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { useInvalidateWorkspaceStateQuery, useSuspenseQuery } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";

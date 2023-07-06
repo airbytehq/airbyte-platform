@@ -1,9 +1,9 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
-import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 import { sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
 
+import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
 import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 

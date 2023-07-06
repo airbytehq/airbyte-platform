@@ -5,7 +5,6 @@ import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { FeatureItem, useFeature } from "core/services/features";
 import { pollUntil } from "core/utils/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";

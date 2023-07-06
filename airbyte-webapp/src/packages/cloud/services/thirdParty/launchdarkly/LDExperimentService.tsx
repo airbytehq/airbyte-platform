@@ -1,4 +1,3 @@
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import * as LDClient from "launchdarkly-js-client-sdk";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useIntl } from "react-intl";
@@ -7,6 +6,7 @@ import { finalize, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useI18nContext } from "core/i18n";
 import { useAnalyticsService } from "core/services/analytics";
