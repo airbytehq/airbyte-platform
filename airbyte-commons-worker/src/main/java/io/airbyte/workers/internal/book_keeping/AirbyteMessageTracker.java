@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.State;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -19,8 +18,6 @@ import io.airbyte.workers.internal.state_aggregator.DefaultStateAggregator;
 import io.airbyte.workers.internal.state_aggregator.StateAggregator;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -33,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AirbyteMessageTracker implements MessageTracker {
 
-  private final AtomicReference<State> sourceOutputState;
-  private final AtomicReference<State> destinationOutputState;
   private final SyncStatsTracker syncStatsTracker;
   private final List<AirbyteTraceMessage> destinationErrorTraceMessages;
   private final List<AirbyteTraceMessage> sourceErrorTraceMessages;
@@ -51,8 +46,6 @@ public class AirbyteMessageTracker implements MessageTracker {
   }
 
   protected AirbyteMessageTracker(final StateAggregator stateAggregator, final SyncStatsTracker syncStatsTracker, final FeatureFlags featureFlags) {
-    this.sourceOutputState = new AtomicReference<>();
-    this.destinationOutputState = new AtomicReference<>();
     this.syncStatsTracker = syncStatsTracker;
     this.destinationErrorTraceMessages = new ArrayList<>();
     this.sourceErrorTraceMessages = new ArrayList<>();
@@ -110,7 +103,6 @@ public class AirbyteMessageTracker implements MessageTracker {
    * correctly.
    */
   private void handleSourceEmittedState(final AirbyteStateMessage stateMessage) {
-    sourceOutputState.set(new State().withState(stateMessage.getData()));
     syncStatsTracker.updateSourceStatesStats(stateMessage);
   }
 
@@ -120,7 +112,6 @@ public class AirbyteMessageTracker implements MessageTracker {
    */
   private void handleDestinationEmittedState(final AirbyteStateMessage stateMessage) {
     stateAggregator.ingest(stateMessage);
-    destinationOutputState.set(stateAggregator.getAggregated());
 
     syncStatsTracker.updateDestinationStateStats(stateMessage);
   }
@@ -200,16 +191,6 @@ public class AirbyteMessageTracker implements MessageTracker {
       return FailureHelper.destinationFailure(destinationMessage, jobId, attempt);
     }
 
-  }
-
-  @Override
-  public Optional<State> getSourceOutputState() {
-    return Optional.ofNullable(sourceOutputState.get());
-  }
-
-  @Override
-  public Optional<State> getDestinationOutputState() {
-    return Optional.ofNullable(destinationOutputState.get());
   }
 
   @Override
