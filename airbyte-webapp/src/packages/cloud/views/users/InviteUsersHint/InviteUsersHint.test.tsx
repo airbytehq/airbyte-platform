@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react";
+
 import { TestWrapper } from "test-utils/testutils";
 
 import { FeatureItem } from "core/services/features";
