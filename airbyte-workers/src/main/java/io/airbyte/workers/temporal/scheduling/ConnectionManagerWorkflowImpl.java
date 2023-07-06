@@ -32,6 +32,8 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
 import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -44,6 +46,7 @@ import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivit
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
+import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
@@ -106,10 +109,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final String CHECK_WITH_API_TAG = "check_with_api";
   private static final String CHECK_WITH_CHILD_WORKFLOW_TAG = "check_with_child_workflow";
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
+  private static final String CHECK_RUN_PROGRESS_TAG = "check_run_progress";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION = 1;
-
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
+  private static final int CHECK_RUN_PROGRESS_VERSION = 1;
 
   private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -141,6 +145,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private FeatureFlagFetchActivity featureFlagFetchActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private CheckRunProgressActivity checkRunProgressActivity;
 
   private CancellationScope cancellableSyncWorkflow;
 
@@ -345,17 +351,29 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         standardSyncOutput,
         FailureHelper.failureSummary(failureReasons, workflowInternalState.getPartialSuccess())));
 
-    final int maxAttempt = configFetchActivity.getMaxAttempt().getMaxAttempt();
+    // ATTENTION: connectionUpdaterInput.getAttemptNumber() is 1-based (usually)
+    // this differs from workflowInternalState.getAttemptNumber() being 0-based.
+    // TODO: Don't mix these bases. Bug filed https://github.com/airbytehq/airbyte/issues/27808
     final int attemptNumber = connectionUpdaterInput.getAttemptNumber();
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, attemptNumber));
+
+    // This is outside the retry if/else block because we will pass it to our retry manager regardless
+    // of retry state.
+    // This will be added in a future PR as we develop this feature.
+    final boolean madeProgress = checkRunProgress(connectionUpdaterInput);
 
     final FailureType failureType =
         standardSyncOutput != null ? standardSyncOutput.getFailures().isEmpty() ? null : standardSyncOutput.getFailures().get(0).getFailureType()
             : null;
-    if (maxAttempt > attemptNumber && failureType != FailureType.CONFIG_ERROR) {
+    if (isWithinRetryLimit(attemptNumber) && failureType != FailureType.CONFIG_ERROR) {
       // restart from failure
       connectionUpdaterInput.setAttemptNumber(attemptNumber + 1);
       connectionUpdaterInput.setFromFailure(true);
+
+      if (madeProgress) {
+        recordProgressMetric(connectionUpdaterInput, failureCause, true);
+      }
+
     } else {
       final String failureReason = failureType == FailureType.CONFIG_ERROR ? "Connection Check Failed " + connectionId
           : "Job failed after too many retries for connection " + connectionId;
@@ -372,8 +390,76 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
       // Record the failure metric
       recordMetric(new RecordMetricInput(connectionUpdaterInput, Optional.of(failureCause), OssMetricsRegistry.TEMPORAL_WORKFLOW_FAILURE, null));
+      // Record whether we made progress
+      if (madeProgress) {
+        recordProgressMetric(connectionUpdaterInput, failureCause, false);
+      }
 
       resetNewConnectionInput(connectionUpdaterInput);
+    }
+  }
+
+  private void recordProgressMetric(final ConnectionUpdaterInput input, final FailureCause cause, final boolean willRetry) {
+    // job id and other attrs get populated by the wrapping activity
+    final var attrs = new MetricAttribute[] {
+      new MetricAttribute(MetricTags.WILL_RETRY, String.valueOf(willRetry)),
+      new MetricAttribute(MetricTags.ATTEMPT_NUMBER, String.valueOf(workflowInternalState.getAttemptNumber()))
+    };
+
+    // we don't use `runMandatoryActivity` to prevent an infinite loop (reportFailure ->
+    // runMandatoryActivity -> reportFailure...)
+    try {
+      recordMetricActivity.recordWorkflowCountMetric(
+          new RecordMetricInput(input, Optional.ofNullable(cause), OssMetricsRegistry.REPLICATION_MADE_PROGRESS, attrs));
+    } catch (final Exception e) {
+      // let's not blow up the workflow if this fails
+      log.error(String.format(
+          "FAILED to report progress metric for connection: %s — attempt: %d",
+          input.getConnectionId(),
+          workflowInternalState.getAttemptNumber()));
+    }
+  }
+
+  private boolean isWithinRetryLimit(final int attemptNumber) {
+    final int maxAttempt = configFetchActivity.getMaxAttempt().getMaxAttempt();
+
+    return maxAttempt > attemptNumber;
+  }
+
+  private boolean shouldCheckRunProgress() {
+    final int version = Workflow.getVersion(CHECK_RUN_PROGRESS_TAG, Workflow.DEFAULT_VERSION, CHECK_RUN_PROGRESS_VERSION);
+    return version >= CHECK_RUN_PROGRESS_VERSION;
+  }
+
+  private boolean checkRunProgress(final ConnectionUpdaterInput input) {
+    if (!shouldCheckRunProgress()) {
+      return false;
+    }
+
+    // we don't use `runMandatoryActivity` to prevent an infinite loop (reportFailure ->
+    // runMandatoryActivity -> reportFailure...)
+    try {
+      final CheckRunProgressActivity.Output progressCheck =
+          checkRunProgressActivity.checkProgress(
+              new CheckRunProgressActivity.Input(
+                  workflowInternalState.getJobId(),
+                  workflowInternalState.getAttemptNumber(),
+                  input.getConnectionId()));
+
+      return progressCheck.madeProgress();
+    } catch (final Exception e) {
+      final var attrs = new MetricAttribute[] {
+        new MetricAttribute(MetricTags.ACTIVITY_NAME, CheckRunProgressActivity.class.getName())
+      };
+      // allow the workflow to continue if we fail to check progress
+      recordMetricActivity.recordWorkflowCountMetric(
+          new RecordMetricInput(input, Optional.empty(), OssMetricsRegistry.ACTIVITY_FAILURE, attrs));
+      log.error(String.format(
+          "FAILED check progress activity for connection: %s — attempt: %d",
+          input.getConnectionId(),
+          workflowInternalState.getAttemptNumber()));
+
+      return false;
     }
   }
 
