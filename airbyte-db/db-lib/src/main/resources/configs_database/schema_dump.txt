@@ -20,6 +20,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "default_version_id" uuid,
   constraint "actor_pkey"
     primary key ("id")
 );
@@ -326,6 +327,10 @@ alter table "public"."actor"
   add constraint "actor_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
+alter table "public"."actor"
+  add constraint "actor_default_version_id_fkey"
+    foreign key ("default_version_id")
+    references "public"."actor_definition_version" ("id");
 alter table "public"."actor"
   add constraint "actor_workspace_id_fkey"
     foreign key ("workspace_id")
