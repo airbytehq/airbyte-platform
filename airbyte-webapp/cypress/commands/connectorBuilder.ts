@@ -59,7 +59,7 @@ export const configureAuth = () => {
 export const configurePagination = () => {
   goToView("0");
   enablePagination();
-  configureLimitOffsetPagination("2", "header", "limit", "header", "offset");
+  configureLimitOffsetPagination("2", "Header", "limit", "Header", "offset");
 };
 
 export const configureStreamSlicer = (numberOfSlices: number) => {

@@ -98,7 +98,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       />
       <BuilderOneOf
         path={streamFieldPath("requestOptions.requestBody")}
-        label="Request body"
+        label="Request Body"
         options={getBodyOptions()}
       />
     </BuilderCard>

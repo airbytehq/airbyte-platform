@@ -75,8 +75,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   path={streamFieldPath("paginator.strategy.page_size")}
                   optional
                 />
-                {pageSize ? <PageSizeOption label="limit" streamFieldPath={streamFieldPath} /> : null}
-                <PageTokenOption label="offset" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="Limit" streamFieldPath={streamFieldPath} /> : null}
+                <PageTokenOption label="Offset" streamFieldPath={streamFieldPath} />
               </>
             ),
           },
@@ -101,8 +101,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="PageIncrement.properties.start_from_page"
                   optional
                 />
-                {pageSize ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
-                <PageTokenOption label="page number" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="Page Size" streamFieldPath={streamFieldPath} /> : null}
+                <PageTokenOption label="Page Number" streamFieldPath={streamFieldPath} />
               </>
             ),
           },
@@ -199,7 +199,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     },
                   ]}
                 />
-                <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />
+                <PageTokenOption label="Cursor Value" streamFieldPath={streamFieldPath} />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
@@ -211,7 +211,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   }}
                   optional
                 />
-                {pageSize ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
+                {pageSize ? <PageSizeOption label="Page Size" streamFieldPath={streamFieldPath} /> : null}
               </>
             ),
           },
@@ -230,7 +230,7 @@ const PageTokenOption = ({
 }): JSX.Element => {
   return (
     <ToggleGroupField<RequestOption>
-      label={`Inject ${label} into outgoing HTTP request`}
+      label={`Inject ${label} into outgoing HTTP Request`}
       tooltip={`Configures how the ${label} will be sent in requests to the source API`}
       fieldPath={streamFieldPath("paginator.pageTokenOption")}
       initialValues={{
@@ -253,7 +253,7 @@ const PageSizeOption = ({
 }): JSX.Element => {
   return (
     <ToggleGroupField<RequestOption>
-      label={`Inject ${label} into outgoing HTTP request`}
+      label={`Inject ${label} into outgoing HTTP Request`}
       tooltip={`Configures how the ${label} will be sent in requests to the source API`}
       fieldPath={streamFieldPath("paginator.pageSizeOption")}
       initialValues={{
