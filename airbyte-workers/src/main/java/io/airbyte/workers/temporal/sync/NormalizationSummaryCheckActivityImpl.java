@@ -14,6 +14,8 @@ import io.airbyte.api.client.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.client.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.temporal.activity.Activity;
 import jakarta.inject.Singleton;
 import java.util.Comparator;
@@ -40,6 +42,8 @@ public class NormalizationSummaryCheckActivityImpl implements NormalizationSumma
   @Override
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public boolean shouldRunNormalization(final Long jobId, final Long attemptNumber, final Optional<Long> numCommittedRecords) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_NORMALIZATION_SUMMARY_CHECK, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, attemptNumber, JOB_ID_KEY, jobId));
 
     // if the count of committed records for this attempt is > 0 OR if it is null,

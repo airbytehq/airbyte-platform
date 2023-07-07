@@ -4,29 +4,43 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_CLIENT;
+import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_TRIGGER;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.map.MoreMaps;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
+import io.airbyte.config.NotificationItem;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.NotificationClient;
+import io.airbyte.notification.SlackNotificationClient;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
+import io.micronaut.core.util.functional.ThrowingFunction;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,22 +61,25 @@ public class JobNotifier {
   private final TrackingClient trackingClient;
   private final WebUrlHelper webUrlHelper;
   private final WorkspaceHelper workspaceHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public JobNotifier(final WebUrlHelper webUrlHelper,
                      final ConfigRepository configRepository,
                      final WorkspaceHelper workspaceHelper,
-                     final TrackingClient trackingClient) {
+                     final TrackingClient trackingClient,
+                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.webUrlHelper = webUrlHelper;
     this.workspaceHelper = workspaceHelper;
     this.configRepository = configRepository;
     this.trackingClient = trackingClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   private void notifyJob(final String reason, final String action, final Job job) {
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspaceId, workspace, workspace.getNotifications());
+      notifyJob(reason, action, job, workspaceId, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -72,70 +89,97 @@ public class JobNotifier {
                          final String action,
                          final Job job,
                          final UUID workspaceId,
-                         final StandardWorkspace workspace,
-                         final List<Notification> notifications) {
+                         final StandardWorkspace workspace) {
     final UUID connectionId = UUID.fromString(job.getScope());
+    NotificationSettings notificationSettings = workspace.getNotificationSettings();
     try {
+      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
       final String sourceConnector = sourceDefinition.getName();
       final String destinationConnector = destinationDefinition.getName();
       final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
       final String jobDescription = getJobDescription(job, failReason);
       final String logUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId);
       final Map<String, Object> jobMetadata = TrackingMetadata.generateJobAttemptMetadata(job);
-      final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition);
-      final Map<String, Object> destinationMetadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
-      for (final Notification notification : notifications) {
-        final NotificationClient notificationClient = getNotificationClient(notification);
-        try {
-          final Builder<String, Object> notificationMetadata = ImmutableMap.builder();
-          notificationMetadata.put("connection_id", connectionId);
-          if (NotificationType.SLACK.equals(notification.getNotificationType())
-              && notification.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
-            // flag as slack if the webhook URL is also pointing to slack
-            notificationMetadata.put("notification_type", NotificationType.SLACK);
-          } else if (NotificationType.CUSTOMERIO.equals(notification.getNotificationType())) {
-            notificationMetadata.put("notification_type", NotificationType.CUSTOMERIO);
-          } else {
-            // Slack Notification type could be "hacked" and re-used for custom webhooks
-            notificationMetadata.put("notification_type", "N/A");
-          }
-          trackingClient.track(
-              workspaceId,
-              action,
-              MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata.build()));
-
-          if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
-            if (!notificationClient.notifyJobFailure(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId())) {
-              LOGGER.warn("Failed to successfully notify failure: {}", notification);
-            }
-            break;
-          } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
-            if (!notificationClient.notifyJobSuccess(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId())) {
-              LOGGER.warn("Failed to successfully notify success: {}", notification);
-            }
-            break;
-          } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
-            if (!notificationClient.notifyConnectionDisabled(workspace.getEmail(), sourceConnector, destinationConnector, jobDescription,
-                workspaceId, connectionId)) {
-              LOGGER.warn("Failed to successfully notify auto-disable connection: {}", notification);
-            }
-            break;
-          } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
-            if (!notificationClient.notifyConnectionDisableWarning(workspace.getEmail(), sourceConnector, destinationConnector, jobDescription,
-                workspaceId, connectionId)) {
-              LOGGER.warn("Failed to successfully notify auto-disable connection warning: {}", notification);
-            }
-
-          }
-        } catch (final Exception e) {
-          LOGGER.error("Failed to notify: {} due to an exception", notification, e);
-        }
+      final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
+      final Map<String, Object> destinationMetadata =
+          TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
+      NotificationItem notificationItem = null;
+      if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnFailure();
+        sendNotification(notificationItem, FAILURE_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector, destinationConnector,
+                standardSync.getName(), jobDescription, logUrl, job.getId()));
+      } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSuccess();
+        sendNotification(notificationItem, SUCCESS_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector, destinationConnector,
+                standardSync.getName(), jobDescription, logUrl, job.getId()));
+      } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSyncDisabled();
+        sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(), sourceConnector, destinationConnector,
+                jobDescription,
+                workspaceId, connectionId));
+      } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
+        sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(), sourceConnector, destinationConnector,
+                jobDescription,
+                workspaceId, connectionId));
+      }
+      if (notificationItem != null) {
+        final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
+        trackingClient.track(
+            workspaceId,
+            action,
+            MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata));
       }
     } catch (final Exception e) {
-      LOGGER.error("Unable to read configuration:", e);
+      LOGGER.error("Unable to read configuration for notification. Non-blocking. Error:", e);
     }
+  }
+
+  List<NotificationClient> getNotificationClientsFromNotificationItem(final NotificationItem item) {
+    return item.getNotificationType().stream().map(notificationType -> {
+      if (NotificationType.SLACK.equals(notificationType)) {
+        return new SlackNotificationClient(item.getSlackConfiguration());
+      } else if (NotificationType.CUSTOMERIO.equals(notificationType)) {
+        return new CustomerioNotificationClient();
+      } else {
+        throw new IllegalArgumentException("Notification type not supported: " + notificationType);
+      }
+    }).collect(Collectors.toList());
+  }
+
+  Map<String, Object> buildNotificationMetadata(final UUID connectionId, final NotificationItem notificationItem) {
+    final Builder<String, Object> notificationMetadata = ImmutableMap.builder();
+    notificationMetadata.put("connection_id", connectionId);
+    for (var notificationType : notificationItem.getNotificationType()) {
+      if (NotificationType.SLACK.equals(notificationType)
+          && notificationItem.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
+        // flag as slack if the webhook URL is also pointing to slack
+        notificationMetadata.put("notification_type", NotificationType.SLACK);
+      } else if (NotificationType.CUSTOMERIO.equals(notificationType)) {
+        notificationMetadata.put("notification_type", NotificationType.CUSTOMERIO);
+      } else {
+        // Slack Notification type could be "hacked" and re-used for custom webhooks
+        notificationMetadata.put("notification_type", "N/A");
+      }
+    }
+    return notificationMetadata.build();
+  }
+
+  private void submitToMetricClient(final String action, final String notificationClient) {
+    MetricAttribute metricTriggerAttribute = new MetricAttribute(NOTIFICATION_TRIGGER, action);
+    MetricAttribute metricClientAttribute = new MetricAttribute(NOTIFICATION_CLIENT, notificationClient);
+
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute, metricTriggerAttribute);
   }
 
   /**
@@ -153,12 +197,10 @@ public class JobNotifier {
    * @param job job notification is for
    */
   public void notifyJobByEmail(final String reason, final String action, final Job job) {
-    final Notification emailNotification = new Notification();
-    emailNotification.setNotificationType(NotificationType.CUSTOMERIO);
     try {
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
       final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, true);
-      notifyJob(reason, action, job, workspaceId, workspace, Collections.singletonList(emailNotification));
+      notifyJob(reason, action, job, workspaceId, workspace);
     } catch (final Exception e) {
       LOGGER.error("Unable to read configuration:", e);
     }
@@ -193,6 +235,29 @@ public class JobNotifier {
 
   protected NotificationClient getNotificationClient(final Notification notification) {
     return NotificationClient.createNotificationClient(notification);
+  }
+
+  private void sendNotification(final NotificationItem notificationItem,
+                                final String notificationTrigger,
+                                ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
+    if (notificationItem == null) {
+      // Note: we may be able to implement a log notifier to log notification message only.
+      LOGGER.info("No notification item found for the desired notification event found. Skipping notification.");
+      return;
+    }
+    final List<NotificationClient> notificationClients = getNotificationClientsFromNotificationItem(notificationItem);
+    for (final NotificationClient notificationClient : notificationClients) {
+      try {
+        if (!executeNotification.apply(notificationClient)) {
+          LOGGER.warn("Failed to successfully notify: {}", notificationItem);
+        }
+        submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType());
+      } catch (Exception ex) {
+        LOGGER.error("Failed to notify: {} due to an exception. Not blocking.", notificationItem, ex);
+        // Do not block.
+      }
+    }
+
   }
 
 }

@@ -26,9 +26,6 @@ import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
@@ -36,6 +33,9 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
+import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.SourceType;
+import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardDestinationDefinition;
+import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardSourceDefinition;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.AuthSpecification;
 import io.airbyte.protocol.models.AuthSpecification.AuthType;
@@ -181,23 +181,24 @@ public class SetupForNormalizedTablesTest {
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
     final ConnectorSpecification connectorSpecification = connectorSpecification();
-    final StandardSourceDefinition standardSourceDefinition1 = new StandardSourceDefinition()
-        .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
-        .withSourceType(SourceType.API)
-        .withName("random-source-1")
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
-        .withIcon("icon-1")
-        .withSpec(connectorSpecification);
-    final StandardSourceDefinition standardSourceDefinition2 = new StandardSourceDefinition()
-        .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
-        .withSourceType(SourceType.DATABASE)
-        .withName("random-source-2")
-        .withDockerImageTag("tag-2")
-        .withDockerRepository("repository-2")
-        .withDocumentationUrl("documentation-url-2")
-        .withIcon("icon-2");
+    final StandardSourceDefinition standardSourceDefinition1 = new StandardSourceDefinition(
+        SOURCE_DEFINITION_ID_1,
+        "random-source-1",
+        "repository-1",
+        "tag-1",
+        "documentation-url-1",
+        "icon-1",
+        SourceType.api,
+        connectorSpecification);
+    final StandardSourceDefinition standardSourceDefinition2 = new StandardSourceDefinition(
+        SOURCE_DEFINITION_ID_2,
+        "random-source-2",
+        "repository-2",
+        "tag-1",
+        "documentation-url-2",
+        "icon-2",
+        SourceType.database,
+        null);
     return Arrays.asList(standardSourceDefinition1, standardSourceDefinition2);
   }
 
@@ -216,22 +217,22 @@ public class SetupForNormalizedTablesTest {
 
   public static List<StandardDestinationDefinition> standardDestinationDefinitions() {
     final ConnectorSpecification connectorSpecification = connectorSpecification();
-    final StandardDestinationDefinition standardDestinationDefinition1 = new StandardDestinationDefinition()
-        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
-        .withName("random-destination-1")
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
-        .withIcon("icon-3")
-        .withSpec(connectorSpecification);
-    final StandardDestinationDefinition standardDestinationDefinition2 = new StandardDestinationDefinition()
-        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
-        .withName("random-destination-2")
-        .withDockerImageTag("tag-4")
-        .withDockerRepository("repository-4")
-        .withDocumentationUrl("documentation-url-4")
-        .withIcon("icon-4")
-        .withSpec(connectorSpecification);
+    final StandardDestinationDefinition standardDestinationDefinition1 = new StandardDestinationDefinition(
+        DESTINATION_DEFINITION_ID_1,
+        "random-destination-1",
+        "repository-3",
+        "tag-3",
+        "documentation-url-3",
+        "icon-3",
+        connectorSpecification);
+    final StandardDestinationDefinition standardDestinationDefinition2 = new StandardDestinationDefinition(
+        DESTINATION_DEFINITION_ID_2,
+        "random-destination-2",
+        "repository-4",
+        "tag-4",
+        "documentation-url-4",
+        "icon-4",
+        connectorSpecification);
     return Arrays.asList(standardDestinationDefinition1, standardDestinationDefinition2);
   }
 

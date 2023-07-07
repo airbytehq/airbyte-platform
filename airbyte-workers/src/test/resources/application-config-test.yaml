@@ -1,0 +1,20 @@
+sanity-check: test config
+airbyte:
+  role: tester
+  version: latest
+  worker:
+    kube-job-configs:
+      default:
+        cpu-limit: default cpu limit
+      check:
+        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:check annotations}
+        node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:check node-selectors}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:check cpu limit}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:check cpu request}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:check mem limit}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:check mem request}
+      spec:
+        annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:spec annotations}
+        node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:spec node selectors}
+        memory-limit: spec memory limit
+        memory-request: ${SOMETHING_NOT_THERE:}

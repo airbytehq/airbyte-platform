@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
@@ -20,6 +21,7 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
+import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -33,9 +35,11 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.DestinationMatcher;
+import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -50,6 +54,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CheckWithCatalog;
@@ -62,10 +67,12 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -92,6 +99,8 @@ public class ConnectionsHandler {
   private final ConnectionHelper connectionHelper;
   @Inject
   FeatureFlagClient featureFlagClient;
+  @Inject
+  ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @VisibleForTesting
   ConnectionsHandler(final ConfigRepository configRepository,
@@ -188,7 +197,7 @@ public class ConnectionsHandler {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
     final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
-    if (workspaceId != null && featureFlagClient.enabled(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
+    if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
     }
@@ -272,6 +281,7 @@ public class ConnectionsHandler {
     metadata.put("connector_source_definition_id", sourceDefinition.getSourceDefinitionId());
     metadata.put("connector_destination", destinationDefinition.getName());
     metadata.put("connector_destination_definition_id", destinationDefinition.getDestinationDefinitionId());
+    metadata.put("connection_id", standardSync.getConnectionId());
 
     final String frequencyString;
     if (standardSync.getScheduleType() != null) {
@@ -378,6 +388,10 @@ public class ConnectionsHandler {
 
     if (patch.getNotifySchemaChanges() != null) {
       sync.setNotifySchemaChanges(patch.getNotifySchemaChanges());
+    }
+
+    if (patch.getNotifySchemaChangesByEmail() != null) {
+      sync.setNotifySchemaChangesByEmail(patch.getNotifySchemaChangesByEmail());
     }
 
     if (patch.getNonBreakingChangesPreference() != null) {
@@ -534,8 +548,11 @@ public class ConnectionsHandler {
     }
     final ActorCatalog catalog = configRepository.getActorCatalogById(connection.getSourceCatalogId());
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(connection.getSourceId());
+    final SourceConnection sourceConnection = configRepository.getSourceConnection(connection.getSourceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
     final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceDefinition));
+    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
   }
 
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
@@ -618,6 +635,45 @@ public class ConnectionsHandler {
         throw new RuntimeException("Unexpected schedule type");
       }
     }
+  }
+
+  public ConnectionReadList listConnectionsForWorkspaces(final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
+      throws IOException {
+
+    final List<ConnectionRead> connectionReads = Lists.newArrayList();
+
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
+        listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
+        listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
+        PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
+        PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));
+
+    for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
+      final UUID workspaceId = entry.getKey();
+      for (final StandardSync standardSync : entry.getValue()) {
+        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+        connectionRead.setWorkspaceId(workspaceId);
+        connectionReads.add(connectionRead);
+      }
+    }
+    return new ConnectionReadList().connections(connectionReads);
+  }
+
+  public ConnectionReadList listConnectionsForActorDefinition(final ActorDefinitionRequestBody actorDefinitionRequestBody)
+      throws IOException {
+
+    final List<ConnectionRead> connectionReads = new ArrayList<>();
+
+    final List<StandardSync> standardSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+        actorDefinitionRequestBody.getActorDefinitionId(),
+        actorDefinitionRequestBody.getActorType().toString(),
+        false);
+
+    for (final StandardSync standardSync : standardSyncs) {
+      final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+      connectionReads.add(connectionRead);
+    }
+    return new ConnectionReadList().connections(connectionReads);
   }
 
 }

@@ -5,6 +5,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { TextInputContainer } from "components/ui/TextInputContainer";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
@@ -65,17 +66,20 @@ export const DestinationStreamPrefixName = () => {
               id: "form.prefix.message",
             })}
           />
-          <FlexContainer alignItems="center" justifyContent="space-between">
-            <Text color="grey">
-              {field.value === ""
-                ? formatMessage({ id: "connectionForm.modal.destinationStreamNames.radioButton.mirror" })
-                : field.value}
-            </Text>
+          <FlexContainer alignItems="center" justifyContent="space-between" gap="sm">
+            <TextInputContainer disabled>
+              <Text>
+                {!field.value
+                  ? formatMessage({ id: "connectionForm.modal.destinationStreamNames.radioButton.mirror" })
+                  : field.value}
+              </Text>
+            </TextInputContainer>
             <Button
               type="button"
               variant="secondary"
               disabled={mode === "readonly"}
               onClick={openDestinationStreamNamesModal}
+              data-testid="destination-stream-prefix-edit-button"
             >
               <FormattedMessage id="form.edit" />
             </Button>

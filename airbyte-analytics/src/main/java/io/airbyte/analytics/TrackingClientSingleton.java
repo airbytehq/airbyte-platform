@@ -76,6 +76,25 @@ public class TrackingClientSingleton {
     initialize(new LoggingTrackingClient(workspaceId -> TrackingIdentity.empty()));
   }
 
+  /**
+   * Initialize client for Airbyte API usage.
+   */
+  public static void initializeWithoutDatabase(final Configs.TrackingStrategy trackingStrategy,
+                                               final Deployment deployment,
+                                               final AirbyteVersion airbyteVersion) {
+    initialize(createTrackingClient(
+        trackingStrategy,
+        deployment,
+        null,
+        (userId) -> new TrackingIdentity(
+            airbyteVersion,
+            userId,
+            null,
+            null,
+            null,
+            null)));
+  }
+
   @VisibleForTesting
   static TrackingIdentity getTrackingIdentity(final ConfigRepository configRepository, final AirbyteVersion airbyteVersion, final UUID workspaceId) {
     try {

@@ -1,13 +1,13 @@
-import { useField } from "formik";
 import { useMemo } from "react";
+import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { DropDown } from "components/ui/DropDown";
 import { Text } from "components/ui/Text";
 
-import styles from "./BuilderField.module.scss";
-import { BuilderStream } from "../types";
+import styles from "./StreamReferenceField.module.scss";
+import { useBuilderWatch } from "../types";
 
 interface StreamReferenceFieldProps {
   // path to the location in the Connector Manifest schema which should be set by this component
@@ -26,31 +26,34 @@ export const StreamReferenceField: React.FC<StreamReferenceFieldProps> = ({
   currentStreamIndex,
   ...props
 }) => {
-  const [streams] = useField<BuilderStream[]>("streams");
-  const [field, meta, helpers] = useField(path);
-  const hasError = !!meta.error && meta.touched;
+  const streams = useBuilderWatch("streams");
+  const { setValue } = useFormContext();
+  const value = useWatch({ name: path });
+  const { errors } = useFormState({ name: path });
+  const error = get(errors, path);
+  const hasError = !!error;
 
   const options = useMemo(() => {
-    return streams.value
+    return streams
       .filter((_value, index) => index !== currentStreamIndex)
       .map((stream) => ({
         value: stream.id,
         label: stream.name,
       }));
-  }, [currentStreamIndex, streams.value]);
+  }, [currentStreamIndex, streams]);
 
   return (
-    <ControlLabels className={styles.container} label={label} infoTooltipContent={tooltip} optional={optional}>
+    <ControlLabels label={label} infoTooltipContent={tooltip} optional={optional}>
       <DropDown
         {...props}
         options={options}
-        onChange={(selected) => selected && helpers.setValue(selected.value)}
-        value={field.value}
+        onChange={(selected) => selected && setValue(path, selected.value)}
+        value={value}
         error={hasError}
       />
       {hasError && (
         <Text className={styles.error}>
-          <FormattedMessage id={meta.error} />
+          <FormattedMessage id={error.message} />
         </Text>
       )}
     </ControlLabels>

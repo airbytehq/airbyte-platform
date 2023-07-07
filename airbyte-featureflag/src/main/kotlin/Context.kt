@@ -40,25 +40,14 @@ data class Multi(val contexts: List<Context>) : Context {
   override val kind = "multi"
 
   /**
-   * Multi contexts don't have a key, however for LDv5 reasons, a key must exist.
-   *
-   * Determine what the key should be based on the priority order of:
-   * workspace -> connection -> source -> destination -> user
-   * taking the first value
-   *
-   * When LDv5 support is dropped replace this with: override vale key = ""
+   * Multi contexts (in LDv6) do not have a key, default to an empty string.
    */
-  override val key = when {
-    /** Intellij is going to recommend replacing .sortedBy with .minByOrNull, ignore this recommendation. */
-    fetchContexts<Workspace>().isNotEmpty() -> fetchContexts<Workspace>().sortedBy { it.key }.first().key
-    fetchContexts<Connection>().isNotEmpty() -> fetchContexts<Connection>().sortedBy { it.key }.first().key
-    fetchContexts<Source>().isNotEmpty() -> fetchContexts<Source>().sortedBy { it.key }.first().key
-    fetchContexts<Destination>().isNotEmpty() -> fetchContexts<Destination>().sortedBy { it.key }.first().key
-    fetchContexts<User>().isNotEmpty() -> fetchContexts<User>().sortedBy { it.key }.first().key
-    else -> throw IllegalArgumentException("unsupported context: ${contexts.joinToString { it.kind }}")
-  }
+  override val key = ""
 
   init {
+    if (contexts.isEmpty()) {
+      throw IllegalArgumentException("Contexts cannot be empty")
+    }
     // ensure there are no nested contexts (i.e. this Multi does not contain another Multi)
     if (fetchContexts<Multi>().isNotEmpty()) {
       throw IllegalArgumentException("Multi contexts cannot be nested")
@@ -125,7 +114,7 @@ data class Connection(override val key: String) : Context {
 }
 
 /**
- * Context for representing a source.
+ * Context for representing a source actor.
  *
  * @param [key] the unique identifying value of this source
  */
@@ -135,13 +124,13 @@ data class Source(override val key: String) : Context {
   /**
    * Secondary constructor
    *
-   * @param [key] Source UUID
+   * @param [key] Source Actor UUID
    */
   constructor(key: UUID) : this(key = key.toString())
 }
 
 /**
- * Context for representing a destination.
+ * Context for representing a destination actor.
  *
  * @param [key] the unique identifying value of this destination
  */
@@ -151,7 +140,39 @@ data class Destination(override val key: String) : Context {
   /**
    * Secondary constructor
    *
-   * @param [key] Destination UUID
+   * @param [key] Destination Actor UUID
+   */
+  constructor(key: UUID) : this(key = key.toString())
+}
+
+/**
+ * Context for representing a source definition.
+ *
+ * @param [key] the unique identifying value of this source definition
+ */
+data class SourceDefinition(override val key: String) : Context {
+  override val kind = "source-definition"
+
+  /**
+   * Secondary constructor
+   *
+   * @param [key] SourceDefinition UUID
+   */
+  constructor(key: UUID) : this(key = key.toString())
+}
+
+/**
+ * Context for representing a destination definition.
+ *
+ * @param [key] the unique identifying value of this destination definition
+ */
+data class DestinationDefinition(override val key: String) : Context {
+  override val kind = "destination-definition"
+
+  /**
+   * Secondary constructor
+   *
+   * @param [key] DestinationDefinition UUID
    */
   constructor(key: UUID) : this(key = key.toString())
 }

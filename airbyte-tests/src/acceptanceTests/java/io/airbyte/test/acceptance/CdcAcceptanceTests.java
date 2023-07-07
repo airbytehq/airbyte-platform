@@ -346,6 +346,7 @@ class CdcAcceptanceTests {
     final ConnectionRead connectionRead = apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     final UUID sourceId = createCdcSource().getSourceId();
     final AirbyteCatalog refreshedCatalog = testHarness.discoverSourceSchema(sourceId);
+    refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     LOGGER.info("Refreshed catalog: {}", refreshedCatalog);
     final WebBackendConnectionUpdate update = testHarness.getUpdateInput(connectionRead, refreshedCatalog, operationRead);
     webBackendApi.webBackendUpdateConnection(update);
@@ -386,6 +387,7 @@ class CdcAcceptanceTests {
     final ConnectionRead connectionRead = apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     final UUID sourceId = connectionRead.getSourceId();
     AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
     final List<AirbyteStreamAndConfiguration> streams = catalog.getStreams();
     // filter out color_palette stream
     final List<AirbyteStreamAndConfiguration> updatedStreams = streams
@@ -408,6 +410,7 @@ class CdcAcceptanceTests {
 
     LOGGER.info("Adding color palette stream back to configured catalog");
     catalog = testHarness.discoverSourceSchema(sourceId);
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
     LOGGER.info("Updated catalog: {}", catalog);
     update = testHarness.getUpdateInput(connectionRead, catalog, operationRead);
     webBackendApi.webBackendUpdateConnection(update);
@@ -454,7 +457,7 @@ class CdcAcceptanceTests {
   }
 
   private List<DestinationCdcRecordMatcher> getCdcRecordMatchersFromSource(final Database source, final String tableName) throws SQLException {
-    final List<JsonNode> sourceRecords = testHarness.retrieveSourceRecords(source, tableName);
+    final List<JsonNode> sourceRecords = testHarness.retrieveRecordsFromDatabase(source, tableName);
     return new ArrayList<>(sourceRecords
         .stream()
         .map(sourceRecord -> new DestinationCdcRecordMatcher(sourceRecord, Instant.EPOCH, Optional.empty()))
@@ -481,6 +484,7 @@ class CdcAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =

@@ -1,22 +1,26 @@
 import * as LDClient from "launchdarkly-js-client-sdk";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { finalize, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useI18nContext } from "core/i18n";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useAnalyticsService } from "core/services/analytics";
+import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
+import { useDebugVariable } from "core/utils/debug";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
-import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
+import { ContextKind, ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
-import { FeatureSet, FeatureItem, useFeatureService } from "hooks/services/Feature";
-import { User } from "packages/cloud/lib/domain/users";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { isDevelopment } from "utils/isDevelopment";
 import { rejectAfter } from "utils/promises";
+
+import { contextReducer } from "./contextReducer";
+import { createLDContext, createMultiContext, createUserContext } from "./contexts";
 
 /**
  * This service hardcodes two conventions about the format of the LaunchDarkly feature
@@ -52,30 +56,10 @@ type LDInitState = "initializing" | "failed" | "initialized";
  */
 const INITIALIZATION_TIMEOUT = 5000;
 
-function mapUserToLDUser(user: User | null, locale: string, workspaceId: string | null): LDClient.LDUser {
-  if (!user) {
-    return {
-      anonymous: true,
-      custom: { locale },
-    };
-  }
-  /**
-   * Currently we can identify that a user is in a workspace with an optional workspaceId custom attribute.
-   * Once the LD Contexts feature is GA, we can upgrade the SDK and refactor this to support contexts:
-   * https://docs.launchdarkly.com/sdk/client-side/javascript/migration-2-to-3
-   */
-  const custom: Record<string, string> = { intercomHash: user.intercomHash, locale };
-  if (workspaceId) {
-    custom.workspace = workspaceId;
-  }
-  return {
-    key: user.userId,
-    email: user.email,
-    name: user.name,
-    custom,
-    anonymous: false,
-  };
-}
+const debugFlags = isDevelopment()
+  ? (_: Error | null, flags: LDClient.LDFlagSet | null) =>
+      console.debug("%c[LaunchDarkly] Flags after identify call:", "color: SlateBlue", flags)
+  : undefined;
 
 const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string }>> = ({ children, apiKey }) => {
   const { setFeatureOverwrites } = useFeatureService();
@@ -87,6 +71,41 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const { setMessageOverwrite } = useI18nContext();
   const { trackAction } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
+  const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {
+    context: createMultiContext(
+      createUserContext(user, locale),
+      ...(workspaceId ? [createLDContext("workspace", workspaceId)] : [])
+    ),
+  });
+
+  // Whenever the user or locale changes, we need to update our contexts
+  useEffect(() => {
+    const userContext = createUserContext(user, locale);
+    dispatchContextUpdate({ type: "add", context: userContext });
+  }, [user, locale]);
+
+  // Whenever the workspace changes, we need to update our contexts
+  useEffect(() => {
+    if (workspaceId) {
+      const workspaceContext = createLDContext("workspace", workspaceId);
+      dispatchContextUpdate({ type: "add", context: workspaceContext });
+    } else {
+      dispatchContextUpdate({ type: "remove", kind: "workspace" });
+    }
+  }, [workspaceId]);
+
+  const addContext = useCallback((kind: ContextKind, key: string) => {
+    dispatchContextUpdate({ type: "add", context: createLDContext(kind, key) });
+  }, []);
+
+  const removeContext = useCallback((kind: Exclude<ContextKind, "user">) => {
+    dispatchContextUpdate({ type: "remove", kind });
+  }, []);
+
+  // With any change of contexts, we need to re-identiy with the launch darkly
+  useEffect(() => {
+    ldClient.current?.identify(contextState.context, undefined, debugFlags);
+  }, [contextState, ldClient]);
 
   /**
    * This function checks for all experiments to find the ones beginning with "i18n_{locale}_"
@@ -123,7 +142,8 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   };
 
   if (!ldClient.current) {
-    ldClient.current = LDClient.initialize(apiKey, mapUserToLDUser(user, locale, null));
+    ldClient.current = LDClient.initialize(apiKey, contextState.context);
+
     // Wait for either LaunchDarkly to initialize or a specific timeout to pass first
     Promise.race([
       ldClient.current.waitForInitialization(),
@@ -150,6 +170,11 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
       });
   }
 
+  useDebugVariable("_EXPERIMENTS", () => ({
+    ...ldClient.current?.allFlags(),
+    ...((process.env.REACT_APP_EXPERIMENT_OVERWRITES as unknown as Record<string, unknown>) ?? {}),
+  }));
+
   useEffectOnce(() => {
     const onFeatureFlagsChanged = () => {
       // Update analytics context whenever a flag changes
@@ -162,10 +187,34 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
     return () => ldClient.current?.off("change", onFeatureFlagsChanged);
   });
 
-  // Whenever the user, locale or workspaceId changes, we need to re-identify with launchdarkly
-  useEffect(() => {
-    ldClient.current?.identify(mapUserToLDUser(user, locale, workspaceId || null));
-  }, [workspaceId, locale, user]);
+  const experimentService: ExperimentService = useMemo(
+    () => ({
+      addContext,
+      removeContext,
+      getExperiment(key, defaultValue) {
+        // Return the current value of a feature flag from the LD client
+        return ldClient.current?.variation(key, defaultValue);
+      },
+      getExperimentChanges$<K extends keyof Experiments>(key: K) {
+        // To retrieve changes from the LD client, we're subscribing to changes
+        // for that specific key (emitted via the change:key event) and emit that
+        // on our observable.
+        const subject = new Subject<Experiments[K]>();
+        const onNewExperimentValue = (newValue: Experiments[K]) => {
+          subject.next(newValue);
+        };
+        ldClient.current?.on(`change:${key}`, onNewExperimentValue);
+        return subject.pipe(
+          finalize(() => {
+            // Whenever the last subscriber disconnects (or the observable would complete, which
+            // we never do for this observable), make sure to unregister our event listener again
+            ldClient.current?.off(`change:${key}`, onNewExperimentValue);
+          })
+        );
+      },
+    }),
+    [addContext, removeContext]
+  );
 
   // Show the loading page while we're still waiting for the initial set of feature flags (or them to time out)
   if (state === "initializing") {
@@ -177,30 +226,6 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   if (state === "failed") {
     return <>{children}</>;
   }
-
-  const experimentService: ExperimentService = {
-    getExperiment(key, defaultValue) {
-      // Return the current value of a feature flag from the LD client
-      return ldClient.current?.variation(key, defaultValue);
-    },
-    getExperimentChanges$<K extends keyof Experiments>(key: K) {
-      // To retrieve changes from the LD client, we're subscribing to changes
-      // for that specific key (emitted via the change:key event) and emit that
-      // on our observable.
-      const subject = new Subject<Experiments[K]>();
-      const onNewExperimentValue = (newValue: Experiments[K]) => {
-        subject.next(newValue);
-      };
-      ldClient.current?.on(`change:${key}`, onNewExperimentValue);
-      return subject.pipe(
-        finalize(() => {
-          // Whenever the last subscriber disconnects (or the observable would complete, which
-          // we never do for this observable), make sure to unregister our event listener again
-          ldClient.current?.off(`change:${key}`, onNewExperimentValue);
-        })
-      );
-    },
-  };
 
   return <ExperimentProvider value={experimentService}>{children}</ExperimentProvider>;
 };

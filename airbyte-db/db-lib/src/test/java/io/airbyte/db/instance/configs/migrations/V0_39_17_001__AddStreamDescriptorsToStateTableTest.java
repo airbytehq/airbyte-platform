@@ -13,6 +13,7 @@ import io.airbyte.db.instance.configs.migrations.V0_39_17_001__AddStreamDescript
 import io.airbyte.db.instance.development.DevDatabaseMigrator;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.exception.DataAccessException;
@@ -133,8 +134,9 @@ class V0_39_17_001__AddStreamDescriptorsToStateTableTest extends AbstractConfigs
         FlywayFactory.create(dataSource, "V0_39_17_001__AddStreamDescriptorsToStateTableTest", ConfigsDatabaseMigrator.DB_IDENTIFIER,
             ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION);
     final ConfigsDatabaseMigrator configsDbMigrator = new ConfigsDatabaseMigrator(database, flyway);
-    devConfigsDbMigrator = new DevDatabaseMigrator(configsDbMigrator);
 
+    final BaseJavaMigration previousMigration = new V0_39_1_001__CreateStreamReset();
+    devConfigsDbMigrator = new DevDatabaseMigrator(configsDbMigrator, previousMigration.getVersion());
     devConfigsDbMigrator.createBaseline();
     injectMockData();
   }

@@ -57,7 +57,7 @@ public class GoogleSearchConsoleOAuthFlowIntegrationTest {
     }
     configRepository = mock(ConfigRepository.class);
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-    googleSearchConsoleOAuthFlow = new GoogleSearchConsoleOAuthFlow(configRepository, httpClient);
+    googleSearchConsoleOAuthFlow = new GoogleSearchConsoleOAuthFlow(httpClient);
 
     server = HttpServer.create(new InetSocketAddress(80), 0);
     server.setExecutor(null); // creates a default executor
@@ -78,15 +78,17 @@ public class GoogleSearchConsoleOAuthFlowIntegrationTest {
     final UUID definitionId = UUID.randomUUID();
     final String fullConfigAsString = Files.readString(CREDENTIALS_PATH);
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString);
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(Map.of("authorization", ImmutableMap.builder()
             .put("client_id", credentialsJson.get("authorization").get("client_id").asText())
             .put("client_secret", credentialsJson.get("authorization").get("client_secret").asText())
-            .build())))));
-    final String url = googleSearchConsoleOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+            .build())));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    final String url = googleSearchConsoleOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+        sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
@@ -96,7 +98,7 @@ public class GoogleSearchConsoleOAuthFlowIntegrationTest {
     }
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = googleSearchConsoleOAuthFlow.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL);
+        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("authorization"));
     final Map<String, Object> credentials = (Map<String, Object>) params.get("authorization");

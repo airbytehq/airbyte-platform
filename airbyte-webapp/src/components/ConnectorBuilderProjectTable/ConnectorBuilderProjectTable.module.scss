@@ -1,0 +1,44 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.table {
+  td {
+    padding-top: variables.$spacing-sm;
+    padding-bottom: variables.$spacing-sm;
+  }
+}
+
+.draft {
+  padding-left: variables.$spacing-md;
+}
+
+.draftInProgress {
+  padding: 0 variables.$spacing-md;
+}
+
+.versionItem {
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-md;
+  border: none;
+  background: none;
+  display: block;
+  text-align: left;
+
+  &:hover {
+    cursor: pointer;
+    background: colors.$grey-50;
+  }
+
+  &--active:hover {
+    cursor: initial;
+    background: none;
+  }
+}
+
+.activeVersion {
+  background: colors.$grey-50;
+  color: colors.$dark-blue;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-sm;
+  text-transform: uppercase;
+}

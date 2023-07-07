@@ -1,15 +1,16 @@
+import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useQueryErrorResetBoundary } from "react-query";
 import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useLocation } from "react-use";
 import { LocationSensorState } from "react-use/lib/useLocation";
 
 import { isFormBuildError } from "core/form/FormBuildError";
+import { CommonRequestError } from "core/request/CommonRequestError";
 import { isVersionError } from "core/request/VersionError";
 import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { ErrorOccurredView } from "views/common/ErrorOccurredView";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import { ServerUnavailableView } from "./ServerUnavailableView";
@@ -80,13 +81,13 @@ class ApiErrorBoundaryComponent extends React.Component<
     }
   }
 
-  componentDidCatch(error: { message: string; status?: number; __type?: string }) {
-    if (isFormBuildError(error)) {
-      this.props.trackError(error, {
-        id: "formBuildError",
-        connectorDefinitionId: error.connectorDefinitionId,
-      });
-    }
+  componentDidCatch(error: Error) {
+    const context = {
+      errorBoundary: this.constructor.name,
+      requestStatus: error instanceof CommonRequestError ? error.status : undefined,
+    };
+
+    this.props.trackError(error, context);
   }
 
   retry = () => {
@@ -126,10 +127,12 @@ class ApiErrorBoundaryComponent extends React.Component<
     }
 
     return !errorId ? (
-      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>{children}</ResourceNotFoundErrorBoundary>
+      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={this.props.trackError}>
+        {children}
+      </ResourceNotFoundErrorBoundary>
     ) : (
       <ErrorOccurredView
-        message={<FormattedMessage id="errorView.unknownError" />}
+        message={message || <FormattedMessage id="errorView.unknownError" />}
         ctaButtonText={<FormattedMessage id="ui.goBack" />}
         onCtaButtonClick={() => {
           navigate("..");

@@ -13,6 +13,7 @@ import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
 import io.airbyte.db.instance.DatabaseConstants;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.micronaut.context.annotation.Factory;
@@ -48,7 +49,7 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
+  public Database jobsDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(dslContext);
   }
 
@@ -72,7 +73,7 @@ public class DatabaseBeanFactory {
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsFlyway")
   public Flyway jobsFlyway(@Named("jobs") final FlywayConfigurationProperties jobsFlywayConfigurationProperties,
-                           @Named("jobs") final DataSource jobsDataSource,
+                           @Named("config") final DataSource jobsDataSource,
                            @Value("${airbyte.flyway.jobs.minimum-migration-version}") final String baselineVersion) {
     return jobsFlywayConfigurationProperties.getFluentConfiguration()
         .dataSource(jobsDataSource)
@@ -87,8 +88,8 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
-                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
-    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
+                                           final FeatureFlagClient featureFlagClient) {
+    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
   }
 
   @Singleton
@@ -127,7 +128,7 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabaseMigrationCheck")
-  public DatabaseMigrationCheck jobsDatabaseMigrationCheck(@Named("jobs") final DSLContext dslContext,
+  public DatabaseMigrationCheck jobsDatabaseMigrationCheck(@Named("config") final DSLContext dslContext,
                                                            @Named("jobsFlyway") final Flyway jobsFlyway,
                                                            @Value("${airbyte.flyway.jobs.minimum-migration-version}") final String jobsDatabaseMinimumFlywayMigrationVersion,
                                                            @Value("${airbyte.flyway.jobs.initialization-timeout-ms}") final Long jobsDatabaseInitializationTimeoutMs) {
@@ -139,7 +140,7 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabaseAvailabilityCheck")
-  public JobsDatabaseAvailabilityCheck jobsDatabaseAvailabilityCheck(@Named("jobs") final DSLContext dslContext) {
+  public JobsDatabaseAvailabilityCheck jobsDatabaseAvailabilityCheck(@Named("config") final DSLContext dslContext) {
     return new JobsDatabaseAvailabilityCheck(dslContext, DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS);
   }
 

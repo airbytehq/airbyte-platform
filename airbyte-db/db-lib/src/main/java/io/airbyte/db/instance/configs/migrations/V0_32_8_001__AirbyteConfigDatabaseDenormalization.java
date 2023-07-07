@@ -21,12 +21,11 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -199,16 +198,15 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
     for (final ConfigWithMetadata<StandardSourceDefinition> configWithMetadata : sourceDefinitionsWithMetadata) {
       final StandardSourceDefinition standardSourceDefinition = configWithMetadata.getConfig();
       ctx.insertInto(DSL.table("actor_definition"))
-          .set(id, standardSourceDefinition.getSourceDefinitionId())
-          .set(name, standardSourceDefinition.getName())
-          .set(dockerRepository, standardSourceDefinition.getDockerRepository())
-          .set(dockerImageTag, standardSourceDefinition.getDockerImageTag())
-          .set(documentationUrl, standardSourceDefinition.getDocumentationUrl())
-          .set(icon, standardSourceDefinition.getIcon())
+          .set(id, standardSourceDefinition.sourceDefinitionId())
+          .set(name, standardSourceDefinition.name())
+          .set(dockerRepository, standardSourceDefinition.dockerRepository())
+          .set(dockerImageTag, standardSourceDefinition.dockerImageTag())
+          .set(documentationUrl, standardSourceDefinition.documentationUrl())
+          .set(icon, standardSourceDefinition.icon())
           .set(actorType, ActorType.source)
-          .set(sourceType, standardSourceDefinition.getSourceType() == null ? null
-              : Enums.toEnum(standardSourceDefinition.getSourceType().value(), SourceType.class).orElseThrow())
-          .set(spec, JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getSpec())))
+          .set(sourceType, standardSourceDefinition.sourceType())
+          .set(spec, JSONB.valueOf(Jsons.serialize(standardSourceDefinition.spec())))
           .set(createdAt, OffsetDateTime.ofInstant(configWithMetadata.getCreatedAt(), ZoneOffset.UTC))
           .set(updatedAt, OffsetDateTime.ofInstant(configWithMetadata.getUpdatedAt(), ZoneOffset.UTC))
           .execute();
@@ -223,14 +221,14 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
     for (final ConfigWithMetadata<StandardDestinationDefinition> configWithMetadata : destinationDefinitionsWithMetadata) {
       final StandardDestinationDefinition standardDestinationDefinition = configWithMetadata.getConfig();
       ctx.insertInto(DSL.table("actor_definition"))
-          .set(id, standardDestinationDefinition.getDestinationDefinitionId())
-          .set(name, standardDestinationDefinition.getName())
-          .set(dockerRepository, standardDestinationDefinition.getDockerRepository())
-          .set(dockerImageTag, standardDestinationDefinition.getDockerImageTag())
-          .set(documentationUrl, standardDestinationDefinition.getDocumentationUrl())
-          .set(icon, standardDestinationDefinition.getIcon())
+          .set(id, standardDestinationDefinition.destinationDefinitionId())
+          .set(name, standardDestinationDefinition.name())
+          .set(dockerRepository, standardDestinationDefinition.dockerRepository())
+          .set(dockerImageTag, standardDestinationDefinition.dockerImageTag())
+          .set(documentationUrl, standardDestinationDefinition.documentationUrl())
+          .set(icon, standardDestinationDefinition.icon())
           .set(actorType, ActorType.destination)
-          .set(spec, JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getSpec())))
+          .set(spec, JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.spec())))
           .set(createdAt, OffsetDateTime.ofInstant(configWithMetadata.getCreatedAt(), ZoneOffset.UTC))
           .set(updatedAt, OffsetDateTime.ofInstant(configWithMetadata.getUpdatedAt(), ZoneOffset.UTC))
           .execute();
@@ -751,6 +749,25 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
         Jsons.deserialize(record.get(configBlob).data(), clazz)))
         .collect(Collectors.toList());
   }
+
+  record StandardSourceDefinition(
+                                  UUID sourceDefinitionId,
+                                  String name,
+                                  String dockerRepository,
+                                  String dockerImageTag,
+                                  String documentationUrl,
+                                  String icon,
+                                  SourceType sourceType,
+                                  ConnectorSpecification spec) {}
+
+  record StandardDestinationDefinition(
+                                       UUID destinationDefinitionId,
+                                       String name,
+                                       String dockerRepository,
+                                       String dockerImageTag,
+                                       String documentationUrl,
+                                       String icon,
+                                       ConnectorSpecification spec) {}
 
   enum SourceType implements EnumType {
 

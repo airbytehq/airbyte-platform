@@ -3,24 +3,26 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
+import Logs from "components/Logs";
+import { Box } from "components/ui/Box";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
+import { StepsMenu } from "components/ui/StepsMenu";
+import { StepMenuItem } from "components/ui/StepsMenu/StepsMenu";
 import { Text } from "components/ui/Text";
 
+import { useGetDebugInfoJob } from "core/api";
 import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
-import { useGetDebugInfoJob } from "services/job/JobService";
 
 import styles from "./JobLogs.module.scss";
-import Logs from "./Logs";
 import { LogsDetails } from "./LogsDetails";
-import Tabs, { TabsData } from "./Tabs";
 import { parseAttemptLink } from "../attemptLinkUtils";
-import { JobsWithJobs } from "../types";
-import { isCancelledAttempt } from "../utils";
+import { JobWithAttempts } from "../types";
+import { getJobId, isCancelledAttempt } from "../utils";
 
 interface JobLogsProps {
   jobIsFailed?: boolean;
-  job: SynchronousJobRead | JobsWithJobs;
+  job: SynchronousJobRead | JobWithAttempts;
 }
 
 const mapAttemptStatusToIcon = (attempt: AttemptRead): StatusIconStatus => {
@@ -46,14 +48,14 @@ const isPartialSuccess = (attempt: AttemptRead) => {
   return !!attempt.failureSummary?.partialSuccess;
 };
 
-const jobIsSynchronousJobRead = (job: SynchronousJobRead | JobsWithJobs): job is SynchronousJobRead => {
+const jobIsSynchronousJobRead = (job: SynchronousJobRead | JobWithAttempts): job is SynchronousJobRead => {
   return !!(job as SynchronousJobRead)?.logs?.logLines;
 };
 
-export const JobLogs: React.FC<JobLogsProps> = ({ jobIsFailed, job }) => {
+export const JobLogs: React.FC<JobLogsProps> = ({ job }) => {
   const isSynchronousJobRead = jobIsSynchronousJobRead(job);
 
-  const id: number | string = (job as JobsWithJobs).job?.id ?? (job as SynchronousJobRead).id;
+  const id: number | string = (job as JobWithAttempts).job?.id ?? (job as SynchronousJobRead).id;
 
   const debugInfo = useGetDebugInfoJob(id, typeof id === "number", true);
 
@@ -80,10 +82,14 @@ export const JobLogs: React.FC<JobLogsProps> = ({ jobIsFailed, job }) => {
   const currentAttempt = job.attempts?.[attemptNumber];
   const path = ["/tmp/workspace", job.job.id, currentAttempt?.id, "logs.log"].join("/");
 
-  const attemptsTabs: TabsData[] =
+  const attemptsTabs: StepMenuItem[] =
     job.attempts?.map((item, index) => ({
       id: index.toString(),
-      icon: <StatusIcon status={mapAttemptStatusToIcon(item)} />,
+      icon: (
+        <Box mr="md">
+          <StatusIcon status={mapAttemptStatusToIcon(item)} />
+        </Box>
+      ),
       name: <FormattedMessage id="sources.attemptNum" values={{ number: index + 1 }} />,
     })) ?? [];
 
@@ -92,16 +98,16 @@ export const JobLogs: React.FC<JobLogsProps> = ({ jobIsFailed, job }) => {
   return (
     <>
       {attempts > 1 && (
-        <Tabs
+        <StepsMenu
+          lightMode
           activeStep={attemptNumber.toString()}
           onSelect={(at) => setAttemptNumber(parseInt(at))}
           data={attemptsTabs}
-          isFailed={jobIsFailed}
         />
       )}
       {attempts ? (
         <LogsDetails
-          id={job.job.id}
+          jobId={getJobId(job)}
           path={path}
           currentAttempt={currentAttempt}
           jobDebugInfo={debugInfo}

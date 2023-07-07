@@ -9,6 +9,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import io.airbyte.api.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
+import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
@@ -35,6 +36,14 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @Override
   public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
+  }
+
+  @Post("/get_for_source")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.getSpecificationForSourceId(sourceIdRequestBody));
   }
 
 }

@@ -1,53 +1,60 @@
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { HeadTitle } from "components/common/HeadTitle";
-import { ItemTabs, StepsTypes } from "components/ConnectorBlocks";
-import { Breadcrumbs } from "components/ui/Breadcrumbs";
-import { PageHeader } from "components/ui/PageHeader";
+import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
+import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
+import { StepsTypes } from "components/ConnectorBlocks";
+import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import { useGetDestination } from "hooks/services/useDestinationHook";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { useDestinationDefinitionVersion } from "core/api";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { RoutePaths } from "pages/routePaths";
+import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);
-  const params = useParams() as { "*": StepsTypes | ""; id: string };
-  const navigate = useNavigate();
+  const params = useParams<{ workspaceId: string; "*": StepsTypes | "" | undefined }>();
+  const destination = useGetDestinationFromParams();
+  const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
+  const actorDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const { formatMessage } = useIntl();
-  const currentStep = useMemo<string>(() => (params["*"] === "" ? StepsTypes.OVERVIEW : params["*"]), [params]);
 
-  const destination = useGetDestination(params.id);
+  const { trackError } = useAppMonitoringService();
 
-  const onSelectStep = (id: string) => {
-    const path = id === StepsTypes.OVERVIEW ? "." : id.toLowerCase();
-    navigate(path);
-  };
+  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Destination}`;
 
   const breadcrumbsData = [
     {
-      label: formatMessage({ id: "admin.destinations" }),
-      to: "..",
+      label: formatMessage({ id: "sidebar.destinations" }),
+      to: `${breadcrumbBasePath}/`,
     },
     { label: destination.name },
   ];
 
   return (
-    <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+    <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
-        <PageHeader
-          title={<Breadcrumbs data={breadcrumbsData} />}
-          middleComponent={<ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />}
-        />
+        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+          <ConnectorTitleBlock
+            connector={destination}
+            connectorDefinition={destinationDefinition}
+            actorDefinitionVersion={actorDefinitionVersion}
+          />
+          <ConnectorNavigationTabs connectorType="destination" connector={destination} id={destination.destinationId} />
+        </NextPageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
-            <Outlet context={{ destination }} />
+            <Outlet />
           </ApiErrorBoundary>
         </Suspense>
       </ConnectorDocumentationWrapper>

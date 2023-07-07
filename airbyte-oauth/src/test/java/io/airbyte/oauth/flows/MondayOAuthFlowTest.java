@@ -16,7 +16,7 @@ class MondayOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new MondayOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new MondayOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

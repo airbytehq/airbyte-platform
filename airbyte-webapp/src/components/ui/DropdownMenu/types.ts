@@ -13,6 +13,7 @@ export interface DropdownMenuOptionBaseType {
   displayName: string;
   value?: unknown;
   className?: string;
+  disabled?: boolean;
 }
 
 export type DropdownMenuOptionType = DropdownMenuOptionAnchorType | DropdownMenuOptionButtonType;

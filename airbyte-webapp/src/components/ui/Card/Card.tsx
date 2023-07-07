@@ -15,6 +15,7 @@ export interface CardProps {
   lightPadding?: boolean;
   withPadding?: boolean;
   roundedBottom?: boolean;
+  inset?: boolean;
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
@@ -26,35 +27,37 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
   lightPadding,
   withPadding,
   roundedBottom,
-}) => {
-  return (
-    <div
-      className={classNames(className, styles.container, {
-        [styles.fullWidth]: fullWidth,
-        [styles.withPadding]: withPadding,
-      })}
-    >
-      {title ? (
-        <div
-          className={classNames(styles.header, {
-            [styles.lightPadding]: lightPadding || !children,
-            [styles.roundedBottom]: roundedBottom,
-            [styles.withDescription]: description,
-          })}
-        >
-          <Heading as="h5" className={classNames(styles.title)}>
-            {title}
-          </Heading>
-          {description && (
-            <InfoTooltip>
-              <Text className={styles.infoTooltip} size="sm">
-                {description}
-              </Text>
-            </InfoTooltip>
-          )}
-        </div>
-      ) : null}
-      {children}
-    </div>
-  );
-};
+  inset = false,
+  ...restProps
+}) => (
+  <div
+    className={classNames(className, styles.container, {
+      [styles.fullWidth]: fullWidth,
+      [styles.withPadding]: withPadding,
+      [styles.inset]: inset,
+    })}
+    {...restProps}
+  >
+    {title ? (
+      <div
+        className={classNames(styles.header, {
+          [styles.lightPadding]: lightPadding || !children,
+          [styles.roundedBottom]: roundedBottom,
+          [styles.withDescription]: description,
+        })}
+      >
+        <Heading as="h5" size="sm">
+          {title}
+        </Heading>
+        {description && (
+          <InfoTooltip>
+            <Text className={styles.infoTooltip} size="sm">
+              {description}
+            </Text>
+          </InfoTooltip>
+        )}
+      </div>
+    ) : null}
+    {children}
+  </div>
+);

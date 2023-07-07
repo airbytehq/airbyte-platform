@@ -1,5 +1,15 @@
 @forward "./DbtCloudCard.scss";
+@use "scss/colors";
 
 .jobListForm {
   width: 100%;
+}
+
+.linkText {
+  color: colors.$grey-500;
+
+  &:hover,
+  &:active {
+    color: colors.$blue;
+  }
 }

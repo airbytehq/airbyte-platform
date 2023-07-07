@@ -5,28 +5,35 @@ export enum RoutePaths {
   SpeakeasyRedirect = "speakeasy-redirect",
 
   Workspaces = "workspaces",
-  Preferences = "preferences",
+  Setup = "setup",
   Connections = "connections",
   Destination = "destination",
   Source = "source",
   Settings = "settings",
-
   Connection = "connection",
-  ConnectionNew = "new-connection",
-  SourceNew = "new-source",
-  DestinationNew = "new-destination",
-
   ConnectorBuilder = "connector-builder",
 }
 
 export enum DestinationPaths {
-  Root = ":id/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
-  Settings = "settings",
-  NewDestination = "new-destination",
+  Root = ":destinationId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
+  Connections = "connections",
+  SelectDestinationNew = "new-destination",
+  DestinationNew = "new-destination/:destinationDefinitionId",
 }
 
 export enum SourcePaths {
-  Root = ":id/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
+  Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
+  Connections = "connections",
+  SelectSourceNew = "new-source",
+  SourceNew = "new-source/:sourceDefinitionId",
+}
+export const enum ConnectionRoutePaths {
+  Root = ":connectionId/*",
+  Status = "status",
+  Transformation = "transformation",
+  Replication = "replication",
   Settings = "settings",
-  NewSource = "new-source",
+  JobHistory = "job-history",
+  ConnectionNew = "new-connection",
+  Configure = "configure",
 }

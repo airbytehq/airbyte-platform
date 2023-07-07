@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,13 +23,13 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class ZendeskSunshineOAuthFlow extends BaseOAuth2Flow {
 
-  public ZendeskSunshineOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public ZendeskSunshineOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public ZendeskSunshineOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public ZendeskSunshineOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

@@ -14,7 +14,7 @@ required:
   - endTime
   - totalStats
   - streamStats
-additionalProperties: false
+additionalProperties: true
 properties:
   status:
     "$ref": ReplicationStatus.yaml
@@ -34,3 +34,5 @@ properties:
     type: array
     items:
       "$ref": StreamSyncStats.yaml
+  performanceMetrics:
+    "$ref": PerformanceMetrics.yaml

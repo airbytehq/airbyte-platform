@@ -41,7 +41,6 @@ airbyte:
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
   worker:
-    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     version: ${AIRBYTE_VERSION}
   version: ${AIRBYTE_VERSION}
 

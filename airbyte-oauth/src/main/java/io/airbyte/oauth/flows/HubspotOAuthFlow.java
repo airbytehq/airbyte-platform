@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -23,12 +22,12 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.hubspot.com/oauth/authorize";
 
-  public HubspotOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public HubspotOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public HubspotOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
+  public HubspotOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   @Override
@@ -73,22 +72,25 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
 
   private String getOptionalScopes() {
     return String.join(" ", "content",
-        "crm.schemas.deals.read",
-        "crm.objects.owners.read",
-        "forms",
-        "tickets",
+        "automation",
         "e-commerce",
-        "crm.objects.companies.read",
-        "crm.lists.read",
-        "crm.objects.deals.read",
-        "crm.objects.contacts.read",
-        "crm.schemas.companies.read",
         "files",
-        "forms-uploaded-files",
         "files.ui_hidden.read",
-        "crm.objects.feedback_submissions.read",
+        "forms",
+        "forms-uploaded-files",
         "sales-email-read",
-        "automation");
+        "tickets",
+        "crm.lists.read",
+        "crm.objects.companies.read",
+        "crm.objects.contacts.read",
+        "crm.objects.custom.read",
+        "crm.objects.deals.read",
+        "crm.objects.feedback_submissions.read",
+        "crm.objects.goals.read",
+        "crm.objects.owners.read",
+        "crm.schemas.companies.read",
+        "crm.schemas.custom.read",
+        "crm.schemas.deals.read");
   }
 
   private String getRequiredScopes() {

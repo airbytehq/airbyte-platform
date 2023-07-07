@@ -1,11 +1,13 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+// @Suppress can be removed when KTIJ-19369 has been fixed, or when we upgrade to gradle 8.1
+@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
   `java-library`
   `maven-publish`
-  kotlin("jvm") version "1.8.10"
-  kotlin("kapt") version "1.8.10"
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.kapt)
 }
 
 dependencies {

@@ -1,0 +1,7 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.svg {
+  color: colors.$grey-300;
+}

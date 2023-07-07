@@ -1,10 +1,11 @@
 import React from "react";
 import styled from "styled-components";
 
+import Logs from "components/Logs";
+
 import { AttemptDetails } from "./AttemptDetails";
 import DownloadButton from "./DownloadButton";
 import { LinkToAttemptButton } from "./LinkToAttemptButton";
-import LogsTable from "./Logs";
 import { AttemptRead, JobDebugInfoRead } from "../../../core/request/AirbyteClient";
 
 const LogHeader = styled.div`
@@ -26,24 +27,24 @@ const LogPath = styled.span`
 `;
 
 export const LogsDetails: React.FC<{
-  id: number | string;
+  jobId: string;
   path: string;
   currentAttempt?: AttemptRead;
   jobDebugInfo?: JobDebugInfoRead;
   showAttemptStats: boolean;
   logs?: string[];
-}> = ({ path, id, currentAttempt, jobDebugInfo, showAttemptStats, logs }) => (
+}> = ({ path, jobId, currentAttempt, jobDebugInfo, showAttemptStats, logs }) => (
   <>
     {currentAttempt && showAttemptStats && (
       <AttemptDetailsSection>
-        <AttemptDetails attempt={currentAttempt} />
+        <AttemptDetails attempt={currentAttempt} jobId={jobId} />
       </AttemptDetailsSection>
     )}
     <LogHeader>
       <LogPath>{path}</LogPath>
-      <LinkToAttemptButton jobId={id} attemptId={currentAttempt?.id} />
-      {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${id}`} />}
+      <LinkToAttemptButton jobId={jobId} attemptId={currentAttempt?.id} />
+      {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${jobId}`} />}
     </LogHeader>
-    <LogsTable logsArray={logs} />
+    <Logs logsArray={logs} />
   </>
 );

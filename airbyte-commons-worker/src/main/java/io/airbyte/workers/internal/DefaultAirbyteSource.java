@@ -15,7 +15,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
-import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -63,13 +62,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private final boolean featureFlagLogConnectorMsgs;
 
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
-                              final FeatureFlags featureFlags,
-                              final HeartbeatMonitor heartbeatMonitor) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), heartbeatMonitor, new DefaultProtocolSerializer(),
-        featureFlags);
-  }
-
-  public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,
                               final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
@@ -81,7 +73,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void start(final WorkerSourceConfig sourceConfig, final Path jobRoot) throws Exception {
     Preconditions.checkState(sourceProcess == null);
@@ -106,7 +97,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
         .iterator();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
     Preconditions.checkState(sourceProcess != null);
@@ -118,7 +108,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return !messageIterator.hasNext() && !sourceProcess.isAlive();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public int getExitValue() throws IllegalStateException {
     Preconditions.checkState(sourceProcess != null, "Source process is null, cannot retrieve exit value.");
@@ -131,7 +120,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return exitValue;
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(sourceProcess != null);
@@ -139,7 +127,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void close() throws Exception {
     if (sourceProcess == null) {

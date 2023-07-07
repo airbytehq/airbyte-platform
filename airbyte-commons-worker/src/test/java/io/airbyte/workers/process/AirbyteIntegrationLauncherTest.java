@@ -22,6 +22,7 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.WorkerEnvConstants;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 @ExtendWith(MockitoExtension.class)
 class AirbyteIntegrationLauncherTest {
@@ -66,12 +68,11 @@ class AirbyteIntegrationLauncherTest {
               .put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, String.valueOf(FEATURE_FLAGS.autoDetectSchema()))
               .put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, String.valueOf(FEATURE_FLAGS.applyFieldSelection()))
               .put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, FEATURE_FLAGS.fieldSelectionWorkspaces())
-              .put(EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_WORKSPACES, FEATURE_FLAGS.strictComparisonNormalizationWorkspaces())
-              .put(EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_TAG, FEATURE_FLAGS.strictComparisonNormalizationTag())
               .put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, CONFIGS.getSocatSidecarKubeCpuLimit())
               .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, CONFIGS.getSocatSidecarKubeCpuRequest())
               .put(EnvConfigs.LAUNCHDARKLY_KEY, CONFIGS.getLaunchDarklyKey())
               .put(EnvConfigs.FEATURE_FLAG_CLIENT, CONFIGS.getFeatureFlagClient())
+              .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, CONFIGS.getOtelCollectorEndpoint())
               .build());
 
   private WorkerConfigs workerConfigs;
@@ -83,30 +84,32 @@ class AirbyteIntegrationLauncherTest {
   void setUp() {
     workerConfigs = new WorkerConfigs(new EnvConfigs());
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, FAKE_IMAGE, processFactory, workerConfigs.getResourceRequirements(), null, false,
-        FEATURE_FLAGS);
+        FEATURE_FLAGS, Collections.emptyMap());
   }
 
   @Test
   void spec() throws WorkerException {
     launcher.spec(JOB_ROOT);
 
-    Mockito.verify(processFactory).create(SPEC_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, Collections.emptyMap(), null,
+    Mockito.verify(processFactory).create(ResourceType.SPEC, SPEC_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false,
+        Collections.emptyMap(),
+        null,
         workerConfigs.getResourceRequirements(), null, Map.of(JOB_TYPE_KEY, SPEC_JOB), JOB_METADATA,
         Map.of(),
-        "spec");
+        Collections.emptyMap(), "spec");
   }
 
   @Test
   void check() throws WorkerException {
     launcher.check(JOB_ROOT, CONFIG, "{}");
 
-    Mockito.verify(processFactory).create(CHECK_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.CHECK, CHECK_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
         JOB_METADATA,
         Map.of(),
-        "check",
+        Collections.emptyMap(), "check",
         CONFIG_ARG, CONFIG);
   }
 
@@ -114,13 +117,14 @@ class AirbyteIntegrationLauncherTest {
   void discover() throws WorkerException {
     launcher.discover(JOB_ROOT, CONFIG, "{}");
 
-    Mockito.verify(processFactory).create(DISCOVER_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.DISCOVER, DISCOVER_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES,
+        null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
         JOB_METADATA,
         Map.of(),
-        "discover",
+        Collections.emptyMap(), "discover",
         CONFIG_ARG, CONFIG);
   }
 
@@ -128,13 +132,15 @@ class AirbyteIntegrationLauncherTest {
   void read() throws WorkerException {
     launcher.read(JOB_ROOT, CONFIG, "{}", CATALOG, "{}", "state", "{}");
 
-    Mockito.verify(processFactory).create(READ_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_CATALOG_STATE_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, READ_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false,
+        CONFIG_CATALOG_STATE_FILES,
+        null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
         JOB_METADATA,
         Map.of(),
-        Lists.newArrayList(
+        Collections.emptyMap(), Lists.newArrayList(
             "read",
             CONFIG_ARG, CONFIG,
             "--catalog", CATALOG,
@@ -142,18 +148,36 @@ class AirbyteIntegrationLauncherTest {
   }
 
   @Test
-  void write() throws WorkerException {
+  void write() throws WorkerException, JsonProcessingException {
     launcher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
 
-    Mockito.verify(processFactory).create(WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true, CONFIG_CATALOG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true,
+        CONFIG_CATALOG_FILES, null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
         JOB_METADATA,
         Map.of(),
-        "write",
+        Collections.emptyMap(), "write",
         CONFIG_ARG, CONFIG,
         "--catalog", CATALOG);
+
+    final var additionalEnvVars = Map.of("HELLO", "WORLD");
+    final var envVarLauncher =
+        new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, FAKE_IMAGE, processFactory, workerConfigs.getResourceRequirements(), null, false,
+            FEATURE_FLAGS, additionalEnvVars);
+    envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true,
+        CONFIG_CATALOG_FILES, null,
+        workerConfigs.getResourceRequirements(),
+        null,
+        Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
+        JOB_METADATA,
+        Map.of(),
+        additionalEnvVars, "write",
+        CONFIG_ARG, CONFIG,
+        "--catalog", CATALOG);
+
   }
 
 }

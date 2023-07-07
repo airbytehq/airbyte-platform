@@ -1,60 +1,37 @@
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useEffect, useState } from "react";
+import classNames from "classnames";
+import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
 import { EmptyResourceBlock } from "components/common/EmptyResourceBlock";
-import { RotateIcon } from "components/icons/RotateIcon";
+import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
+import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Link } from "components/ui/Link";
-import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
-import { getFrequencyFromScheduleData } from "core/analytics/utils";
-import { ConnectionStatus, JobStatus, JobWithAttemptsRead } from "core/request/AirbyteClient";
-import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "hooks/services/Analytics";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useListJobs } from "core/api";
+import { getFrequencyFromScheduleData } from "core/services/analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useResetConnection, useSyncConnection } from "hooks/services/useConnectionHook";
-import { useCancelJob, useListJobs } from "services/job/JobService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
 
 const JOB_PAGE_SIZE_INCREMENT = 25;
 
-enum ActionType {
-  RESET = "reset_connection",
-  SYNC = "sync",
-}
-
-interface ActiveJob {
-  id: number;
-  action: ActionType;
-  isCanceling: boolean;
-}
-
-const getJobRunningOrPending = (jobs: JobWithAttemptsRead[]) => {
-  return jobs.find((jobWithAttempts) => {
-    const jobStatus = jobWithAttempts?.job?.status;
-    return jobStatus === JobStatus.pending || jobStatus === JobStatus.running || jobStatus === JobStatus.incomplete;
-  });
-};
-
 export const ConnectionJobHistoryPage: React.FC = () => {
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
-  const [activeJob, setActiveJob] = useState<ActiveJob>();
   const [jobPageSize, setJobPageSize] = useState(JOB_PAGE_SIZE_INCREMENT);
   const analyticsService = useAnalyticsService();
   const { jobId: linkedJobId } = useAttemptLink();
   const { pathname } = useLocation();
   const {
-    jobs,
-    totalJobCount,
+    data: { jobs, totalJobCount },
     isPreviousData: isJobPageLoading,
   } = useListJobs({
     configId: connection.connectionId,
@@ -64,70 +41,10 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       pageSize: jobPageSize,
     },
   });
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
   const moreJobPagesAvailable = !linkedJobNotFound && jobPageSize < totalJobCount;
-
-  useEffect(() => {
-    const jobRunningOrPending = getJobRunningOrPending(jobs);
-
-    setActiveJob(
-      (state) =>
-        ({
-          id: jobRunningOrPending?.job?.id,
-          action: jobRunningOrPending?.job?.configType,
-          isCanceling: state?.isCanceling && !!jobRunningOrPending,
-          // We need to disable button when job is canceled but the job list still has a running job
-        } as ActiveJob)
-    );
-
-    // necessary because request to listJobs may return a result larger than the current page size if a linkedJobId is passed in
-    setJobPageSize((prevJobPageSize) => Math.max(prevJobPageSize, jobs.length));
-  }, [jobs]);
-
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-
-  const cancelJob = useCancelJob();
-
-  const { mutateAsync: resetConnection } = useResetConnection();
-  const { mutateAsync: syncConnection } = useSyncConnection();
-
-  const onSync = () => syncConnection(connection);
-  const onReset = () => resetConnection(connection.connectionId);
-
-  const onResetDataButtonClick = () => {
-    openConfirmationModal({
-      text: `form.resetDataText`,
-      title: `form.resetData`,
-      submitButtonText: "form.reset",
-      cancelButtonText: "form.noNeed",
-      onSubmit: async () => {
-        await onReset();
-        setActiveJob((state) => ({ ...state, action: ActionType.RESET } as ActiveJob));
-        closeConfirmationModal();
-      },
-      submitButtonDataId: "reset",
-    });
-  };
-
-  const onSyncNowButtonClick = () => {
-    setActiveJob((state) => ({ ...state, action: ActionType.SYNC } as ActiveJob));
-    return onSync();
-  };
-
-  const onCancelJob = () => {
-    if (!activeJob?.id) {
-      return;
-    }
-    setActiveJob((state) => ({ ...state, isCanceling: true } as ActiveJob));
-    return cancelJob(activeJob.id);
-  };
-  let label = null;
-  if (activeJob?.action === ActionType.RESET) {
-    label = <FormattedMessage id="connection.cancelReset" />;
-  } else if (activeJob?.action === ActionType.SYNC) {
-    label = <FormattedMessage id="connection.cancelSync" />;
-  }
 
   const onLoadMoreJobs = () => {
     setJobPageSize((prevJobPageSize) => prevJobPageSize + JOB_PAGE_SIZE_INCREMENT);
@@ -144,67 +61,42 @@ export const ConnectionJobHistoryPage: React.FC = () => {
     });
   };
 
-  const cancelJobBtn = (
-    <Button
-      variant="danger"
-      disabled={!activeJob?.id || activeJob.isCanceling}
-      onClick={onCancelJob}
-      icon={<FontAwesomeIcon icon={faXmark} />}
-    >
-      {label}
-    </Button>
-  );
-
   return (
-    <>
-      <Card
-        title={
-          <div className={styles.title}>
-            <FormattedMessage id="sources.syncHistory" />
-            {connection.status === ConnectionStatus.active && !activeJob?.action && (
+    <div className={classNames(searchableJobLogsEnabled && styles.narrowTable)}>
+      <ConnectionSyncContextProvider>
+        <Card
+          title={
+            <div className={styles.title}>
+              <FormattedMessage id="sources.syncHistory" />
               <div className={styles.actions}>
-                <Button variant="secondary" onClick={onResetDataButtonClick}>
-                  <FormattedMessage id="connection.resetData" />
-                </Button>
-                <Button
-                  onClick={onSyncNowButtonClick}
-                  icon={<RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />}
-                >
-                  <FormattedMessage id="connection.startSync" />
-                </Button>
+                <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
               </div>
-            )}
-            {activeJob?.action && !activeJob.isCanceling && cancelJobBtn}
-            {activeJob?.action && activeJob.isCanceling && (
-              <Tooltip control={cancelJobBtn} cursor="not-allowed">
-                <FormattedMessage id="connection.canceling" />
-              </Tooltip>
-            )}
-          </div>
-        }
-      >
-        {jobs.length ? (
-          <JobsList jobs={jobs} />
-        ) : linkedJobNotFound ? (
-          <EmptyResourceBlock
-            text={<FormattedMessage id="connection.linkedJobNotFound" />}
-            description={
-              <Link to={pathname}>
-                <FormattedMessage id="connection.returnToSyncHistory" />
-              </Link>
-            }
-          />
-        ) : (
-          <EmptyResourceBlock text={<FormattedMessage id="sources.noSync" />} />
+            </div>
+          }
+        >
+          {jobs.length ? (
+            <JobsList jobs={jobs} />
+          ) : linkedJobNotFound ? (
+            <EmptyResourceBlock
+              text={<FormattedMessage id="connection.linkedJobNotFound" />}
+              description={
+                <Link to={pathname}>
+                  <FormattedMessage id="connection.returnToSyncHistory" />
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyResourceBlock text={<FormattedMessage id="sources.noSync" />} />
+          )}
+        </Card>
+        {(moreJobPagesAvailable || isJobPageLoading) && (
+          <footer className={styles.footer}>
+            <Button variant="secondary" isLoading={isJobPageLoading} onClick={onLoadMoreJobs}>
+              <FormattedMessage id="connection.loadMoreJobs" />
+            </Button>
+          </footer>
         )}
-      </Card>
-      {(moreJobPagesAvailable || isJobPageLoading) && (
-        <footer className={styles.footer}>
-          <Button variant="secondary" isLoading={isJobPageLoading} onClick={onLoadMoreJobs}>
-            <FormattedMessage id="connection.loadMoreJobs" />
-          </Button>
-        </footer>
-      )}
-    </>
+      </ConnectionSyncContextProvider>
+    </div>
   );
 };

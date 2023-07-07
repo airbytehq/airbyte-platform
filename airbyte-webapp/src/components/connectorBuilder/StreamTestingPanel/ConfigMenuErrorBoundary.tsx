@@ -1,12 +1,11 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
+import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
-import styles from "./ConfigMenuErrorBoundary.module.scss";
 import { EditorView } from "../types";
 
 interface ApiErrorBoundaryState {
@@ -16,12 +15,26 @@ interface ApiErrorBoundaryState {
 interface ApiErrorBoundaryProps {
   closeAndSwitchToYaml: () => void;
   currentView: EditorView;
+  trackError: TrackErrorFn;
 }
 
 export class ConfigMenuErrorBoundaryComponent extends React.Component<
   React.PropsWithChildren<ApiErrorBoundaryProps>,
   ApiErrorBoundaryState
 > {
+  componentDidCatch(error: { message: string; status?: number; __type?: string }): void {
+    if (isFormBuildError(error)) {
+      this.props.trackError(error, {
+        id: "formBuildError",
+        connectorDefinitionId: error.connectorDefinitionId,
+        errorBoundary: this.constructor.name,
+      });
+    } else {
+      // We don't want to handle anything but FormBuildErrors here
+      throw error;
+    }
+  }
+
   state: ApiErrorBoundaryState = {};
 
   static getDerivedStateFromError(error: { message: string; __type?: string }): ApiErrorBoundaryState {
@@ -39,28 +52,32 @@ export class ConfigMenuErrorBoundaryComponent extends React.Component<
       return children;
     }
     return (
-      <div className={styles.errorContent}>
-        <Callout>
-          <FormattedMessage
-            id="connectorBuilder.inputsError"
-            values={{ error: typeof error === "string" ? error : <FormattedMessage id={error.message} /> }}
-          />{" "}
-          <a
-            target="_blank"
-            href="https://docs.airbyte.com/connector-development/connector-specification-reference"
-            rel="noreferrer"
-          >
-            <FormattedMessage id="connectorBuilder.inputsErrorDocumentation" />
-          </a>
-        </Callout>
-        <Button onClick={closeAndSwitchToYaml}>
-          {currentView === "ui" ? (
+      <Message
+        text={
+          <>
+            <FormattedMessage
+              id="connectorBuilder.inputsError"
+              values={{ error: typeof error === "string" ? error : <FormattedMessage id={error.message} /> }}
+            />{" "}
+            <a
+              target="_blank"
+              href="https://docs.airbyte.com/connector-development/connector-specification-reference"
+              rel="noreferrer"
+            >
+              <FormattedMessage id="connectorBuilder.inputsErrorDocumentation" />
+            </a>
+          </>
+        }
+        type="error"
+        actionBtnText={
+          currentView === "ui" ? (
             <FormattedMessage id="connectorBuilder.goToYaml" />
           ) : (
             <FormattedMessage id="connectorBuilder.close" />
-          )}
-        </Button>
-      </div>
+          )
+        }
+        onAction={closeAndSwitchToYaml}
+      />
     );
   }
 }

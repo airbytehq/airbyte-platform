@@ -1,3 +1,1 @@
-import ConfigurationsPage from "./ConfigurationsPage";
-
-export default ConfigurationsPage;
+export { ConfigurationsPage } from "./ConfigurationsPage";

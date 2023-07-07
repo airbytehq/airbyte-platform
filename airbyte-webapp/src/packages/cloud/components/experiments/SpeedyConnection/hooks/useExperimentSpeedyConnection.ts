@@ -1,5 +1,5 @@
+import { useCurrentWorkspaceState } from "core/api";
 import { useExperiment } from "hooks/services/Experiment";
-import { useCurrentWorkspaceState } from "services/workspaces/WorkspacesService";
 
 export const useExperimentSpeedyConnection = () => {
   const { hasConnections } = useCurrentWorkspaceState();

@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
@@ -74,6 +75,12 @@ public class JobConverter {
         .attempts(job.getAttempts().stream().map(this::getAttemptInfoRead).collect(Collectors.toList()));
   }
 
+  public JobInfoRead getJobInfoWithoutLogsRead(final Job job) {
+    return new JobInfoRead()
+        .job(getJobWithAttemptsRead(job).getJob())
+        .attempts(job.getAttempts().stream().map(this::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
+  }
+
   public JobInfoLightRead getJobInfoLightRead(final Job job) {
     return new JobInfoLightRead().job(getJobRead(job));
   }
@@ -110,6 +117,7 @@ public class JobConverter {
         .id(job.getId())
         .configId(configId)
         .configType(configType)
+        .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
         .createdAt(job.getCreatedAtInSecond())
         .updatedAt(job.getUpdatedAtInSecond())
@@ -144,6 +152,11 @@ public class JobConverter {
     return new AttemptInfoRead()
         .attempt(getAttemptRead(attempt))
         .logs(getLogRead(attempt.getLogPath()));
+  }
+
+  public AttemptInfoRead getAttemptInfoWithoutLogsRead(final Attempt attempt) {
+    return new AttemptInfoRead()
+        .attempt(getAttemptRead(attempt));
   }
 
   public static AttemptRead getAttemptRead(final Attempt attempt) {
@@ -268,6 +281,13 @@ public class JobConverter {
         .hasRecordsCommitted(!databaseStatus.recordsCommitted().isEmpty())
         .recordsCommitted(databaseStatus.recordsCommitted().orElse(0L))
         .hasNormalizationFailed(databaseStatus.normalizationFailed());
+  }
+
+  private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
+    return job.getConfig().getSync() != null
+        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams().stream()
+            .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
+        : List.of();
   }
 
 }

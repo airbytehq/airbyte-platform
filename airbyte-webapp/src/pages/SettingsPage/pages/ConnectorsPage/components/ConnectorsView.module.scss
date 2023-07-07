@@ -2,7 +2,7 @@
 @use "scss/colors";
 
 .changeToHeader {
-  margin-left: 200px;
+  margin-left: 100px;
 }
 
 .connectorsTable {
@@ -14,12 +14,13 @@
 
 .thName {
   width: 25%;
+  min-width: 400px; // for long names
 }
 
 .thDockerRepository {
   width: 36%;
 }
 
-.thDockerImageTag {
+.thCurrentVersion {
   width: 10%;
 }

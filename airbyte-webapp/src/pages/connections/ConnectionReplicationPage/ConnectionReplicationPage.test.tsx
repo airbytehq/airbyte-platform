@@ -5,6 +5,7 @@ import { render as tlr, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
 import selectEvent from "react-select-event";
+
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -13,11 +14,11 @@ import {
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
-import { TestWrapper } from "test-utils/testutils";
+import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
 import * as connectionHook from "hooks/services/useConnectionHook";
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
@@ -40,9 +41,12 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 
 jest.setTimeout(10000);
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
-  useCurrentWorkspace: () => mockWorkspace,
+jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => mockWorkspaceId,
+}));
+
+jest.mock("core/api", () => ({
+  useCurrentWorkspace: () => mockWorkspace,
 }));
 
 describe("ConnectionReplicationPage", () => {
@@ -55,8 +59,10 @@ describe("ConnectionReplicationPage", () => {
       </TestWrapper>
     </Suspense>
   );
+
   const render = async () => {
     let renderResult: ReturnType<typeof tlr>;
+
     await act(async () => {
       renderResult = tlr(
         <Wrapper>
@@ -81,6 +87,11 @@ describe("ConnectionReplicationPage", () => {
         } as any)
     );
   };
+
+  beforeEach(() => {
+    useMockIntersectionObserver();
+  });
+
   it("should render", async () => {
     setupSpies();
 
@@ -120,6 +131,8 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
       const renderResult = await render();
 
+      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
+
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
       const cronExpressionInput = renderResult.getByTestId("cronExpression");
@@ -136,6 +149,8 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
 
       const renderResult = await render();
+
+      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
@@ -160,6 +175,8 @@ describe("ConnectionReplicationPage", () => {
           </ConnectionEditServiceProvider>
         </TestWrapper>
       );
+
+      userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
 

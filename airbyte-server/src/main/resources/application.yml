@@ -20,13 +20,16 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowedOrigins:
+          allowed-origins-regex:
             - ^.*$
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  shutdown:
+    delay_ms: 20000
   cloud:
     storage:
       logs:
@@ -44,6 +47,9 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      specs:
+        gcs:
+          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -93,7 +99,6 @@ airbyte:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
-    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -125,6 +130,7 @@ datasources:
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
 
 endpoints:
   beans:
@@ -181,3 +187,6 @@ logger:
   #    io.micronaut.context.condition: DEBUG
   # Uncomment to help resolve issues with security beans
   #    io.micronaut.security: DEBUG
+  # Uncomment to help resolve issues with micronaut data
+  #    com.zaxxer.hikari.HikariConfig: DEBUG
+  #    com.zaxxer.hikari: TRACE

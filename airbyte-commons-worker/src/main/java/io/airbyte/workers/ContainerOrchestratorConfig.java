@@ -24,6 +24,7 @@ import java.util.Map;
  * @param containerOrchestratorImagePullPolicy container pull policy
  * @param googleApplicationCredentials gcp creds
  * @param workerEnvironment worker env
+ * @param serviceAccount kube service account for orchestrator pod
  */
 public record ContainerOrchestratorConfig(
                                           String namespace,
@@ -37,4 +38,5 @@ public record ContainerOrchestratorConfig(
                                           String containerOrchestratorImage,
                                           String containerOrchestratorImagePullPolicy,
                                           String googleApplicationCredentials,
-                                          WorkerEnvironment workerEnvironment) {}
+                                          WorkerEnvironment workerEnvironment,
+                                          String serviceAccount) {}

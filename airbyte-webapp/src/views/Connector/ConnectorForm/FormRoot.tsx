@@ -1,22 +1,24 @@
-import { Form, useFormikContext } from "formik";
 import React, { ReactNode } from "react";
+import { useFormContext } from "react-hook-form";
 
-import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
-import { FormBlock } from "core/form/types";
+import { FormBlock, GroupDetails } from "core/form/types";
 
 import { FormSection } from "./components/Sections/FormSection";
 import { useConnectorForm } from "./connectorFormContext";
-import styles from "./FormRoot.module.scss";
 import { ConnectorFormValues } from "./types";
 
-export interface BaseFormRootProps {
-  formFields: FormBlock;
+export interface FormRootProps {
+  formFields: FormBlock[];
+  groupStructure?: GroupDetails[];
   connectionTestSuccess?: boolean;
   isTestConnectionInProgress?: boolean;
   bodyClassName?: string;
   headerBlock?: ReactNode;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  full?: boolean;
   castValues: (values: ConnectorFormValues) => ConnectorFormValues;
   renderFooter?: (formProps: {
     dirty: boolean;
@@ -29,59 +31,52 @@ export interface BaseFormRootProps {
   }) => ReactNode;
 }
 
-interface CardFormRootProps extends BaseFormRootProps {
-  renderWithCard: true;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  full?: boolean;
-}
-
-interface BareFormRootProps extends BaseFormRootProps {
-  renderWithCard?: false;
-}
-
-export const FormRoot: React.FC<CardFormRootProps | BareFormRootProps> = ({
+export const FormRoot: React.FC<FormRootProps> = ({
   isTestConnectionInProgress = false,
   formFields,
+  groupStructure,
   bodyClassName,
   headerBlock,
   renderFooter,
   castValues,
   ...props
 }) => {
-  const { dirty, isSubmitting, isValid, values } = useFormikContext<ConnectorFormValues>();
+  const form = useFormContext<ConnectorFormValues>();
+  const isSubmitting = form.formState.isSubmitting;
+  const dirty = form.formState.isDirty;
+  const isValid = form.formState.isValid;
   const { resetConnectorForm, isEditMode, formType } = useConnectorForm();
 
   const formBody = (
-    <>
-      {headerBlock}
-      <div className={bodyClassName}>
-        <FormSection blocks={formFields} disabled={isSubmitting || isTestConnectionInProgress} />
-      </div>
-    </>
+    <FormSection
+      headerBlock={
+        headerBlock || props.title || props.description
+          ? {
+              elements: headerBlock,
+              title: props.title,
+              description: props.description,
+            }
+          : undefined
+      }
+      rootLevel
+      blocks={formFields}
+      groupStructure={groupStructure}
+      disabled={isSubmitting || isTestConnectionInProgress}
+    />
   );
-
   return (
-    <Form>
-      <FlexContainer direction="column" gap="xl">
-        {props.renderWithCard ? (
-          <Card title={props.title} description={props.description} fullWidth={props.full}>
-            <div className={styles.cardForm}>{formBody}</div>
-          </Card>
-        ) : (
-          formBody
-        )}
-        {renderFooter &&
-          renderFooter({
-            dirty,
-            isSubmitting,
-            isValid,
-            resetConnectorForm,
-            isEditMode,
-            formType,
-            getValues: () => castValues(values),
-          })}
-      </FlexContainer>
-    </Form>
+    <FlexContainer direction="column" gap="xl">
+      <div className={bodyClassName}>{formBody}</div>
+      {renderFooter &&
+        renderFooter({
+          dirty,
+          isSubmitting,
+          isValid,
+          resetConnectorForm,
+          isEditMode,
+          formType,
+          getValues: () => castValues(form.getValues()),
+        })}
+    </FlexContainer>
   );
 };

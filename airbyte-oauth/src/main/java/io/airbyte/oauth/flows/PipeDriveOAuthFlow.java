@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -26,13 +25,13 @@ public class PipeDriveOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "https://oauth.pipedrive.com/oauth/authorize";
   private static final String ACCESS_TOKEN_URL = "https://oauth.pipedrive.com/oauth/token";
 
-  public PipeDriveOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public PipeDriveOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public PipeDriveOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public PipeDriveOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

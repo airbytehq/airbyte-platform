@@ -4,14 +4,17 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
@@ -20,8 +23,10 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
@@ -29,14 +34,15 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
+import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Attempt;
@@ -47,8 +53,6 @@ import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.run.TemporalWorkerRunFactory;
-import io.airbyte.workers.run.WorkerRun;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -87,7 +91,7 @@ class JobCreationAndStatusUpdateActivityTest {
   private JobPersistence mJobPersistence;
 
   @Mock
-  private TemporalWorkerRunFactory mTemporalWorkerRunFactory;
+  private Path mPath;
 
   @Mock
   private WorkerEnvironment mWorkerEnvironment;
@@ -116,9 +120,13 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private OAuthConfigSupplier mOAuthConfigSupplier;
 
+  @Mock
+  private ActorDefinitionVersionHelper mActorDefinitionVersionHelper;
+
   @InjectMocks
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
@@ -169,24 +177,32 @@ class JobCreationAndStatusUpdateActivityTest {
     void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
       final StandardSync standardSync = new StandardSync().withDestinationId(DESTINATION_ID);
       Mockito.when(mConfigRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
-      final DestinationConnection destination = new DestinationConnection().withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+      final DestinationConnection destination = new DestinationConnection()
+          .withDestinationId(DESTINATION_ID)
+          .withWorkspaceId(WORKSPACE_ID)
+          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       Mockito.when(mConfigRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
-      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition();
+      final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
           .withDockerRepository(DOCKER_REPOSITORY)
           .withDockerImageTag(DOCKER_IMAGE_TAG)
           .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize());
+      Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
+          .thenReturn(destinationVersion);
       Mockito.when(mConfigRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
       final List<StreamDescriptor> streamsToReset = List.of(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2);
       Mockito.when(mStreamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);
 
       Mockito
-          .when(mJobCreator.createResetConnectionJob(destination, standardSync, DOCKER_IMAGE_NAME, DESTINATION_PROTOCOL_VERSION, false, List.of(),
+          .when(mJobCreator.createResetConnectionJob(destination, standardSync, destinationVersion, DOCKER_IMAGE_NAME, DESTINATION_PROTOCOL_VERSION,
+              false, List.of(),
               streamsToReset))
           .thenReturn(Optional.of(JOB_ID));
 
       final JobCreationOutput output = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
-      Mockito.verify(mOAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any());
+      Mockito.verify(mOAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any());
+      Mockito.verify(mActorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID);
 
       Assertions.assertThat(output.getJobId()).isEqualTo(JOB_ID);
     }
@@ -268,23 +284,20 @@ class JobCreationAndStatusUpdateActivityTest {
     @DisplayName("Test attempt creation")
     void createAttemptNumber() throws IOException {
       final Job mJob = Mockito.mock(Job.class);
+      Mockito.when(mJob.getAttemptsCount())
+          .thenReturn(ATTEMPT_NUMBER);
 
       Mockito.when(mJobPersistence.getJob(JOB_ID))
           .thenReturn(mJob);
 
-      final WorkerRun mWorkerRun = Mockito.mock(WorkerRun.class);
-
-      Mockito.when(mTemporalWorkerRunFactory.create(mJob))
-          .thenReturn(mWorkerRun);
-
-      final Path mPath = Mockito.mock(Path.class);
       final Path path = Path.of("test");
       Mockito.when(mPath.resolve(Mockito.anyString()))
           .thenReturn(path);
-      Mockito.when(mWorkerRun.getJobRoot())
-          .thenReturn(mPath);
 
-      Mockito.when(mJobPersistence.createAttempt(JOB_ID, path))
+      final Path expectedRoot = TemporalUtils.getJobRoot(mPath, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+      Mockito.when(mJobPersistence.createAttempt(JOB_ID, expectedLogPath))
           .thenReturn(ATTEMPT_NUMBER_1);
 
       final LogClientSingleton mLogClientSingleton = Mockito.mock(LogClientSingleton.class);
@@ -295,7 +308,7 @@ class JobCreationAndStatusUpdateActivityTest {
         final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
             JOB_ID));
 
-        verify(mLogClientSingleton).setJobMdc(mWorkerEnvironment, mLogConfigs, mPath);
+        verify(mLogClientSingleton).setJobMdc(mWorkerEnvironment, mLogConfigs, expectedRoot);
         Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
       }
     }
@@ -348,12 +361,13 @@ class JobCreationAndStatusUpdateActivityTest {
       final Attempt mAttempt = Mockito.mock(Attempt.class);
       Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
 
-      final JobSyncConfig mJobSyncConfig = Mockito.mock(JobSyncConfig.class);
-      Mockito.when(mJobSyncConfig.getSourceDockerImage()).thenReturn(DOCKER_IMAGE_NAME);
-      Mockito.when(mJobSyncConfig.getDestinationDockerImage()).thenReturn(DOCKER_IMAGE_NAME);
+      final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+          .withSourceDefinitionVersionId(UUID.randomUUID())
+          .withDestinationDefinitionVersionId(UUID.randomUUID());
 
       final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
-      Mockito.when(mJobConfig.getSync()).thenReturn(mJobSyncConfig);
+      Mockito.when(mJobConfig.getConfigType()).thenReturn(SYNC);
+      Mockito.when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
 
       final Job mJob = Mockito.mock(Job.class);
       Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
@@ -365,9 +379,14 @@ class JobCreationAndStatusUpdateActivityTest {
 
       jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON));
 
+      final SyncJobReportingContext expectedReportingContext = new SyncJobReportingContext(
+          JOB_ID,
+          jobSyncConfig.getSourceDefinitionVersionId(),
+          jobSyncConfig.getDestinationDefinitionVersionId());
+
       verify(mJobPersistence).failJob(JOB_ID);
       verify(mJobNotifier).failJob(eq(REASON), Mockito.any());
-      verify(mJobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any());
+      verify(mJobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext);
     }
 
     @Test
@@ -473,13 +492,18 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void ensureCleanJobState() throws IOException {
+      final JobConfig jobConfig = new JobConfig()
+          .withConfigType(SYNC)
+          .withSync(new JobSyncConfig()
+              .withSourceDefinitionVersionId(UUID.randomUUID())
+              .withDestinationDefinitionVersionId(UUID.randomUUID()));
       final Attempt failedAttempt = new Attempt(0, 1, Path.of(""), null, null, AttemptStatus.FAILED, null, null, 2L, 3L, 3L);
       final int runningAttemptNumber = 1;
       final Attempt runningAttempt = new Attempt(runningAttemptNumber, 1, Path.of(""), null, null, AttemptStatus.RUNNING, null, null, 4L, 5L, null);
-      final Job runningJob = new Job(1, ConfigType.SYNC, CONNECTION_ID.toString(), new JobConfig(), List.of(failedAttempt, runningAttempt),
+      final Job runningJob = new Job(1, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(failedAttempt, runningAttempt),
           JobStatus.RUNNING, 2L, 2L, 3L);
 
-      final Job pendingJob = new Job(2, ConfigType.SYNC, CONNECTION_ID.toString(), new JobConfig(), List.of(), JobStatus.PENDING, 4L, 4L, 5L);
+      final Job pendingJob = new Job(2, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 4L, 4L, 5L);
 
       Mockito.when(mJobPersistence.listJobsForConnectionWithStatuses(CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES))
           .thenReturn(List.of(runningJob, pendingJob));
@@ -505,11 +529,49 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @Test
   void testReleaseStageOrdering() {
-    final List<ReleaseStage> input = List.of(ReleaseStage.alpha, ReleaseStage.custom, ReleaseStage.beta, ReleaseStage.generally_available);
-    final List<ReleaseStage> expected = List.of(ReleaseStage.custom, ReleaseStage.alpha, ReleaseStage.beta, ReleaseStage.generally_available);
+    final List<ReleaseStage> input = List.of(ReleaseStage.ALPHA, ReleaseStage.CUSTOM, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
+    final List<ReleaseStage> expected = List.of(ReleaseStage.CUSTOM, ReleaseStage.ALPHA, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
 
     Assertions.assertThat(JobCreationAndStatusUpdateActivityImpl.orderByReleaseStageAsc(input))
         .containsExactlyElementsOf(expected);
+  }
+
+  @Test
+  void testGetSyncJobToReleaseStages() throws IOException {
+    final UUID sourceDefVersionId = UUID.randomUUID();
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(SYNC)
+        .withSync(new JobSyncConfig()
+            .withSourceDefinitionVersionId(sourceDefVersionId)
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(JOB_ID, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
+
+    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
+
+    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
+  }
+
+  @Test
+  void testGetResetJobToReleaseStages() throws IOException {
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(RESET_CONNECTION)
+        .withResetConnection(new JobResetConnectionConfig()
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
+
+    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
+    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA);
   }
 
 }

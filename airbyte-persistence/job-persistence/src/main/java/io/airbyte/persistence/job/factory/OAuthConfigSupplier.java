@@ -13,8 +13,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.MoreOAuthParameters;
@@ -44,10 +46,14 @@ public class OAuthConfigSupplier {
   private static final String PROPERTIES = "properties";
   private final ConfigRepository configRepository;
   private final TrackingClient trackingClient;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
-  public OAuthConfigSupplier(final ConfigRepository configRepository, final TrackingClient trackingClient) {
+  public OAuthConfigSupplier(final ConfigRepository configRepository,
+                             final TrackingClient trackingClient,
+                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.trackingClient = trackingClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   /**
@@ -61,20 +67,35 @@ public class OAuthConfigSupplier {
   }
 
   /**
+   * Test if a connector spec has legacy oauth configuration.
+   *
+   * @param spec to check
+   * @return true if it has a legacy oauth config. otherwise, false.
+   */
+  public static boolean hasLegacyOAuthConfigSpecification(final ConnectorSpecification spec) {
+    return spec != null && spec.getAuthSpecification() != null && spec.getAuthSpecification().getOauth2Specification() != null;
+  }
+
+  /**
    * Mask secrets in OAuth params.
    *
    * @param sourceDefinitionId source definition id
+   * @param sourceId source id
    * @param workspaceId workspace id
    * @param sourceConnectorConfig config to mask
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
-  public JsonNode maskSourceOAuthParameters(final UUID sourceDefinitionId, final UUID workspaceId, final JsonNode sourceConnectorConfig)
+  public JsonNode maskSourceOAuthParameters(final UUID sourceDefinitionId,
+                                            final UUID sourceId,
+                                            final UUID workspaceId,
+                                            final JsonNode sourceConnectorConfig)
       throws IOException {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
       MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
-          .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceDefinition.getSpec(), sourceConnectorConfig));
+          .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceConnectorConfig));
       return sourceConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
       throw new IOException(e);
@@ -85,19 +106,23 @@ public class OAuthConfigSupplier {
    * Mask secrets in OAuth params.
    *
    * @param destinationDefinitionId destination definition id
+   * @param destinationId destination id
    * @param workspaceId workspace id
    * @param destinationConnectorConfig config to mask
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
   public JsonNode maskDestinationOAuthParameters(final UUID destinationDefinitionId,
+                                                 final UUID destinationId,
                                                  final UUID workspaceId,
                                                  final JsonNode destinationConnectorConfig)
       throws IOException {
     try {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
       MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
-          .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationDefinition.getSpec(),
+          .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationVersion.getSpec(),
               destinationConnectorConfig));
       return destinationConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
@@ -109,20 +134,25 @@ public class OAuthConfigSupplier {
    * Inject OAuth params for a source.
    *
    * @param sourceDefinitionId source definition id
+   * @param sourceId source id
    * @param workspaceId workspace id
    * @param sourceConnectorConfig source connector config
    * @return config with oauth params injected
    * @throws IOException while fetching oauth configs
    */
-  public JsonNode injectSourceOAuthParameters(final UUID sourceDefinitionId, final UUID workspaceId, final JsonNode sourceConnectorConfig)
+  public JsonNode injectSourceOAuthParameters(final UUID sourceDefinitionId,
+                                              final UUID sourceId,
+                                              final UUID workspaceId,
+                                              final JsonNode sourceConnectorConfig)
       throws IOException {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
+      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
       MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> {
-            if (injectOAuthParameters(sourceDefinition.getName(), sourceDefinition.getSpec(), sourceOAuthParameter.getConfiguration(),
+            if (injectOAuthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceOAuthParameter.getConfiguration(),
                 sourceConnectorConfig)) {
-              final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition);
+              final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
               Exceptions.swallow(() -> trackingClient.track(workspaceId, "OAuth Injection - Backend", metadata));
             }
           });
@@ -136,22 +166,26 @@ public class OAuthConfigSupplier {
    * Inject OAuth params for a destination.
    *
    * @param destinationDefinitionId destination definition id
+   * @param destinationId destination id
    * @param workspaceId workspace id
    * @param destinationConnectorConfig destination connector config
    * @return config with oauth params injected
    * @throws IOException while fetching oauth configs
    */
   public JsonNode injectDestinationOAuthParameters(final UUID destinationDefinitionId,
+                                                   final UUID destinationId,
                                                    final UUID workspaceId,
                                                    final JsonNode destinationConnectorConfig)
       throws IOException {
     try {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
       MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> {
-            if (injectOAuthParameters(destinationDefinition.getName(), destinationDefinition.getSpec(), destinationOAuthParameter.getConfiguration(),
+            if (injectOAuthParameters(destinationDefinition.getName(), destinationVersion.getSpec(), destinationOAuthParameter.getConfiguration(),
                 destinationConnectorConfig)) {
-              final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
+              final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
               Exceptions.swallow(() -> trackingClient.track(workspaceId, "OAuth Injection - Backend", metadata));
             }
           });

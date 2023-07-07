@@ -77,6 +77,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <div
         className={classNames(containerClassName, styles.container, {
           [styles.disabled]: props.disabled,
+          [styles.readOnly]: props.readOnly,
           [styles.focused]: focused,
           [styles.light]: light,
           [styles.error]: error,
@@ -86,6 +87,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         onBlur={onContainerBlur}
       >
         <input
+          aria-invalid={error}
           data-testid="input"
           {...props}
           ref={inputRef}
@@ -94,6 +96,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             styles.input,
             {
               [styles.disabled]: props.disabled,
+              [styles.readOnly]: props.readOnly,
               [styles.password]: isPassword,
               "fs-exclude": isPassword,
             },
@@ -124,3 +127,4 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     );
   }
 );
+Input.displayName = "Input";

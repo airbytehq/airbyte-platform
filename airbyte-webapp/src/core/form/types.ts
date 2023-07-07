@@ -1,6 +1,11 @@
 import { JSONSchema7Type, JSONSchema7TypeName } from "json-schema";
 
-import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { AirbyteJSONSchema } from "../jsonSchema/types";
+
+export interface GroupDetails {
+  id: string;
+  title?: string;
+}
 
 /**
  * When turning the JSON schema into `FormBlock`s,
@@ -18,6 +23,9 @@ type FormRelevantJSONSchema = Pick<
   | "airbyte_hidden"
   | "enum"
   | "format"
+  | "always_show"
+  | "pattern_descriptor"
+  | "group"
 >;
 
 interface FormItem extends FormRelevantJSONSchema {
@@ -65,3 +73,5 @@ export interface FormObjectArrayItem extends FormItem {
 }
 
 export type FormBlock = FormGroupItem | FormBaseItem | FormConditionItem | FormObjectArrayItem;
+
+export const FORM_PATTERN_ERROR = "form.pattern.error";

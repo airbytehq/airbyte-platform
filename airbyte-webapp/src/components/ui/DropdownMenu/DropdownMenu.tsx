@@ -50,6 +50,7 @@ export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> 
         [styles.iconPositionLeft]: (item?.iconPosition === "left" && item.icon) || !item?.iconPosition,
         [styles.iconPositionRight]: item?.iconPosition === "right",
         [styles.active]: active,
+        [styles.disabled]: item.disabled,
       }),
       title: item.displayName,
       onClick: () => onChange && onChange(item),
@@ -57,7 +58,7 @@ export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> 
   };
 
   return (
-    <Menu ref={reference} className={styles.dropdownMenu} as="div">
+    <Menu ref={reference} as="div">
       {({ open }) => (
         <>
           <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>
@@ -71,7 +72,7 @@ export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> 
             }}
           >
             {options.map((item, index) => (
-              <Menu.Item key={index}>
+              <Menu.Item key={index} disabled={item.disabled}>
                 {({ active }) =>
                   item.as === "a"
                     ? React.createElement(

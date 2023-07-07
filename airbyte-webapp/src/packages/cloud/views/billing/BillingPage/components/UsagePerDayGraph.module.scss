@@ -1,0 +1,19 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  width: 100%;
+
+  &--full {
+    height: 260px;
+    padding: variables.$spacing-md;
+  }
+}
+
+:export {
+  white: colors.$white;
+  green: colors.$green;
+  grey: colors.$grey-500;
+  grey100: colors.$grey-100;
+  darkBlue: colors.$dark-blue;
+}

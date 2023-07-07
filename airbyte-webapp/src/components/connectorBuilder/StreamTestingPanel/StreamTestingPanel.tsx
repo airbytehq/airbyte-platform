@@ -1,28 +1,29 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { ValidationError } from "yup";
 
 import { Heading } from "components/ui/Heading";
 import { Spinner } from "components/ui/Spinner";
 
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
+import { Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
-import { Spec } from "core/request/ConnectorManifest";
 import {
-  useConnectorBuilderTestState,
   useConnectorBuilderFormState,
+  useConnectorBuilderFormManagementState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import addButtonScreenshot from "./add-button.png";
 import { ConfigMenu } from "./ConfigMenu";
-import octavia from "./pointing.svg";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputJsonErrors(testInputJson: StreamReadRequestBodyConfig, spec?: Spec): number {
+function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec?: Spec): number {
   return useMemo(() => {
     try {
       const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
@@ -40,9 +41,9 @@ function useTestInputJsonErrors(testInputJson: StreamReadRequestBodyConfig, spec
 }
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
-  const [isTestInputOpen, setTestInputOpen] = useState(false);
-  const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
-  const { testInputJson } = useConnectorBuilderTestState();
+  const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
+  const { jsonManifest, yamlEditorIsMounted, editorView } = useConnectorBuilderFormState();
+  const { testInputJson } = useConnectorBuilderTestRead();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
 
@@ -58,24 +59,18 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
 
   return (
     <div className={styles.container}>
-      <ConfigMenu
-        className={styles.configButton}
-        testInputJsonErrors={testInputJsonErrors}
-        isOpen={isTestInputOpen}
-        setIsOpen={setTestInputOpen}
-      />
-      {!hasStreams && (
+      <ConfigMenu testInputJsonErrors={testInputJsonErrors} isOpen={isTestInputOpen} setIsOpen={setTestInputOpen} />
+      {hasStreams || editorView === "yaml" ? (
+        <>
+          <StreamSelector className={styles.streamSelector} />
+          <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />
+        </>
+      ) : (
         <div className={styles.addStreamMessage}>
+          <img className={styles.logo} alt="" src={addButtonScreenshot} width={320} />
           <Heading as="h2" className={styles.addStreamHeading}>
             <FormattedMessage id="connectorBuilder.noStreamsMessage" />
           </Heading>
-          <img className={styles.logo} alt="" src={octavia} width={102} />
-        </div>
-      )}
-      {hasStreams && (
-        <div className={styles.selectAndTestContainer}>
-          <StreamSelector className={styles.streamSelector} />
-          <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />
         </div>
       )}
     </div>

@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.nu.studer.jooq)
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.platform.testcontainers.postgresql
+    }
+}
 dependencies {
     implementation libs.jooq.meta
     implementation libs.jooq
@@ -12,10 +17,8 @@ dependencies {
 
     // jOOQ code generation
     implementation libs.jooq.codegen
-    implementation (libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    implementation libs.platform.testcontainers.postgresql
+
     // These are required because gradle might be using lower version of Jna from other
     // library transitive dependency. Can be removed if we can figure out which library is the cause.
     // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
@@ -24,10 +27,7 @@ dependencies {
 
     // The jOOQ code generator only has access to classes added to the jooqGenerator configuration
     jooqGenerator project(':airbyte-db:db-lib')
-    jooqGenerator(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    jooqGenerator libs.platform.testcontainers.postgresql
 }
 
 jooq {
@@ -73,9 +73,9 @@ jooq {
     }
 }
 
-sourceSets.main.java.srcDirs (
-    tasks.named('generateConfigsDatabaseJooq').flatMap { it.outputDir },
-    tasks.named('generateJobsDatabaseJooq').flatMap { it.outputDir }
+sourceSets.main.java.srcDirs(
+        tasks.named('generateConfigsDatabaseJooq').flatMap { it.outputDir },
+        tasks.named('generateJobsDatabaseJooq').flatMap { it.outputDir }
 )
 
 sourceSets {

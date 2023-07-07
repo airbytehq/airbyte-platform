@@ -4,24 +4,25 @@
 @use "scss/z-indices";
 
 .container {
-  display: inline;
   position: relative;
 }
 
 .tooltip {
   @include mixins.shadow;
 
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
   line-height: initial;
   padding: variables.$spacing-md;
   border-radius: variables.$border-radius-sm;
-  max-width: 300px;
+  max-width: 400px;
+  max-height: 50vh; // Make sure the tooltip doesn't overflow the viewport
+  overflow-y: auto;
   z-index: z-indices.$tooltip;
   background: colors.$dark-blue-900;
   color: colors.$white;
 
   a {
-    color: colors.$dark-blue-200;
+    color: colors.$blue-100;
   }
 
   &.light {

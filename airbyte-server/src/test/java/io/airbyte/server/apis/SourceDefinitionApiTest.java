@@ -18,7 +18,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -27,9 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 @MicronautTest
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.TRUE,
-          value = StringUtils.TRUE)
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class SourceDefinitionApiTest extends BaseControllerTest {
@@ -89,7 +85,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
   @Test
   void testGrantSourceDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(Mockito.any()))
+    Mockito.when(sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateSourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/grant_definition";
@@ -142,9 +138,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testRevokeSourceDefinitionFromWorkspace() throws IOException {
-    Mockito.doNothing()
-        .when(sourceDefinitionsHandler).revokeSourceDefinitionFromWorkspace(Mockito.any());
+  void testRevokeSourceDefinition() throws IOException {
+    Mockito.doNothing().when(sourceDefinitionsHandler).revokeSourceDefinition(Mockito.any());
 
     final String path = "/api/v1/source_definitions/revoke_definition";
     testEndpointStatus(

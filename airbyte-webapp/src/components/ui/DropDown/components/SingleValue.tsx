@@ -33,3 +33,4 @@ export const SingleValue = React.memo(
     );
   }
 );
+SingleValue.displayName = "SingleValue";

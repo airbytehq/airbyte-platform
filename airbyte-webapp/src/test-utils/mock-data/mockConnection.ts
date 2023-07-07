@@ -300,6 +300,580 @@ export const mockConnection: WebBackendConnectionRead = {
           selected: true,
         },
       },
+      {
+        stream: {
+          name: "pokemon2",
+          jsonSchema: {
+            type: "object",
+            $schema: "http://json-schema.org/draft-07/schema#",
+            properties: {
+              id: {
+                type: ["null", "integer"],
+              },
+              name: {
+                type: ["null", "string"],
+              },
+              forms: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    url: {
+                      type: ["null", "string"],
+                    },
+                    name: {
+                      type: ["null", "string"],
+                    },
+                  },
+                },
+              },
+              moves: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    move: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    version_group_details: {
+                      type: ["null", "array"],
+                      items: {
+                        type: ["null", "object"],
+                        properties: {
+                          version_group: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                          level_learned_at: {
+                            type: ["null", "integer"],
+                          },
+                          move_learn_method: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              order: {
+                type: ["null", "integer"],
+              },
+              stats: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    stat: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    effort: {
+                      type: ["null", "integer"],
+                    },
+                    base_stat: {
+                      type: ["null", "integer"],
+                    },
+                  },
+                },
+              },
+              types: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    slot: {
+                      type: ["null", "integer"],
+                    },
+                    type: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              height: {
+                type: ["null", "integer"],
+              },
+              weight: {
+                type: ["null", "integer"],
+              },
+              species: {
+                type: ["null", "object"],
+                properties: {
+                  url: {
+                    type: ["null", "string"],
+                  },
+                  name: {
+                    type: ["null", "string"],
+                  },
+                },
+              },
+              sprites: {
+                type: ["null", "object"],
+                properties: {
+                  back_shiny: {
+                    type: ["null", "string"],
+                  },
+                  back_female: {
+                    type: ["null", "string"],
+                  },
+                  front_shiny: {
+                    type: ["null", "string"],
+                  },
+                  back_default: {
+                    type: ["null", "string"],
+                  },
+                  front_female: {
+                    type: ["null", "string"],
+                  },
+                  front_default: {
+                    type: ["null", "string"],
+                  },
+                  back_shiny_female: {
+                    type: ["null", "string"],
+                  },
+                  front_shiny_female: {
+                    type: ["null", "string"],
+                  },
+                },
+              },
+              abilities: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    slot: {
+                      type: ["null", "integer"],
+                    },
+                    ability: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    is_hidden: {
+                      type: ["null", "boolean"],
+                    },
+                  },
+                },
+              },
+              held_items: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    item: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    version_details: {
+                      type: ["null", "array"],
+                      items: {
+                        type: ["null", "object"],
+                        properties: {
+                          rarity: {
+                            type: ["null", "integer"],
+                          },
+                          version: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              "is_default ": {
+                type: ["null", "boolean"],
+              },
+              game_indices: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    version: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    game_index: {
+                      type: ["null", "integer"],
+                    },
+                  },
+                },
+              },
+              base_experience: {
+                type: ["null", "integer"],
+              },
+              location_area_encounters: {
+                type: ["null", "string"],
+              },
+            },
+          },
+          supportedSyncModes: ["full_refresh"],
+          defaultCursorField: [],
+          sourceDefinedPrimaryKey: [],
+        },
+        config: {
+          syncMode: "full_refresh",
+          cursorField: [],
+          destinationSyncMode: "append",
+          primaryKey: [],
+          aliasName: "pokemon",
+          selected: false,
+        },
+      },
+      {
+        stream: {
+          name: "another_stream",
+          jsonSchema: {
+            type: "object",
+            $schema: "http://json-schema.org/draft-07/schema#",
+            properties: {
+              id: {
+                type: ["null", "integer"],
+              },
+              name: {
+                type: ["null", "string"],
+              },
+              forms: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    url: {
+                      type: ["null", "string"],
+                    },
+                    name: {
+                      type: ["null", "string"],
+                    },
+                  },
+                },
+              },
+              moves: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    move: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    version_group_details: {
+                      type: ["null", "array"],
+                      items: {
+                        type: ["null", "object"],
+                        properties: {
+                          version_group: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                          level_learned_at: {
+                            type: ["null", "integer"],
+                          },
+                          move_learn_method: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              order: {
+                type: ["null", "integer"],
+              },
+              stats: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    stat: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    effort: {
+                      type: ["null", "integer"],
+                    },
+                    base_stat: {
+                      type: ["null", "integer"],
+                    },
+                  },
+                },
+              },
+              types: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    slot: {
+                      type: ["null", "integer"],
+                    },
+                    type: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              height: {
+                type: ["null", "integer"],
+              },
+              weight: {
+                type: ["null", "integer"],
+              },
+              species: {
+                type: ["null", "object"],
+                properties: {
+                  url: {
+                    type: ["null", "string"],
+                  },
+                  name: {
+                    type: ["null", "string"],
+                  },
+                },
+              },
+              sprites: {
+                type: ["null", "object"],
+                properties: {
+                  back_shiny: {
+                    type: ["null", "string"],
+                  },
+                  back_female: {
+                    type: ["null", "string"],
+                  },
+                  front_shiny: {
+                    type: ["null", "string"],
+                  },
+                  back_default: {
+                    type: ["null", "string"],
+                  },
+                  front_female: {
+                    type: ["null", "string"],
+                  },
+                  front_default: {
+                    type: ["null", "string"],
+                  },
+                  back_shiny_female: {
+                    type: ["null", "string"],
+                  },
+                  front_shiny_female: {
+                    type: ["null", "string"],
+                  },
+                },
+              },
+              abilities: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    slot: {
+                      type: ["null", "integer"],
+                    },
+                    ability: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    is_hidden: {
+                      type: ["null", "boolean"],
+                    },
+                  },
+                },
+              },
+              held_items: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    item: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    version_details: {
+                      type: ["null", "array"],
+                      items: {
+                        type: ["null", "object"],
+                        properties: {
+                          rarity: {
+                            type: ["null", "integer"],
+                          },
+                          version: {
+                            type: ["null", "object"],
+                            properties: {
+                              url: {
+                                type: ["null", "string"],
+                              },
+                              name: {
+                                type: ["null", "string"],
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              "is_default ": {
+                type: ["null", "boolean"],
+              },
+              game_indices: {
+                type: ["null", "array"],
+                items: {
+                  type: ["null", "object"],
+                  properties: {
+                    version: {
+                      type: ["null", "object"],
+                      properties: {
+                        url: {
+                          type: ["null", "string"],
+                        },
+                        name: {
+                          type: ["null", "string"],
+                        },
+                      },
+                    },
+                    game_index: {
+                      type: ["null", "integer"],
+                    },
+                  },
+                },
+              },
+              base_experience: {
+                type: ["null", "integer"],
+              },
+              location_area_encounters: {
+                type: ["null", "string"],
+              },
+            },
+          },
+          supportedSyncModes: ["full_refresh"],
+          defaultCursorField: [],
+          sourceDefinedPrimaryKey: [],
+        },
+        config: {
+          syncMode: "full_refresh",
+          cursorField: [],
+          destinationSyncMode: "append",
+          primaryKey: [],
+          aliasName: "pokemon",
+          selected: true,
+        },
+      },
     ],
   },
   scheduleType: "manual",
@@ -353,5 +927,6 @@ export const mockConnection: WebBackendConnectionRead = {
   catalogId: "bf31d1df-d7ba-4bae-b1ec-dac617b4f70c",
   schemaChange: "no_change",
   notifySchemaChanges: true,
+  notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
 };

@@ -58,6 +58,10 @@ spec:
         image: {{ printf "%s:%s" .Values.image.repository (include "server.imageTag" .) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
+        {{- if .Values.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
         {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: AIRBYTE_VERSION
           valueFrom:
@@ -243,7 +247,7 @@ spec:
         {{- end }}
 
         # Values from env
-        {{- if .Values.env_vars }}
+        {{- if or .Values.env_vars .Values.global.env_vars }}
         {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
         - name: {{ $k }}
           value: {{ $v | quote }}
@@ -281,6 +285,11 @@ spec:
         - name: http
           containerPort: 8001
           protocol: TCP
+        {{- if .Values.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}

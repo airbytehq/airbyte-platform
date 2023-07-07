@@ -1,0 +1,10 @@
+@use "scss/_colors";
+@use "scss/_variables";
+@forward "./StreamsConfigTableRow.module.scss";
+
+.headerContainer {
+  margin: variables.$spacing-md variables.$spacing-xl variables.$spacing-sm variables.$spacing-md;
+  gap: variables.$spacing-md;
+  scrollbar-gutter: stable;
+  min-height: 33px;
+}

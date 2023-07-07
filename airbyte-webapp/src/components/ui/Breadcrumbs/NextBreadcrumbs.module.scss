@@ -1,0 +1,7 @@
+@use "scss/variables";
+
+.link {
+  text-decoration: none;
+  font-size: variables.$font-size-sm;
+  display: block;
+}

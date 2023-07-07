@@ -11,7 +11,7 @@
   background-color: colors.$white;
   padding: variables.$spacing-xl variables.$spacing-xs variables.$spacing-lg;
   text-align: center;
-  box-shadow: variables.$box-shadow-sidebar;
+  border-right: variables.$border-thin solid colors.$grey-100;
   display: flex;
   gap: variables.$spacing-md;
   flex-direction: column;

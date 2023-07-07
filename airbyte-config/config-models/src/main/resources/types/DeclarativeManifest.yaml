@@ -10,7 +10,7 @@ required:
   - manifest
   - spec
   - version
-additionalProperties: false
+additionalProperties: true
 properties:
   actorDefinitionId:
     type: string

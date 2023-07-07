@@ -1,0 +1,38 @@
+@use "scss/variables";
+
+$icon-size: 15px;
+
+.container {
+  display: flex;
+  flex-direction: row;
+  padding: variables.$spacing-xl variables.$spacing-md 0 45px; // need to hard code to make all columns align with rows
+  height: 43px;
+  align-items: center;
+  scrollbar-gutter: stable;
+}
+
+.connector {
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-self: stretch;
+  align-items: center;
+  gap: variables.$spacing-sm;
+}
+
+.source {
+  // A hard-coded px is bad, but it works.
+  // Ideally this table will be converted away from div's and
+  // flexbox into react-table and this will go away.
+  flex: 2 1 470px;
+}
+
+.destination {
+  display: flex;
+  flex: 1 1 125px;
+  align-items: center;
+}
+
+.arrowContainer {
+  width: 20px;
+}

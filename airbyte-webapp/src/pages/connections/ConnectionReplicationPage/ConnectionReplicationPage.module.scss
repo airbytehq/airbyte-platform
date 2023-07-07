@@ -1,12 +1,13 @@
 @use "scss/colors";
 @use "scss/variables";
 
-$container-padding-bottom: 28px; // (intercom height + margins (88px) - button height (32px)) / 2
+$container-padding-bottom: 28px; // (margins (88px) - button height (32px)) / 2
 
 .content {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  min-width: variables.$min-width-wide-table-container;
 
   > form {
     display: flex;

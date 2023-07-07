@@ -1,23 +1,8 @@
 @use "scss/variables";
 
-.formContainer {
-  display: flex;
-  flex-direction: column;
-  gap: variables.$spacing-md;
-  position: relative;
-  flex: 1;
-}
-
-.namespaceFormatLabel {
-  flex: 5 0 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
 .tryArrow {
   margin: 0 variables.$spacing-md -1px 0;
 
   // used to control svg size
-  font-size: 14px;
+  font-size: variables.$font-size-lg;
 }

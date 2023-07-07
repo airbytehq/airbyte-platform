@@ -8,14 +8,17 @@ import com.google.common.collect.ImmutableSet;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.WebUrlHelper;
@@ -35,7 +38,6 @@ import org.slf4j.LoggerFactory;
 public class JobErrorReporter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobErrorReporter.class);
-
   private static final String FROM_TRACE_MESSAGE = "from_trace_message";
   private static final String DEPLOYMENT_MODE_META_KEY = "deployment_mode";
   private static final String AIRBYTE_VERSION_META_KEY = "airbyte_version";
@@ -98,33 +100,55 @@ public class JobErrorReporter {
 
         if (failureOrigin == FailureOrigin.SOURCE) {
           final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
-          final String dockerImage = jobContext.sourceDockerImage();
-          final Map<String, String> metadata = MoreMaps.merge(commonMetadata, getSourceMetadata(sourceDefinition));
+          final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(jobContext.sourceVersionId());
+          final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
+          final Map<String, String> metadata =
+              MoreMaps.merge(commonMetadata, getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage()));
 
           reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
         } else if (failureOrigin == FailureOrigin.DESTINATION) {
           final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
-          final String dockerImage = jobContext.destinationDockerImage();
-          final Map<String, String> metadata = MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition));
+          final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+          final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
+          final Map<String, String> metadata =
+              MoreMaps.merge(commonMetadata, getDestinationMetadata(destinationDefinition, dockerImage, destinationVersion.getReleaseStage()));
 
           reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
         } else if (failureOrigin == FailureOrigin.NORMALIZATION) {
           final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
           final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+          final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(jobContext.destinationVersionId());
+          // null check because resets don't have sources
+          final @Nullable ActorDefinitionVersion sourceVersion =
+              jobContext.sourceVersionId() != null ? configRepository.getActorDefinitionVersion(jobContext.sourceVersionId()) : null;
+
+          final Map<String, String> destinationMetadata = getDestinationMetadata(
+              destinationDefinition,
+              ActorDefinitionVersionHelper.getDockerImageName(destinationVersion),
+              destinationVersion.getReleaseStage());
+
+          // prefixing source keys, so we don't overlap (destination as 'true' keys since normalization runs
+          // on the destination)
+          final Map<String, String> sourceMetadata = sourceVersion != null
+              ? prefixConnectorMetadataKeys(getSourceMetadata(
+                  sourceDefinition,
+                  ActorDefinitionVersionHelper.getDockerImageName(sourceVersion),
+                  sourceVersion.getReleaseStage()), "source")
+              : Map.of();
+
           // since error could be arising from source or destination or normalization itself, we want all the
           // metadata
-          // prefixing source keys so we don't overlap (destination as 'true' keys since normalization runs on
-          // the destination)
           final Map<String, String> metadata = MoreMaps.merge(
               commonMetadata,
-              getNormalizationMetadata(destinationDefinition.getNormalizationConfig().getNormalizationRepository()),
-              prefixConnectorMetadataKeys(getSourceMetadata(sourceDefinition), "source"),
-              getDestinationMetadata(destinationDefinition));
-          final String dockerImage =
-              destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
-                  + destinationDefinition.getNormalizationConfig().getNormalizationTag();
+              getNormalizationMetadata(destinationVersion.getNormalizationConfig().getNormalizationRepository()),
+              sourceMetadata,
+              destinationMetadata);
 
-          reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
+          final String normalizationDockerImage =
+              destinationVersion.getNormalizationConfig().getNormalizationRepository() + ":"
+                  + destinationVersion.getNormalizationConfig().getNormalizationTag();
+
+          reportJobFailureReason(workspace, failureReason, normalizationDockerImage, metadata);
         }
       }
     });
@@ -145,7 +169,7 @@ public class JobErrorReporter {
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
-        getSourceMetadata(sourceDefinition),
+        getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
     reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.SOURCE), jobContext.dockerImage(), metadata);
   }
@@ -166,7 +190,7 @@ public class JobErrorReporter {
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
-        getDestinationMetadata(destinationDefinition),
+        getDestinationMetadata(destinationDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
     reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureOrigin.DESTINATION), jobContext.dockerImage(), metadata);
   }
@@ -186,7 +210,7 @@ public class JobErrorReporter {
     final StandardWorkspace workspace = workspaceId != null ? configRepository.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final Map<String, String> metadata = MoreMaps.merge(
-        getSourceMetadata(sourceDefinition),
+        getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage()),
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
     reportJobFailureReason(workspace, failureReason, jobContext.dockerImage(), metadata);
   }
@@ -213,20 +237,33 @@ public class JobErrorReporter {
         Map.entry(CONNECTION_URL_META_KEY, connectionUrl));
   }
 
-  private Map<String, String> getDestinationMetadata(final StandardDestinationDefinition destinationDefinition) {
-    return Map.ofEntries(
+  private Map<String, String> getDestinationMetadata(final StandardDestinationDefinition destinationDefinition,
+                                                     final String dockerImage,
+                                                     @Nullable final ReleaseStage releaseStage) {
+    final String connectorRepository = dockerImage.split(":")[0];
+
+    final Map<String, String> metadata = new HashMap<>(Map.ofEntries(
         Map.entry(CONNECTOR_DEFINITION_ID_META_KEY, destinationDefinition.getDestinationDefinitionId().toString()),
         Map.entry(CONNECTOR_NAME_META_KEY, destinationDefinition.getName()),
-        Map.entry(CONNECTOR_REPOSITORY_META_KEY, destinationDefinition.getDockerRepository()),
-        Map.entry(CONNECTOR_RELEASE_STAGE_META_KEY, destinationDefinition.getReleaseStage().value()));
+        Map.entry(CONNECTOR_REPOSITORY_META_KEY, connectorRepository)));
+    if (releaseStage != null) {
+      metadata.put(CONNECTOR_RELEASE_STAGE_META_KEY, releaseStage.value());
+    }
+    return metadata;
   }
 
-  private Map<String, String> getSourceMetadata(final StandardSourceDefinition sourceDefinition) {
-    return Map.ofEntries(
+  private Map<String, String> getSourceMetadata(final StandardSourceDefinition sourceDefinition,
+                                                final String dockerImage,
+                                                @Nullable final ReleaseStage releaseStage) {
+    final String connectorRepository = dockerImage.split(":")[0];
+    final Map<String, String> metadata = new HashMap<>(Map.ofEntries(
         Map.entry(CONNECTOR_DEFINITION_ID_META_KEY, sourceDefinition.getSourceDefinitionId().toString()),
         Map.entry(CONNECTOR_NAME_META_KEY, sourceDefinition.getName()),
-        Map.entry(CONNECTOR_REPOSITORY_META_KEY, sourceDefinition.getDockerRepository()),
-        Map.entry(CONNECTOR_RELEASE_STAGE_META_KEY, sourceDefinition.getReleaseStage().value()));
+        Map.entry(CONNECTOR_REPOSITORY_META_KEY, connectorRepository)));
+    if (releaseStage != null) {
+      metadata.put(CONNECTOR_RELEASE_STAGE_META_KEY, releaseStage.value());
+    }
+    return metadata;
   }
 
   private Map<String, String> getNormalizationMetadata(final String normalizationImage) {

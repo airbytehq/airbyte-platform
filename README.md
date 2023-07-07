@@ -49,7 +49,7 @@ You can run Airbyte locally with Docker.
 ```bash
 git clone --depth 1 https://github.com/airbytehq/airbyte.git
 cd airbyte
-docker compose up
+./run-ab-platform.sh 
 ```
 
 Login to the web app at [http://localhost:8000](http://localhost:8000) by entering the default credentials found in your .env file.
@@ -105,4 +105,4 @@ See the [LICENSE](docs/project-overview/licenses/) file for licensing informatio
 - [Newsletter](https://airbyte.com/newsletter) for product updates and data news
 - [Blog](https://airbyte.com/blog) for data insigts articles, tutorials and updates
 - [Docs](https://docs.airbyte.com/) for Airbyte features
-- [Roadmap](https://app.harvestr.io/roadmap/view/pQU6gdCyc/launch-week-roadmap) for planned features
+- [Roadmap](https://go.airbyte.com/roadmap) for planned features

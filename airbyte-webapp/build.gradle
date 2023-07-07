@@ -13,6 +13,7 @@ def pnpmVer = new groovy.json.JsonSlurper().parse(new File("${projectDir}/packag
 // might affect them (i.e. if any of those files change we want to rerun most tasks)
 def commonConfigs = [
     '.env',
+    '.env.production',
     'package.json',
     'pnpm-lock.yaml',
     'tsconfig.json',
@@ -30,7 +31,7 @@ task validateLockFiles {
     description "Validate only a pnpm-lock.yaml lock file exists"
     inputs.files "pnpm-lock.yaml", "package-lock.json", "yarn.lock"
 
-    // The validateLockFiles has no outputs, thus we always treat the outpus up to date
+    // The validateLockFiles has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
 
@@ -60,8 +61,11 @@ def publicDir = fileTree('public').matching {
 task pnpmBuild(type: PnpmTask) {
     dependsOn pnpmInstall
 
+    environment = ["VERSION": rootProject.ext.version]
+
     args = ['build']
 
+    inputs.property "cloudEnv", System.env.WEBAPP_BUILD_CLOUD_ENV ?: ""
     inputs.files commonConfigs
     inputs.files nodeModules
     inputs.files publicDir
@@ -85,20 +89,49 @@ task test(type: PnpmTask) {
     inputs.file 'babel.config.js'
     inputs.dir 'src'
 
-    // The test has no outputs, thus we always treat the outpus up to date
+    // The test has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
+}
+
+task e2etest(type: PnpmTask) {
+    dependsOn pnpmInstall
+
+    // If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
+    // we'll record the cypress session, otherwise we're not recording
+    def recordCypress = project.hasProperty('cypressWebappKey') && project.getProperty('cypressWebappKey')
+    if (recordCypress) {
+        environment = [CYPRESS_KEY: project.getProperty('cypressWebappKey')]
+        args = ['run', 'cypress:ci:record']
+    } else {
+        args = ['run', 'cypress:ci']
+    }
+
+    // Mark the outputs as never up to date, to ensure we always run the tests.
+    // We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
+    outputs.upToDateWhen { false }
+}
+
+task cloudE2eTest(type: PnpmTask) {
+    dependsOn pnpmInstall
+
+    args = ['run', 'cloud-test:stage']
+
+    // Mark the outputs as never up to date, to ensure we always run the tests.
+    // We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
+    outputs.upToDateWhen { false }
 }
 
 task licenseCheck(type: PnpmTask) {
     dependsOn pnpmInstall
 
     args = ['run', 'license-check']
+
     inputs.files nodeModules
     inputs.file 'package.json'
     inputs.file 'scripts/license-check.js'
 
-    // The licenseCheck has no outputs, thus we always treat the outpus up to date
+    // The licenseCheck has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
 }
@@ -121,6 +154,7 @@ task validateLinks(type: PnpmTask) {
 
 task buildStorybook(type: PnpmTask) {
     dependsOn pnpmInstall
+
     args = ['run', 'build:storybook']
 
     inputs.files commonConfigs
@@ -132,7 +166,7 @@ task buildStorybook(type: PnpmTask) {
     outputs.dir 'build/storybook'
 
     environment = [
-        'NODE_OPTIONS': '--max_old_space_size=4096'
+        'NODE_OPTIONS': '--max_old_space_size=8192'
     ]
 }
 
@@ -141,25 +175,6 @@ task copyBuildOutput(type: Copy) {
 
     from "${project.projectDir}/build/app"
     into 'build/docker/bin/build'
-}
-
-task copyDocs(type: Copy) {
-    dependsOn copyDocker, copyBuildOutput
-
-    from "${project.rootProject.projectDir}/docs/integrations"
-    into "build/docker/bin/build/docs/integrations"
-    // google-ads.md is blocked by Ad Blockers
-    rename ('google-ads.md', 'gglad.md')
-    duplicatesStrategy DuplicatesStrategy.INCLUDE
-}
-
-// Copy images that are used in .md integration documentation docs
-task copyDocAssets(type: Copy) {
-    dependsOn copyDocker, copyBuildOutput
-
-    from "${project.rootProject.projectDir}/docs/.gitbook"
-    into "build/docker/bin/build/docs/.gitbook"
-    duplicatesStrategy DuplicatesStrategy.INCLUDE
 }
 
 task copyNginx(type: Copy) {
@@ -174,10 +189,11 @@ check.dependsOn validateLinks, licenseCheck, test
 
 build.dependsOn buildStorybook
 
-task assembleApp {
-    dependsOn copyBuildOutput, copyDocs, copyDocAssets
+tasks.named("buildDockerImage") {
+    dependsOn copyDocker, copyNginx, copyBuildOutput
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn copyDocker, copyNginx, assembleApp
+// Include some cloud-specific tasks only in the airbyte-platform-internal environment
+if (file("${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle").exists()) {
+   apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
 }

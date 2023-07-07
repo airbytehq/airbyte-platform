@@ -4,12 +4,12 @@ info:
     Airbyte Configuration API
     [https://airbyte.io](https://airbyte.io).
 
-    The Configuration API is an internal Airbyte API that is designed for communications between different Airbyte components. 
+    The Configuration API is an internal Airbyte API that is designed for communications between different Airbyte components.
     * It's main purpose is to enable the Airbyte Engineering team to configure the internal state of [Airbyte Cloud](https://airbyte.com/airbyte-cloud)
     * It is also sometimes used by OSS users to configure their own Self-Hosted Airbyte deployment (internal state, etc)
 
-    WARNING 
-    * Airbyte does NOT have active commitments to support this API long-term. 
+    WARNING
+    * Airbyte does NOT have active commitments to support this API long-term.
     * OSS users can utilize the Configuration API, but at their own risk.
     * This API is utilized internally by the Airbyte Engineering team and may be modified in the future if the need arises.
     * Modifications by the Airbyte Engineering team could create breaking changes and OSS users would need to update their code to catch up to any backwards incompatible changes in the API.
@@ -70,6 +70,8 @@ tags:
     description: Interactions with attempt related resources.
   - name: state
     description: Interactions with state related resources.
+  - name: actor_definition_version
+    description: Interactions with actor definition version related resources.
 
 paths:
   /v1/workspaces/create:
@@ -261,13 +263,37 @@ paths:
     post:
       tags:
         - notifications
-      summary: Try sending a notifications
+      summary: Try sending a notifications; to be deprecated
       operationId: tryNotificationConfig
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Notification"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/notifications/try_webhook:
+    post:
+      tags:
+        - notifications
+      summary: Try sending a notifications to webhook
+      operationId: tryNotificationWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationWebhookConfigValidationRequestBody"
         required: true
       responses:
         "200":
@@ -414,7 +440,7 @@ paths:
     post:
       tags:
         - source_definition
-      summary: Creates a custom sourceDefinition for the given workspace
+      summary: Creates a custom sourceDefinition for the given workspace or organization
       operationId: createCustomSourceDefinition
       requestBody:
         content:
@@ -453,17 +479,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/source_definitions/grant_definition:
+  /v1/source_definitions/get_for_scope:
     post:
       tags:
         - source_definition
-      summary: grant a private, non-custom sourceDefinition to a given workspace
-      operationId: grantSourceDefinitionToWorkspace
+      summary: Get a sourceDefinition that is configured for the given workspace or organization
+      operationId: getSourceDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definitions/grant_definition:
+    post:
+      tags:
+        - source_definition
+      summary: grant a private, non-custom sourceDefinition to a given workspace or organization
+      operationId: grantSourceDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -480,13 +529,13 @@ paths:
     post:
       tags:
         - source_definition
-      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace
-      operationId: revokeSourceDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace or organization
+      operationId: revokeSourceDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -495,6 +544,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_source:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a source.
+      operationId: getActorDefinitionVersionForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/source_definition_specifications/get:
     post:
       tags:
@@ -518,6 +588,90 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definition_specifications/get_for_source:
+    post:
+      tags:
+        - source_definition_specification
+      summary: Get specification for a source.
+      operationId: getSpecificationForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/declarative_source_definitions/create_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Create a declarative manifest to be used by the specified source definition
+      operationId: createDeclarativeSourceDefinitionManifest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclarativeSourceDefinitionCreateManifestRequestBody"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+        "400":
+          description: Definition is not declarative source
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: Version already exists for definition id
+  /v1/declarative_source_definitions/update_active_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Update the declarative manifest version for a source
+      operationId: updateDeclarativeManifestVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActiveManifestRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/declarative_source_definitions/list_manifests:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: List all available declarative manifest versions of a declarative source definition
+      operationId: listDeclarativeManifests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListDeclarativeManifestsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeManifestsReadList"
+        "400":
+          description: Definition is not declarative source
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connector_builder_projects/create:
     post:
       tags:
@@ -531,12 +685,31 @@ paths:
               $ref: "#/components/schemas/ConnectorBuilderProjectWithWorkspaceId"
         required: true
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+  /v1/connector_builder_projects/publish:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Publish a connector to the workspace
+      operationId: publishConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderPublishRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionIdBody"
   /v1/connector_builder_projects/update:
     post:
       tags:
@@ -637,6 +810,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SourceUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/partial_update:
+    post:
+      tags:
+        - source
+      summary: Partially update a source
+      operationId: partialUpdateSource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialSourceUpdate"
         required: true
       responses:
         "200":
@@ -851,7 +1047,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
+  /v1/sources/apply_schema_changes:
+    post:
+      tags:
+        - source
+      summary:
+        Auto propagate the change on a catalog to a catalog saved in the DB. It will fetch all the connections linked to
+        a source id and apply the provided diff to their catalog.
+      operationId: applySchemaChangeForSource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceAutoPropagateChange"
+        required: true
+      responses:
+        "204":
+          description: The schema was properly auto propagate
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/write_discover_catalog_result:
     post:
       tags:
@@ -1045,17 +1261,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/destination_definitions/grant_definition:
+  /v1/destination_definitions/get_for_scope:
     post:
       tags:
         - destination_definition
-      summary: grant a private, non-custom destinationDefinition to a given workspace
-      operationId: grantDestinationDefinitionToWorkspace
+      summary: Get a destinationDefinition that is configured for the given scope
+      operationId: getDestinationDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definitions/grant_definition:
+    post:
+      tags:
+        - destination_definition
+      summary: grant a private, non-custom destinationDefinition to a given workspace or organization
+      operationId: grantDestinationDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -1072,13 +1311,13 @@ paths:
     post:
       tags:
         - destination_definition
-      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace
-      operationId: revokeDestinationDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace or organization
+      operationId: revokeDestinationDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -1087,6 +1326,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_destination:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a destination.
+      operationId: getActorDefinitionVersionForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_definition_specifications/get:
     post:
       tags:
@@ -1098,6 +1358,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definition_specifications/get_for_destination:
+    post:
+      tags:
+        - destination_definition_specification
+      summary: Get specification for a destination
+      operationId: getSpecificationForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
         required: true
       responses:
         "200":
@@ -1143,6 +1426,27 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DestinationUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/partial_update:
+    post:
+      tags:
+        - destination
+      summary: Update a destination partially
+      operationId: partialUpdateDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialDestinationUpdate"
         required: true
       responses:
         "200":
@@ -1422,6 +1726,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/list_by_actor_definition:
+    post:
+      tags:
+        - connection
+      summary: List all connections that use the provided actor definition
+      operationId: listConnectionsByActorDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -1843,6 +2170,25 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/revoke:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source definition ID and workspace ID revoke access/refresh token etc.
+      operationId: revokeSourceOAuthTokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeSourceOauthTokensRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_oauths/get_consent_url:
     post:
       tags:
@@ -2107,6 +2453,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/list_for_workspaces:
+    post:
+      tags:
+        - jobs
+      summary: Returns recent jobs for a connection. Jobs are returned in descending order by createdAt.
+      operationId: listJobsForWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobListForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/get:
     post:
       tags:
@@ -2148,6 +2517,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JobOptionalRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/get_without_logs:
+    post:
+      tags:
+        - jobs
+      summary: Get information about a job excluding logs
+      operationId: getJobInfoWithoutLogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -2354,7 +2746,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
-
+  /v1/attempt/get_combined_stats:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For retrieving combined stats for a single attempt
+      operationId: getAttemptCombinedStats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptStats"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/stream_statuses/list:
+    post:
+      summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatuses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusListRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/latest_per_run_state:
+    post:
+      summary: Gets a list of the latest stream status for each stream and run state for a connection.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatusesByRunState
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/create:
+    post:
+      summary: Creates a stream status.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: createStreamStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusCreateRequestBody"
+      responses:
+        "201":
+          description: Successfully created stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
+  /v1/stream_statuses/update:
+    post:
+      summary: Updates a stream status.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: updateStreamStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusUpdateRequestBody"
+      responses:
+        "201":
+          description: Successfully created stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
+        "200":
+          description: Successfully updated stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
+  /v1/jobs/retry_states/create_or_update:
+    post:
+      summary: Creates or updates a retry state for a job.
+      tags:
+        - job_retry_states
+      operationId: createOrUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRetryStateRequestBody"
+      responses:
+        "204":
+          description: Successfully put retry state.
+  /v1/jobs/retry_states/get:
+    post:
+      summary: Gets a retry state.
+      tags:
+        - job_retry_states
+      operationId: get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved retry state for a job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetryStateRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -2389,6 +2918,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
         defaultGeography:
@@ -2409,6 +2940,34 @@ components:
         validationUrl:
           type: string
           description: if supplied, the webhook config will be validated by checking that this URL returns a 2xx response.
+    NotificationItem:
+      type: object
+      properties:
+        notificationType:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationType"
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        customerioConfiguration:
+          $ref: "#/components/schemas/CustomerioNotificationConfiguration"
+
+    NotificationSettings:
+      type: object
+      properties:
+        sendOnSuccess:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnFailure:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabled:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabledWarning:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdate:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationItem"
+
     Notification:
       type: object
       required:
@@ -2445,6 +3004,15 @@ components:
         - slack
         - customerio
         # - webhook
+    NotificationTrigger:
+      type: string
+      enum:
+        - sync_success
+        - sync_failure
+        - sync_disabled
+        - sync_disabled_warning
+        - connection_update
+        - connection_update_action_required
     NotificationRead:
       type: object
       required:
@@ -2464,6 +3032,38 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ListConnectionsForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+        - userId
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        includeDeleted:
+          type: boolean
+          default: false
+    ListResourcesForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        includeDeleted:
+          type: boolean
+          default: false
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     WorkspaceReadList:
       type: object
       required:
@@ -2507,6 +3107,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         firstCompletedSync:
           type: boolean
         feedbackDone:
@@ -2565,6 +3167,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         defaultGeography:
           $ref: "#/components/schemas/Geography"
         webhookConfigs:
@@ -2628,6 +3232,7 @@ components:
       format: uuid
     DeclarativeManifest:
       description: Low code CDK manifest JSON object
+      type: object
     DeclarativeManifestRead:
       type: object
       properties:
@@ -2635,6 +3240,10 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         isDraft:
           type: boolean
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        description:
+          type: string
     ConnectorBuilderProjectDetails:
       type: object
       required:
@@ -2655,6 +3264,10 @@ components:
           type: string
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        activeDeclarativeManifestVersion:
+          $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
     ConnectorBuilderProjectIdWithWorkspaceId:
@@ -2667,6 +3280,8 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     ExistingConnectorBuilderProjectWithWorkspaceId:
       type: object
       required:
@@ -2708,6 +3323,48 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+    ConnectorBuilderPublishRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - name
+        - initialDeclarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        name:
+          type: string
+        initialDeclarativeManifest:
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
+    ManifestVersion:
+      type: integer
+      format: int64
+    DeclarativeSourceManifest:
+      type: object
+      required:
+        - description
+        - manifest
+        - spec
+        - version
+      properties:
+        description:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        spec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+    SourceDefinitionIdBody:
+      type: object
+      required:
+        - sourceDefinitionId
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -2805,14 +3462,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
+    ScopeId:
+      type: string
+      format: uuid
+    ScopeType:
+      type: string
+      enum:
+        - workspace
+        - organization
     CustomSourceDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - sourceDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
         sourceDefinition:
           $ref: "#/components/schemas/SourceDefinitionCreate"
     SourceDefinitionIdWithWorkspaceId:
@@ -2825,6 +3493,81 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ActorDefinitionIdWithScope:
+      type: object
+      required:
+        - actorDefinitionId
+        - scopeId
+        - scopeType
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+    ListDeclarativeManifestsRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+    DeclarativeManifestsReadList:
+      type: object
+      required:
+        - manifestVersions
+      properties:
+        manifestVersions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeclarativeManifestVersionRead"
+    DeclarativeManifestVersionRead:
+      type: object
+      required:
+        - version
+        - isActive
+        - description
+      properties:
+        version:
+          type: integer
+          format: int64
+        isActive:
+          type: boolean
+        description:
+          type: string
+    DeclarativeSourceDefinitionCreateManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - setAsActiveManifest
+        - declarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        setAsActiveManifest:
+          type: boolean
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
+    UpdateActiveManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - version
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
       type: object
       required:
@@ -3004,6 +3747,20 @@ components:
           type: boolean
         notifySchemaChange:
           type: boolean
+    PartialSourceUpdate:
+      type: object
+      required:
+        - sourceId
+      properties:
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/SourceConfiguration"
+        name:
+          type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
+          type: string
     SourceUpdate:
       type: object
       required:
@@ -3016,6 +3773,9 @@ components:
         connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
         name:
+          type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
     SourceRead:
       type: object
@@ -3102,6 +3862,28 @@ components:
           type: boolean
         connectionStatus:
           $ref: "#/components/schemas/ConnectionStatus"
+    SourceAutoPropagateChange:
+      description:
+        Input of the source propagation, it contains the discovered catalog and a list of diff that need to be applied
+        to the existing catalog.
+      type: object
+      required:
+        - catalog
+        - catalogId
+        - sourceId
+        - workspaceId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/AirbyteCatalog"
+        catalogId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
     SourceSearch:
       type: object
       properties:
@@ -3203,7 +3985,6 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
-
     DestinationDefinitionReadList:
       type: object
       required:
@@ -3216,13 +3997,16 @@ components:
     CustomDestinationDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - destinationDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         destinationDefinition:
           $ref: "#/components/schemas/DestinationDefinitionCreate"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
     DestinationDefinitionIdWithWorkspaceId:
       type: object
       required:
@@ -3255,6 +4039,7 @@ components:
     # DESTINATION DEFINITION SPECIFICATION
     DestinationDefinitionSpecification:
       description: The specification for what values are required to configure the destinationDefinition.
+      type: object
       example: { user: { type: string } }
     DestinationDefinitionSpecificationRead:
       type: object
@@ -3329,6 +4114,15 @@ components:
         - destinationId
         - connectionConfiguration
         - name
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        name:
+          type: string
+    PartialDestinationUpdate:
+      type: object
       properties:
         destinationId:
           $ref: "#/components/schemas/DestinationId"
@@ -3419,7 +4213,17 @@ components:
           type: string
         destinationName:
           type: string
-    # SOURCE / DESTINATION RELEASE STAGE ENUM
+    # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionRead:
+      type: object
+      required:
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ReleaseStage:
       type: string
       enum:
@@ -3522,6 +4326,8 @@ components:
         geography:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -3630,6 +4436,8 @@ components:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         breakingChange:
@@ -3679,6 +4487,8 @@ components:
         geography:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -3736,8 +4546,12 @@ components:
           type: boolean
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     SchemaChange:
       enum:
         - no_change
@@ -4196,6 +5010,23 @@ components:
           $ref: "#/components/schemas/JobId"
         pagination:
           $ref: "#/components/schemas/Pagination"
+    JobListForWorkspacesRequestBody:
+      type: object
+      required:
+        - configTypes
+      properties:
+        configTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobConfigType"
+        configId:
+          type: string
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     JobIdRequestBody:
       type: object
       required:
@@ -4219,6 +5050,10 @@ components:
           $ref: "#/components/schemas/JobConfigType"
         configId:
           type: string
+        enabledStreams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDescriptor"
         createdAt:
           type: integer
           format: int64
@@ -4349,6 +5184,9 @@ components:
           type: integer
           format: int64
         stateMessagesEmitted:
+          type: integer
+          format: int64
+        bytesCommitted:
           type: integer
           format: int64
         recordsCommitted:
@@ -4554,7 +5392,6 @@ components:
     CheckConnectionRead:
       type: object
       required:
-        - status
         - jobInfo
       properties:
         status:
@@ -4707,6 +5544,21 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionId:
+      description: A unique identifier for an actor definition.
+      type: string
+      format: uuid
+    ActorDefinitionRequestBody:
+      type: object
+      additionalProperties: false
+      required:
+        - actorDefinitionId
+        - actorType
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
       description: describes a normalization config for destination definition
       type: object
@@ -5001,6 +5853,19 @@ components:
           default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    RevokeSourceOauthTokensRequest:
+      type: object
+      required:
+        - sourceId
+        - sourceDefinitionId
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     CompleteDestinationOAuthRequest:
       type: object
       required:
@@ -5024,7 +5889,17 @@ components:
           $ref: "#/components/schemas/DestinationId"
     CompleteOAuthResponse:
       type: object
-      additionalProperties: true # Oauth parameters like refresh/access token etc.. will be different per API so we don't specify them in advance
+      required:
+        - request_succeeded
+        - auth_payload
+      properties:
+        request_succeeded:
+          type: boolean
+        request_error:
+          type: string
+        auth_payload:
+          type: object
+          additionalProperties: true # Oauth parameters like refresh/access token etc.. will be different per API, so we don't specify them in advance
     SetInstancewideSourceOauthParamsRequestBody:
       type: object
       required:
@@ -5047,6 +5922,29 @@ components:
         params:
           type: object
           additionalProperties: true
+    WorkspaceOverrideOauthParamsRequestBody:
+      type: object
+      required:
+        - definitionId
+        - params
+        - workspaceId
+        - actorType
+      properties:
+        definitionId:
+          type: string
+          format: uuid
+        params:
+          type: object
+          additionalProperties: true
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+    ActorType:
+      enum:
+        - source
+        - destination
+      type: string
     # Web Backend
     WebBackendCheckUpdatesRead:
       type: object
@@ -5122,6 +6020,7 @@ components:
         - isSyncing
         - schemaChange
         - notifySchemaChanges
+        - notifySchemaChangesByEmail
         - nonBreakingChangesPreference
       properties:
         connectionId:
@@ -5183,12 +6082,16 @@ components:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
     NonBreakingChangesPreference:
       enum:
-        - ignore
-        - disable
+        - ignore # do nothing if we detect a schema change
+        - disable # disable the connection, pausing the sync
+        - propagate_columns # automatically propagate the changes on selected streams and continue syncing
+        - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
     WebBackendConnectionReadList:
       type: object
@@ -5315,6 +6218,16 @@ components:
           $ref: "#/components/schemas/AttemptNumber"
         syncConfig:
           $ref: "#/components/schemas/AttemptSyncConfig"
+    GetAttemptStatsRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
     InternalOperationResult:
       type: object
       required:
@@ -5349,7 +6262,206 @@ components:
           format: int64
         hasNormalizationFailed:
           type: boolean
-
+    StreamStatusId:
+      type: string
+      format: uuid
+    StreamStatusRunState:
+      type: string
+      description: >
+        Values:
+          * `PENDING` - The stream operation has been selected to run
+          * `RUNNING` - The stream operation is running
+          * `COMPLETE` - The stream operation ran successfully to completion
+          * `INCOMPLETE` - The stream operation has terminated in an incomplete state.
+          See StreamStatusIncompleteRunCause for more details.
+      enum:
+        - PENDING
+        - RUNNING
+        - COMPLETE
+        - INCOMPLETE
+    StreamStatusIncompleteRunCause:
+      type: string
+      description: >
+        Values:
+          * `FAILED` - A failure has occurred
+          * `CANCELED` - The run has been canceled
+      enum:
+        - FAILED
+        - CANCELED
+    StreamStatusJobType:
+      type: string
+      enum:
+        - SYNC
+        - RESET
+    StreamStatusListRequestBody:
+      type: object
+      required:
+        - pagination
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusCreateRequestBody:
+      type: object
+      required:
+        - attemptNumber
+        - connectionId
+        - jobId
+        - jobType
+        - runState
+        - streamName
+        - transitionedAt
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        incompleteRunCause:
+          $ref: "#/components/schemas/StreamStatusIncompleteRunCause"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
+        runState:
+          $ref: "#/components/schemas/StreamStatusRunState"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        transitionedAt:
+          type: integer
+          format: int64
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusUpdateRequestBody:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/StreamStatusCreateRequestBody"
+      required:
+        - id
+      properties:
+        id:
+          $ref: "#/components/schemas/StreamStatusId"
+    StreamStatusRead:
+      type: object
+      required:
+        - attemptNumber
+        - connectionId
+        - id
+        - jobId
+        - jobType
+        - runState
+        - streamName
+        - streamNamespace
+        - transitionedAt
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        id:
+          $ref: "#/components/schemas/StreamStatusId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        incompleteRunCause:
+          $ref: "#/components/schemas/StreamStatusIncompleteRunCause"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
+        runState:
+          $ref: "#/components/schemas/StreamStatusRunState"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        transitionedAt:
+          type: integer
+          format: int64
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusReadList:
+      type: object
+      properties:
+        streamStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamStatusRead"
+    NotificationWebhookConfigValidationRequestBody:
+      type: object
+      required:
+        - NotificationTrigger
+        - slackConfiguration
+      properties:
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        notificationTrigger:
+          $ref: "#/components/schemas/NotificationTrigger"
+    RetryStateRead:
+      type: object
+      required:
+        - id
+        - jobId
+        - connectionId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
+    JobRetryStateRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
     InvalidInputProperty:
       type: object
       required:

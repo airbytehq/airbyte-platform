@@ -1,20 +1,25 @@
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { DestinationDefinitionService } from "core/domain/connector/DestinationDefinitionService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { isDefined } from "utils/common";
 
 import { connectorDefinitionKeys } from "./ConnectorDefinitions";
-import { useSuspenseQuery } from "./useSuspenseQuery";
-import { DestinationDefinitionCreate, DestinationDefinitionRead } from "../../core/request/AirbyteClient";
+import {
+  DestinationDefinitionCreate,
+  DestinationDefinitionRead,
+  DestinationDefinitionReadList,
+} from "../../core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../Scope";
 
 export const destinationDefinitionKeys = {
   all: [SCOPE_WORKSPACE, "destinationDefinition"] as const,
   lists: () => [...destinationDefinitionKeys.all, "list"] as const,
+  listLatest: () => [...destinationDefinitionKeys.all, "listLatest"] as const,
   detail: (id: string) => [...destinationDefinitionKeys.all, "details", id] as const,
 };
 
@@ -29,37 +34,23 @@ export function useGetDestinationDefinitionService(): DestinationDefinitionServi
   );
 }
 
-export interface DestinationDefinitionReadWithLatestTag extends DestinationDefinitionRead {
-  latestDockerImageTag?: string;
-}
+/**
+ * This hook calls the list_latest endpoint, which is not needed under most circumstances. Only use this hook if you need the latest destination definitions available, for example when prompting the user to update a connector version.
+ */
+export const useLatestDestinationDefinitionList = (): DestinationDefinitionReadList => {
+  const service = useGetDestinationDefinitionService();
 
-const useDestinationDefinitionList = (): {
-  destinationDefinitions: DestinationDefinitionReadWithLatestTag[];
-} => {
+  return useSuspenseQuery(destinationDefinitionKeys.listLatest(), () => service.listLatest(), { staleTime: 60_000 });
+};
+
+export const useDestinationDefinitionList = (): DestinationDefinitionReadList => {
   const service = useGetDestinationDefinitionService();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(destinationDefinitionKeys.lists(), async () => {
-    const [definition, latestDefinition] = await Promise.all([service.list(workspaceId), service.listLatest()]);
-
-    const destinationDefinitions: DestinationDefinitionRead[] = definition.destinationDefinitions.map(
-      (destination: DestinationDefinitionRead) => {
-        const withLatest = latestDefinition.destinationDefinitions.find(
-          (latestDestination) => latestDestination.destinationDefinitionId === destination.destinationDefinitionId
-        );
-
-        return {
-          ...destination,
-          latestDockerImageTag: withLatest?.dockerImageTag,
-        };
-      }
-    );
-
-    return { destinationDefinitions };
-  });
+  return useSuspenseQuery(destinationDefinitionKeys.lists(), () => service.list(workspaceId));
 };
 
-const useDestinationDefinition = <T extends string | undefined>(
+export const useDestinationDefinition = <T extends string | undefined>(
   destinationDefinitionId: T
 ): T extends string ? DestinationDefinitionRead : DestinationDefinitionRead | undefined => {
   const service = useGetDestinationDefinitionService();
@@ -74,7 +65,7 @@ const useDestinationDefinition = <T extends string | undefined>(
   );
 };
 
-const useCreateDestinationDefinition = () => {
+export const useCreateDestinationDefinition = () => {
   const service = useGetDestinationDefinitionService();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
@@ -94,7 +85,7 @@ const useCreateDestinationDefinition = () => {
   );
 };
 
-const useUpdateDestinationDefinition = () => {
+export const useUpdateDestinationDefinition = () => {
   const service = useGetDestinationDefinitionService();
   const queryClient = useQueryClient();
 
@@ -122,11 +113,4 @@ const useUpdateDestinationDefinition = () => {
       queryClient.invalidateQueries(connectorDefinitionKeys.count());
     },
   });
-};
-
-export {
-  useDestinationDefinition,
-  useDestinationDefinitionList,
-  useCreateDestinationDefinition,
-  useUpdateDestinationDefinition,
 };

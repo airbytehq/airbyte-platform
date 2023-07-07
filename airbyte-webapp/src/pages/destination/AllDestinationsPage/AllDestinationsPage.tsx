@@ -8,27 +8,32 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { DestinationsTable } from "components/destination/DestinationsTable";
 import { Button } from "components/ui/Button";
-import { PageHeader } from "components/ui/PageHeader";
+import { Heading } from "components/ui/Heading";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 
-import { RoutePaths } from "../../routePaths";
+import { DestinationPaths } from "../../routePaths";
 
 export const AllDestinationsPage: React.FC = () => {
   const navigate = useNavigate();
   const { destinations } = useDestinationList();
   useTrackPage(PageTrackingCodes.DESTINATION_LIST);
 
-  const onCreateDestination = () => navigate(`${RoutePaths.DestinationNew}`);
+  const onCreateDestination = () => navigate(`${DestinationPaths.SelectDestinationNew}`);
 
   return destinations.length ? (
     <MainPageWithScroll
       softScrollEdge={false}
       headTitle={<HeadTitle titles={[{ id: "admin.destinations" }]} />}
       pageTitle={
-        <PageHeader
-          title={<FormattedMessage id="admin.destinations" />}
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="sidebar.destinations" />
+            </Heading>
+          }
           endComponent={
             <Button
               icon={<FontAwesomeIcon icon={faPlus} />}
@@ -45,6 +50,6 @@ export const AllDestinationsPage: React.FC = () => {
       <DestinationsTable destinations={destinations} />
     </MainPageWithScroll>
   ) : (
-    <Navigate to={RoutePaths.DestinationNew} />
+    <Navigate to={DestinationPaths.SelectDestinationNew} />
   );
 };

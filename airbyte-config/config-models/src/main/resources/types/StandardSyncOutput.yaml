@@ -4,7 +4,7 @@
 title: StandardSyncOutput
 description: job sync config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - standardSyncSummary
   - state
@@ -24,7 +24,3 @@ properties:
     type: array
     items:
       "$ref": FailureReason.yaml
-  commitStateAsap:
-    description: whether we want to commit states during the replication activity, defaults to false
-    type: boolean
-    default: false

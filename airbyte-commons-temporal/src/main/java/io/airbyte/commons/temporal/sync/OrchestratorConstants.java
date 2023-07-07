@@ -28,6 +28,7 @@ public class OrchestratorConstants {
       .addAll(EnvConfigs.JOB_SHARED_ENVS.keySet())
       .addAll(Set.of(
           EnvConfigs.WORKER_ENVIRONMENT,
+          EnvConfigs.JOB_KUBE_ANNOTATIONS,
           EnvConfigs.JOB_KUBE_TOLERATIONS,
           EnvConfigs.JOB_KUBE_CURL_IMAGE,
           EnvConfigs.JOB_KUBE_BUSYBOX_IMAGE,
@@ -53,6 +54,7 @@ public class OrchestratorConstants {
           EnvConfigs.DD_AGENT_HOST,
           EnvConfigs.DD_DOGSTATSD_PORT,
           EnvConfigs.METRIC_CLIENT,
+          EnvConfigs.OTEL_COLLECTOR_ENDPOINT,
           LOG_LEVEL,
           LogClientSingleton.GCS_LOG_BUCKET,
           LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS,
@@ -76,8 +78,6 @@ public class OrchestratorConstants {
           EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA,
           EnvVariableFeatureFlags.APPLY_FIELD_SELECTION,
           EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES,
-          EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_WORKSPACES,
-          EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_TAG,
           FEATURE_FLAG_CLIENT,
           FEATURE_FLAG_PATH,
           EnvConfigs.LAUNCHDARKLY_KEY,

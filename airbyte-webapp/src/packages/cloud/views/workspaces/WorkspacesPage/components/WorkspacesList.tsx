@@ -1,36 +1,35 @@
 import React from "react";
-import styled from "styled-components";
+import { FormattedMessage } from "react-intl";
 
-import {
-  useCreateCloudWorkspace,
-  useListCloudWorkspaces,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { useWorkspaceService } from "services/workspaces/WorkspacesService";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
-import WorkspaceItem from "./WorkspaceItem";
-import WorkspacesControl from "./WorkspacesControl";
+import { useListCloudWorkspaces } from "core/api/cloud";
 
-const Content = styled.div`
-  width: 100%;
-  max-width: 550px;
-  margin: 0 auto;
-  padding-bottom: 26px;
-`;
+import { WorkspaceItem } from "./WorkspaceItem";
 
-const WorkspacesList: React.FC = () => {
-  const workspaces = useListCloudWorkspaces();
-  const { selectWorkspace } = useWorkspaceService();
-  const { mutateAsync: createCloudWorkspace } = useCreateCloudWorkspace();
+export const WorkspacesList: React.FC = () => {
+  const { workspaces } = useListCloudWorkspaces();
+
+  if (!workspaces.length) {
+    return (
+      <Heading as="h4">
+        <FormattedMessage id="workspaces.noWorkspaces" />
+      </Heading>
+    );
+  }
 
   return (
-    <Content>
-      {workspaces.map((workspace) => (
-        <WorkspaceItem key={workspace.workspaceId} id={workspace.workspaceId} onClick={selectWorkspace}>
-          {workspace.name}
-        </WorkspaceItem>
+    <FlexContainer direction="column">
+      {workspaces.map((workspace, index) => (
+        <WorkspaceItem
+          key={workspace.workspaceId}
+          workspaceId={workspace.workspaceId}
+          workspaceName={workspace.name ?? ""}
+          testId={`select-workspace-${index}`}
+        />
       ))}
-      <WorkspacesControl onSubmit={createCloudWorkspace} />
-    </Content>
+    </FlexContainer>
   );
 };
 

@@ -33,6 +33,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     [styles.typePrimary]: variant === "primary",
     [styles.typeSecondary]: variant === "secondary",
     [styles.typeDark]: variant === "dark",
+    [styles.link]: variant === "link",
   };
 
   const widthStyle: React.CSSProperties = width ? { width: `${width}px` } : {};
@@ -41,7 +42,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     <button
       ref={ref}
       style={widthStyle}
-      className={classNames(styles.button, className, buttonStyles)}
+      className={classNames(styles.button, buttonStyles, className)}
       disabled={disabled || isLoading}
       {...buttonProps}
     >
@@ -75,3 +76,4 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     </button>
   );
 });
+Button.displayName = "Button";

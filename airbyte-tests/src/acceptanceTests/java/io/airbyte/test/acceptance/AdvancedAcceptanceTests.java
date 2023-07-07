@@ -35,6 +35,8 @@ import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
@@ -136,13 +138,14 @@ class AdvancedAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @RetryingTest(3)
@@ -182,6 +185,7 @@ class AdvancedAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
         .cursorField(List.of(COLUMN_ID))
+        .selected(true)
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
@@ -241,6 +245,7 @@ class AdvancedAcceptanceTests {
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)

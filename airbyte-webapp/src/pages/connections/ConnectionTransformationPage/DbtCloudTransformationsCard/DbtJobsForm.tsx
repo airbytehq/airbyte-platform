@@ -7,14 +7,16 @@ import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { DropdownMenu } from "components/ui/DropdownMenu";
+import { Text } from "components/ui/Text";
 
-import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
-import { DbtCloudJob, isSameJob } from "packages/cloud/services/dbtCloud";
+import { DbtCloudJob, isSameJob } from "core/api/cloud";
+import { DbtCloudJobInfo } from "core/api/types/CloudApi";
+import { links } from "utils/links";
 
 import styles from "./DbtJobsForm.module.scss";
 import { JobsList } from "./JobsList";
 
-interface DbtJobListValues {
+export interface DbtJobListValues {
   jobs: DbtCloudJob[];
 }
 
@@ -59,23 +61,43 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                 return (
                   <Card
                     title={
-                      <span className={styles.cardTitle}>
+                      <div className={styles.cardTitle}>
                         <FormattedMessage id="connection.dbtCloudJobs.cardTitle" />
-                        <DropdownMenu
-                          options={availableDbtCloudJobs
-                            .filter((remoteJob) => !values.jobs.some((savedJob) => isSameJob(remoteJob, savedJob)))
-                            .map((job) => ({ displayName: job.jobName, value: job }))}
-                          onChange={(selection) => {
-                            push(selection.value);
-                          }}
-                        >
-                          {() => (
-                            <Button variant="secondary" icon={<FontAwesomeIcon icon={faPlus} />}>
-                              <FormattedMessage id="connection.dbtCloudJobs.addJob" />
-                            </Button>
-                          )}
-                        </DropdownMenu>
-                      </span>
+                        {availableDbtCloudJobs.length > 0 ? (
+                          <DropdownMenu
+                            options={availableDbtCloudJobs
+                              .filter((remoteJob) => !values.jobs.some((savedJob) => isSameJob(remoteJob, savedJob)))
+                              .map((job) => ({ displayName: job.jobName, value: job }))}
+                            onChange={(selection) => {
+                              push(selection.value);
+                            }}
+                          >
+                            {() => (
+                              <Button variant="secondary" icon={<FontAwesomeIcon icon={faPlus} />}>
+                                <FormattedMessage id="connection.dbtCloudJobs.addJob" />
+                              </Button>
+                            )}
+                          </DropdownMenu>
+                        ) : (
+                          <Text color="grey">
+                            <FormattedMessage
+                              id="connection.dbtCloudJobs.noJobsFoundForAccount"
+                              values={{
+                                lnk: (linkText: React.ReactNode[]) => (
+                                  <a
+                                    href={links.dbtCloud}
+                                    rel="noreferrer noopener"
+                                    target="_blank"
+                                    className={styles.linkText}
+                                  >
+                                    {linkText}
+                                  </a>
+                                ),
+                              }}
+                            />
+                          </Text>
+                        )}
+                      </div>
                     }
                   >
                     <JobsList jobs={values.jobs} remove={remove} dirty={dirty} isLoading={isSaving} />

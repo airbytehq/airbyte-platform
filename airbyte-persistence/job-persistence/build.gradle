@@ -2,6 +2,12 @@ plugins {
     id "java-library"
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.platform.testcontainers.postgresql
+    }
+}
+
 dependencies {
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
@@ -14,6 +20,7 @@ dependencies {
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-notification')
     implementation project(':airbyte-analytics')
+    implementation project(':airbyte-metrics:metrics-lib')
 
     implementation libs.sentry.java
     implementation libs.otel.semconv
@@ -29,10 +36,7 @@ dependencies {
 
     testImplementation project(':airbyte-config:config-persistence')
     testImplementation project(':airbyte-test-utils')
-    testImplementation(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    testImplementation libs.platform.testcontainers.postgresql
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

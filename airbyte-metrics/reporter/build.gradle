@@ -6,6 +6,12 @@ configurations {
     jdbc
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.jooq
+    }
+}
+
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
@@ -17,10 +23,7 @@ dependencies {
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-metrics:metrics-lib')
-
-    implementation(libs.jooq) {
-        force = true
-    }
+    implementation libs.jooq
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor

@@ -1,18 +1,9 @@
 @use "scss/variables";
 @use "scss/colors";
-@use "scss/mixins";
 
 .container {
   padding: variables.$spacing-lg;
   position: relative;
-}
-
-.connectorImg {
-  @include mixins.shadow;
-
-  width: 90px;
-  border-radius: variables.$border-radius-2xl;
-  padding: variables.$spacing-xl;
 }
 
 .connectorName {
@@ -21,24 +12,17 @@
 }
 
 .streamsHeader {
-  display: flex;
-  align-items: center;
   width: 100%;
   padding: 0 variables.$spacing-sm 0 variables.$spacing-md;
 }
 
 .streamsHeading {
   color: colors.$blue;
-  flex-grow: 1;
-  position: static;
-}
+  text-align: center;
+  text-transform: uppercase;
 
-.downloadButton {
-  width: 100%;
-}
-
-.resetButton {
-  margin-top: variables.$spacing-sm;
+  // Set line-height to 1 to make this centered with the info tooltip icon, and because this is a single line anyway
+  line-height: 1;
 }
 
 .viewButton {
@@ -69,9 +53,14 @@
   color: colors.$blue;
 }
 
-.streamList {
+.streamListContainer {
   flex-grow: 1;
   width: 100%;
+}
+
+.streamList {
+  flex-grow: 1;
+  flex-basis: 0;
   overflow-y: auto;
 }
 
@@ -94,4 +83,22 @@
 
 .emptyStreamViewText {
   color: colors.$grey-300;
+}
+
+.slackLink {
+  color: colors.$dark-blue;
+
+  &:hover {
+    color: colors.$blue;
+  }
+
+  & a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.slackIcon {
+  height: 14px;
+  width: 14px;
 }

@@ -11,7 +11,7 @@ public class LinkedinAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new LinkedinAdsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new LinkedinAdsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

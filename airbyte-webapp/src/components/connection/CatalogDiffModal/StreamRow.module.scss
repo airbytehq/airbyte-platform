@@ -11,7 +11,7 @@
   gap: variables.$spacing-md;
   border-bottom: 1px solid colors.$white;
   width: 100%;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
 
   &.add {
     background-color: colors.$green-50;

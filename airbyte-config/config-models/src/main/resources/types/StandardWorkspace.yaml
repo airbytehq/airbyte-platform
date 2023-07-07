@@ -10,7 +10,7 @@ required:
   - slug
   - initialSetupComplete
   - defaultGeography
-additionalProperties: false
+additionalProperties: true
 properties:
   workspaceId:
     type: string
@@ -44,6 +44,8 @@ properties:
     type: array
     items:
       "$ref": Notification.yaml
+  notificationSettings:
+    "$ref": NotificationSettings.yaml
   firstCompletedSync:
     type: boolean
   feedbackDone:

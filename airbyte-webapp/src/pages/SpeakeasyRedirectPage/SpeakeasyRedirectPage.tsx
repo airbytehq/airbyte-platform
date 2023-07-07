@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components/LoadingPage";
 
+import { useSpeakeasyRedirect } from "core/api/cloud";
 import { useAppMonitoringService, TrackErrorFn } from "hooks/services/AppMonitoringService";
-import { useSpeakeasyRedirect } from "packages/cloud/services/speakeasy";
 import { RoutePaths } from "pages/routePaths";
 import { ErrorOccurredView } from "views/common/ErrorOccurredView";
 
@@ -59,7 +59,7 @@ export class SpeakeasyErrorBoundary extends React.Component<React.PropsWithChild
   }
 
   componentDidCatch(error: Error): void {
-    this.props.trackError(error);
+    this.props.trackError(error, { errorBoundary: this.constructor.name });
   }
 
   render() {

@@ -14,15 +14,17 @@ import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
-import { ToastType } from "components/ui/Toast";
 
-import { Action, Namespace } from "core/analytics";
-import { ConnectorManifest } from "core/request/ConnectorManifest";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useListBuilderProjects } from "core/api";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
-import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
+import { links } from "utils/links";
 
 import styles from "./ConnectorBuilderCreatePage.module.scss";
 import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
@@ -37,7 +39,7 @@ const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
-  const existingProjects = useListProjects();
+  const existingProjects = useListBuilderProjects();
   const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const navigate = useNavigate();
 
@@ -79,7 +81,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
                     }}
                   />
                 ),
-                type: ToastType.ERROR,
+                type: "error",
               });
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.INVALID_YAML_UPLOADED, {
                 actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder create page",
@@ -176,6 +178,12 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           dataTestId="start-from-scratch"
         />
       </FlexContainer>
+      <ExternalLink href={links.connectorBuilderTutorial}>
+        <FlexContainer alignItems="center" gap="sm">
+          <Icon type="docs" size="lg" />
+          <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
+        </FlexContainer>
+      </ExternalLink>
     </FlexContainer>
   );
 };
@@ -192,13 +200,17 @@ function getConnectorName(fileName?: string | undefined, formValues?: BuilderFor
   return startCase(fileNameNoType);
 }
 
-export const ConnectorBuilderCreatePage: React.FC = () => (
-  <ConnectorBuilderLocalStorageProvider>
-    <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-    <BackButton />
-    <ConnectorBuilderCreatePageInner />
-  </ConnectorBuilderLocalStorageProvider>
-);
+export const ConnectorBuilderCreatePage: React.FC = () => {
+  const existingProjects = useListBuilderProjects();
+
+  return (
+    <ConnectorBuilderLocalStorageProvider>
+      <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+      {existingProjects.length > 0 && <BackButton />}
+      <ConnectorBuilderCreatePageInner />
+    </ConnectorBuilderLocalStorageProvider>
+  );
+};
 
 interface TileProps {
   image: React.ReactNode;
@@ -222,7 +234,7 @@ const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, butt
             <FormattedMessage id={title} />
           </Heading>
           <FlexContainer direction="column" justifyContent="center" className={styles.tileDescription}>
-            <Text centered>
+            <Text align="center">
               <FormattedMessage id={description} />
             </Text>
           </FlexContainer>

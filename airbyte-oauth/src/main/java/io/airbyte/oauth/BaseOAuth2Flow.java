@@ -9,8 +9,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,19 +77,22 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   protected final TokenRequestContentType tokenReqContentType;
   private final Supplier<String> stateSupplier;
 
-  public BaseOAuth2Flow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    this(configRepository, httpClient, BaseOAuth2Flow::generateRandomState);
+  // possible errors enumerated @
+  // https://www.oauth.com/oauth2-servers/server-side-apps/possible-errors/
+  private final List<String> ignoredOauthErrors = Arrays.asList("access_denied");
+
+  public BaseOAuth2Flow(final HttpClient httpClient) {
+    this(httpClient, BaseOAuth2Flow::generateRandomState);
   }
 
-  public BaseOAuth2Flow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    this(configRepository, httpClient, stateSupplier, TokenRequestContentType.URL_ENCODED);
+  public BaseOAuth2Flow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    this(httpClient, stateSupplier, TokenRequestContentType.URL_ENCODED);
   }
 
-  public BaseOAuth2Flow(final ConfigRepository configRepository,
-                        final HttpClient httpClient,
+  public BaseOAuth2Flow(final HttpClient httpClient,
                         final Supplier<String> stateSupplier,
                         final TokenRequestContentType tokenReqContentType) {
-    super(configRepository);
+    super();
     this.httpClient = httpClient;
     this.stateSupplier = stateSupplier;
     this.tokenReqContentType = tokenReqContentType;
@@ -99,11 +103,16 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                     final UUID sourceDefinitionId,
                                     final String redirectUrl,
                                     final JsonNode inputOAuthConfiguration,
-                                    final OAuthConfigSpecification oauthConfigSpecification)
+                                    final OAuthConfigSpecification oauthConfigSpecification,
+                                    final JsonNode sourceOAuthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
-    return formatConsentUrl(sourceDefinitionId, getClientIdUnsafe(oAuthParamConfig), redirectUrl, inputOAuthConfiguration);
+    // This should probably never happen because the caller of this function should throw this exception
+    // when fetching the param, but this was the prior behavior so adding it here.
+    if (sourceOAuthParamConfig == null) {
+      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "Undefined OAuth Parameter.");
+    }
+    return formatConsentUrl(sourceDefinitionId, getClientIdUnsafe(sourceOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
 
   @Override
@@ -111,11 +120,16 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                          final UUID destinationDefinitionId,
                                          final String redirectUrl,
                                          final JsonNode inputOAuthConfiguration,
-                                         final OAuthConfigSpecification oauthConfigSpecification)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+                                         final OAuthConfigSpecification oauthConfigSpecification,
+                                         JsonNode destinationOAuthParamConfig)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
-    return formatConsentUrl(destinationDefinitionId, getClientIdUnsafe(oAuthParamConfig), redirectUrl, inputOAuthConfiguration);
+    // This should probably never happen because the caller of this function should throw this exception
+    // when fetching the param, but this was the prior behavior so adding it here.
+    if (destinationOAuthParamConfig == null) {
+      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, "Undefined OAuth Parameter.");
+    }
+    return formatConsentUrl(destinationDefinitionId, getClientIdUnsafe(destinationOAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
 
   /**
@@ -151,19 +165,23 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
             Jsons.emptyObject(),
-            oAuthParamConfig),
+            oauthParamConfig),
         getDefaultOAuthOutputPath());
+
   }
 
   @Override
@@ -172,20 +190,24 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  final JsonNode inputOAuthConfiguration,
-                                                 final OAuthConfigSpecification oauthConfigSpecification)
+                                                 final OAuthConfigSpecification oauthConfigSpecification,
+                                                 final JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
             inputOAuthConfiguration,
-            oAuthParamConfig),
+            oauthParamConfig),
         oauthConfigSpecification);
+
   }
 
   @Override
@@ -193,19 +215,23 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
                                                       final Map<String, Object> queryParams,
-                                                      final String redirectUrl)
-      throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
+                                                      final String redirectUrl,
+                                                      JsonNode oauthParamConfig)
+      throws IOException {
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
             Jsons.emptyObject(),
-            oAuthParamConfig),
+            oauthParamConfig),
         getDefaultOAuthOutputPath());
+
   }
 
   @Override
@@ -214,20 +240,24 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                       final Map<String, Object> queryParams,
                                                       final String redirectUrl,
                                                       final JsonNode inputOAuthConfiguration,
-                                                      final OAuthConfigSpecification oauthConfigSpecification)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
+                                                      final OAuthConfigSpecification oauthConfigSpecification,
+                                                      JsonNode oauthParamConfig)
+      throws IOException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             redirectUrl,
             inputOAuthConfiguration,
-            oAuthParamConfig),
+            oauthParamConfig),
         oauthConfigSpecification);
+
   }
 
   /**
@@ -293,6 +323,32 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     } else {
       throw new IOException("Undefined 'code' from consent redirected url.");
     }
+  }
+
+  /**
+   * If there is an error param, return it.
+   */
+  protected String extractErrorParameter(final Map<String, Object> queryParams) {
+    if (queryParams.containsKey("error")) {
+      return (String) queryParams.get("error");
+    } else {
+      return null;
+    }
+  }
+
+  protected boolean containsIgnoredOAuthError(final Map<String, Object> queryParams) {
+    final String oauthError = extractErrorParameter(queryParams);
+    return oauthError != null && ignoredOauthErrors.contains(oauthError);
+  }
+
+  /**
+   * Return an error payload if the previous oAuth request was stopped.
+   */
+  protected Map<String, Object> buildRequestError(final Map<String, Object> queryParams) {
+    final Map<String, Object> results = new HashMap<>();
+    results.put("request_succeeded", false);
+    results.put("request_error", extractErrorParameter(queryParams));
+    return results;
   }
 
   /**

@@ -1,0 +1,46 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte-platform/blob/main/airbyte-config/models/src/main/resources/types/ActorDefinitionVersion.yaml
+title: ActorDefinitionVersion
+description: describes an actor definition version
+type: object
+required:
+  - dockerRepository
+  - dockerImageTag
+  - spec
+additionalProperties: true
+properties:
+  versionId:
+    type: string
+    format: uuid
+  actorDefinitionId:
+    type: string
+    format: uuid
+  dockerRepository:
+    type: string
+  dockerImageTag:
+    type: string
+  documentationUrl:
+    type: string
+  releaseStage:
+    type: string
+    existingJavaType: io.airbyte.config.ReleaseStage
+  releaseDate:
+    description: The date when this connector was first released, in yyyy-mm-dd format.
+    type: string
+    format: date
+  spec:
+    type: object
+    existingJavaType: io.airbyte.protocol.models.ConnectorSpecification
+  protocolVersion:
+    type: string
+    description: the Airbyte Protocol version supported by the connector
+  allowedHosts:
+    "$ref": AllowedHosts.yaml
+  suggestedStreams:
+    "$ref": SuggestedStreams.yaml
+  normalizationConfig:
+    "$ref": NormalizationDestinationDefinitionConfig.yaml
+  supportsDbt:
+    type: boolean
+    description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.

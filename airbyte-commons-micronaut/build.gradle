@@ -1,0 +1,26 @@
+plugins {
+    id "java-library"
+}
+
+dependencies {
+    annotationProcessor platform(libs.micronaut.bom)
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+
+    implementation platform(libs.micronaut.bom)
+    implementation libs.bundles.micronaut
+
+    implementation project(':airbyte-commons')
+    implementation project(':airbyte-config:config-models')
+
+    testAnnotationProcessor platform(libs.micronaut.bom)
+    testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
+
+    testImplementation libs.bundles.micronaut.test
+    testImplementation libs.mockito.inline
+}
+
+test {
+    maxHeapSize = '2g'
+}
+
+Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

@@ -25,19 +25,14 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
 
   public static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
 
-  public static final String STRICT_COMPARISON_NORMALIZATION_WORKSPACES = "STRICT_COMPARISON_NORMALIZATION_WORKSPACES";
-  public static final String STRICT_COMPARISON_NORMALIZATION_TAG = "STRICT_COMPARISON_NORMALIZATION_TAG";
+  public static final String PROCESS_IN_GCP_DATA_PLANE = "PROCESS_IN_GCP_DATA_PLANE";
+  public static final String PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS = "PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS";
 
   @Override
   public boolean autoDisablesFailingConnections() {
     log.info("Auto Disable Failing Connections: " + Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS")));
 
     return Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS"));
-  }
-
-  @Override
-  public boolean forceSecretMigration() {
-    return Boolean.parseBoolean(System.getenv("FORCE_MIGRATE_SECRET_STORE"));
   }
 
   @Override
@@ -68,16 +63,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   @Override
   public String fieldSelectionWorkspaces() {
     return getEnvOrDefault(FIELD_SELECTION_WORKSPACES, "", (arg) -> arg);
-  }
-
-  @Override
-  public String strictComparisonNormalizationWorkspaces() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_WORKSPACES, "", (arg) -> arg);
-  }
-
-  @Override
-  public String strictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2", (arg) -> arg);
   }
 
   /**

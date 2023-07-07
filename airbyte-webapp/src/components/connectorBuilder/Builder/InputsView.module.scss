@@ -1,21 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: variables.$spacing-md;
-  list-style-type: none;
-  padding: 0;
-  align-items: stretch;
-  margin: 0;
-}
-
-.listItem {
-  display: flex;
-  align-items: center;
-}
-
 .itemLabel {
   flex-grow: 1;
 }
@@ -27,14 +12,36 @@
 }
 
 .inputsDescription {
-  margin-top: variables.$spacing-xl;
+  margin-top: variables.$spacing-lg;
   margin-bottom: variables.$spacing-lg;
+  white-space: pre-line;
 }
 
 .addInputButton {
+  margin-top: variables.$spacing-lg;
   align-self: center;
 }
 
-.inputsCard {
-  align-self: stretch;
+.inputCard {
+  display: flex;
+  align-items: center;
+  padding: variables.$spacing-sm variables.$spacing-md;
+  gap: variables.$spacing-md;
+  cursor: grab;
+
+  &:hover {
+    background-color: colors.$grey-40;
+  }
+
+  &[aria-pressed="true"] {
+    background-color: colors.$blue-40;
+    cursor: grabbing;
+    box-shadow: variables.$box-shadow-raised;
+  }
+}
+
+.dragHandle {
+  color: colors.$grey-500;
+  width: 13px;
+  height: 13px;
 }

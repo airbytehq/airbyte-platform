@@ -2,6 +2,15 @@ plugins {
     id 'application'
 }
 
+configurations.all {
+    resolutionStrategy {
+        // Ensure that the versions defined in deps.toml are used
+        // instead of versions from transitive dependencies
+        // Force to avoid updated version brought in transitively from Micronaut 3.8+
+        // that is incompatible with our current Helm setup
+        force libs.flyway.core, libs.s3, libs.aws.java.sdk.s3
+    }
+}
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
@@ -9,36 +18,28 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.bundles.micronaut.data.jdbc
     implementation libs.micronaut.jaxrs.server
-
-    // Ensure that the versions defined in deps.toml are used
-    // instead of versions from transitive dependencies
-    implementation(libs.flyway.core) {
-        force = true
-    }
-    implementation(libs.s3) {
-        // Force to avoid updated version brought in transitively from Micronaut 3.8+
-        // that is incompatible with our current Helm setup
-        force = true
-    }
-    implementation(libs.aws.java.sdk.s3) {
-        // Force to avoid updated version brought in transitively from Micronaut 3.8+
-        // that is incompatible with our current Helm setup
-        force = true
-    }
+    implementation libs.micronaut.security
+    implementation libs.flyway.core
+    implementation libs.s3
+    implementation libs.aws.java.sdk.s3
 
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-config:specs')
+    implementation project(":airbyte-featureflag")
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-db:db-lib')
+    implementation project(':airbyte-db:jooq')
     implementation project(":airbyte-json-validation")
     implementation project(':airbyte-notification')
     implementation project(':airbyte-oauth')
@@ -77,11 +78,9 @@ task copySeed(type: Copy, dependsOn: [project(':airbyte-config:init').processRes
 test.dependsOn(project.tasks.copySeed)
 assemble.dependsOn(project.tasks.copySeed)
 
-mainClassName = 'io.airbyte.server.Application'
-
 application {
     applicationName = project.name
-    mainClass = mainClassName
+    mainClass = 'io.airbyte.server.Application'
     applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
 }
 
@@ -116,8 +115,6 @@ test {
     environment 'AIRBYTE_VERSION', env.VERSION
     environment 'MICRONAUT_ENVIRONMENTS', 'test'
     environment 'SERVICE_NAME', project.name
-
-    systemProperty 'mockito.test.enabled', true
 }
 
 // produce reproducible archives

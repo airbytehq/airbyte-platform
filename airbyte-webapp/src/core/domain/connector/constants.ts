@@ -30,11 +30,13 @@ export const getExcludedConnectorIds = (workspaceId?: string): string[] =>
         ConnectorIds.Destinations.MeiliSearch, // hide MeiliSearch Destination https://github.com/airbytehq/airbyte/issues/16313
         ConnectorIds.Destinations.RabbitMq, // hide RabbitMQ Destination https://github.com/airbytehq/airbyte/issues/16315
         ConnectorIds.Destinations.AmazonSqs, // hide Amazon SQS Destination https://github.com/airbytehq/airbyte/issues/16316
-        ConnectorIds.Sources.AmazonSellerPartner, // hide Amazon Seller Partner Source https://github.com/airbytehq/airbyte/issues/14734
+        ConnectorIds.Sources.Drift, // hide Source Drift https://github.com/airbytehq/airbyte/issues/24270
         // revert me
         ...(workspaceId !== "d705a766-e9e3-4689-85cb-52143422317d" // `oauth-testing` workspace for review
-          ? [ConnectorIds.Sources.YouTubeAnalyticsBusiness] // Youtube Analytics Business
+          ? [] // add actor_difinition_id here, once needed
           : []),
         //
       ]
     : [];
+
+export const getSupportRevokingTokensConnectorIds = (): string[] => [ConnectorIds.Sources.QuickBooks];

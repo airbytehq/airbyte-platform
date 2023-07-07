@@ -4,19 +4,23 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { useExperimentContext } from "hooks/services/Experiment";
+import { ConnectionRoutePaths } from "pages/routePaths";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
-import { ConnectionPageTitle } from "./ConnectionPageTitle";
-import { ConnectionRoutePaths } from "../types";
+import { ConnectionPageHeader } from "./ConnectionPageHeader";
 
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();
+  useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  useExperimentContext("connection", connection.connectionId);
 
   return (
     <HeadTitle
@@ -43,15 +47,16 @@ export const ConnectionPage: React.FC = () => {
     () => location.pathname.includes(`/${ConnectionRoutePaths.Replication}`),
     [location.pathname]
   );
+  const { trackError } = useAppMonitoringService();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
   return (
     <ConnectionEditServiceProvider connectionId={connectionId}>
-      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
-          pageTitle={<ConnectionPageTitle />}
+          pageTitle={<ConnectionPageHeader />}
           noBottomPadding={isReplicationPage}
         >
           <Suspense fallback={<LoadingPage />}>

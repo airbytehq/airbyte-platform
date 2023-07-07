@@ -24,10 +24,14 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DefaultDiscoverCatalogWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -41,6 +45,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +57,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
@@ -64,8 +69,10 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public DiscoverCatalogActivityImpl(@Named("discoverWorkerConfigs") final WorkerConfigs workerConfigs,
-                                     @Named("discoverProcessFactory") final ProcessFactory processFactory,
+  private final MetricClient metricClient;
+
+  public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
+                                     final ProcessFactory processFactory,
                                      final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
@@ -74,8 +81,9 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      @Value("${airbyte.version}") final String airbyteVersion,
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                     final FeatureFlags featureFlags) {
-    this.workerConfigs = workerConfigs;
+                                     final FeatureFlags featureFlags,
+                                     final MetricClient metricClient) {
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
@@ -86,6 +94,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -93,6 +102,8 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   public ConnectorJobOutput run(final JobRunConfig jobRunConfig,
                                 final IntegrationLauncherConfig launcherConfig,
                                 final StandardDiscoverCatalogInput config) {
+    metricClient.count(OssMetricsRegistry.ACTIVITY_DISCOVER_CATALOG, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DOCKER_IMAGE_KEY,
         launcherConfig.getDockerImage()));
     final JsonNode fullConfig = secretsHydrator.hydrate(config.getConnectionConfiguration());
@@ -125,10 +136,11 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private CheckedSupplier<Worker<StandardDiscoverCatalogInput, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                                 final IntegrationLauncherConfig launcherConfig) {
     return () -> {
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DISCOVER);
       final IntegrationLauncher integrationLauncher =
           new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getDockerImage(),
               processFactory, workerConfigs.getResourceRequirements(), launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
-              featureFlags);
+              featureFlags, Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
               Optional.empty());

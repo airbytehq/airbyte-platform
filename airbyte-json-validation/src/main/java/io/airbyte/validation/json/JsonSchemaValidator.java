@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -72,7 +71,7 @@ public class JsonSchemaValidator {
   /**
    * Create and cache a schema validator for a particular schema. This validator is used when
    * {@link #testInitializedSchema(String, JsonNode)} and
-   * {@link #ensureInitializedSchema(String, JsonNode)} is called.
+   * {@link #validateInitializedSchema(String, JsonNode)} is called.
    */
   public void initializeSchemaValidator(final String schemaName, final JsonNode schemaJson) {
     schemaToValidators.put(schemaName, getSchemaValidator(schemaJson));
@@ -90,22 +89,15 @@ public class JsonSchemaValidator {
   }
 
   /**
-   * Throws an exception if the object does not adhere to the given schema.
+   * Returns a set of schema validation errors, which is empty if the object adheres to the given
+   * schema.
    */
-  public void ensureInitializedSchema(final String schemaName, final JsonNode objectNode) throws JsonValidationException {
+  public Set<String> validateInitializedSchema(final String schemaName, final JsonNode objectNode) {
     final var schema = schemaToValidators.get(schemaName);
     Preconditions.checkNotNull(schema, schemaName + " needs to be initialised before calling this method");
 
     final Set<ValidationMessage> validationMessages = schema.validate(objectNode);
-    if (validationMessages.isEmpty()) {
-      return;
-    }
-
-    throw new JsonValidationException(
-        String.format(
-            "json schema validation failed when comparing the data to the json schema. \nErrors: %s \nSchema: \n%s", Strings.join(validationMessages,
-                ", "),
-            schemaName));
+    return validationMessages.stream().map(ValidationMessage::getMessage).collect(Collectors.toSet());
   }
 
   /**
@@ -145,36 +137,6 @@ public class JsonSchemaValidator {
         .stream()
         .map(ValidationMessage::getMessage)
         .collect(Collectors.toSet());
-  }
-
-  /**
-   * Test if a JSON object conforms to a given JSONSchema. Returns the reason for failure if there are
-   * any.
-   *
-   * @param schemaJson JSONSchema to test against
-   * @param objectJson object to test
-   * @return List of failure reasons. If empty, then objectJson is valid.
-   */
-  public List<String[]> getValidationMessageArgs(final JsonNode schemaJson, final JsonNode objectJson) {
-    return validateInternal(schemaJson, objectJson)
-        .stream()
-        .map(ValidationMessage::getArguments)
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Test if a JSON object conforms to a given JSONSchema. Returns the JSONPaths to the fields that
-   * failed validation if there are any.
-   *
-   * @param schemaJson JSONSchema to test against
-   * @param objectJson object to test
-   * @return List of paths to fields that failed validation. If empty, then objectJson is valid.
-   */
-  public List<String> getValidationMessagePaths(final JsonNode schemaJson, final JsonNode objectJson) {
-    return validateInternal(schemaJson, objectJson)
-        .stream()
-        .map(ValidationMessage::getPath)
-        .collect(Collectors.toList());
   }
 
   /**

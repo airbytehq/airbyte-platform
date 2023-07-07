@@ -14,11 +14,11 @@ interface LabeledSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   id?: string;
 }
 
-export const LabeledSwitch: React.FC<LabeledSwitchProps> = (props) => {
+export const LabeledSwitch = React.forwardRef<HTMLDivElement, LabeledSwitchProps>((props, ref) => {
   const switchId = props.id ?? `toggle-${props.name}`;
 
   return (
-    <div className={classNames(styles.labeledSwitch, props.className)}>
+    <div ref={ref} className={classNames(styles.labeledSwitch, props.className)}>
       <span>{props.checkbox ? <CheckBox {...props} id={switchId} /> : <Switch {...props} id={switchId} />}</span>
 
       <label
@@ -32,4 +32,5 @@ export const LabeledSwitch: React.FC<LabeledSwitchProps> = (props) => {
       </label>
     </div>
   );
-};
+});
+LabeledSwitch.displayName = "LabeledSwitch";

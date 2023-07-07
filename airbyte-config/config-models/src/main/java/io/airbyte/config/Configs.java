@@ -293,6 +293,11 @@ public interface Configs {
   int getSyncJobMaxTimeoutDays();
 
   /**
+   * Define the number of minutes a retry job will attempt to run before timing out.
+   */
+  int getJobInitRetryTimeoutMinutes();
+
+  /**
    * Defines whether job creation uses connector-specific resource requirements when spawning jobs.
    * Works on both Docker and Kubernetes. Defaults to false for ease of use in OSS trials of Airbyte
    * but recommended for production deployments.
@@ -758,9 +763,12 @@ public interface Configs {
 
   String getFieldSelectionWorkspaces();
 
-  String getStrictComparisonNormalizationWorkspaces();
+  /**
+   * Connector Builder configs.
+   */
+  String getCdkPython();
 
-  String getStrictComparisonNormalizationTag();
+  String getCdkEntrypoint();
 
   /**
    * Tracking strategy.

@@ -7,8 +7,8 @@ package io.airbyte.commons.server.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.io.Resources;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -52,7 +52,7 @@ class AirbyteRemoteOssCatalogTest {
 
     final AirbyteRemoteOssCatalog remoteDefinitionsProvider = new AirbyteRemoteOssCatalog(catalogUrl);
     final UUID stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de");
-    final StandardSourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
+    final ConnectorRegistrySourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
     assertEquals(stripeSourceId, stripeSource.getSourceDefinitionId());
     assertEquals("Stripe", stripeSource.getName());
     assertEquals("airbyte/source-stripe", stripeSource.getDockerRepository());
@@ -73,10 +73,10 @@ class AirbyteRemoteOssCatalogTest {
 
     assertEquals(0, webServer.getRequestCount());
 
-    remoteDefinitionsProvider.getRemoteDefinitionCatalog();
+    remoteDefinitionsProvider.getRemoteConnectorRegistry();
     assertEquals(1, webServer.getRequestCount());
 
-    remoteDefinitionsProvider.getRemoteDefinitionCatalog();
+    remoteDefinitionsProvider.getRemoteConnectorRegistry();
     assertEquals(2, webServer.getRequestCount());
   }
 
@@ -87,10 +87,10 @@ class AirbyteRemoteOssCatalogTest {
     webServer.enqueue(invalidCatalogResponse);
 
     final AirbyteRemoteOssCatalog remoteDefinitionsProvider = new AirbyteRemoteOssCatalog(catalogUrl);
-    final List<StandardDestinationDefinition> definitions = remoteDefinitionsProvider.getDestinationDefinitions();
+    final List<ConnectorRegistryDestinationDefinition> definitions = remoteDefinitionsProvider.getDestinationDefinitions();
     assertEquals(0, definitions.size());
 
-    final List<StandardSourceDefinition> sources = remoteDefinitionsProvider.getSourceDefinitions();
+    final List<ConnectorRegistrySourceDefinition> sources = remoteDefinitionsProvider.getSourceDefinitions();
     assertEquals(0, sources.size());
 
   }

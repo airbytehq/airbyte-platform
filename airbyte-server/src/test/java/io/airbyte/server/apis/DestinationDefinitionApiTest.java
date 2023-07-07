@@ -18,7 +18,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -27,9 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 @MicronautTest
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.TRUE,
-          value = StringUtils.TRUE)
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class DestinationDefinitionApiTest extends BaseControllerTest {
@@ -88,7 +84,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
 
   @Test
   void testGrantDestinationDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(destinationDefinitionsHandler.grantDestinationDefinitionToWorkspace(Mockito.any()))
+    Mockito.when(destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateDestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/grant_definition";
@@ -143,7 +139,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   @Test
   void testRevokeDestinationDefinitionFromWorkspace() throws IOException {
     Mockito.doNothing()
-        .when(destinationDefinitionsHandler).revokeDestinationDefinitionFromWorkspace(Mockito.any());
+        .when(destinationDefinitionsHandler).revokeDestinationDefinition(Mockito.any());
     final String path = "/api/v1/destination_definitions/revoke_definition";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),

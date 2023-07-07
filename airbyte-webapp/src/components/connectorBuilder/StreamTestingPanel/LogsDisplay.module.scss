@@ -28,4 +28,21 @@
 
 .error {
   color: colors.$red;
+  font-size: variables.$font-size-lg;
+}
+
+.warning {
+  color: colors.$yellow;
+}
+
+.level {
+  flex-basis: 50px;
+  flex-shrink: 0;
+}
+
+.message {
+  & > pre {
+    white-space: break-spaces;
+    margin: 0;
+  }
 }

@@ -1,8 +1,8 @@
-import { useField } from "formik";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { injectIntoValues, RequestOptionOrPathInject } from "../types";
+import { injectIntoOptions } from "../types";
 
 interface RequestOptionFieldsProps {
   path: string;
@@ -11,27 +11,30 @@ interface RequestOptionFieldsProps {
 }
 
 export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, descriptor, excludePathInjection }) => {
-  const [field, , helpers] = useField<RequestOptionOrPathInject>(path);
+  const value = useWatch({ name: `${path}.inject_into` });
+  const { setValue } = useFormContext();
 
   return (
     <>
       <BuilderField
         type="enum"
         path={`${path}.inject_into`}
-        options={excludePathInjection ? injectIntoValues.filter((target) => target !== "path") : injectIntoValues}
+        options={
+          excludePathInjection ? injectIntoOptions.filter((target) => target.value !== "path") : injectIntoOptions
+        }
         onChange={(newValue) => {
           if (newValue === "path") {
-            helpers.setValue({ inject_into: newValue });
+            setValue(path, { inject_into: newValue });
           }
         }}
-        label="Inject into"
+        label="Inject Into"
         tooltip={`Configures where the ${descriptor} should be set on the HTTP requests`}
       />
-      {field.value.inject_into !== "path" && (
+      {value !== "path" && (
         <BuilderFieldWithInputs
           type="string"
           path={`${path}.field_name`}
-          label="Field name"
+          label={injectIntoOptions.find((option) => option.value === value)?.fieldLabel ?? "Field Name"}
           tooltip={`Configures which key should be used in the location that the ${descriptor} is being injected into`}
         />
       )}

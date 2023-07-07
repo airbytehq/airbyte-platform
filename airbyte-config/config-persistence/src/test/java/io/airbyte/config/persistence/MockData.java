@@ -12,7 +12,9 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -63,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Data;
 
@@ -77,10 +80,18 @@ public class MockData {
   private static final UUID SOURCE_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_1 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   public static final UUID SOURCE_ID_1 = UUID.randomUUID();
   public static final UUID SOURCE_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_ID_3 = UUID.randomUUID();
@@ -107,6 +118,7 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 10800;
+  public static final Supplier<Long> MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER = () -> DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES;
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -197,14 +209,10 @@ public class MockData {
   public static StandardSourceDefinition publicSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withSourceType(SourceType.API)
         .withName("random-source-1")
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
         .withIcon("icon-1")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.2.1")
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
@@ -215,11 +223,9 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition1() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-2")
-        .withDockerImageTag("tag-2")
-        .withDockerRepository("repository-2")
-        .withDocumentationUrl("documentation-url-2")
         .withIcon("icon-2")
         .withTombstone(false)
         .withPublic(false)
@@ -230,12 +236,9 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition2() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_3)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_3)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-3")
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
-        .withProtocolVersion("0.2.2")
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
@@ -246,17 +249,22 @@ public class MockData {
   public static StandardSourceDefinition customSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_4)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_4)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-4")
-        .withDockerImageTag("tag-4")
-        .withDockerRepository("repository-4")
-        .withDocumentationUrl("documentation-url-4")
-        .withProtocolVersion("0.2.4")
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+  }
+
+  public static ActorDefinitionVersion actorDefinitionVersion() {
+    return new ActorDefinitionVersion()
+        .withDockerImageTag("tag-4")
+        .withDockerRepository("repository-4")
+        .withSpec(connectorSpecification())
+        .withProtocolVersion("0.2.0");
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
@@ -267,7 +275,7 @@ public class MockData {
         customSourceDefinition());
   }
 
-  private static ConnectorSpecification connectorSpecification() {
+  public static ConnectorSpecification connectorSpecification() {
     return new ConnectorSpecification()
         .withAuthSpecification(new AuthSpecification().withAuthType(AuthType.OAUTH_2_0))
         .withConnectionSpecification(Jsons.jsonNode(CONNECTION_SPECIFICATION))
@@ -283,13 +291,9 @@ public class MockData {
   public static StandardDestinationDefinition publicDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withName("random-destination-1")
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
         .withIcon("icon-3")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.3.1")
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
@@ -299,12 +303,9 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withName("random-destination-2")
-        .withDockerImageTag("tag-4")
-        .withDockerRepository("repository-4")
-        .withDocumentationUrl("documentation-url-4")
         .withIcon("icon-4")
-        .withSpec(connectorSpecification())
         .withTombstone(false)
         .withPublic(false)
         .withCustom(false);
@@ -313,27 +314,20 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_3)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_3)
         .withName("random-destination-3")
-        .withDockerImageTag("tag-33")
-        .withDockerRepository("repository-33")
-        .withDocumentationUrl("documentation-url-33")
         .withIcon("icon-3")
-        .withSpec(connectorSpecification())
         .withTombstone(false)
         .withPublic(false)
         .withCustom(false);
   }
 
-  public static StandardDestinationDefinition cusstomDestinationDefinition() {
+  public static StandardDestinationDefinition customDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_4)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_4)
         .withName("random-destination-4")
-        .withDockerImageTag("tag-44")
-        .withDockerRepository("repository-44")
-        .withDocumentationUrl("documentation-url-44")
         .withIcon("icon-4")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.3.2")
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true);
@@ -344,7 +338,7 @@ public class MockData {
         publicDestinationDefinition(),
         grantableDestinationDefinition1(),
         grantableDestinationDefinition2(),
-        cusstomDestinationDefinition());
+        customDestinationDefinition());
   }
 
   public static List<SourceConnection> sourceConnections() {
@@ -496,7 +490,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync2 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -515,7 +510,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync3 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -534,7 +530,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync4 = new StandardSync()
         .withOperationIds(Collections.emptyList())
@@ -553,7 +550,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync5 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_3))
@@ -572,7 +570,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync6 = new StandardSync()
         .withOperationIds(Arrays.asList())
@@ -591,7 +590,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(false);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     return Arrays.asList(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6);
   }
@@ -748,7 +748,18 @@ public class MockData {
           .withDescription("a description")
           .withManifest(new ObjectMapper().readTree("{\"manifest\": \"manifest\"}"))
           .withSpec(new ObjectMapper().readTree("{\"spec\": \"spec\"}"));
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ActorDefinitionConfigInjection actorDefinitionConfigInjection() {
+    try {
+      return new ActorDefinitionConfigInjection()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withJsonToInject(new ObjectMapper().readTree("{\"json_to_inject\": \"a json value\"}"))
+          .withInjectionPath("an_injection_path");
+    } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }

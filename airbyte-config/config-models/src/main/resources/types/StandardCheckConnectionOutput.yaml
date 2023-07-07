@@ -6,7 +6,7 @@ description: describes the result of a 'check connection' action.
 type: object
 required:
   - status
-additionalProperties: false
+additionalProperties: true
 properties:
   status:
     type: string

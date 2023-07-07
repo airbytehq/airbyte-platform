@@ -1,18 +1,21 @@
 import { faCircleQuestion } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
-import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
+import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useExperiment } from "hooks/services/Experiment";
-import { useConnectorSpecifications } from "services/connector/ConnectorDefinitions";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorIds } from "utils/connectors";
 import { getIcon } from "utils/imageUtils";
 import { links } from "utils/links";
@@ -20,6 +23,8 @@ import { links } from "utils/links";
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
 import { ReactComponent as PlusIcon } from "./plusIcon.svg";
+import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
+import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
 
 interface ConnectionOnboardingProps {
   onCreate: (sourceConnectorTypeId?: string) => void;
@@ -52,35 +57,33 @@ const roundConnectorCount = (connectors: Record<string, SourceDefinitionRead | D
  * them to a map by id, to access them faster.
  */
 export const useConnectorSpecificationMap = (): ConnectorSpecificationMap => {
-  const workspace = useCurrentWorkspace();
-  const { sourceDefinitions: sources, destinationDefinitions: destinations } = useConnectorSpecifications();
-
-  const filteredSources = useAvailableConnectorDefinitions(sources, workspace);
-  const filteredDestinations = useAvailableConnectorDefinitions(destinations, workspace);
+  const sourceDefinitionsList = useAvailableSourceDefinitions();
+  const destinationDefinitionsList = useAvailableDestinationDefinitions();
 
   const sourceDefinitions = useMemo(
     () =>
-      filteredSources.reduce<Record<string, SourceDefinitionRead>>((map, def) => {
+      sourceDefinitionsList.reduce<Record<string, SourceDefinitionRead>>((map, def) => {
         map[def.sourceDefinitionId] = def;
         return map;
       }, {}),
-    [filteredSources]
+    [sourceDefinitionsList]
   );
 
   const destinationDefinitions = useMemo(
     () =>
-      filteredDestinations.reduce<Record<string, DestinationDefinitionRead>>((map, def) => {
+      destinationDefinitionsList.reduce<Record<string, DestinationDefinitionRead>>((map, def) => {
         map[def.destinationDefinitionId] = def;
         return map;
       }, {}),
-    [filteredDestinations]
+    [destinationDefinitionsList]
   );
 
   return { sourceDefinitions, destinationDefinitions };
 };
 
-export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = ({ onCreate }) => {
+export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
   const { formatMessage } = useIntl();
+  const { workspaceId } = useCurrentWorkspace();
   const { sourceDefinitions, destinationDefinitions } = useConnectorSpecificationMap();
 
   const [highlightedSource, setHighlightedSource] = useState<HighlightIndex>(1);
@@ -88,6 +91,14 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = ({ onCr
 
   const sourceIds = useExperiment("connection.onboarding.sources", "").split(",");
   const destinationIds = useExperiment("connection.onboarding.destinations", "").split(",");
+
+  const createConnectionPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+
+  const createSourcePath = (sourceDefinitionId?: string) => {
+    const sourceDefinitionPath = sourceDefinitionId ? `&${SOURCE_DEFINITION_PARAM}=${sourceDefinitionId}` : "";
+
+    return `${createConnectionPath}?${SOURCE_TYPE_PARAM}=${NEW_SOURCE_TYPE}${sourceDefinitionPath}`;
+  };
 
   const sources = useMemo(
     () =>
@@ -141,16 +152,21 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = ({ onCr
                 key={source?.sourceDefinitionId}
                 placement="right"
                 control={
-                  <button
+                  <Link
                     data-testid={`onboardingSource-${index}`}
                     data-source-definition-id={source?.sourceDefinitionId}
                     aria-label={tooltipText}
-                    className={styles.connectorButton}
-                    onClick={() => onCreate(source?.sourceDefinitionId)}
-                    onMouseEnter={() => setHighlightedSource(index as HighlightIndex)}
+                    to={createSourcePath(source?.sourceDefinitionId)}
                   >
-                    <div className={styles.connectorIcon}>{getIcon(source?.icon)}</div>
-                  </button>
+                    <FlexContainer
+                      className={styles.connectorButton}
+                      onMouseEnter={() => setHighlightedSource(index as HighlightIndex)}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <div className={styles.connectorIcon}>{getIcon(source?.icon)}</div>
+                    </FlexContainer>
+                  </Link>
                 }
               >
                 {tooltipText}
@@ -161,15 +177,16 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = ({ onCr
           <Tooltip
             placement="right"
             control={
-              <button
-                data-testid="onboardingSource-more"
-                className={styles.connectorButton}
-                onClick={() => onCreate()}
-                onMouseEnter={() => setHighlightedSource(3)}
-                aria-label={moreSourcesTooltip}
-              >
-                <PlusIcon className={styles.moreIcon} />
-              </button>
+              <Link data-testid="onboardingSource-more" to={createSourcePath()} aria-label={moreSourcesTooltip}>
+                <FlexContainer
+                  onMouseEnter={() => setHighlightedSource(3)}
+                  className={styles.connectorButton}
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <PlusIcon className={styles.moreIcon} />
+                </FlexContainer>
+              </Link>
             }
           >
             {moreSourcesTooltip}
@@ -241,9 +258,13 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = ({ onCr
         </div>
       </div>
       <div className={styles.footer}>
-        <Button onClick={() => onCreate()} size="lg" data-testid="new-connection-button">
+        <Link
+          to={createConnectionPath}
+          data-testid="new-connection-button"
+          className={classNames(styles.button, styles.typePrimary, styles.sizeL, styles.linkText)}
+        >
           <FormattedMessage id="connection.onboarding.createFirst" />
-        </Button>
+        </Link>
         <FormattedMessage
           tagName="span"
           id="connection.onboarding.demoInstance"

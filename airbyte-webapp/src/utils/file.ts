@@ -8,3 +8,5 @@ export const downloadFile = (blob: Blob, name: string) => {
 };
 
 export const fileizeString = (name: string) => name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+
+export const FILE_TYPE_DOWNLOAD = "text/plain;charset=utf-8";

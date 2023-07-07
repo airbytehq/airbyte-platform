@@ -7,6 +7,8 @@ package io.airbyte.workers.process;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +20,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -75,7 +79,7 @@ class DockerProcessFactoryTest {
   void testImageExists() throws IOException, WorkerException {
     final Path workspaceRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), PROCESS_FACTORY);
 
-    final DockerProcessFactory processFactory = new DockerProcessFactory(new WorkerConfigs(new EnvConfigs()), workspaceRoot, null, null, null);
+    final DockerProcessFactory processFactory = new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
     assertTrue(processFactory.checkImageExists(BUSYBOX));
   }
 
@@ -83,7 +87,7 @@ class DockerProcessFactoryTest {
   void testImageDoesNotExist() throws IOException, WorkerException {
     final Path workspaceRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), PROCESS_FACTORY);
 
-    final DockerProcessFactory processFactory = new DockerProcessFactory(new WorkerConfigs(new EnvConfigs()), workspaceRoot, null, null, null);
+    final DockerProcessFactory processFactory = new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
     assertFalse(processFactory.checkImageExists("airbyte/fake:0.1.2"));
   }
 
@@ -93,9 +97,10 @@ class DockerProcessFactoryTest {
     final Path jobRoot = workspaceRoot.resolve("job");
 
     final DockerProcessFactory processFactory =
-        new DockerProcessFactory(new WorkerConfigs(new EnvConfigs()), workspaceRoot, null, null, null);
-    processFactory.create("tester", "job_id", 0, jobRoot, BUSYBOX, false, false, ImmutableMap.of("config.json", "{\"data\": 2}"), "echo hi",
-        new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), null, Map.of(), Map.of(), Map.of());
+        new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
+    processFactory.create(ResourceType.DEFAULT, "tester", "job_id", 0, jobRoot, BUSYBOX, false, false,
+        ImmutableMap.of("config.json", "{\"data\": 2}"),
+        "echo hi", new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), null, Map.of(), Map.of(), Map.of(), Collections.emptyMap());
 
     assertEquals(
         Jsons.jsonNode(ImmutableMap.of("data", 2)),
@@ -112,10 +117,11 @@ class DockerProcessFactoryTest {
 
     final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
     when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
+    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
 
     final DockerProcessFactory processFactory =
         new DockerProcessFactory(
-            workerConfigs,
+            createConfigProviderStub(workerConfigs),
             workspaceRoot,
             null,
             null,
@@ -124,6 +130,7 @@ class DockerProcessFactoryTest {
     waitForDockerToInitialize(processFactory, jobRoot, workerConfigs);
 
     final Process process = processFactory.create(
+        ResourceType.DEFAULT,
         "tester",
         "job_id",
         0,
@@ -138,7 +145,7 @@ class DockerProcessFactoryTest {
         Map.of(),
         Map.of(),
         Map.of(),
-        "-c",
+        Collections.emptyMap(), "-c",
         "echo ENV_VAR_1=$ENV_VAR_1");
 
     final StringBuilder out = new StringBuilder();
@@ -158,6 +165,7 @@ class DockerProcessFactoryTest {
 
     while (stopwatch.elapsed().compareTo(Duration.ofSeconds(30)) < 0) {
       final Process p = processFactory.create(
+          ResourceType.DEFAULT,
           "tester",
           "job_id_" + RandomStringUtils.randomAlphabetic(4),
           0,
@@ -172,7 +180,7 @@ class DockerProcessFactoryTest {
           Map.of(),
           Map.of(),
           Map.of(),
-          "-c",
+          Collections.emptyMap(), "-c",
           "echo ENV_VAR_1=$ENV_VAR_1");
       p.waitFor();
       final int exitStatus = p.exitValue();
@@ -209,6 +217,16 @@ class DockerProcessFactoryTest {
           Arguments.of(postgresLatest, "destination-postgres:a-bad-middle:5005", options, Collections.emptyList()));
     }
 
+  }
+
+  private WorkerConfigsProvider createConfigProviderStub() {
+    return createConfigProviderStub(new WorkerConfigs(new EnvConfigs()));
+  }
+
+  private WorkerConfigsProvider createConfigProviderStub(final WorkerConfigs workerConfigs) {
+    final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
+    when(workerConfigsProvider.getConfig(any())).thenReturn(workerConfigs);
+    return workerConfigsProvider;
   }
 
   @ParameterizedTest

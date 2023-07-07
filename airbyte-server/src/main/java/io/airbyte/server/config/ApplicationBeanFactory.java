@@ -11,10 +11,9 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.persistence.job.JobPersistence;
@@ -56,21 +55,12 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public AirbyteVersion airbyteVersion(@Value("${airbyte.version}") final String airbyteVersion) {
-    return new AirbyteVersion(airbyteVersion);
-  }
-
-  @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
-    return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
-  }
-
-  @Singleton
   public JobTracker jobTracker(
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
-                               final TrackingClient trackingClient) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient);
+                               final TrackingClient trackingClient,
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Singleton

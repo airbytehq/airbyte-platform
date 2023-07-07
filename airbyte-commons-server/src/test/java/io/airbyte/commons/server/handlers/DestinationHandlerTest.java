@@ -27,8 +27,10 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
@@ -50,6 +52,7 @@ class DestinationHandlerTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private StandardDestinationDefinition standardDestinationDefinition;
+  private ActorDefinitionVersion destinationDefinitionVersion;
   private DestinationDefinitionSpecificationRead destinationDefinitionSpecificationRead;
   private DestinationConnection destinationConnection;
   private DestinationHandler destinationHandler;
@@ -60,6 +63,7 @@ class DestinationHandlerTest {
   private JsonSecretsProcessor secretsProcessor;
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   // needs to match name of file in src/test/resources/icons
   private static final String ICON = "test-destination.svg";
@@ -77,17 +81,18 @@ class DestinationHandlerTest {
     configurationUpdate = mock(ConfigurationUpdate.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
     standardDestinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(UUID.randomUUID())
         .withName("db2")
-        .withDockerRepository("thebestrepo")
-        .withDockerImageTag("thelatesttag")
-        .withDocumentationUrl("https://wikipedia.org")
-        .withSpec(connectorSpecification)
         .withIcon(ICON);
+
+    destinationDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerImageTag("thelatesttag")
+        .withSpec(connectorSpecification);
 
     destinationDefinitionSpecificationRead = new DestinationDefinitionSpecificationRead()
         .connectionSpecification(connectorSpecification.getConnectionSpecification())
@@ -105,7 +110,8 @@ class DestinationHandlerTest {
             uuidGenerator,
             secretsProcessor,
             configurationUpdate,
-            oAuthConfigSupplier);
+            oAuthConfigSupplier,
+            actorDefinitionVersionHelper);
   }
 
   @Test
@@ -116,7 +122,10 @@ class DestinationHandlerTest {
         .thenReturn(destinationConnection);
     when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
+        .thenReturn(destinationDefinitionVersion);
     when(oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
+        destinationConnection.getDestinationId(),
         destinationConnection.getWorkspaceId(),
         destinationConnection.getConfiguration())).thenReturn(destinationConnection.getConfiguration());
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
@@ -146,7 +155,9 @@ class DestinationHandlerTest {
     verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration());
     verify(secretsRepositoryWriter).writeDestinationConnection(destinationConnection, connectorSpecification);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
+        destinationConnection.getDestinationId(),
         destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId());
     verify(secretsProcessor)
         .prepareSecretsForOutput(destinationConnection.getConfiguration(), destinationDefinitionSpecificationRead.getConnectionSpecification());
   }
@@ -173,10 +184,14 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification()))
         .thenReturn(newConfiguration);
     when(oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
+        destinationConnection.getDestinationId(),
         destinationConnection.getWorkspaceId(),
         newConfiguration)).thenReturn(newConfiguration);
     when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
     when(configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
         .thenReturn(standardDestinationDefinition);
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId()))
@@ -194,7 +209,10 @@ class DestinationHandlerTest {
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification());
     verify(secretsRepositoryWriter).writeDestinationConnection(expectedDestinationConnection, connectorSpecification);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
+        destinationConnection.getDestinationId(),
         destinationConnection.getWorkspaceId(), newConfiguration);
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId());
     verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
   }
 
@@ -217,6 +235,9 @@ class DestinationHandlerTest {
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
 
     final DestinationRead actualDestinationRead = destinationHandler.getDestination(destinationIdRequestBody);
 
@@ -225,6 +246,8 @@ class DestinationHandlerTest {
     // make sure the icon was loaded into actual svg content
     assertTrue(expectedDestinationRead.getIcon().startsWith("<svg>"));
 
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId());
     verify(secretsProcessor)
         .prepareSecretsForOutput(destinationConnection.getConfiguration(), destinationDefinitionSpecificationRead.getConnectionSpecification());
   }
@@ -246,6 +269,9 @@ class DestinationHandlerTest {
         .thenReturn(Lists.newArrayList(destinationConnection));
     when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
@@ -253,6 +279,8 @@ class DestinationHandlerTest {
     final DestinationReadList actualDestinationRead = destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody);
 
     assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0));
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId());
     verify(secretsProcessor)
         .prepareSecretsForOutput(destinationConnection.getConfiguration(), destinationDefinitionSpecificationRead.getConnectionSpecification());
   }
@@ -272,6 +300,9 @@ class DestinationHandlerTest {
     when(configRepository.listDestinationConnection()).thenReturn(Lists.newArrayList(destinationConnection));
     when(configRepository.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
@@ -317,6 +348,8 @@ class DestinationHandlerTest {
 
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
+        .thenReturn(destinationDefinitionVersion);
     when(configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
         .thenReturn(standardDestinationDefinition);
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
@@ -356,6 +389,8 @@ class DestinationHandlerTest {
 
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
+        .thenReturn(destinationDefinitionVersion);
     when(configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
         .thenReturn(standardDestinationDefinition);
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),

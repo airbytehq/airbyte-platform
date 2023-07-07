@@ -30,6 +30,7 @@ Check `io.airbyte.db.instance.configs` for example.
 - Run the `dumpSchema` command to update the database schema.
   - Configs database: `./gradlew :airbyte-db:db-lib:dumpConfigsSchema`
   - Jobs database: `./gradlew :airbyte-db:db-lib:dumpJobsSchema`
+- Update the appropriate `BootloaderTest.java` constant (`CURRENT_CONFIGS_MIGRATION_VERSION`, `CURRENT_JOBS_MIGRATION_VERSION`) based off the version described below.
 
 ## Migration Filename
 - The name of the file should follow this pattern: `V(version)__(migration_description_in_snake_case).java`.

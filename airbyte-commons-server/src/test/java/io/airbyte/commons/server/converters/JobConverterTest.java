@@ -73,6 +73,8 @@ class JobConverterTest {
   private static final String FAILURE_EXTERNAL_MESSAGE = "something went wrong";
   private static final long FAILURE_TIMESTAMP = System.currentTimeMillis();
   private static final String FAILURE_STACKTRACE = "stacktrace";
+  private static final String USERS = "users";
+  private static final String ACCOUNTS = "accounts";
   private static final FailureReason FAILURE_REASON = new FailureReason()
       .withFailureOrigin(FailureOrigin.SOURCE)
       .withFailureType(FailureType.SYSTEM_ERROR)
@@ -108,8 +110,8 @@ class JobConverterTest {
     private static final JobConfig JOB_CONFIG = new JobConfig()
         .withConfigType(CONFIG_TYPE)
         .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("users")),
-            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("accounts"))))));
+            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(USERS)),
+            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName(ACCOUNTS))))));
 
     private static final JobOutput JOB_OUTPUT = new JobOutput()
         .withOutputType(OutputType.SYNC)
@@ -139,6 +141,7 @@ class JobConverterTest {
                 .configId(JOB_CONFIG_ID)
                 .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
                 .configType(JobConfigType.SYNC)
+                .enabledStreams(List.of(new StreamDescriptor().name(USERS), new StreamDescriptor().name(ACCOUNTS)))
                 .createdAt(CREATED_AT)
                 .updatedAt(CREATED_AT))
             .attempts(Lists.newArrayList(new AttemptInfoRead()
@@ -247,8 +250,8 @@ class JobConverterTest {
       final JobConfig resetConfig = new JobConfig()
           .withConfigType(ConfigType.RESET_CONNECTION)
           .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(List.of(
-              new io.airbyte.protocol.models.StreamDescriptor().withName("users"),
-              new io.airbyte.protocol.models.StreamDescriptor().withName("accounts")))));
+              new io.airbyte.protocol.models.StreamDescriptor().withName(USERS),
+              new io.airbyte.protocol.models.StreamDescriptor().withName(ACCOUNTS)))));
       final Job resetJob = new Job(
           JOB_ID,
           ConfigType.RESET_CONNECTION,
@@ -261,8 +264,8 @@ class JobConverterTest {
           CREATED_AT);
 
       final ResetConfig expectedResetConfig = new ResetConfig().streamsToReset(List.of(
-          new StreamDescriptor().name("users"),
-          new StreamDescriptor().name("accounts")));
+          new StreamDescriptor().name(USERS),
+          new StreamDescriptor().name(ACCOUNTS)));
       assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
     }
 
@@ -296,7 +299,7 @@ class JobConverterTest {
     private static final Optional<UUID> CONFIG_ID = Optional.empty();
     private static final boolean JOB_SUCCEEDED = false;
     private static final boolean CONNECTOR_CONFIG_UPDATED = false;
-    private static SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
+    private static final SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
         .id(JOB_ID)
         .configType(JobConfigType.DISCOVER_SCHEMA)
         .configId(String.valueOf(CONFIG_ID))

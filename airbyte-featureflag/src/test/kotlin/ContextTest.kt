@@ -42,7 +42,7 @@ class MultiTest {
   }
 
   @Test
-  fun `key set correctly based on contexts`() {
+  fun `key is an empty string`() {
     val workspace = Workspace("workspace")
     val connection = Connection("connection")
     val source = Source("source")
@@ -50,19 +50,7 @@ class MultiTest {
     val user = User("user")
 
     Multi(listOf(user, destination, source, connection, workspace)).also {
-      assert(it.key == workspace.key)
-    }
-    Multi(listOf(user, destination, source, connection)).also {
-      assert(it.key == connection.key)
-    }
-    Multi(listOf(user, destination, source)).also {
-      assert(it.key == source.key)
-    }
-    Multi(listOf(user, destination)).also {
-      assert(it.key == destination.key)
-    }
-    Multi(listOf(user)).also {
-      assert(it.key == user.key)
+      assert(it.key.isEmpty())
     }
   }
 
@@ -120,6 +108,26 @@ class DestinationTest {
     Destination("destination key").also {
       assert(it.kind == "destination")
       assert(it.key == "destination key")
+    }
+  }
+}
+
+class SourceDefinitionTest {
+  @Test
+  fun `verify data`() {
+    SourceDefinition("source definition key").also {
+      assert(it.kind == "source-definition")
+      assert(it.key == "source definition key")
+    }
+  }
+}
+
+class DestinationDefinitionTest {
+  @Test
+  fun `verify data`() {
+    DestinationDefinition("destination definition key").also {
+      assert(it.kind == "destination-definition")
+      assert(it.key == "destination definition key")
     }
   }
 }

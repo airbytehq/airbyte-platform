@@ -5,10 +5,10 @@ import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { SortableTableHeader } from "components/ui/Table";
+import { Table } from "components/ui/Table";
 
 import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useQuery } from "hooks/useQuery";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";
@@ -20,7 +20,6 @@ import { StatusCell } from "./components/StatusCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
 import { ConnectionTableDataItem, SortOrderEnum } from "./types";
-import { NextTable } from "../ui/NextTable";
 
 interface ConnectionTableProps {
   data: ConnectionTableDataItem[];
@@ -32,7 +31,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v2", false);
+  const streamCentricUIEnabled = false;
 
   const sortBy = query.sortBy || "entityName";
   const sortOrder = query.order || SortOrderEnum.ASC;
@@ -126,6 +125,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             value={props.cell.getValue()}
             icon={props.row.original.entityIcon}
             enabled={props.row.original.enabled}
+            hideIcon={entity !== "connection"}
           />
         ),
       }),
@@ -202,13 +202,14 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   );
 
   return (
-    <NextTable
+    <Table
       columns={columns}
       data={sortingData}
       onClickRow={onClickRow}
       testId="connectionsTable"
-      columnVisibility={{ "stream-status": streamCentricUIEnabled, name: !streamCentricUIEnabled }}
+      columnVisibility={{ "stream-status": streamCentricUIEnabled }}
       sortedByColumn={sortBy}
+      className={styles.connectionsTable}
     />
   );
 };

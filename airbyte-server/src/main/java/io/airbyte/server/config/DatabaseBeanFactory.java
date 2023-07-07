@@ -10,13 +10,16 @@ import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
+import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DatabaseCheckFactory;
 import io.airbyte.db.instance.DatabaseConstants;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
+import io.micronaut.transaction.jdbc.DelegatingDataSource;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -24,6 +27,8 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DataSourceConnectionProvider;
 
 /**
  * Micronaut bean factory for database-related singletons.
@@ -41,7 +46,7 @@ public class DatabaseBeanFactory {
   @Singleton
   @Named("configDatabase")
   public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
-    return new Database(dslContext);
+    return new Database(unwrapContext(dslContext));
   }
 
   @Singleton
@@ -50,7 +55,7 @@ public class DatabaseBeanFactory {
                              @Named("config") final DataSource configDataSource,
                              @Value("${airbyte.flyway.configs.minimum-migration-version}") final String baselineVersion) {
     return configFlywayConfigurationProperties.getFluentConfiguration()
-        .dataSource(configDataSource)
+        .dataSource(unwrapDataSource(configDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
@@ -65,7 +70,7 @@ public class DatabaseBeanFactory {
                            @Named("config") final DataSource jobsDataSource,
                            @Value("${airbyte.flyway.jobs.minimum-migration-version}") final String baselineVersion) {
     return jobsFlywayConfigurationProperties.getFluentConfiguration()
-        .dataSource(jobsDataSource)
+        .dataSource(unwrapDataSource(jobsDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
@@ -76,8 +81,8 @@ public class DatabaseBeanFactory {
 
   @Singleton
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
-                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
-    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
+                                           final FeatureFlagClient featureFlagClient) {
+    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
   }
 
   @Singleton
@@ -98,7 +103,7 @@ public class DatabaseBeanFactory {
                                                               @Value("${airbyte.flyway.configs.initialization-timeout-ms}") final Long configsDatabaseInitializationTimeoutMs) {
     log.info("Configs database configuration: {} {}", configsDatabaseMinimumFlywayMigrationVersion, configsDatabaseInitializationTimeoutMs);
     return DatabaseCheckFactory
-        .createConfigsDatabaseMigrationCheck(dslContext, configsFlyway, configsDatabaseMinimumFlywayMigrationVersion,
+        .createConfigsDatabaseMigrationCheck(unwrapContext(dslContext), configsFlyway, configsDatabaseMinimumFlywayMigrationVersion,
             configsDatabaseInitializationTimeoutMs);
   }
 
@@ -109,19 +114,34 @@ public class DatabaseBeanFactory {
                                                            @Value("${airbyte.flyway.jobs.minimum-migration-version}") final String jobsDatabaseMinimumFlywayMigrationVersion,
                                                            @Value("${airbyte.flyway.jobs.initialization-timeout-ms}") final Long jobsDatabaseInitializationTimeoutMs) {
     return DatabaseCheckFactory
-        .createJobsDatabaseMigrationCheck(dslContext, jobsFlyway, jobsDatabaseMinimumFlywayMigrationVersion,
+        .createJobsDatabaseMigrationCheck(unwrapContext(dslContext), jobsFlyway, jobsDatabaseMinimumFlywayMigrationVersion,
             jobsDatabaseInitializationTimeoutMs);
   }
 
   @Singleton
   @Named("jobsDatabaseAvailabilityCheck")
   public JobsDatabaseAvailabilityCheck jobsDatabaseAvailabilityCheck(@Named("config") final DSLContext dslContext) {
-    return new JobsDatabaseAvailabilityCheck(dslContext, DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS);
+    return new JobsDatabaseAvailabilityCheck(unwrapContext(dslContext), DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS);
   }
 
   @Singleton
   public StreamResetPersistence streamResetPersistence(@Named("configDatabase") final Database configDatabase) {
     return new StreamResetPersistence(configDatabase);
+  }
+
+  // Micronaut-data wraps the injected data sources with transactional semantics, which don't respect
+  // our jooq operations and error out. If we inject an unwrapped one, it will be re-wrapped. So we
+  // manually unwrap them.
+  static DataSource unwrapDataSource(final DataSource dataSource) {
+    return ((DelegatingDataSource) dataSource).getTargetDataSource();
+  }
+
+  // For some reason, it won't let us provide an unwrapped dsl context as a bean, so we manually
+  // unwrap the data source here as well.
+  static DSLContext unwrapContext(final DSLContext context) {
+    final var datasource = ((DataSourceConnectionProvider) context.configuration().connectionProvider()).dataSource();
+
+    return DSLContextFactory.create(unwrapDataSource(datasource), SQLDialect.POSTGRES);
   }
 
 }
