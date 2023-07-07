@@ -5,10 +5,10 @@ import { ValidationError } from "yup";
 import { Heading } from "components/ui/Heading";
 import { Spinner } from "components/ui/Spinner";
 
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
+import { Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
-import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
-import { Spec } from "core/request/ConnectorManifest";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,

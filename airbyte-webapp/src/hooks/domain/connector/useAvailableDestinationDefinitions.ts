@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { getExcludedConnectorIds } from "core/domain/connector/constants";
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";

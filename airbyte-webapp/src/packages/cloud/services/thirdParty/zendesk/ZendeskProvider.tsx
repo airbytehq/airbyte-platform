@@ -1,7 +1,7 @@
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useEffect } from "react";
 import { useEffectOnce } from "react-use";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { config } from "config";
 
 import { useAuthService } from "../../auth/AuthService";

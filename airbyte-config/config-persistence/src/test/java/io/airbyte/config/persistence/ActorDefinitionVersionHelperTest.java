@@ -18,10 +18,8 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
-import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.List;
@@ -76,7 +74,6 @@ class ActorDefinitionVersionHelperTest {
     when(mOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
     mFeatureFlagClient = mock(TestClient.class);
-    when(mFeatureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     mConfigRepository = mock(ConfigRepository.class);
     when(mConfigRepository.getActorDefinitionVersion(DEFAULT_VERSION_ID)).thenReturn(DEFAULT_VERSION);
@@ -105,21 +102,6 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
-  }
-
-  @Test
-  void testGetSourceVersionWithDisabledFeatureFlag() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
-        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
-
-    when(mFeatureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
-
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDefaultVersionId(DEFAULT_VERSION_ID);
-
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, actual);
   }
 
   @Test

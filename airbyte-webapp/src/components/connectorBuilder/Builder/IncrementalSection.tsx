@@ -6,7 +6,7 @@ import { LabelInfo } from "components/Label";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { RequestOption } from "core/request/ConnectorManifest";
+import { RequestOption } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 
@@ -80,7 +80,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           { value: "no_filter", label: "No filter (data feed)" },
         ]}
         path={streamFieldPath("incrementalSync.filter_mode")}
-        label="API time filtering capabilities"
+        label="API Time Filtering Capabilities"
         tooltip={
           <LabelInfo
             label=""
@@ -210,7 +210,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       )}
       {filterMode !== "no_filter" && (
         <ToggleGroupField<RequestOption>
-          label="Inject start time into outgoing HTTP request"
+          label="Inject Start Time into outgoing HTTP Request"
           tooltip="Optionally configures how the start datetime will be sent in requests to the source API"
           fieldPath={streamFieldPath("incrementalSync.start_time_option")}
           initialValues={{
@@ -228,7 +228,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       )}
       {filterMode === "range" && (
         <ToggleGroupField<RequestOption>
-          label="Inject end time into outgoing HTTP request"
+          label="Inject End Time into outgoing HTTP Request"
           tooltip="Optionally configures how the end datetime will be sent in requests to the source API"
           fieldPath={streamFieldPath("incrementalSync.end_time_option")}
           initialValues={{
@@ -247,7 +247,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
         {filterMode !== "no_filter" && (
           <ToggleGroupField<BuilderIncrementalSync["slicer"]>
-            label="Split up interval"
+            label="Split Up Interval"
             tooltip="Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures"
             fieldPath={streamFieldPath("incrementalSync.slicer")}
             initialValues={{

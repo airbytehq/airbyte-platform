@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import { DefaultErrorHandlerBackoffStrategiesItem, HttpResponseFilter } from "core/request/ConnectorManifest";
+import { DefaultErrorHandlerBackoffStrategiesItem, HttpResponseFilter } from "core/api/types/ConnectorManifest";
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";

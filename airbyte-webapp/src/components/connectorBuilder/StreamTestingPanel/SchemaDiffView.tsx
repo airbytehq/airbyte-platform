@@ -12,7 +12,7 @@ import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { StreamReadInferredSchema } from "core/request/ConnectorBuilderClient";
+import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import {

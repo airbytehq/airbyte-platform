@@ -1247,6 +1247,7 @@ public class AirbyteAcceptanceTestHarness {
                                    final StreamStatusJobType expectedJobType)
       throws ApiException {
     final JobRead jobRead = getMostRecentSyncJobId(connectionId);
+    LOGGER.info("Asserting stream statuses for: job id: {}. Expected state: {}", jobRead.getId(), expectedRunState);
     final JobInfoRead jobInfo = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(jobRead.getId()));
     assertStreamStatuses(workspaceId, connectionId, jobInfo.getJob().getId(),
         jobInfo.getAttempts().size() - 1, expectedRunState, expectedJobType);

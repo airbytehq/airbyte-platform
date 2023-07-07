@@ -4,12 +4,6 @@ import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
-import { naturalComparator } from "utils/objects";
-
-import { CDK_VERSION } from "./cdk";
-import { formatJson } from "./utils";
-import { FORM_PATTERN_ERROR } from "../../core/form/types";
-import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -46,7 +40,13 @@ import {
   HttpResponseFilter,
   DefaultPaginator,
   DeclarativeComponentSchemaMetadata,
-} from "../../core/request/ConnectorManifest";
+} from "core/api/types/ConnectorManifest";
+import { naturalComparator } from "utils/objects";
+
+import { CDK_VERSION } from "./cdk";
+import { formatJson } from "./utils";
+import { FORM_PATTERN_ERROR } from "../../core/form/types";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export type EditorView = "ui" | "yaml";
 
@@ -520,11 +520,18 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
 
-export const injectIntoValues = ["request_parameter", "header", "path", "body_data", "body_json"];
+export const injectIntoOptions = [
+  { label: "Query Parameter", value: "request_parameter", fieldLabel: "Parameter Name" },
+  { label: "Header", value: "header", fieldLabel: "Header Name" },
+  { label: "Path", value: "path" },
+  { label: "Body data (urlencoded form)", value: "body_data", fieldLabel: "Key Name" },
+  { label: "Body JSON payload", value: "body_json", fieldLabel: "Key Name" },
+];
+
 const nonPathRequestOptionSchema = yup
   .object()
   .shape({
-    inject_into: yup.mixed().oneOf(injectIntoValues.filter((val) => val !== "path")),
+    inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
     field_name: yup.string().required("form.empty.error"),
   })
   .notRequired()
@@ -630,7 +637,7 @@ export const builderFormValidationSchema = yup.object().shape({
             pageTokenOption: yup
               .object()
               .shape({
-                inject_into: yup.mixed().oneOf(injectIntoValues),
+                inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
                 field_name: yup.mixed().when("inject_into", {
                   is: "path",
                   then: (schema) => schema.strip(),

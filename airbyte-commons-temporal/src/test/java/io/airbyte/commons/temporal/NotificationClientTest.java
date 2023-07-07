@@ -33,6 +33,7 @@ class NotificationClientTest {
 
   private static final String WEBHOOK_URL = "url";
   private static final String SOURCE_NAME = "SourceName";
+  private static final String CONNECTION_NAME = "ConnectionName";
 
   private final UUID connectionId = UUID.randomUUID();
 
@@ -49,7 +50,7 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, "", false);
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, "", false);
 
     verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.onNonBreakingChange));
   }
@@ -62,13 +63,16 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, false);
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, false);
     verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+        CONNECTION_NAME,
         SOURCE_NAME,
         WEBHOOK_URL);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, true);
-    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), SOURCE_NAME,
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, true);
+    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+        CONNECTION_NAME,
+        SOURCE_NAME,
         WEBHOOK_URL);
   }
 
@@ -80,7 +84,7 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(connectionNotificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, false);
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, false);
 
     verify(connectionNotificationWorkflow).sendSchemaChangeNotification(connectionId, WEBHOOK_URL);
   }

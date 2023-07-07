@@ -1,4 +1,4 @@
-import { faCheck, faExclamation, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faExclamation, faTimes, faInfo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React from "react";
@@ -29,7 +29,7 @@ const ICON_MAPPING = {
   warning: faExclamation,
   error: faTimes,
   success: faCheck,
-  info: faExclamation,
+  info: faInfo,
 };
 
 const STYLES_BY_TYPE: Readonly<Record<MessageType, string>> = {

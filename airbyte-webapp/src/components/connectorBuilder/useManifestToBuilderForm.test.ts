@@ -1,6 +1,6 @@
 import merge from "lodash/merge";
 
-import { ConnectorManifest, DeclarativeStream } from "core/request/ConnectorManifest";
+import { ConnectorManifest, DeclarativeStream } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "utils/form";
 
 import { DEFAULT_BUILDER_FORM_VALUES, DEFAULT_CONNECTOR_NAME, OLDEST_SUPPORTED_CDK_VERSION } from "./types";

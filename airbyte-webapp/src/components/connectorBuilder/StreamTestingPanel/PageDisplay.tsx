@@ -17,7 +17,7 @@ import {
   HttpResponse,
   StreamReadInferredSchema,
   StreamReadSlicesItemPagesItem,
-} from "core/request/ConnectorBuilderClient";
+} from "core/api/types/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,

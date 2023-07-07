@@ -76,6 +76,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final AtomicLong sourceMessagesRead;
 
   private volatile boolean isReadFromDestRunning;
+  private volatile boolean writeToDestFailed;
   private volatile boolean cancelled;
 
   private final Stopwatch readFromSourceStopwatch;
@@ -116,6 +117,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.executors = Executors.newFixedThreadPool(4);
     this.scheduledExecutors = Executors.newSingleThreadScheduledExecutor();
     this.isReadFromDestRunning = true;
+    this.writeToDestFailed = false;
     this.cancelled = false;
 
     this.destMessagesRead = new AtomicLong();
@@ -382,6 +384,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       }
 
     } catch (final Exception e) {
+      writeToDestFailed = true;
       LOGGER.info("writeToDestination: exception caught", e);
       throw new DestinationException("Destination process message delivery failed", e);
     } finally {
@@ -397,7 +400,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!(destinationIsFinished = destinationIsFinished())) {
+      while (!writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
         final Optional<AirbyteMessage> messageOptional;
         try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
@@ -421,7 +424,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       LOGGER.info("readFromDestination: exception caught", e);
       throw e;
     } finally {
-      LOGGER.info("readFromDestination: done. (dest.isFinished:{})", destinationIsFinished);
+      LOGGER.info("readFromDestination: done. (writeToDestFailed:{}, dest.isFinished:{})", writeToDestFailed, destinationIsFinished);
       isReadFromDestRunning = false;
     }
   }

@@ -91,7 +91,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="array"
               path={streamFieldPath("primaryKey")}
-              label="Primary key"
+              label="Primary Key"
               tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
               directionalStyle={false}
               optional

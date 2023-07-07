@@ -148,6 +148,7 @@ Helm chart to deploy airbyte
 | minio.enabled | bool | `true` |  |
 | minio.image.repository | string | `"minio/minio"` |  |
 | minio.image.tag | string | `"latest"` |  |
+| minio.storage.volumeClaimValue | string | `500Mi` |  |
 | nameOverride | string | `""` |  |
 | pod-sweeper.affinity | object | `{}` |  |
 | pod-sweeper.containerSecurityContext | object | `{}` |  |

@@ -534,6 +534,8 @@
   "connection.stream.status.table.lastRecordAt": "Last record committed at",
   "connection.stream.status.table.lastRecord": "Last record committed",
   "connection.stream.status.table.syncButton": "Sync {streamCount} enabled {streamCount, plural, one {stream} other {streams}}",
+  "connection.stream.status.table.emptyTable.message": "Re-enable the connection to show stream sync progress",
+  "connection.stream.status.table.emptyTable.callToAction": "Re-enable",
   "connection.stream.actions.resetThisStream": "Reset this stream",
   "connection.stream.actions.showInReplicationTable": "Show in replication table",
   "connection.stream.actions.openDetails": "Open details",

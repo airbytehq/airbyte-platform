@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 
 interface ProjectToTestInputState {
   projectToTestInputJson: Record<string, TestInputContext["testInputJson"]>;

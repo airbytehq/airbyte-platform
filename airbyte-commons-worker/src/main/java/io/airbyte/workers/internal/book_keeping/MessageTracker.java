@@ -5,10 +5,8 @@
 package io.airbyte.workers.internal.book_keeping;
 
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.State;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
-import java.util.Optional;
 
 /**
  * Interface to handle extracting metadata from the stream of data flowing from a Source to a
@@ -31,22 +29,6 @@ public interface MessageTracker {
    * @param message message to derive metadata from.
    */
   void acceptFromDestination(AirbyteMessage message);
-
-  /**
-   * Get the current source state of the stream.
-   *
-   * @return returns the last StateMessage that was accepted from the source. If no StateMessage was
-   *         accepted, empty.
-   */
-  Optional<State> getSourceOutputState();
-
-  /**
-   * Get the current destination state of the stream.
-   *
-   * @return returns the last StateMessage that was accepted from the destination. If no StateMessage
-   *         was accepted, empty.
-   */
-  Optional<State> getDestinationOutputState();
 
   AirbyteTraceMessage getFirstDestinationErrorTraceMessage();
 

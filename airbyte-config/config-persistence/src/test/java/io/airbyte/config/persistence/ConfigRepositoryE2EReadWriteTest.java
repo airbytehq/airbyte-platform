@@ -22,6 +22,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -321,13 +322,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final UUID definitionId = MockData.standardSourceDefinitions().get(0).getSourceDefinitionId();
 
-    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId));
+    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
 
-    configRepository.writeActorDefinitionWorkspaceGrant(definitionId, workspaceId);
-    assertTrue(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId));
+    configRepository.writeActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
+    assertTrue(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
 
-    configRepository.deleteActorDefinitionWorkspaceGrant(definitionId, workspaceId);
-    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId));
+    configRepository.deleteActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE);
+    assertFalse(configRepository.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE));
   }
 
   @Test
@@ -361,8 +362,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition grantableDefinition2 = MockData.grantableSourceDefinition2();
     final StandardSourceDefinition customDefinition = MockData.customSourceDefinition();
 
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getSourceDefinitionId(), workspaceId);
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getSourceDefinitionId(), workspaceId);
+    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     final List<StandardSourceDefinition> actualGrantedDefinitions = configRepository
         .listGrantedSourceDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
@@ -373,6 +374,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         Map.entry(grantableDefinition1, true),
         Map.entry(grantableDefinition2, false)));
   }
+
+  // todo: testSourceDefinitionGrants for organization
 
   @Test
   void testListPublicDestinationDefinitions() throws IOException {
@@ -387,8 +390,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition grantableDefinition2 = MockData.grantableDestinationDefinition2();
     final StandardDestinationDefinition customDefinition = MockData.customDestinationDefinition();
 
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId);
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId);
+    configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
+    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE);
     final List<StandardDestinationDefinition> actualGrantedDefinitions = configRepository
         .listGrantedDestinationDefinitions(workspaceId, false);
     assertThat(actualGrantedDefinitions).hasSameElementsAs(List.of(grantableDefinition1, customDefinition));
@@ -399,6 +402,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         Map.entry(grantableDefinition1, true),
         Map.entry(grantableDefinition2, false)));
   }
+
+  // todo: testDestinationDefinitionGrants for organization
 
   @Test
   void testWorkspaceCanUseDefinition() throws IOException {
@@ -413,16 +418,16 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     assertTrue(configRepository.workspaceCanUseDefinition(publicDefinitionId, workspaceId));
 
     // Can use granted definitions
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId);
+    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId, ScopeType.WORKSPACE);
     assertTrue(configRepository.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId));
-    configRepository.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId);
+    configRepository.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId, ScopeType.WORKSPACE);
     assertTrue(configRepository.workspaceCanUseDefinition(customDefinitionId, workspaceId));
 
     // Cannot use private definitions without grant
     assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Cannot use other workspace's grants
-    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId);
+    configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId, ScopeType.WORKSPACE);
     assertFalse(configRepository.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId));
 
     // Passing invalid IDs returns false
@@ -431,6 +436,9 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     // workspaceCanUseCustomDefinition can only be true for custom definitions
     assertTrue(configRepository.workspaceCanUseCustomDefinition(customDefinitionId, workspaceId));
     assertFalse(configRepository.workspaceCanUseCustomDefinition(grantableDefinition1Id, workspaceId));
+
+    // todo: add tests for organizations
+    // to test orgs, need to somehow link org to workspace
   }
 
   @Test

@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
@@ -10,6 +9,7 @@ import { SelectSource } from "components/connection/CreateConnection/SelectSourc
 import { FormPageContent } from "components/ConnectorBlocks";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { AppActionCodes } from "hooks/services/AppMonitoringService";
 import { useGetDestination } from "hooks/services/useDestinationHook";

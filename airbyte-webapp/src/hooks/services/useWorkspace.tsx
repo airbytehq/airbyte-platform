@@ -1,6 +1,6 @@
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
 import { NotificationSettings } from "core/request/AirbyteClient";
 import { Action, Namespace } from "core/services/analytics";

@@ -9,7 +9,7 @@ import { Modal, ModalBody } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Table } from "components/ui/Table";
 
-import { StreamReadSlicesItemPagesItemRecordsItem } from "core/request/ConnectorBuilderClient";
+import { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/ConnectorBuilderClient";
 
 import styles from "./RecordTable.module.scss";
 

@@ -5,10 +5,10 @@ import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";

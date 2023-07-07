@@ -16,17 +16,17 @@ import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import {
+  BuilderProject,
+  useChangeBuilderProjectVersion,
+  useDeleteBuilderProject,
+  useListBuilderProjectVersions,
+} from "core/api";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
-import {
-  BuilderProject,
-  useChangeVersion,
-  useDeleteProject,
-  useListVersions,
-} from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import styles from "./ConnectorBuilderProjectTable.module.scss";
 import { BuilderLogo } from "../connectorBuilder/BuilderLogo";
@@ -43,9 +43,9 @@ const VersionChangeModal: React.FC<{
   project: BuilderProject;
   onClose: () => void;
 }> = ({ onClose, project }) => {
-  const { data: versions, isLoading: isLoadingVersionList } = useListVersions(project);
+  const { data: versions, isLoading: isLoadingVersionList } = useListBuilderProjectVersions(project);
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(undefined);
-  const { mutateAsync: changeVersion, isLoading } = useChangeVersion();
+  const { mutateAsync: changeVersion, isLoading } = useChangeBuilderProjectVersion();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
 
@@ -189,7 +189,7 @@ export const ConnectorBuilderProjectTable = ({
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
-  const { mutateAsync: deleteProject } = useDeleteProject();
+  const { mutateAsync: deleteProject } = useDeleteBuilderProject();
   const navigate = useNavigate();
   const columns = useMemo(
     () => [

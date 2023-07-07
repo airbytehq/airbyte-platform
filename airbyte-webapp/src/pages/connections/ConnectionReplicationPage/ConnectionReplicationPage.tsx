@@ -4,7 +4,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
 import EditControls from "components/connection/ConnectionForm/EditControls";
 import {
@@ -18,6 +17,7 @@ import LoadingSchema from "components/LoadingSchema";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { toWebBackendConnectionUpdate } from "core/domain/connection";
 import { SchemaChange } from "core/request/AirbyteClient";
 import { getFrequencyFromScheduleData } from "core/services/analytics";

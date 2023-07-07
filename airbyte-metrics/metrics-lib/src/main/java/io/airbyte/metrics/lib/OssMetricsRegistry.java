@@ -75,6 +75,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "activity_webhook_operation",
       "increments when we start a webhook operation activity"),
+  ACTIVITY_FAILURE(
+      MetricEmittingApps.WORKER,
+      "activity_failure",
+      "Generic metric for incrementing when an activity fails. Add activity name to attributes."),
 
   ATTEMPTS_CREATED(
       MetricEmittingApps.WORKER,
@@ -210,6 +214,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   REPLICATION_WORKER_CREATED(MetricEmittingApps.WORKER,
       "replication_worker_created",
       "number of replication worker created"),
+  REPLICATION_MADE_PROGRESS(MetricEmittingApps.WORKER,
+      "replication_made_progress",
+      "Count of replication runs that made progress. To be faceted by attributes."),
+  REPLICATION_PROGRESS_CHECK_FAIL(MetricEmittingApps.WORKER,
+      "replication_progress_check_fail",
+      "Count of failures checking progress. To be faceted by attributes."),
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),

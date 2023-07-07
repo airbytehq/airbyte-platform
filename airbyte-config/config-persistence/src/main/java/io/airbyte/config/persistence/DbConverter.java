@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_BREAKING_CHANGE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
@@ -23,9 +24,11 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SER
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -433,6 +436,21 @@ public class DbConverter {
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
         .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
         .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
+  }
+
+  /**
+   * Actor definition breaking change from db record.
+   *
+   * @param record db record
+   * @return actor definition breaking change
+   */
+  public static ActorDefinitionBreakingChange buildActorDefinitionBreakingChange(final Record record) {
+    return new ActorDefinitionBreakingChange()
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID))
+        .withVersion(new Version(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.VERSION)))
+        .withMessage(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE))
+        .withUpgradeDeadline(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE).toString())
+        .withMigrationDocumentationUrl(record.get(ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL));
   }
 
   /**

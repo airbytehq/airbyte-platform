@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-
 import { useConfig } from "config";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";

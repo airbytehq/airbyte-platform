@@ -1313,6 +1313,9 @@ components:
           format: int64
         userPaymentAccountId:
           $ref: "#/components/schemas/UserPaymentAccountId"
+        enrolledInFreeConnectorProgram:
+          type: boolean
+          description: Whether the workspace is enrolled in the Free Connector Program
     CloudWorkspaceLightRead:
       type: object
       required:
@@ -1349,6 +1352,9 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
+        enrolledInFreeConnectorProgram:
+          description: Whether the workspace is enrolled in the Free Connector Program
+          type: boolean
         tombstone:
           description:
             If not set or false, the configuration is active. If true, then this

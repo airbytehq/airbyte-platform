@@ -1,22 +1,29 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { SCOPE_WORKSPACE } from "services/Scope";
 
-import { useConfig } from "config";
-import { useSuspenseQuery } from "core/api";
-import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
+import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
+import {
+  createConnectorBuilderProject,
+  createDeclarativeSourceDefinitionManifest,
+  deleteConnectorBuilderProject,
+  getConnectorBuilderProject,
+  listConnectorBuilderProjects,
+  listDeclarativeManifests,
+  publishConnectorBuilderProject,
+  updateConnectorBuilderProject,
+  updateDeclarativeManifestVersion,
+} from "../generated/AirbyteClient";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
   DeclarativeManifestVersionRead,
   ConnectorBuilderProjectRead,
   SourceDefinitionIdBody,
-} from "core/request/AirbyteClient";
-import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
-import { useInitService } from "services/useInitService";
-
-import { useConnectorBuilderService } from "./ConnectorBuilderApiService";
-import { SCOPE_WORKSPACE } from "../Scope";
+} from "../types/AirbyteClient";
+import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
+import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const connectorBuilderProjectsKeys = {
   all: [SCOPE_WORKSPACE, "connectorBuilderProjects"] as const,
@@ -26,12 +33,6 @@ const connectorBuilderProjectsKeys = {
   versions: (projectId?: string) => [...connectorBuilderProjectsKeys.all, "versions", projectId] as const,
   list: (workspaceId: string) => [...connectorBuilderProjectsKeys.all, "list", workspaceId] as const,
 };
-
-function useConnectorBuilderProjectsService() {
-  const { apiUrl } = useConfig();
-  const middlewares = useDefaultRequestMiddlewares();
-  return useInitService(() => new ConnectorBuilderProjectsRequestService(apiUrl, middlewares), [apiUrl, middlewares]);
-}
 
 export interface BuilderProject {
   name: string;
@@ -46,12 +47,12 @@ export interface BuilderProjectWithManifest {
   manifest?: DeclarativeComponentSchema;
 }
 
-export const useListProjects = () => {
-  const service = useConnectorBuilderProjectsService();
+export const useListBuilderProjects = () => {
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await service.list(workspaceId)).projects.map(
+    (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
       (projectDetails): BuilderProject => ({
         name: projectDetails.name,
         version:
@@ -66,8 +67,8 @@ export const useListProjects = () => {
   );
 };
 
-export const useListVersions = (project?: BuilderProject) => {
-  const service = useConnectorBuilderProjectsService();
+export const useListBuilderProjectVersions = (project?: BuilderProject) => {
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
@@ -75,7 +76,7 @@ export const useListVersions = (project?: BuilderProject) => {
       return [];
     }
     return (
-      await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)
+      await listDeclarativeManifests({ workspaceId, sourceDefinitionId: project.sourceDefinitionId }, requestOptions)
     ).manifestVersions.sort((v1, v2) => v2.version - v1.version);
   });
 };
@@ -84,8 +85,8 @@ export type CreateProjectContext =
   | { name: string; manifest?: DeclarativeComponentSchema }
   | { name: string; forkProjectId: string; version?: "draft" | number };
 
-export const useCreateProject = () => {
-  const service = useConnectorBuilderProjectsService();
+export const useCreateBuilderProject = () => {
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
@@ -94,16 +95,22 @@ export const useCreateProject = () => {
       const name = context.name;
       let manifest;
       if ("forkProjectId" in context) {
-        const { declarativeManifest } = await service.getConnectorBuilderProject(
-          workspaceId,
-          context.forkProjectId,
-          context.version !== "draft" ? context.version : undefined
+        const { declarativeManifest } = await getConnectorBuilderProject(
+          {
+            workspaceId,
+            builderProjectId: context.forkProjectId,
+            version: context.version !== "draft" ? context.version : undefined,
+          },
+          requestOptions
         );
         manifest = declarativeManifest?.manifest as DeclarativeComponentSchema | undefined;
       } else {
         manifest = context.manifest;
       }
-      return service.createBuilderProject(workspaceId, name, manifest);
+      return createConnectorBuilderProject(
+        { workspaceId, builderProject: { name, draftManifest: manifest } },
+        requestOptions
+      );
     },
     {
       onSuccess: ({ builderProjectId }, { name }) => {
@@ -124,13 +131,14 @@ export const useCreateProject = () => {
   );
 };
 
-export const useDeleteProject = () => {
+export const useDeleteBuilderProject = () => {
   const queryClient = useQueryClient();
-  const service = useConnectorBuilderProjectsService();
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProject>(
-    (builderProject) => service.deleteBuilderProject(workspaceId, builderProject.id),
+    (builderProject) =>
+      deleteConnectorBuilderProject({ workspaceId, builderProjectId: builderProject.id }, requestOptions),
     {
       onMutate: (builderProject) => {
         queryClient.removeQueries(connectorBuilderProjectsKeys.detail(builderProject.id));
@@ -151,13 +159,13 @@ export const useDeleteProject = () => {
   );
 };
 
-export const useProject = (projectId: string) => {
-  const service = useConnectorBuilderProjectsService();
+export const useBuilderProject = (builderProjectId: string) => {
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(
-    connectorBuilderProjectsKeys.detail(projectId),
-    () => service.getConnectorBuilderProject(workspaceId, projectId),
+    connectorBuilderProjectsKeys.detail(builderProjectId),
+    () => getConnectorBuilderProject({ workspaceId, builderProjectId }, requestOptions),
     {
       cacheTime: 0,
       retry: false,
@@ -165,9 +173,9 @@ export const useProject = (projectId: string) => {
   );
 };
 
-export const useResolvedProjectVersion = (projectId: string, version?: number) => {
-  const projectsService = useConnectorBuilderProjectsService();
-  const builderService = useConnectorBuilderService();
+export const useResolvedBuilderProjectVersion = (projectId: string, version?: number) => {
+  const requestOptions = useRequestOptions();
+  const resolveManifestQuery = useBuilderResolveManifestQuery();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
@@ -176,11 +184,14 @@ export const useResolvedProjectVersion = (projectId: string, version?: number) =
       if (version === undefined) {
         return null;
       }
-      const project = await projectsService.getConnectorBuilderProject(workspaceId, projectId, version);
+      const project = await getConnectorBuilderProject(
+        { workspaceId, builderProjectId: projectId, version },
+        requestOptions
+      );
       if (!project.declarativeManifest?.manifest) {
         return null;
       }
-      return (await builderService.resolveManifest({ manifest: project.declarativeManifest?.manifest }))
+      return (await resolveManifestQuery({ manifest: project.declarativeManifest.manifest }))
         .manifest as DeclarativeComponentSchema;
     },
     {
@@ -191,13 +202,17 @@ export const useResolvedProjectVersion = (projectId: string, version?: number) =
   );
 };
 
-export const useUpdateProject = (projectId: string) => {
-  const service = useConnectorBuilderProjectsService();
+export const useUpdateBuilderProject = (projectId: string) => {
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest }) => service.updateBuilderProject(workspaceId, projectId, name, manifest),
+    ({ name, manifest }) =>
+      updateConnectorBuilderProject(
+        { workspaceId, builderProjectId: projectId, builderProject: { name, draftManifest: manifest } },
+        requestOptions
+      ),
     {
       onSuccess: (_data, { name }) => {
         // update listing and detail cache on update
@@ -247,14 +262,30 @@ function updateProjectQueryCache(
 
 const FIRST_VERSION = 1;
 
-export const usePublishProject = () => {
-  const service = useConnectorBuilderProjectsService();
+export const usePublishBuilderProject = () => {
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
     ({ name, projectId, description, manifest }) =>
-      service.publishBuilderProject(workspaceId, projectId, name, description, manifest, FIRST_VERSION),
+      publishConnectorBuilderProject(
+        {
+          workspaceId,
+          builderProjectId: projectId,
+          name,
+          initialDeclarativeManifest: {
+            description,
+            manifest,
+            version: FIRST_VERSION,
+            spec: {
+              documentationUrl: manifest.spec?.documentation_url,
+              connectionSpecification: manifest.spec?.connection_specification,
+            },
+          },
+        },
+        requestOptions
+      ),
     {
       onSuccess(data, context) {
         queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
@@ -273,14 +304,30 @@ export interface NewVersionBody {
   manifest: DeclarativeComponentSchema;
 }
 
-export const useReleaseNewVersion = () => {
-  const service = useConnectorBuilderProjectsService();
+export const useReleaseNewBuilderProjectVersion = () => {
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, NewVersionBody>(
     ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
-      service.releaseNewVersion(workspaceId, sourceDefinitionId, description, version, useAsActiveVersion, manifest),
+      createDeclarativeSourceDefinitionManifest(
+        {
+          workspaceId,
+          sourceDefinitionId,
+          declarativeManifest: {
+            description,
+            version,
+            manifest,
+            spec: {
+              documentationUrl: manifest.spec?.documentation_url,
+              connectionSpecification: manifest.spec?.connection_specification,
+            },
+          },
+          setAsActiveManifest: useAsActiveVersion,
+        },
+        requestOptions
+      ),
     {
       onSuccess(_data, context) {
         queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
@@ -298,14 +345,17 @@ export interface ChangeVersionContext {
   version: number;
 }
 
-export const useChangeVersion = () => {
-  const service = useConnectorBuilderProjectsService();
+export const useChangeBuilderProjectVersion = () => {
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, ChangeVersionContext>(
     async (context) => {
-      return service.changeVersion(workspaceId, context.sourceDefinitionId, context.version);
+      return updateDeclarativeManifestVersion(
+        { workspaceId, sourceDefinitionId: context.sourceDefinitionId, version: context.version },
+        requestOptions
+      );
     },
     {
       onSuccess: (_data, { sourceDefinitionId, version: newVersion, builderProjectId }) => {

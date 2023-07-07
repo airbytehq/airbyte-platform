@@ -1,4 +1,3 @@
-import { useSelectWorkspace } from "area/workspace/utils/useSelectWorkspace";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
@@ -9,6 +8,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useSelectWorkspace } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateWorkspace } from "core/api";
 import { useUpdateCloudWorkspace } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";

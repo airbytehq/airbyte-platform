@@ -10,8 +10,12 @@ import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+
+import { ConnectionStatus } from "core/request/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
@@ -98,6 +102,8 @@ export const StreamsList = () => {
     [columnHelper, setShowRelativeTime, showRelativeTime]
   );
 
+  const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
+
   return (
     <>
       <Box mb="md">
@@ -120,6 +126,24 @@ export const StreamsList = () => {
               className={styles.table}
               getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
             />
+
+            {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
+            {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
+              <Box m="lg">
+                <Message
+                  text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
+                  actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
+                  type="info"
+                  onAction={() => {
+                    updateConnection({
+                      connectionId: connection.connectionId,
+                      status: ConnectionStatus.active,
+                    });
+                  }}
+                  actionBtnProps={connectionUpdating ? { disabled: true } : {}}
+                />
+              </Box>
+            )}
           </div>
         </FlexContainer>
       </Card>

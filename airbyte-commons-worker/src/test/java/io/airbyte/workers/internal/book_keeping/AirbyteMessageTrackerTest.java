@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
-import io.airbyte.config.State;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.helper.FailureHelper;
@@ -70,37 +69,6 @@ class AirbyteMessageTrackerTest {
     assertEquals(3, syncStatsTracker.getTotalRecordsEmitted());
     assertEquals(3L * Jsons.getEstimatedByteSize(r1.getRecord().getData()), syncStatsTracker.getTotalBytesEmitted());
     assertEquals(2, syncStatsTracker.getTotalSourceStateMessagesEmitted());
-  }
-
-  @Test
-  void testRetainsLatestSourceAndDestinationState() {
-    final int s1Value = 111;
-    final int s2Value = 222;
-    final int s3Value = 333;
-    final AirbyteMessage s1 = AirbyteMessageUtils.createStateMessage(s1Value);
-    final AirbyteMessage s2 = AirbyteMessageUtils.createStateMessage(s2Value);
-    final AirbyteMessage s3 = AirbyteMessageUtils.createStateMessage(s3Value);
-
-    final State expectedState = new State().withState(Jsons.jsonNode(s2Value));
-    Mockito.when(mStateAggregator.getAggregated()).thenReturn(expectedState);
-
-    messageTracker.acceptFromSource(s1);
-    messageTracker.acceptFromSource(s2);
-    messageTracker.acceptFromSource(s3);
-    messageTracker.acceptFromDestination(s1);
-    messageTracker.acceptFromDestination(s2);
-
-    assertTrue(messageTracker.getSourceOutputState().isPresent());
-    assertEquals(new State().withState(Jsons.jsonNode(s3Value)), messageTracker.getSourceOutputState().get());
-
-    assertTrue(messageTracker.getDestinationOutputState().isPresent());
-    assertEquals(expectedState, messageTracker.getDestinationOutputState().get());
-  }
-
-  @Test
-  void testReturnEmptyStateIfNoneEverAccepted() {
-    assertTrue(messageTracker.getSourceOutputState().isEmpty());
-    assertTrue(messageTracker.getDestinationOutputState().isEmpty());
   }
 
   @Test
