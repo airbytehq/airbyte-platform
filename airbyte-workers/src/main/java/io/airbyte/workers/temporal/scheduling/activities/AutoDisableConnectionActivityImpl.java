@@ -29,6 +29,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,6 +77,10 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
   public AutoDisableConnectionOutput autoDisableFailingConnection(final AutoDisableConnectionActivityInput input) {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
     if (featureFlags.autoDisablesFailingConnections()) {
+
+      // we are in the process of getting rid of the currentTimestamp field. This field should be null,
+      // but this logic exists so that unit tests don't break. This logic is temporary.
+      final Instant currentTimestamp = input.getCurrTimestamp() == null ? Instant.now() : input.getCurrTimestamp();
       try {
         // if connection is already inactive, no need to disable
         final StandardSync standardSync = configRepository.getStandardSync(input.getConnectionId());
@@ -86,14 +91,14 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
         final int maxDaysOfOnlyFailedJobs = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
         final int maxDaysOfOnlyFailedJobsBeforeWarning = maxDaysOfOnlyFailedJobs / 2;
         final int maxFailedJobsInARowBeforeConnectionDisableWarning = maxFailedJobsInARowBeforeConnectionDisable / 2;
-        final long currTimestampInSeconds = input.getCurrTimestamp().getEpochSecond();
+        final long currTimestampInSeconds = currentTimestamp.getEpochSecond();
         final Job lastJob = jobPersistence.getLastReplicationJob(input.getConnectionId())
             .orElseThrow(() -> new Exception("Auto-Disable Connection should not have been attempted if can't get latest replication job."));
         final Job firstJob = jobPersistence.getFirstReplicationJob(input.getConnectionId())
             .orElseThrow(() -> new Exception("Auto-Disable Connection should not have been attempted if no replication job has been run."));
 
         final List<JobWithStatusAndTimestamp> jobs = jobPersistence.listJobStatusAndTimestampWithConnection(input.getConnectionId(),
-            REPLICATION_TYPES, input.getCurrTimestamp().minus(maxDaysOfOnlyFailedJobs, DAYS));
+            REPLICATION_TYPES, currentTimestamp.minus(maxDaysOfOnlyFailedJobs, DAYS));
 
         int numFailures = 0;
         Optional<Long> successTimestamp = Optional.empty();
