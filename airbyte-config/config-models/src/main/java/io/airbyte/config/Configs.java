@@ -770,6 +770,8 @@ public interface Configs {
 
   String getCdkEntrypoint();
 
+  String getCustomerIoKey();
+
   /**
    * Tracking strategy.
    */

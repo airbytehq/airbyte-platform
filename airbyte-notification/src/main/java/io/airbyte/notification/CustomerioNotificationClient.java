@@ -6,7 +6,7 @@ package io.airbyte.notification;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.Notification;
+import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.net.URI;
@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,18 +51,9 @@ public class CustomerioNotificationClient extends NotificationClient {
   private final String apiToken;
   private final String emailApiEndpoint;
 
-  public CustomerioNotificationClient(final Notification notification) {
-    super(notification);
-    this.apiToken = System.getenv("CUSTOMERIO_API_KEY");
-    this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
-    this.httpClient = HttpClient.newBuilder()
-        .version(HttpClient.Version.HTTP_2)
-        .build();
-  }
-
   public CustomerioNotificationClient() {
-    super();
-    this.apiToken = System.getenv("CUSTOMERIO_API_KEY");
+    final EnvConfigs configs = new EnvConfigs();
+    this.apiToken = configs.getCustomerIoKey();
     this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
     this.httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
@@ -69,11 +61,9 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @VisibleForTesting
-  public CustomerioNotificationClient(final Notification notification,
-                                      final String apiToken,
+  public CustomerioNotificationClient(final String apiToken,
                                       final String emailApiEndpoint,
                                       final HttpClient httpClient) {
-    super(notification);
     this.apiToken = apiToken;
     this.emailApiEndpoint = emailApiEndpoint;
     this.httpClient = httpClient;
@@ -162,6 +152,10 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   private boolean notifyByEmail(final String requestBody) throws IOException, InterruptedException {
+    if (StringUtils.isEmpty(apiToken)) {
+      LOGGER.info("Customer.io API token is empty. Skipping email notification.");
+      return false;
+    }
     final HttpRequest request = HttpRequest.newBuilder()
         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
         .uri(URI.create(emailApiEndpoint))
