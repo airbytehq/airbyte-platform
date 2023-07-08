@@ -4,11 +4,9 @@
 
 package io.airbyte.notification;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.Notification;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.net.URI;
@@ -37,14 +35,7 @@ public class SlackNotificationClient extends NotificationClient {
 
   private final SlackNotificationConfiguration config;
 
-  @JsonCreator
-  public SlackNotificationClient(final Notification notification) {
-    super(notification);
-    this.config = notification.getSlackConfiguration();
-  }
-
   public SlackNotificationClient(final SlackNotificationConfiguration slackNotificationConfiguration) {
-    super();
     this.config = slackNotificationConfiguration;
   }
 
@@ -171,7 +162,7 @@ public class SlackNotificationClient extends NotificationClient {
   @Override
   public boolean notifySuccess(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl) && sendOnSuccess) {
+    if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;
@@ -180,7 +171,7 @@ public class SlackNotificationClient extends NotificationClient {
   @Override
   public boolean notifyFailure(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
-    if (!Strings.isEmpty(webhookUrl) && sendOnFailure) {
+    if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;

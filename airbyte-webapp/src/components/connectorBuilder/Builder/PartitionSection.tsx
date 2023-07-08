@@ -69,7 +69,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
             manifestPath="ListPartitionRouter.properties.cursor_field"
           />
           <ToggleGroupField<RequestOption>
-            label="Inject partition value into outgoing HTTP request"
+            label="Inject Partition Value into outgoing HTTP Request"
             tooltip="Optionally configures how the partition value will be sent in requests to the source API"
             fieldPath={buildPath("request_option")}
             initialValues={{

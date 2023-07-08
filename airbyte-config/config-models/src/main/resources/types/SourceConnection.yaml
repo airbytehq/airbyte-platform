@@ -18,6 +18,10 @@ properties:
   sourceDefinitionId:
     type: string
     format: uuid
+  defaultVersionId:
+    description: References the Actor Definition Version to use for the connection.
+    type: string
+    format: uuid
   workspaceId:
     type: string
     format: uuid

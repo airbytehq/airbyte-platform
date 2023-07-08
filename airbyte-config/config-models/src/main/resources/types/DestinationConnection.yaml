@@ -24,6 +24,10 @@ properties:
   destinationId:
     type: string
     format: uuid
+  defaultVersionId:
+    description: References the Actor Definition Version to use for the connection.
+    type: string
+    format: uuid
   configuration:
     description: Integration specific blob. Must be a valid JSON string.
     type: object

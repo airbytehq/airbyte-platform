@@ -2,7 +2,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { injectIntoValues } from "../types";
+import { injectIntoOptions } from "../types";
 
 interface RequestOptionFieldsProps {
   path: string;
@@ -19,20 +19,22 @@ export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, 
       <BuilderField
         type="enum"
         path={`${path}.inject_into`}
-        options={excludePathInjection ? injectIntoValues.filter((target) => target !== "path") : injectIntoValues}
+        options={
+          excludePathInjection ? injectIntoOptions.filter((target) => target.value !== "path") : injectIntoOptions
+        }
         onChange={(newValue) => {
           if (newValue === "path") {
             setValue(path, { inject_into: newValue });
           }
         }}
-        label="Inject into"
+        label="Inject Into"
         tooltip={`Configures where the ${descriptor} should be set on the HTTP requests`}
       />
       {value !== "path" && (
         <BuilderFieldWithInputs
           type="string"
           path={`${path}.field_name`}
-          label="Field name"
+          label={injectIntoOptions.find((option) => option.value === value)?.fieldLabel ?? "Field Name"}
           tooltip={`Configures which key should be used in the location that the ${descriptor} is being injected into`}
         />
       )}

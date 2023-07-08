@@ -84,6 +84,8 @@ public class EnvConfigs implements Configs {
   private static final String SIDECAR_KUBE_MEMORY_LIMIT = "SIDECAR_KUBE_MEMORY_LIMIT";
   private static final String DEFAULT_SIDECAR_KUBE_CPU_REQUEST = "0.1";
   private static final String SIDECAR_KUBE_CPU_REQUEST = "SIDECAR_KUBE_CPU_REQUEST";
+
+  private static final String CUSTOMERIO_API_KEY = "CUSTOMERIO_API_KEY";
   // Test show at least 1.5 CPU is required to hit >20 Mb/s. Overprovision to ensure sidecar resources
   // do not cause bottlenecks.
   // This is fine as the limit only affects whether the container is throttled by Kube. It does not
@@ -1183,6 +1185,11 @@ public class EnvConfigs implements Configs {
   @Override
   public String getCdkEntrypoint() {
     return getEnv(CDK_ENTRYPOINT);
+  }
+
+  @Override
+  public String getCustomerIoKey() {
+    return getEnvOrDefault(CUSTOMERIO_API_KEY, null);
   }
 
   // Helpers

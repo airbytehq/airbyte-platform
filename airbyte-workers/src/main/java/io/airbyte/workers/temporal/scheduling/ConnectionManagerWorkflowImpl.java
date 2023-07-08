@@ -86,7 +86,6 @@ import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -380,8 +379,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       runMandatoryActivity(jobCreationAndStatusUpdateActivity::jobFailure, new JobFailureInput(connectionUpdaterInput.getJobId(),
           connectionUpdaterInput.getAttemptNumber(), connectionUpdaterInput.getConnectionId(), failureReason));
 
-      final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput =
-          new AutoDisableConnectionActivityInput(connectionId, Instant.ofEpochMilli(Workflow.currentTimeMillis()));
+      final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
+      autoDisableConnectionActivityInput.setConnectionId(connectionId);
       final AutoDisableConnectionOutput output = runMandatoryActivityWithOutput(
           autoDisableConnectionActivity::autoDisableFailingConnection, autoDisableConnectionActivityInput);
       if (output.isDisabled()) {

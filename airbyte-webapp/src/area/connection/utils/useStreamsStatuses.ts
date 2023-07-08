@@ -106,43 +106,45 @@ export const useStreamsStatuses = (
       return streamStatuses;
     }, streamStatuses);
 
-    // push each stream status entry into to the corresponding stream's history
-    data.streamStatuses.reduce((streamStatuses, streamStatus) => {
-      const streamKey = getStreamKey(streamStatus);
-      const mappedStreamStatus = streamStatuses.get(streamKey);
-      if (mappedStreamStatus) {
-        mappedStreamStatus.relevantHistory.push(streamStatus); // intentionally mutate the array inside the map
-      }
-      return streamStatuses;
-    }, streamStatuses);
-
-    // compute the final status for each stream
-    enabledStreams.reduce((streamStatuses, enabledStream) => {
-      const streamKey = getStreamKey(enabledStream.stream);
-      const mappedStreamStatus = streamStatuses.get(streamKey);
-
-      if (mappedStreamStatus) {
-        mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
-        const detectedStatus = computeStreamStatus({
-          statuses: mappedStreamStatus.relevantHistory,
-          scheduleType: connection.scheduleType,
-          scheduleData: connection.scheduleData,
-          hasBreakingSchemaChange,
-          lateMultiplier,
-          errorMultiplier,
-        });
-
-        if (detectedStatus.status != null) {
-          // we have enough history to determine the final status
-          // otherwise it will be left in Pending
-          mappedStreamStatus.status = detectedStatus.status;
+    if (hasPerStreamStatuses) {
+      // push each stream status entry into to the corresponding stream's history
+      data.streamStatuses.reduce((streamStatuses, streamStatus) => {
+        const streamKey = getStreamKey(streamStatus);
+        const mappedStreamStatus = streamStatuses.get(streamKey);
+        if (mappedStreamStatus) {
+          mappedStreamStatus.relevantHistory.push(streamStatus); // intentionally mutate the array inside the map
         }
-        mappedStreamStatus.isRunning = detectedStatus.isRunning;
-        mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
-      }
+        return streamStatuses;
+      }, streamStatuses);
 
-      return streamStatuses;
-    }, streamStatuses);
+      // compute the final status for each stream
+      enabledStreams.reduce((streamStatuses, enabledStream) => {
+        const streamKey = getStreamKey(enabledStream.stream);
+        const mappedStreamStatus = streamStatuses.get(streamKey);
+
+        if (mappedStreamStatus) {
+          mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
+          const detectedStatus = computeStreamStatus({
+            statuses: mappedStreamStatus.relevantHistory,
+            scheduleType: connection.scheduleType,
+            scheduleData: connection.scheduleData,
+            hasBreakingSchemaChange,
+            lateMultiplier,
+            errorMultiplier,
+          });
+
+          if (detectedStatus.status != null) {
+            // we have enough history to determine the final status
+            // otherwise it will be left in Pending
+            mappedStreamStatus.status = detectedStatus.status;
+          }
+          mappedStreamStatus.isRunning = detectedStatus.isRunning;
+          mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
+        }
+
+        return streamStatuses;
+      }, streamStatuses);
+    }
   }
 
   return {
