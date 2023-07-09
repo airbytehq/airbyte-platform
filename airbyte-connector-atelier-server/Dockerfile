@@ -10,7 +10,7 @@ ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
 COPY requirements.txt requirements.txt
 RUN ${PIP} install -r requirements.txt
 
-ARG VERSION=0.50.6
+ARG VERSION=0.50.7
 
 ENV APPLICATION airbyte-connector-atelier-server
 ENV VERSION ${VERSION}
@@ -23,5 +23,5 @@ ADD bin/${APPLICATION}-${VERSION}.tar /app
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
 
-LABEL io.airbyte.version=0.50.6
+LABEL io.airbyte.version=0.50.7
 LABEL io.airbyte.name=airbyte/connector-atelier-server
