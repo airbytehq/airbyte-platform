@@ -6,7 +6,7 @@ description: describes the standard output for any discovery run.
 type: object
 required:
   - catalog
-additionalProperties: false
+additionalProperties: true
 properties:
   catalog:
     description: describes the available schemas.

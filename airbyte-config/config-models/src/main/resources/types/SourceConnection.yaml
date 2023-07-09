@@ -11,11 +11,15 @@ required:
   - workspaceId
   - configuration
   - tombstone
-additionalProperties: false
+additionalProperties: true
 properties:
   name:
     type: string
   sourceDefinitionId:
+    type: string
+    format: uuid
+  defaultVersionId:
+    description: References the Actor Definition Version to use for the connection.
     type: string
     format: uuid
   workspaceId:

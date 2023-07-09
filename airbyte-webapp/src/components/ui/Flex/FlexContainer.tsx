@@ -4,6 +4,7 @@ import React from "react";
 import styles from "./FlexContainer.module.scss";
 
 interface FlexContainerProps {
+  as?: "div" | "span";
   className?: string;
   /**
    * The flex-direction css property
@@ -33,6 +34,7 @@ export const FlexContainer = React.forwardRef<
 >(
   (
     {
+      as = "div",
       className,
       direction = "row",
       gap = "md",
@@ -71,10 +73,12 @@ export const FlexContainer = React.forwardRef<
       className
     );
 
-    return (
-      <div className={fullClassName} {...otherProps} ref={ref}>
-        {children}
-      </div>
-    );
+    return React.createElement(as, {
+      ...otherProps,
+      ref,
+      className: fullClassName,
+      children,
+    });
   }
 );
+FlexContainer.displayName = "FlexContainer";

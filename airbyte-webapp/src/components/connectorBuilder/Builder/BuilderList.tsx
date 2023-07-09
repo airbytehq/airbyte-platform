@@ -1,8 +1,7 @@
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useField } from "formik";
 import React, { ReactElement, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { useFieldArray } from "react-hook-form";
 
 import { Button } from "components/ui/Button";
 
@@ -13,41 +12,44 @@ interface BuilderListProps {
   children: (props: { buildPath: (path: string) => string }) => ReactElement;
   basePath: string;
   emptyItem: object;
+  addButtonLabel: string;
 }
 
-export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, basePath }) => {
-  const [list, , helpers] = useField<object[]>(basePath);
+export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, basePath, addButtonLabel }) => {
+  const { fields, append, remove } = useFieldArray({
+    name: basePath,
+  });
 
   const buildPathFunctions = useMemo(
     () =>
-      new Array(list.value.length).fill(undefined).map((_value, index) => {
-        return (path: string) => `${basePath}[${index}]${path !== "" ? "." : ""}${path}`;
+      new Array(fields.length).fill(undefined).map((_value, index) => {
+        return (path: string) => `${basePath}.${index}${path !== "" ? "." : ""}${path}`;
       }),
-    [basePath, list.value.length]
+    [basePath, fields.length]
   );
 
   return (
     <>
       {buildPathFunctions.map((buildPath, currentItemIndex) => (
-        <div className={styles.itemWrapper} key={currentItemIndex}>
+        <div className={styles.itemWrapper} key={fields[currentItemIndex].id}>
           <div className={styles.itemContainer}>{children({ buildPath })}</div>
           <RemoveButton
             onClick={() => {
-              const updatedItems = list.value.filter((_, index) => index !== currentItemIndex);
-              helpers.setValue(updatedItems);
+              remove(currentItemIndex);
             }}
           />
         </div>
       ))}
       <div>
         <Button
+          type="button"
           variant="secondary"
           icon={<FontAwesomeIcon icon={faPlus} />}
           onClick={() => {
-            helpers.setValue([...list.value, { ...emptyItem }]);
+            append({ ...emptyItem });
           }}
         >
-          <FormattedMessage id="connectorBuilder.addNewPartitionRouter" />
+          {addButtonLabel}
         </Button>
       </div>
     </>

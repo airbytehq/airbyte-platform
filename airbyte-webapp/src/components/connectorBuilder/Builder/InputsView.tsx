@@ -1,7 +1,16 @@
+import { DndContext, closestCenter, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { faGear, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useFormikContext } from "formik";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -9,38 +18,59 @@ import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
 import { BuilderConfigView } from "./BuilderConfigView";
+import { KeyboardSensor, PointerSensor } from "./dndSensors";
+import { ReactComponent as DragHandleIcon } from "./drag-handle.svg";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { values } = useFormikContext<BuilderFormValues>();
+  const inputs = useBuilderWatch("inputs");
+  const storedInputOrder = useBuilderWatch("inputOrder");
+  const { setValue } = useFormContext();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
-  const inferredInputs = useMemo(
-    () => getInferredInputs(values.global, values.inferredInputOverrides),
-    [values.global, values.inferredInputOverrides]
+  const inferredInputs = useInferredInputs();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
+
+  const { orderedInputs, inputOrder } = useMemo(() => {
+    const orderedInputs = orderInputs(inputs, inferredInputs, storedInputOrder);
+    const inputOrder = orderedInputs.map((input) => input.id);
+    return { orderedInputs, inputOrder };
+  }, [inferredInputs, storedInputOrder, inputs]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over !== null && active.id !== over.id) {
+      const oldIndex = inputOrder.indexOf(active.id.toString());
+      const newIndex = inputOrder.indexOf(over.id.toString());
+      setValue("inputOrder", arrayMove(inputOrder, oldIndex, newIndex));
+    }
+  };
 
   return (
     <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.inputsTitle" })}>
-      <Text centered className={styles.inputsDescription}>
+      <Text align="center" className={styles.inputsDescription}>
         <FormattedMessage id="connectorBuilder.inputsDescription" />
       </Text>
-      {(values.inputs.length > 0 || inferredInputs.length > 0) && (
-        <Card withPadding className={styles.inputsCard}>
-          <ol className={styles.list}>
-            {inferredInputs.map((input) => (
-              <InputItem key={input.key} input={input} setInputInEditing={setInputInEditing} isInferredInput />
-            ))}
-            {values.inputs.map((input) => (
-              <InputItem key={input.key} input={input} setInputInEditing={setInputInEditing} isInferredInput={false} />
-            ))}
-          </ol>
-        </Card>
-      )}
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={orderedInputs} strategy={verticalListSortingStrategy}>
+          {orderedInputs.map((input) => (
+            <SortableInput key={input.id} {...input} setInputInEditing={setInputInEditing} />
+          ))}
+        </SortableContext>
+      </DndContext>
+
       <Button
         className={styles.addInputButton}
         onClick={() => {
@@ -49,9 +79,12 @@ export const InputsView: React.FC = () => {
         icon={<FontAwesomeIcon icon={faPlus} />}
         iconPosition="left"
         variant="secondary"
+        type="button"
+        data-no-dnd="true"
       >
         <FormattedMessage id="connectorBuilder.addInputButton" />
       </Button>
+
       {inputInEditing && (
         <InputForm
           inputInEditing={inputInEditing}
@@ -64,45 +97,75 @@ export const InputsView: React.FC = () => {
   );
 };
 
+// Return user input type for a given schema definition
+function getType(definition: BuilderFormInput["definition"]): InputInEditing["type"] {
+  if (definition.format === "date") {
+    return "date";
+  }
+  if (definition.format === "date-time") {
+    return "date-time";
+  }
+  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
+  if (supportedType !== "unknown" && definition.enum) {
+    return "enum";
+  }
+  return supportedType;
+}
+
 function formInputToInputInEditing(
   { key, definition, required }: BuilderFormInput,
   isInferredInputOverride: boolean
 ): InputInEditing {
-  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
   return {
     key,
+    previousKey: key,
     definition,
     required,
     isNew: false,
     showDefaultValueField: Boolean(definition.default),
-    type: supportedType !== "unknown" && definition.enum ? "enum" : supportedType,
+    type: getType(definition),
     isInferredInputOverride,
   };
 }
 
-const InputItem = ({
-  input,
-  setInputInEditing,
-  isInferredInput,
-}: {
+interface SortableInputProps {
   input: BuilderFormInput;
+  isInferred: boolean;
+  id: string;
   setInputInEditing: (inputInEditing: InputInEditing) => void;
-  isInferredInput: boolean;
-}): JSX.Element => {
+}
+
+const SortableInput: React.FC<SortableInputProps> = ({ input, isInferred, id, setInputInEditing }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    // set x transform to 0 so that the inputs only move up and down
+    transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
+    transition,
+    zIndex: isDragging ? 1 : undefined,
+  };
+
   return (
-    <li className={styles.listItem} key={input.key}>
-      <div className={styles.itemLabel}>{input.definition.title || input.key}</div>
-      <Button
-        className={styles.itemButton}
-        size="sm"
-        variant="secondary"
-        aria-label="Edit"
-        onClick={() => {
-          setInputInEditing(formInputToInputInEditing(input, isInferredInput));
-        }}
-      >
-        <FontAwesomeIcon className={styles.icon} icon={faGear} />
-      </Button>
-    </li>
+    <div ref={setNodeRef} style={style}>
+      <Card className={styles.inputCard} {...attributes} {...listeners}>
+        <DragHandleIcon className={styles.dragHandle} />
+        <Text size="lg" className={styles.itemLabel}>
+          {input.definition.title || input.key}
+        </Text>
+        <Button
+          className={styles.itemButton}
+          size="sm"
+          variant="secondary"
+          aria-label="Edit"
+          type="button"
+          onClick={() => {
+            setInputInEditing(formInputToInputInEditing(input, isInferred));
+          }}
+          data-no-dnd="true"
+        >
+          <FontAwesomeIcon className={styles.icon} icon={faGear} />
+        </Button>
+      </Card>
+    </div>
   );
 };

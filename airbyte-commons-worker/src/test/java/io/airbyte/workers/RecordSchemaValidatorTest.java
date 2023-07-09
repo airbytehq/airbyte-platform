@@ -4,16 +4,22 @@
 
 package io.airbyte.workers;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.ImmutableMap;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
-import io.airbyte.workers.exception.RecordSchemaValidationException;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,32 +28,72 @@ import org.junit.jupiter.api.Test;
 class RecordSchemaValidatorTest {
 
   private StandardSyncInput syncInput;
-  private static final String STREAM_NAME = "user_preferences";
+  private static final AirbyteStreamNameNamespacePair AIRBYTE_STREAM_NAME_NAMESPACE_PAIR = new AirbyteStreamNameNamespacePair("user_preferences", "");
+  private static final String STREAM_NAME = AIRBYTE_STREAM_NAME_NAMESPACE_PAIR.getName();
   private static final String FIELD_NAME = "favorite_color";
   private static final AirbyteMessage VALID_RECORD = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
-  private static final AirbyteMessage INVALID_RECORD = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, 3);
+  private static final AirbyteMessage INVALID_RECORD_1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, 3);
+  private static final AirbyteMessage INVALID_RECORD_2 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, ImmutableMap.of(FIELD_NAME, true));
+
+  private ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors;
+  private ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors;
 
   @BeforeEach
-  void setup() throws Exception {
+  void setup() {
     final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
     syncInput = syncPair.getValue();
+    validationErrors = new ConcurrentHashMap<>();
+    uncountedValidationErrors = new ConcurrentHashMap<>();
   }
 
   @Test
-  void testValidateValidSchema() throws Exception {
-    final var featureFlagClient = new TestClient();
-    final var recordSchemaValidator = new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(),
-        WorkerUtils.mapStreamNamesToSchemas(syncInput));
-    recordSchemaValidator.validateSchema(VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()));
+  void testValidateValidSchema() {
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+    recordSchemaValidator.validateSchema(VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
+        validationErrors);
+
+    assertEquals(0, validationErrors.size());
   }
 
   @Test
-  void testValidateInvalidSchema() throws Exception {
-    final var featureFlagClient = new TestClient();
-    final RecordSchemaValidator recordSchemaValidator = new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(),
-        WorkerUtils.mapStreamNamesToSchemas(syncInput));
-    assertThrows(RecordSchemaValidationException.class, () -> recordSchemaValidator.validateSchema(INVALID_RECORD.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(INVALID_RECORD.getRecord())));
+  void testValidateValidSchemaWithoutCounting() {
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+    recordSchemaValidator.validateSchemaWithoutCounting(VALID_RECORD.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
+        uncountedValidationErrors);
+
+    assertEquals(0, uncountedValidationErrors.size());
+  }
+
+  @Test
+  void testValidateInvalidSchema() throws InterruptedException {
+    final var executorService = Executors.newFixedThreadPool(1);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
+    final List<AirbyteMessage> messagesToValidate = new ArrayList<>(Arrays.asList(INVALID_RECORD_1, INVALID_RECORD_2, VALID_RECORD));
+
+    messagesToValidate.forEach(message -> recordSchemaValidator.validateSchema(
+        message.getRecord(),
+        AIRBYTE_STREAM_NAME_NAMESPACE_PAIR,
+        validationErrors));
+    executorService.awaitTermination(3, TimeUnit.SECONDS);
+    assertEquals(1, validationErrors.size());
+    assertEquals(2, (int) validationErrors.get(AIRBYTE_STREAM_NAME_NAMESPACE_PAIR).getRight());
+  }
+
+  @Test
+  void testValidateInvalidSchemaWithoutCounting() throws InterruptedException {
+    final var executorService = Executors.newFixedThreadPool(1);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
+    final List<AirbyteMessage> messagesToValidate = new ArrayList<>(Arrays.asList(INVALID_RECORD_1, INVALID_RECORD_2, VALID_RECORD));
+
+    messagesToValidate.forEach(message -> recordSchemaValidator.validateSchemaWithoutCounting(
+        message.getRecord(),
+        AIRBYTE_STREAM_NAME_NAMESPACE_PAIR,
+        uncountedValidationErrors));
+
+    executorService.awaitTermination(3, TimeUnit.SECONDS);
+    assertEquals(1, uncountedValidationErrors.size());
+    assertEquals(2, uncountedValidationErrors.get(AIRBYTE_STREAM_NAME_NAMESPACE_PAIR).size());
   }
 
 }

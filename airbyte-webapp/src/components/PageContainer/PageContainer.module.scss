@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.pageContainer {
+  max-width: variables.$page-width;
+}

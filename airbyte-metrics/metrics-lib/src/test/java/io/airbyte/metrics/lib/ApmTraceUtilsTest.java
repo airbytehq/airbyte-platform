@@ -4,10 +4,15 @@
 
 package io.airbyte.metrics.lib;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceUtils.TAG_FORMAT;
 import static io.airbyte.metrics.lib.ApmTraceUtils.TAG_PREFIX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,7 +27,9 @@ import io.opentracing.tag.Tags;
 import io.opentracing.util.GlobalTracerTestUtil;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.jupiter.api.Assertions;
@@ -115,6 +122,41 @@ class ApmTraceUtilsTest {
     when(tracer.activeSpan()).thenReturn(null);
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer);
     Assertions.assertDoesNotThrow(() -> ApmTraceUtils.addTagsToRootSpan(TAGS));
+  }
+
+  @Test
+  void testAddingTagsWithNullChecks() {
+    final Span span = mock(Span.class);
+    final Tracer tracer = mock(Tracer.class);
+    when(tracer.activeSpan()).thenReturn(span);
+    GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer);
+
+    final UUID connectionID = UUID.randomUUID();
+    final String jobId = UUID.randomUUID().toString();
+    final Path jobRoot = Path.of("dev", "null");
+
+    ApmTraceUtils.addTagsToTrace(connectionID, jobId, jobRoot);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
+
+    clearInvocations(span);
+    ApmTraceUtils.addTagsToTrace(null, jobId, jobRoot);
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
+
+    clearInvocations(span);
+    ApmTraceUtils.addTagsToTrace(connectionID, jobId, null);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
+
+    clearInvocations(span);
+    ApmTraceUtils.addTagsToTrace((UUID) null, null, null);
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
   }
 
   @Test

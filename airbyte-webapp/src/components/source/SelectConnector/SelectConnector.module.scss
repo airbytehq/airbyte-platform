@@ -1,0 +1,43 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.selectConnector {
+  position: relative;
+  z-index: z-indices.$base;
+  display: grid;
+  grid-template-columns: 1fr min(100%, variables.$page-width) 1fr;
+
+  &__header {
+    grid-column: 2 / 3;
+    padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-sm;
+    position: sticky;
+    top: 0;
+    background-color: colors.$grey-50;
+    max-width: variables.$page-width;
+    z-index: 1;
+  }
+
+  &__gutter {
+    background-color: colors.$grey-50;
+    position: sticky;
+    top: 0;
+  }
+
+  &__gutter--left {
+    grid-column: 1 / 2;
+  }
+
+  &__gutter--right {
+    grid-column: 3 / 4;
+  }
+
+  &__grid {
+    grid-column: 2 / 3;
+    padding-inline: variables.$spacing-md;
+    margin-top: calc(
+      variables.$spacing-xl - variables.$spacing-sm
+    ); // When not scrolled, we want xl space between the sticky header and the grid
+  }
+}

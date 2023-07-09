@@ -1,0 +1,14 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.notifications {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-xl;
+  position: fixed;
+  bottom: variables.$spacing-xl;
+  width: 400px;
+  left: calc(50vw - 200px);
+  z-index: z-indices.$notification;
+}

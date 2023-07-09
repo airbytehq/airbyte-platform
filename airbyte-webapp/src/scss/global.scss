@@ -1,6 +1,15 @@
 @use "./theme-light";
 @use "./colors";
 @use "./fonts";
+@use "./variables";
+
+@import "normalize.css";
+
+:root {
+  --font-size-sm: 0.75rem; // 12px
+  --font-size-md: 0.8125rem; // 13px
+  --font-size-lg: 0.875rem; // 14px
+}
 
 html,
 body,
@@ -14,7 +23,6 @@ body,
   color: colors.$dark-blue;
   font-family: fonts.$primary;
   background: colors.$grey-50;
-  font-size: 14px;
 }
 
 button,

@@ -7,12 +7,10 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,29 +24,28 @@ import org.apache.http.client.utils.URIBuilder;
 public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://%s/oauth/token";
-  private final Clock clock;
+  private static final String DEFAULT_GITLAB_DOMAIN = "gitlab.com";
 
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
-    this.clock = Clock.systemUTC();
+  public GitlabOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
-    this.clock = Clock.systemUTC();
+  public GitlabOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
-    super(configRepository, httpClient, stateSupplier);
-    this.clock = clock;
-  }
-
-  protected static String getDomain(JsonNode inputOAuthConfiguration) throws IOException {
-    final var domain = inputOAuthConfiguration.get("domain");
-    if (domain == null) {
-      throw new IOException("Domain field is empty.");
+  protected static String getDomain(JsonNode inputOAuthConfiguration) {
+    String stringURL = DEFAULT_GITLAB_DOMAIN;
+    if (inputOAuthConfiguration.has("domain")) {
+      String url = inputOAuthConfiguration.get("domain").asText();
+      if (!url.isEmpty()) {
+        stringURL = url;
+      }
     }
-    return domain.asText();
+    // this could be `https://gitlab.com` or `gitlab.com`
+    // because the connector supports storing hostname with and without schema
+    final String[] parts = stringURL.split("//");
+    return parts[parts.length - 1];
   }
 
   @Override
@@ -72,8 +69,8 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
   @Override
   protected String getAccessTokenUrl(final JsonNode inputOAuthConfiguration) {
-    final var domain = inputOAuthConfiguration.get("domain");
-    return String.format(ACCESS_TOKEN_URL, domain == null ? "gitlab.com" : domain.asText());
+    final var domain = getDomain(inputOAuthConfiguration);
+    return String.format(ACCESS_TOKEN_URL, domain);
   }
 
   @Override
@@ -104,7 +101,7 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
     }
     if (data.has("expires_in")) {
-      final Instant expiresIn = Instant.now(this.clock).plusSeconds(data.get("expires_in").asInt());
+      final Instant expiresIn = Instant.ofEpochSecond(data.get("created_at").asInt()).plusSeconds(data.get("expires_in").asInt());
       result.put("token_expiry_date", expiresIn.toString());
     } else {
       throw new IOException(String.format("Missing 'expires_in' in query params from %s", accessTokenUrl));
@@ -117,7 +114,8 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
     throw new IOException("Deprecated API not supported by this connector");
   }

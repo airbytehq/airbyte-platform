@@ -1,0 +1,21 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  height: calc(100% - variables.$height-connection-header);
+}
+
+.card {
+  width: 54px;
+  height: 54px;
+  padding: variables.$spacing-md;
+}
+
+.icon {
+  width: 100%;
+  height: auto;
+}
+
+.empty {
+  background-color: colors.$grey-100;
+}

@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react-hooks";
 import React from "react";
+
 import { mockCatalogDiff } from "test-utils/mock-data/mockCatalogDiff";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
@@ -31,7 +32,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 

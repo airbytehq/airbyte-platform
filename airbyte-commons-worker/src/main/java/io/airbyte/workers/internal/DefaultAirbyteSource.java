@@ -6,7 +6,6 @@ package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.features.FeatureFlags;
@@ -16,7 +15,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
-import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -43,7 +41,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteSource.class);
 
-  private static final Duration HEARTBEAT_FRESH_DURATION = Duration.of(5, ChronoUnit.MINUTES);
   private static final Duration GRACEFUL_SHUTDOWN_DURATION = Duration.of(1, ChronoUnit.MINUTES);
   static final Set<Integer> IGNORED_EXIT_CODES = Set.of(
       0, // Normal exit
@@ -64,23 +61,11 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private Integer exitValue = null;
   private final boolean featureFlagLogConnectorMsgs;
 
-  public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher, final FeatureFlags featureFlags) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), new DefaultProtocolSerializer(), featureFlags);
-  }
-
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,
+                              final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
                               final FeatureFlags featureFlags) {
-    this(integrationLauncher, streamFactory, new HeartbeatMonitor(HEARTBEAT_FRESH_DURATION), protocolSerializer, featureFlags);
-  }
-
-  @VisibleForTesting
-  DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
-                       final AirbyteStreamFactory streamFactory,
-                       final HeartbeatMonitor heartbeatMonitor,
-                       final ProtocolSerializer protocolSerializer,
-                       final FeatureFlags featureFlags) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.protocolSerializer = protocolSerializer;
@@ -88,7 +73,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void start(final WorkerSourceConfig sourceConfig, final Path jobRoot) throws Exception {
     Preconditions.checkState(sourceProcess == null);
@@ -113,7 +97,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
         .iterator();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
     Preconditions.checkState(sourceProcess != null);
@@ -125,7 +108,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return !messageIterator.hasNext() && !sourceProcess.isAlive();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public int getExitValue() throws IllegalStateException {
     Preconditions.checkState(sourceProcess != null, "Source process is null, cannot retrieve exit value.");
@@ -138,7 +120,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return exitValue;
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(sourceProcess != null);
@@ -146,7 +127,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void close() throws Exception {
     if (sourceProcess == null) {

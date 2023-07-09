@@ -1,38 +1,78 @@
+import { Placement } from "@floating-ui/react-dom";
 import { Listbox } from "@headlessui/react";
+import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import React from "react";
+import { useIntl } from "react-intl";
+
+import { Text } from "components/ui/Text";
 
 import { ReactComponent as CaretDownIcon } from "./CaretDownIcon.svg";
 import styles from "./ListBox.module.scss";
+import { FlexContainer, FlexItem } from "../Flex";
 
 export interface ListBoxControlButtonProps<T> {
-  selectedOption: Option<T>;
+  selectedOption?: Option<T>;
+  isDisabled?: boolean;
 }
 
-const DefaultControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T>) => {
+const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
+  const { formatMessage } = useIntl();
+
   return (
     <>
-      {selectedOption.label}
+      {selectedOption ? (
+        <Text as="span" size="lg" className={classNames({ [styles.disabledText]: isDisabled })}>
+          {selectedOption.label}
+        </Text>
+      ) : (
+        <Text as="span" size="lg" color="grey">
+          {formatMessage({ id: "form.selectValue" })}
+        </Text>
+      )}
+
       <CaretDownIcon className={styles.caret} />
     </>
   );
 };
 
 export interface Option<T> {
-  label: string;
+  label: React.ReactNode;
   value: T;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
-interface ListBoxProps<T> {
+export interface ListBoxProps<T> {
   className?: string;
   optionClassName?: string;
   selectedOptionClassName?: string;
   options: Array<Option<T>>;
-  selectedValue: T;
+  selectedValue?: T;
   onSelect: (selectedValue: T) => void;
   buttonClassName?: string;
+  isDisabled?: boolean;
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
+  "data-testid"?: string;
+  hasError?: boolean;
+  /**
+   * If true, the ListBox option will have rounded corners and menu will have a padding
+   */
+  connectorStyle?: boolean;
+  /**
+   * Floating menu placement
+   */
+  placement?: Placement;
+  /**
+   * If true, the width of the ListBox menu will be the same as the width of the control button. Default is true.
+   */
+  adaptiveWidth?: boolean;
+  /**
+   * DEPRECATED. This is a way to hack in a custom button at the bottom of the ListBox, but this is not the right way to do this.
+   * We should be using a headlessui Menu for this instead of a ListBox: https://github.com/airbytehq/airbyte/issues/24394
+   * @deprecated
+   */
+  footerOption?: React.ReactNode;
 }
 
 export const ListBox = <T,>({
@@ -44,38 +84,75 @@ export const ListBox = <T,>({
   controlButton: ControlButton = DefaultControlButton,
   optionClassName,
   selectedOptionClassName,
+  "data-testid": testId,
+  hasError,
+  connectorStyle,
+  isDisabled,
+  placement = "bottom",
+  adaptiveWidth = true,
+  footerOption,
 }: ListBoxProps<T>) => {
-  const selectedOption = options.find((option) => option.value === selectedValue) ?? {
-    label: String(selectedValue),
-    value: selectedValue,
+  const selectedOption = options.find((option) => option.value === selectedValue);
+
+  const onOnSelect = (value: T) => {
+    onSelect(value);
   };
 
   return (
-    <div className={className}>
-      <Listbox value={selectedValue} onChange={onSelect}>
-        <Listbox.Button className={classNames(buttonClassName, styles.button)}>
-          <ControlButton selectedOption={selectedOption} />
-        </Listbox.Button>
-        {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
-        <div className={styles.optionsContainer}>
-          <Listbox.Options className={classNames(styles.optionsMenu)}>
-            {options.map(({ label, value, icon }) => (
-              <Listbox.Option key={label} value={value} className={classNames(styles.option, optionClassName)}>
-                {({ active, selected }) => (
-                  <div
-                    className={classNames(styles.optionValue, selected && selectedOptionClassName, {
-                      [styles.active]: active,
-                      [styles.selected]: selected,
+    <div className={className} data-testid={testId}>
+      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled}>
+        <Float
+          adaptiveWidth={adaptiveWidth}
+          placement={placement}
+          flip
+          offset={5} // $spacing-sm
+          autoUpdate={{
+            elementResize: false, // this will prevent render in wrong place after multiple open/close actions
+          }}
+        >
+          <Listbox.Button
+            className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
+          >
+            <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
+          </Listbox.Button>
+          <Listbox.Options
+            className={classNames(styles.optionsMenu, { [styles.optionsMenuConnectorStyle]: connectorStyle })}
+          >
+            {options.length > 0 && (
+              <>
+                {options.map(({ label, value, icon, disabled }, index) => (
+                  <Listbox.Option
+                    key={typeof label === "string" ? label : index}
+                    value={value}
+                    disabled={disabled}
+                    className={classNames(styles.option, optionClassName, {
+                      [styles.disabled]: disabled,
+                      [styles.optionValueConnectorStyle]: connectorStyle,
                     })}
                   >
-                    {icon && <span className={styles.icon}>{icon}</span>}
-                    <span className={styles.label}>{label}</span>
-                  </div>
-                )}
+                    {({ active, selected }) => (
+                      <FlexContainer
+                        alignItems="center"
+                        className={classNames(styles.optionValue, selected && selectedOptionClassName, {
+                          [styles.active]: active,
+                          [styles.selected]: selected,
+                        })}
+                      >
+                        {icon && <FlexItem className={styles.icon}>{icon}</FlexItem>}
+                        <Text className={styles.label}>{label}</Text>
+                      </FlexContainer>
+                    )}
+                  </Listbox.Option>
+                ))}
+              </>
+            )}
+            {footerOption && (
+              <Listbox.Option value={undefined} className={classNames(styles.option, optionClassName)}>
+                {footerOption}
               </Listbox.Option>
-            ))}
+            )}
           </Listbox.Options>
-        </div>
+        </Float>
       </Listbox>
     </div>
   );

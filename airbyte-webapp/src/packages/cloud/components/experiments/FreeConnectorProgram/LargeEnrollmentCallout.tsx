@@ -2,27 +2,26 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
+import { useBillingPageBanners } from "packages/cloud/views/billing/BillingPage/useBillingPageBanners";
+
 import { ReactComponent as ConnectorsBadges } from "./connectors-badges.svg";
 import { useShowEnrollmentModal } from "./EnrollmentModal";
-import { useFreeConnectorProgram } from "./hooks/useFreeConnectorProgram";
 import styles from "./LargeEnrollmentCallout.module.scss";
 
 export const LargeEnrollmentCallout: React.FC = () => {
   const { showEnrollmentModal } = useShowEnrollmentModal();
-  const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
+  const { showFCPBanner } = useBillingPageBanners();
 
-  if (userDidEnroll || !showEnrollmentUi) {
+  if (!showFCPBanner) {
     return null;
   }
 
   return (
-    <Callout variant="boldInfo" className={styles.container}>
+    <div className={styles.container}>
       <FlexContainer direction="row" alignItems="center" className={styles.flexRow}>
         <FlexItem grow={false} alignSelf="center">
           <ConnectorsBadges />
@@ -39,6 +38,8 @@ export const LargeEnrollmentCallout: React.FC = () => {
           <FormattedMessage id="freeConnectorProgram.enrollNow" />
         </Button>
       </FlexContainer>
-    </Callout>
+    </div>
   );
 };
+
+export default LargeEnrollmentCallout;

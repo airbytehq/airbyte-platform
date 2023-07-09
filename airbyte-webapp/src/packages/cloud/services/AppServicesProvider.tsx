@@ -3,11 +3,9 @@ import React, { useMemo } from "react";
 import { LoadingPage } from "components";
 
 import { MissingConfigError, useConfig } from "config";
-import { ApiServices } from "core/ApiServices";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
 import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
 import { RequestAuthMiddleware } from "packages/cloud/lib/auth/RequestAuthMiddleware";
-import { UserService } from "packages/cloud/lib/domain/users";
 import { useAuth } from "packages/firebaseReact";
 
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
@@ -49,17 +47,17 @@ const ServiceOverrides: React.FC<React.PropsWithChildren<unknown>> = React.memo(
 
   const inject = useMemo(
     () => ({
-      UserService: new UserService(cloudApiUrl, middlewares),
       DefaultRequestMiddlewares: middlewares,
     }),
-    [cloudApiUrl, middlewares]
+    [middlewares]
   );
 
   useInjectServices(inject);
 
   const registeredMiddlewares = useGetService("DefaultRequestMiddlewares");
 
-  return <ApiServices>{registeredMiddlewares ? <>{children}</> : <LoadingPage />}</ApiServices>;
+  return registeredMiddlewares ? <>{children}</> : <LoadingPage />;
 });
+ServiceOverrides.displayName = "ServiceOverrides";
 
 export { AppServicesProvider };

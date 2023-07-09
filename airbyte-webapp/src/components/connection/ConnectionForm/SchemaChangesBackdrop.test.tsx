@@ -1,9 +1,10 @@
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
 import { mockConnection, TestWrapper } from "test-utils/testutils";
 
 import { SchemaChange } from "core/request/AirbyteClient";
-import { FeatureItem } from "hooks/services/Feature";
+import { FeatureItem } from "core/services/features";
 const mockUseConnectionEditService = jest.fn();
 
 jest.doMock("hooks/services/ConnectionEdit/ConnectionEditService", () => ({

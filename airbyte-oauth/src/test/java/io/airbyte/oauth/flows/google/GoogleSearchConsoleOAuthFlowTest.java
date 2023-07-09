@@ -13,7 +13,7 @@ public class GoogleSearchConsoleOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new GoogleSearchConsoleOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new GoogleSearchConsoleOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/variables";
 
 .container {
   min-height: 100vh;
@@ -7,5 +8,5 @@
 }
 
 .content {
-  padding: 0 35px;
+  padding: 0 variables.$spacing-2xl;
 }

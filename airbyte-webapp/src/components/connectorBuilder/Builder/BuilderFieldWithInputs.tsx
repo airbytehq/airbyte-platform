@@ -1,11 +1,13 @@
 import { faPlus, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useField } from "formik";
 import { useMemo, useState } from "react";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useFormContext } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
 
+import { FlexContainer } from "components/ui/Flex";
 import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -13,52 +15,36 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 import { BuilderField, BuilderFieldProps } from "./BuilderField";
 import styles from "./BuilderFieldWithInputs.module.scss";
 import { InputForm, newInputInEditing } from "./InputsForm";
-import { getInferredInputs } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
 export const BuilderFieldWithInputs: React.FC<BuilderFieldProps> = (props) => {
-  const [field, , helpers] = useField(props.path);
-
   return (
-    <BuilderField
-      {...props}
-      adornment={<UserInputHelper setValue={helpers.setValue} currentValue={field.value} />}
-      className={styles.inputWithHelper}
-    />
+    <BuilderField {...props} adornment={<UserInputHelper path={props.path} />} className={styles.inputWithHelper} />
   );
 };
 
 interface UserInputHelperProps {
-  setValue: (value: string) => void;
-  currentValue: string;
+  path: string;
 }
 
-export const UserInputHelper = (props: UserInputHelperProps) => {
-  const { formatMessage } = useIntl();
+const UserInputHelper = (props: UserInputHelperProps) => {
   const { builderFormValues } = useConnectorBuilderFormState();
+  const inferredInputs = useInferredInputs();
   const listOptions = useMemo(() => {
-    const options: Array<Option<string | undefined>> = [
-      ...builderFormValues.inputs,
-      ...getInferredInputs(builderFormValues.global, builderFormValues.inferredInputOverrides),
-    ].map((input) => ({
-      label: input.definition.title || input.key,
-      value: input.key,
-    }));
-    options.push({
-      value: undefined,
-      label: formatMessage({ id: "connectorBuilder.inputModal.newTitle" }),
-      icon: <FontAwesomeIcon icon={faPlus} />,
-    });
+    const options: Array<Option<string | undefined>> = [...builderFormValues.inputs, ...inferredInputs].map(
+      (input) => ({
+        label: input.definition.title || input.key,
+        value: input.key,
+      })
+    );
     return options;
-  }, [builderFormValues.global, builderFormValues.inferredInputOverrides, builderFormValues.inputs, formatMessage]);
+  }, [builderFormValues.inputs, inferredInputs]);
   return <InnerUserInputHelper {...props} listOptions={listOptions} />;
 };
 
 const InnerUserInputHelper = React.memo(
-  ({
-    setValue,
-    currentValue,
-    listOptions,
-  }: UserInputHelperProps & { listOptions: Array<Option<string | undefined>> }) => {
+  ({ path, listOptions }: UserInputHelperProps & { listOptions: Array<Option<string | undefined>> }) => {
+    const { setValue, getValues } = useFormContext();
     const [modalOpen, setModalOpen] = useState(false);
     return (
       <>
@@ -71,17 +57,37 @@ const InnerUserInputHelper = React.memo(
           selectedValue={undefined}
           onSelect={(selectedValue) => {
             if (selectedValue) {
-              setValue(`${currentValue || ""}{{ config['${selectedValue}'] }}`);
-            } else {
-              // This hack is necessary because listbox will put the focus back when the option list gets hidden, which conflicts with the auto-focus setting of the modal.
-              // As it's not possible to prevent listbox from forcing the focus back on the button component, this will wait until the focus went to the button, then opens the modal
-              // so it can move it to the first input
-              setTimeout(() => {
-                setModalOpen(true);
-              }, 50);
+              setValue(path, `${getValues(path) || ""}{{ config['${selectedValue}'] }}`, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              });
             }
           }}
           options={listOptions}
+          adaptiveWidth={false}
+          placement="bottom-end"
+          footerOption={
+            <button
+              type="button"
+              onClick={() => {
+                // This hack is necessary because listbox will put the focus back when the option list gets hidden, which conflicts with the auto-focus setting of the modal.
+                // As it's not possible to prevent listbox from forcing the focus back on the button component, this will wait until the focus went to the button, then opens the modal
+                // so it can move it to the first input
+                setTimeout(() => {
+                  setModalOpen(true);
+                }, 50);
+              }}
+              className={styles.newInput}
+            >
+              <Text as="div">
+                <FlexContainer alignItems="center">
+                  <FontAwesomeIcon icon={faPlus} />
+                  <FormattedMessage id="connectorBuilder.inputModal.newTitle" />
+                </FlexContainer>
+              </Text>
+            </button>
+          }
         />
         {modalOpen && (
           <InputForm
@@ -91,7 +97,11 @@ const InnerUserInputHelper = React.memo(
               if (!newInput) {
                 return;
               }
-              setValue(`${currentValue}{{ config['${newInput.key}'] }}`);
+              setValue(path, `${getValues(path) || ""}{{ config['${newInput.key}'] }}`, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              });
             }}
           />
         )}
@@ -99,6 +109,7 @@ const InnerUserInputHelper = React.memo(
     );
   }
 );
+InnerUserInputHelper.displayName = "InnerUserInputHelper";
 
 const UserInputHelperControlButton: React.FC<ListBoxControlButtonProps<string | undefined>> = () => {
   return (

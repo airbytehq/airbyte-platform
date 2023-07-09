@@ -2,9 +2,15 @@ micronaut:
   application:
     name: airbyte-server
   executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     io:
       type: fixed
-      n-threads: 10  # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}  # Match the data source max pool size below
+    scheduler:
+      type: fixed
+      n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -14,13 +20,16 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowedOrigins:
+          allowed-origins-regex:
             - ^.*$
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  shutdown:
+    delay_ms: 20000
   cloud:
     storage:
       logs:
@@ -38,6 +47,9 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      specs:
+        gcs:
+          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -54,6 +66,10 @@ airbyte:
           region: ${STATE_STORAGE_S3_REGION:}
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -106,7 +122,7 @@ datasources:
   config:
     connection-test-query: SELECT 1
     connection-timeout: 30000
-    maximum-pool-size: 10
+    maximum-pool-size: ${CONFIG_DB_MAX_POOL_SIZE:10}
     minimum-idle: 0
     idle-timeout: 600000
     initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
@@ -114,6 +130,7 @@ datasources:
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
 
 endpoints:
   beans:
@@ -123,14 +140,16 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true
     sensitive: true
   loggers:
     enabled: true
-    sensitive: true
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true
@@ -168,3 +187,6 @@ logger:
   #    io.micronaut.context.condition: DEBUG
   # Uncomment to help resolve issues with security beans
   #    io.micronaut.security: DEBUG
+  # Uncomment to help resolve issues with micronaut data
+  #    com.zaxxer.hikari.HikariConfig: DEBUG
+  #    com.zaxxer.hikari: TRACE

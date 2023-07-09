@@ -4,8 +4,10 @@
 
 package io.airbyte.config.persistence.split_secrets;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -157,6 +159,16 @@ public class SecretsHelpersTest {
 
     // check that we didn't mutate the input configs
     assertEquals(inputPartialConfigCopy, inputPartialConfig);
+  }
+
+  @Test
+  void testCombineNullPartialConfig() {
+    final var secretPersistence = new MemorySecretPersistence();
+
+    assertDoesNotThrow(() -> {
+      final var actualCombinedConfig = SecretsHelpers.combineConfig(null, secretPersistence);
+      assertNull(actualCombinedConfig);
+    });
   }
 
   @Test

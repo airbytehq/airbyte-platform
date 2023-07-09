@@ -11,7 +11,7 @@ public class RetentlyOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new RetentlyOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new RetentlyOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -1,14 +1,13 @@
-import { DestinationDefinitionReadWithLatestTag } from "services/connector/DestinationDefinitionService";
-import { SourceDefinitionReadWithLatestTag } from "services/connector/SourceDefinitionService";
-
 import {
+  DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
   DestinationRead,
+  SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   SourceRead,
 } from "../../request/AirbyteClient";
 
-export type ConnectorDefinition = SourceDefinitionReadWithLatestTag | DestinationDefinitionReadWithLatestTag;
+export type ConnectorDefinition = SourceDefinitionRead | DestinationDefinitionRead;
 
 export type SourceDefinitionSpecificationDraft = Pick<
   SourceDefinitionSpecificationRead,

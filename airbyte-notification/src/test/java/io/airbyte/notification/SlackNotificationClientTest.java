@@ -13,8 +13,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.Notification;
-import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,16 +38,17 @@ class SlackNotificationClientTest {
   private static final String JOB_DESCRIPTION = "job description";
   private static final String LOG_URL = "logUrl";
   private static final String SOURCE_TEST = "source-test";
+  private static final String CONNECTION_NAME = "connectionName";
   private static final Long JOB_ID = 1L;
 
   public static final String WEBHOOK_URL = "http://localhost:";
-  private static final String EXPECTED_FAIL_MESSAGE = "Your connection from source-test to destination-test just failed...\n"
+  private static final String EXPECTED_FAIL_MESSAGE = "Your connection connectionName from source-test to destination-test just failed...\n"
       + "This happened with job description\n"
       + "\n"
       + "You can access its logs here: logUrl\n"
       + "\n"
       + "Job ID: 1";
-  private static final String EXPECTED_SUCCESS_MESSAGE = "Your connection from source-test to destination-test succeeded\n"
+  private static final String EXPECTED_SUCCESS_MESSAGE = "Your connection connectionName from source-test to destination-test succeeded\n"
       + "This was for job description\n"
       + "\n"
       + "You can access its logs here: logUrl\n"
@@ -74,27 +73,23 @@ class SlackNotificationClientTest {
     final String message = UUID.randomUUID().toString();
     server.createContext(TEST_PATH, new ServerHandler("Message mismatched"));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertThrows(IOException.class, () -> client.notifyFailure(message));
   }
 
   @Test
   void testBadWebhookUrl() {
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad")));
-    assertThrows(IOException.class, () -> client.notifyJobFailure(SOURCE_TEST, DESTINATION_TEST, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + "/bad"));
+    assertThrows(IOException.class,
+        () -> client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
   }
 
   @Test
   void testEmptyWebhookUrl() throws IOException, InterruptedException {
     final SlackNotificationClient client =
-        new SlackNotificationClient(
-            new Notification().withNotificationType(NotificationType.SLACK).withSlackConfiguration(new SlackNotificationConfiguration()));
-    assertFalse(client.notifyJobFailure(SOURCE_TEST, DESTINATION_TEST, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+        new SlackNotificationClient(new SlackNotificationConfiguration());
+    assertFalse(client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
   }
 
   @Test
@@ -102,32 +97,25 @@ class SlackNotificationClientTest {
     final String message = UUID.randomUUID().toString();
     server.createContext(TEST_PATH, new ServerHandler(message));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyFailure(message));
-    assertFalse(client.notifySuccess(message));
+    assertTrue(client.notifySuccess(message));
   }
 
   @Test
   void testNotifyJobFailure() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_FAIL_MESSAGE));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
-    assertTrue(client.notifyJobFailure(SOURCE_TEST, DESTINATION_TEST, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+    assertTrue(client.notifyJobFailure(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
   }
 
   @Test
   void testNotifyJobSuccess() throws IOException, InterruptedException {
     server.createContext(TEST_PATH, new ServerHandler(EXPECTED_SUCCESS_MESSAGE));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSendOnSuccess(true)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
-    assertTrue(client.notifyJobSuccess(SOURCE_TEST, DESTINATION_TEST, JOB_DESCRIPTION, LOG_URL, JOB_ID));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+    assertTrue(client.notifyJobSuccess(null, SOURCE_TEST, DESTINATION_TEST, CONNECTION_NAME, JOB_DESCRIPTION, LOG_URL, JOB_ID));
   }
 
   @SuppressWarnings("LineLength")
@@ -146,10 +134,7 @@ class SlackNotificationClientTest {
 
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSendOnSuccess(true)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyConnectionDisabled("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
   }
 
@@ -169,10 +154,7 @@ class SlackNotificationClientTest {
 
     server.createContext(TEST_PATH, new ServerHandler(expectedNotificationWarningMessage));
     final SlackNotificationClient client =
-        new SlackNotificationClient(new Notification()
-            .withNotificationType(NotificationType.SLACK)
-            .withSendOnSuccess(true)
-            .withSlackConfiguration(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH)));
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyConnectionDisableWarning("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
   }
 

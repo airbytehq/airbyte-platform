@@ -1,3 +1,4 @@
+import { FormikErrors } from "formik";
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { useIntl } from "react-intl";
 
@@ -18,7 +19,6 @@ import {
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
@@ -73,7 +73,11 @@ interface ConnectionFormHook {
   schemaError?: SchemaError;
   formId: string;
   setSubmitError: (submitError: FormError | null) => void;
-  getErrorMessage: (formValid: boolean, connectionDirty: boolean) => string | JSX.Element | null;
+  getErrorMessage: (
+    formValid: boolean,
+    connectionDirty: boolean,
+    errors?: FormikErrors<FormikConnectionFormValues>
+  ) => string | JSX.Element | null;
   refreshSchema: () => Promise<void>;
 }
 
@@ -89,33 +93,39 @@ const useConnectionForm = ({
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(destinationDefinitionId);
+  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
+    destinationDefinitionId,
+    connection.destinationId
+  );
 
   const initialValues = useInitialValues(connection, destDefinition, destDefinitionSpecification, mode !== "create");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
   const formId = useUniqueFormId();
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
-  const getErrorMessage = useCallback(
-    (formValid: boolean, connectionDirty: boolean) => {
-      if (isNewTableDesignEnabled) {
-        // There is a case when some fields could be dropped in the database. We need to validate the form without property dirty
-        return submitError
-          ? generateMessageFromError(submitError)
-          : !formValid
-          ? formatMessage({ id: "connectionForm.validation.error" })
-          : null;
+  const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
+    (formValid, connectionDirty, errors) => {
+      if (submitError) {
+        return generateMessageFromError(submitError);
       }
-      return submitError
-        ? generateMessageFromError(submitError)
-        : connectionDirty && !formValid
-        ? formatMessage({ id: "connectionForm.validation.error" })
-        : null;
+
+      // There is a case when some fields could be dropped in the database. We need to validate the form without property dirty
+      const hasValidationError = !formValid && connectionDirty;
+
+      if (hasValidationError) {
+        // No streams are selected, but make sure to ignore case when stream pk or cursor is missing
+        const hasNoStreamsSelectedError = errors?.syncCatalog?.streams && !Array.isArray(errors.syncCatalog.streams);
+
+        return formatMessage({
+          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
+        });
+      }
+
+      return null;
     },
-    [formatMessage, isNewTableDesignEnabled, submitError]
+    [formatMessage, submitError]
   );
 
   return {

@@ -1,8 +1,22 @@
 micronaut:
+  application:
+    name: airbyte-container-orchestrator
   server:
     port: 9000
+  executors:
+    control-message:
+      type: fixed
+      n-threads: ${CONTROL_MESSAGE_EXECUTOR_THREADS:1}
+    stream-status:
+      type: fixed
+      n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
+  security:
+    enabled: false
 
 airbyte:
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  role: ${AIRBYTE_ROLE:}
+  version: ${AIRBYTE_VERSION}
   config-dir: /config
   acceptance:
     test:
@@ -25,6 +39,48 @@ airbyte:
         name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
         value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
       host: ${INTERNAL_API_HOST}
+  worker:
+    isolated:
+      kube:
+        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
+        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
+    job:
+      kube:
+        images:
+          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
+          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
+          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        main:
+          container:
+            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
+        sidecar:
+          container:
+            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        tolerations: ${JOB_KUBE_TOLERATIONS:}
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
+    kube-job-configs:
+      default:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      normalization:
+        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      replication:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
+        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
+        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
+        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
+    replication:
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
 
 endpoints:
   beans:

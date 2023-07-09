@@ -12,7 +12,7 @@ public class SalesforceOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SalesforceOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SalesforceOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

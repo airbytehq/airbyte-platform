@@ -65,7 +65,7 @@ public class Version {
   }
 
   /**
-   * Compares two Version to check if they are equivalent. Only the major and minor part of the
+   * Compares two Versions to check if they are compatible. Only the major and minor part of the
    * Version is taken into account.
    *
    * @param another version to compare
@@ -84,43 +84,43 @@ public class Version {
   }
 
   /**
-   * Test is a provided version is greater than this version.
+   * Test if this version is greater than another version.
    *
    * @param other version to compare
-   * @return true if this is greater than other. otherwise false.
+   * @return true if this version is greater than the other, otherwise false.
    */
   public boolean greaterThan(final Version other) {
-    return patchVersionCompareTo(other) > 0;
+    return versionCompareTo(other) > 0;
   }
 
   /**
-   * Test is a provided version is greater than or equal to this version.
+   * Test if this version is greater than or equal to another version.
    *
    * @param other version to compare
-   * @return true if this is greater than or equal to other. otherwise false.
+   * @return true if this version is greater than or equal to the other, otherwise false.
    */
   public boolean greaterThanOrEqualTo(final Version other) {
-    return patchVersionCompareTo(other) >= 0;
+    return versionCompareTo(other) >= 0;
   }
 
   /**
-   * Test is a provided version is less than to this version.
+   * Test if a provided version is less than another version.
    *
    * @param other version to compare
-   * @return true if this is greater than other. otherwise false.
+   * @return true if this version is less than the other, otherwise false.
    */
   public boolean lessThan(final Version other) {
-    return patchVersionCompareTo(other) < 0;
+    return versionCompareTo(other) < 0;
   }
 
   /**
-   * Compares two Version to check if they are equivalent (including patch version).
+   * Compares two Versions to check if they are equivalent.
    *
    * @param another version to compare
    * @return the value 0 if version == another; a value less than 0 if version < another; and a value
    *         greater than 0 if version > another
    */
-  public int patchVersionCompareTo(final Version another) {
+  public int versionCompareTo(final Version another) {
     if (isDev() || another.isDev()) {
       return 0;
     }
@@ -136,7 +136,7 @@ public class Version {
   }
 
   /**
-   * Compares two Version to check if only the patch version was updated.
+   * Compares two Versions to check if only the patch version was updated.
    *
    * @param another version to compare
    * @return true if exactly the same version or if the same version except for the patch. otherwise,
@@ -147,11 +147,11 @@ public class Version {
       return false;
     }
     final int majorDiff = compareVersion(major, another.major);
-    if (majorDiff > 0) {
+    if (majorDiff != 0) {
       return false;
     }
     final int minorDiff = compareVersion(minor, another.minor);
-    if (minorDiff > 0) {
+    if (minorDiff != 0) {
       return false;
     }
     return compareVersion(patch, another.patch) > 0;
@@ -176,7 +176,7 @@ public class Version {
   }
 
   /**
-   * Compares two Version to check if they are equivalent. Only the major and minor part of the
+   * Compares two Versions to check if they are compatible. Only the major and minor part of the
    * Version is taken into account.
    *
    * @param v1 version to compare

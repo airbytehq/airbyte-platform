@@ -4,7 +4,7 @@ import { config } from "config";
 
 export const loadDatadog = (): void => {
   const {
-    webappTag,
+    version,
     datadog: { applicationId, clientToken, site, service },
   } = config;
 
@@ -17,7 +17,7 @@ export const loadDatadog = (): void => {
     clientToken,
     site,
     service,
-    version: webappTag,
+    version,
     sampleRate: 100,
     sessionReplaySampleRate: 0,
     trackInteractions: false,
@@ -27,4 +27,22 @@ export const loadDatadog = (): void => {
   });
 
   datadogRum.startSessionReplayRecording();
+};
+
+export const trackAction = (action: string, context?: Record<string, unknown>) => {
+  if (!datadogRum.getInternalContext()) {
+    console.debug(`trackAction(${action}) failed because RUM is not initialized. Context: \n`, context);
+    return;
+  }
+
+  datadogRum.addAction(action, context);
+};
+
+export const trackError = (error: Error, context?: Record<string, unknown>) => {
+  if (!datadogRum.getInternalContext()) {
+    console.debug(`trackError() failed because RUM is not initialized. Error: \n`, error, `Context: \n`, context);
+    return;
+  }
+
+  datadogRum.addError(error, context);
 };

@@ -1,9 +1,9 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:1.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
 FROM ${JDK_IMAGE} AS server
 
-EXPOSE 8000
+EXPOSE 8000 5005
 
-ARG VERSION=0.41.0
+ARG VERSION=0.50.6
 
 ENV APPLICATION airbyte-server
 ENV VERSION ${VERSION}

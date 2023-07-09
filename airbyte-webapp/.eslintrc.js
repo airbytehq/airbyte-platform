@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require("path");
+
 module.exports = {
+  root: true,
   extends: [
     "react-app",
     "plugin:@typescript-eslint/recommended",
-    "plugin:jest/recommended",
     "prettier",
     "plugin:prettier/recommended",
     "plugin:css-modules/recommended",
@@ -15,6 +18,13 @@ module.exports = {
     sourceType: "module",
     ecmaFeatures: {
       jsx: true,
+    },
+  },
+  settings: {
+    "import/resolver": {
+      typescript: {
+        project: path.resolve(__dirname, "tsconfig.json"),
+      },
     },
   },
   rules: {
@@ -54,7 +64,7 @@ module.exports = {
             group: "internal",
           },
           {
-            pattern: "+(config|core|hooks|locales|packages|pages|services|types|utils|views){/**,}",
+            pattern: "+(area|config|core|hooks|locales|packages|pages|services|types|utils|views){/**,}",
             group: "internal",
             position: "after",
           },
@@ -76,6 +86,7 @@ module.exports = {
     "@typescript-eslint/consistent-indexed-object-style": ["warn", "record"],
     "@typescript-eslint/consistent-type-definitions": ["warn", "interface"],
     "@typescript-eslint/no-unused-vars": "warn",
+    "react/display-name": "warn",
     "react/function-component-definition": [
       "warn",
       {
@@ -83,7 +94,6 @@ module.exports = {
         unnamedComponents: "arrow-function",
       },
     ],
-    "jest/consistent-test-it": ["warn", { fn: "it", withinDescribe: "it" }],
     "react/no-danger": "error",
     "react/jsx-boolean-value": "warn",
     "react/jsx-curly-brace-presence": "warn",
@@ -112,6 +122,28 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   overrides: [
     {
+      // Forbid importing anything from within `core/api/`, except the explicit files that are meant to be accessed outside this folder.
+      files: ["src/**/*"],
+      excludedFiles: ["src/core/api/**"],
+      rules: {
+        "import/no-restricted-paths": [
+          "error",
+          {
+            basePath: path.resolve(__dirname, "./src"),
+            zones: [
+              {
+                target: ".",
+                from: "./core/api",
+                except: ["index.ts", "cloud.ts", "types/", "errors/index.ts"],
+                message:
+                  "Only import from `core/api`, `core/api/cloud`, `core/api/errors`, or `core/api/types/*`. See also `core/api/README.md`.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       files: ["scripts/**/*", "packages/**/*"],
       rules: {
         "@typescript-eslint/no-var-requires": "off",
@@ -121,6 +153,7 @@ module.exports = {
       // Only applies to files in src. Rules should be in here that are requiring type information
       // and thus require the below parserOptions.
       files: ["src/**/*"],
+      excludedFiles: ["src/.eslintrc.js"],
       parserOptions: {
         tsconfigRootDir: __dirname,
         project: "./tsconfig.json",
@@ -128,6 +161,12 @@ module.exports = {
       rules: {
         "@typescript-eslint/await-thenable": "warn",
         "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      },
+    },
+    {
+      files: ["**/*.test.*", "**/*.stories.tsx"],
+      rules: {
+        "react/display-name": "off",
       },
     },
   ],

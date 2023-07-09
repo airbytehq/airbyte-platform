@@ -7,6 +7,7 @@
 
 .wrapper {
   position: relative;
+  width: 100%;
 }
 
 .datepickerButtonContainer {
@@ -21,7 +22,7 @@
 }
 
 .datepickerButton svg {
-  font-size: 14px;
+  font-size: variables.$font-size-lg;
 }
 
 .popup {
@@ -38,7 +39,7 @@
   font-family: fonts.$primary;
   border: variables.$border-thick solid colors.$grey-100;
   border-radius: variables.$border-radius-md;
-  box-shadow: 2px 2px 20px -6px colors.$grey-200;
+  box-shadow: variables.$box-shadow-popup;
 }
 
 /** Main calendar area **/
@@ -111,6 +112,7 @@
 :global(.react-datepicker-time__header) {
   font-weight: 500;
   color: colors.$dark-blue-900;
+  font-size: variables.$font-size-sm;
 }
 
 :global(.react-datepicker__time-list-item) {
@@ -124,19 +126,23 @@
   }
 }
 
-:global(.react-datepicker__time-container
-    .react-datepicker__time
-    .react-datepicker__time-box
-    ul.react-datepicker__time-list
-    li.react-datepicker__time-list-item) {
+:global(
+    .react-datepicker__time-container
+      .react-datepicker__time
+      .react-datepicker__time-box
+      ul.react-datepicker__time-list
+      li.react-datepicker__time-list-item
+  ) {
   justify-content: center;
 }
 
-:global(.react-datepicker__time-container
-    .react-datepicker__time
-    .react-datepicker__time-box
-    ul.react-datepicker__time-list
-    li.react-datepicker__time-list-item--selected) {
+:global(
+    .react-datepicker__time-container
+      .react-datepicker__time
+      .react-datepicker__time-box
+      ul.react-datepicker__time-list
+      li.react-datepicker__time-list-item--selected
+  ) {
   color: colors.$white;
   background-color: colors.$blue-400;
 

@@ -11,10 +11,8 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -50,11 +48,10 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   @BeforeAll
   static void setUpAll() throws SQLException {
     // create actor_definition
-    database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.DOCKER_REPOSITORY,
-        ACTOR_DEFINITION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION.SPEC, ACTOR_DEFINITION.ACTOR_TYPE, ACTOR_DEFINITION.RELEASE_STAGE)
-        .values(SRC_DEF_ID, "srcDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.source, ReleaseStage.beta)
-        .values(DST_DEF_ID, "dstDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.destination, ReleaseStage.generally_available)
-        .values(UUID.randomUUID(), "dstDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.destination, ReleaseStage.alpha)
+    database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.ACTOR_TYPE)
+        .values(SRC_DEF_ID, "srcDef", ActorType.source)
+        .values(DST_DEF_ID, "dstDef", ActorType.destination)
+        .values(UUID.randomUUID(), "dstDef", ActorType.destination)
         .execute());
 
     // create workspace
@@ -100,7 +97,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void beforeEach() {
-    configRepository = new ConfigRepository(database, new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)), null);
+    configRepository = new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   @Test

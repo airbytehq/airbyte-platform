@@ -1,33 +1,22 @@
 import React from "react";
-import styled from "styled-components";
 
 import { CheckBox } from "components/ui/CheckBox";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
-type IProps = {
+interface CheckBoxControlProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: React.ReactNode;
-} & React.InputHTMLAttributes<HTMLInputElement>;
+}
 
-const ToggleContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const Label = styled.label<{ disabled?: boolean }>`
-  padding-left: 7px;
-  font-size: 11px;
-  line-height: 13px;
-  color: ${({ theme }) => theme.textColor};
-  cursor: pointer;
-`;
-
-const CheckBoxControl: React.FC<IProps> = (props) => (
-  <ToggleContainer>
-    <CheckBox {...props} id={`checkbox-${props.name}`} />
-    <Label disabled={props.disabled} htmlFor={`checkbox-${props.name}`}>
-      {props.label}
-    </Label>
-  </ToggleContainer>
+export const CheckBoxControl: React.FC<CheckBoxControlProps> = (props) => (
+  <FlexContainer direction="row" alignItems="center">
+    <FlexItem grow={false}>
+      <CheckBox {...props} id={`checkbox-${props.name}`} />
+    </FlexItem>
+    <label htmlFor={`checkbox-${props.name}`}>
+      <Text size="sm" color={props.disabled ? "grey300" : "darkBlue"}>
+        {props.label}
+      </Text>
+    </label>
+  </FlexContainer>
 );
-
-export default CheckBoxControl;

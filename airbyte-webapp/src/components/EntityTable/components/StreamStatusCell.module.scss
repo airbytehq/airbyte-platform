@@ -1,0 +1,63 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/connection/stream-status-colors";
+
+.bar {
+  width: 100%;
+  max-width: 370px;
+  height: 23px;
+  border-radius: variables.$border-radius-xs;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  gap: 1px;
+
+  .filling {
+    width: 100%;
+    height: 100%;
+
+    @each $name, $color in stream-status-colors.$by-stream-status {
+      &--#{$name} {
+        background-color: $color;
+      }
+    }
+  }
+}
+
+$contentPadding: 10px;
+
+.tooltipContainer {
+  width: 195px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .bar {
+    padding: 0 $contentPadding;
+    margin-bottom: variables.$spacing-md;
+  }
+
+  .tooltipContent {
+    display: flex;
+    align-items: center;
+    padding: 0 $contentPadding;
+    width: 100%;
+
+    .streamsDetail {
+      display: flex;
+      align-items: center;
+      gap: variables.$spacing-sm;
+      flex: 1;
+    }
+
+    .syncContainer {
+      display: flex;
+      align-items: center;
+
+      .loadingSpinner {
+        transform: scale(82%); // ~18px, matching the status indicators
+        margin-right: variables.$spacing-sm;
+      }
+    }
+  }
+}

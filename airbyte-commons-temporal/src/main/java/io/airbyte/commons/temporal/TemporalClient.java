@@ -14,18 +14,13 @@ import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
-import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
-import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -78,7 +73,7 @@ public class TemporalClient {
   private final WorkflowServiceStubs service;
   private final StreamResetPersistence streamResetPersistence;
   private final ConnectionManagerUtils connectionManagerUtils;
-  private final NotificationUtils notificationUtils;
+  private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
@@ -86,14 +81,14 @@ public class TemporalClient {
                         final WorkflowServiceStubs service,
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
-                        final NotificationUtils notificationUtils,
+                        final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper) {
     this.workspaceRoot = workspaceRoot;
     this.client = client;
     this.service = service;
     this.streamResetPersistence = streamResetPersistence;
     this.connectionManagerUtils = connectionManagerUtils;
-    this.notificationUtils = notificationUtils;
+    this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
   }
 
@@ -103,17 +98,19 @@ public class TemporalClient {
    * Restart workflows stuck in a certain status.
    *
    * @param executionStatus execution status
+   * @return set of connection ids that were restarted, primarily used for tracking purposes
    */
-  public void restartClosedWorkflowByStatus(final WorkflowExecutionStatus executionStatus) {
+  public int restartClosedWorkflowByStatus(final WorkflowExecutionStatus executionStatus) {
     final Set<UUID> workflowExecutionInfos = fetchClosedWorkflowsByStatus(executionStatus);
 
     final Set<UUID> nonRunningWorkflow = filterOutRunningWorkspaceId(workflowExecutionInfos);
-
     nonRunningWorkflow.forEach(connectionId -> {
-      connectionManagerUtils.safeTerminateWorkflow(client, connectionId, "Terminating workflow in "
-          + "unreachable state before starting a new workflow for this connection");
+      connectionManagerUtils.safeTerminateWorkflow(client, connectionId,
+          "Terminating workflow in unreachable state before starting a new workflow for this connection");
       connectionManagerUtils.startConnectionManagerNoSignal(client, connectionId);
     });
+
+    return nonRunningWorkflow.size();
   }
 
   Set<UUID> fetchClosedWorkflowsByStatus(final WorkflowExecutionStatus executionStatus) {
@@ -436,61 +433,6 @@ public class TemporalClient {
   }
 
   /**
-   * Submit a sync job to temporal.
-   *
-   * @param jobId job id
-   * @param attempt attempt
-   * @param config sync config
-   * @param attemptConfig attempt config
-   * @param connectionId connection id
-   * @return sync output
-   */
-  public TemporalResponse<StandardSyncOutput> submitSync(final long jobId,
-                                                         final int attempt,
-                                                         final JobSyncConfig config,
-                                                         final AttemptSyncConfig attemptConfig,
-                                                         final UUID connectionId) {
-    final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
-
-    final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(jobId))
-        .withAttemptId((long) attempt)
-        .withDockerImage(config.getSourceDockerImage())
-        .withProtocolVersion(config.getSourceProtocolVersion())
-        .withIsCustomConnector(config.getIsSourceCustomConnector());
-
-    final IntegrationLauncherConfig destinationLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(jobId))
-        .withAttemptId((long) attempt)
-        .withDockerImage(config.getDestinationDockerImage())
-        .withProtocolVersion(config.getDestinationProtocolVersion())
-        .withIsCustomConnector(config.getIsDestinationCustomConnector());
-
-    final StandardSyncInput input = new StandardSyncInput()
-        .withNamespaceDefinition(config.getNamespaceDefinition())
-        .withNamespaceFormat(config.getNamespaceFormat())
-        .withPrefix(config.getPrefix())
-        .withSourceConfiguration(attemptConfig.getSourceConfiguration())
-        .withDestinationConfiguration(attemptConfig.getDestinationConfiguration())
-        .withOperationSequence(config.getOperationSequence())
-        .withCatalog(config.getConfiguredAirbyteCatalog())
-        .withState(attemptConfig.getState())
-        .withResourceRequirements(config.getResourceRequirements())
-        .withSourceResourceRequirements(config.getSourceResourceRequirements())
-        .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
-        .withConnectionId(connectionId)
-        .withWorkspaceId(config.getWorkspaceId());
-
-    return execute(jobRunConfig,
-        () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(
-            jobRunConfig,
-            sourceLauncherConfig,
-            destinationLauncherConfig,
-            input,
-            connectionId));
-  }
-
-  /**
    * Run update to start connection manager workflows for connection ids.
    *
    * @param connectionIds connection ids
@@ -592,8 +534,12 @@ public class TemporalClient {
     connectionManagerUtils.deleteWorkflowIfItExist(client, connectionId);
   }
 
-  public void sendSchemaChangeNotification(final UUID connectionId, final String url) {
-    notificationUtils.sendSchemaChangeNotification(client, connectionId, url);
+  public void sendSchemaChangeNotification(final UUID connectionId,
+                                           final String connectionName,
+                                           final String sourceName,
+                                           final String url,
+                                           final boolean containsBreakingChange) {
+    notificationClient.sendSchemaChangeNotification(connectionId, connectionName, sourceName, url, containsBreakingChange);
   }
 
   /**

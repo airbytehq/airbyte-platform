@@ -1,58 +1,28 @@
 @use "scss/variables";
 @use "scss/colors";
-@use "scss/mixins";
 
 .container {
   padding: variables.$spacing-lg;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   position: relative;
 }
 
-.connectorImg {
-  @include mixins.shadow;
-
-  width: 90px;
-  border-radius: 25px;
-  padding: variables.$spacing-xl;
-  margin-top: 55px;
-}
-
 .connectorName {
-  margin-top: variables.$spacing-md;
-  min-height: 28px;
-  width: 100%;
-  display: flex;
-  align-items: center;
   overflow-x: auto;
-}
-
-.connectorNameText {
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: variables.$spacing-lg;
+  text-align: center;
 }
 
 .streamsHeader {
-  display: flex;
-  align-items: center;
   width: 100%;
   padding: 0 variables.$spacing-sm 0 variables.$spacing-md;
-  margin-top: variables.$spacing-2xl;
 }
 
 .streamsHeading {
   color: colors.$blue;
-  flex-grow: 1;
-}
+  text-align: center;
+  text-transform: uppercase;
 
-.downloadButton {
-  width: 100%;
-}
-
-.resetButton {
-  margin-top: variables.$spacing-sm;
+  // Set line-height to 1 to make this centered with the info tooltip icon, and because this is a single line anyway
+  line-height: 1;
 }
 
 .viewButton {
@@ -83,16 +53,14 @@
   color: colors.$blue;
 }
 
-.globalConfigButton {
-  margin-top: variables.$spacing-sm;
+.streamListContainer {
+  flex-grow: 1;
+  width: 100%;
 }
 
 .streamList {
   flex-grow: 1;
-  width: 100%;
-  margin: variables.$spacing-md 0;
-  display: flex;
-  flex-direction: column;
+  flex-basis: 0;
   overflow-y: auto;
 }
 
@@ -115,4 +83,22 @@
 
 .emptyStreamViewText {
   color: colors.$grey-300;
+}
+
+.slackLink {
+  color: colors.$dark-blue;
+
+  &:hover {
+    color: colors.$blue;
+  }
+
+  & a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.slackIcon {
+  height: 14px;
+  width: 14px;
 }

@@ -1,8 +1,6 @@
 @use "scss/variables";
-@use "scss/colors";
 
 .deleteBlock {
-  margin-top: variables.$spacing-md;
   padding: variables.$spacing-xl;
   display: flex;
   align-items: center;
@@ -10,8 +8,5 @@
 }
 
 .text {
-  font-size: 11px;
-  line-height: 13px;
-  color: colors.$grey-300;
   white-space: pre-line;
 }

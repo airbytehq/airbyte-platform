@@ -4,14 +4,12 @@
 
 package io.airbyte.cron.config;
 
-import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Value;
-import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
-import java.util.Locale;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -20,11 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 @Factory
 @Slf4j
 public class ApplicationBeanFactory {
-
-  @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
-    return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
-  }
 
   /**
    * Json secrets process.
@@ -38,8 +31,10 @@ public class ApplicationBeanFactory {
         .build();
   }
 
-  private <T> T convertToEnum(final String value, final Function<String, T> creatorFunction, final T defaultValue) {
-    return StringUtils.isNotEmpty(value) ? creatorFunction.apply(value.toUpperCase(Locale.ROOT)) : defaultValue;
+  @Singleton
+  public MetricClient metricClient() {
+    MetricClientFactory.initialize(MetricEmittingApps.CRON);
+    return io.airbyte.metrics.lib.MetricClientFactory.getMetricClient();
   }
 
 }

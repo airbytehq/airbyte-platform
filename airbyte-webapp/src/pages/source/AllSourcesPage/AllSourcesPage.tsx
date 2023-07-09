@@ -7,26 +7,32 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { Button } from "components/ui/Button";
-import { PageHeader } from "components/ui/PageHeader";
+import { Heading } from "components/ui/Heading";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useSourceList } from "hooks/services/useSourceHook";
 
 import { SourcesTable } from "./SourcesTable";
-import { RoutePaths } from "../../routePaths";
+import { SourcePaths } from "../../routePaths";
 
 const AllSourcesPage: React.FC = () => {
   const navigate = useNavigate();
   const { sources } = useSourceList();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const onCreateSource = () => navigate(`${RoutePaths.SourceNew}`);
+  const onCreateSource = () => navigate(`${SourcePaths.SelectSourceNew}`);
+
   return sources.length ? (
     <MainPageWithScroll
       softScrollEdge={false}
       headTitle={<HeadTitle titles={[{ id: "admin.sources" }]} />}
       pageTitle={
-        <PageHeader
-          title={<FormattedMessage id="sidebar.sources" />}
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="sidebar.sources" />
+            </Heading>
+          }
           endComponent={
             <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={onCreateSource} size="sm" data-id="new-source">
               <FormattedMessage id="sources.newSource" />
@@ -38,7 +44,7 @@ const AllSourcesPage: React.FC = () => {
       <SourcesTable sources={sources} />
     </MainPageWithScroll>
   ) : (
-    <Navigate to={RoutePaths.SourceNew} />
+    <Navigate to={SourcePaths.SelectSourceNew} />
   );
 };
 

@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
+import { FlexContainer } from "components/ui/Flex";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 
-import styles from "./ConnectionStatusCell.module.scss";
 import { EntityNameCell } from "./EntityNameCell";
 import { Status } from "../types";
 
@@ -16,6 +16,7 @@ interface ConnectionStatusCellProps {
 
 export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ status, value, enabled }) => {
   const { formatMessage } = useIntl();
+  const isStreamCentricV2 = false;
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(
     () =>
       status === Status.EMPTY
@@ -53,9 +54,9 @@ export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ stat
         });
 
   return (
-    <div className={styles.content}>
-      <StatusIcon title={title} status={statusIconStatus} />
-      <EntityNameCell className={styles.text} value={value} enabled={enabled} />
-    </div>
+    <FlexContainer alignItems="center">
+      {!isStreamCentricV2 && <StatusIcon title={title} status={statusIconStatus} />}
+      <EntityNameCell value={value} enabled={enabled} />
+    </FlexContainer>
   );
 };

@@ -3,7 +3,7 @@ import classNames from "classnames";
 import { Paginator } from "components/ui/Paginator";
 import { Text } from "components/ui/Text";
 
-import { StreamReadInferredSchema, StreamReadSlicesItem } from "core/request/ConnectorBuilderClient";
+import { StreamReadInferredSchema, StreamReadSlicesItem } from "core/api/types/ConnectorBuilderClient";
 import { useSelectedPageAndSlice } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PageDisplay } from "./PageDisplay";

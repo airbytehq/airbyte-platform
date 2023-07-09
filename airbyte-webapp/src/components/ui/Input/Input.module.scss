@@ -5,18 +5,24 @@
   width: 100%;
   position: relative;
   background-color: colors.$grey-50;
-  border: 1px solid colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-50;
   border-radius: variables.$border-radius-xs;
 
   &.light {
     background-color: colors.$white;
+    border: variables.$border-thin solid colors.$grey-100;
   }
 
   &.error {
     border-color: colors.$red-100;
   }
 
-  &:not(.disabled, .focused):hover {
+  &.disabled,
+  &.readOnly {
+    cursor: not-allowed;
+  }
+
+  &:not(.disabled, .readOnly, .focused):hover {
     border-color: colors.$grey-100;
 
     &.light {
@@ -41,8 +47,8 @@
   outline: none;
   width: 100%;
   padding: 7px 8px;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.4;
   font-weight: normal;
   border: none;
   background: none;
@@ -58,7 +64,7 @@
   }
 
   &.disabled,
-  &:read-only {
+  &.readOnly {
     pointer-events: none;
     color: colors.$grey-400;
   }

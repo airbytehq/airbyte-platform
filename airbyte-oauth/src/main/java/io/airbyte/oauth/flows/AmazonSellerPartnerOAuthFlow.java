@@ -6,8 +6,11 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -35,43 +38,52 @@ public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
     return getConfigValueUnsafe(oauthConfig, "lwa_client_secret");
   }
 
-  public AmazonSellerPartnerOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public AmazonSellerPartnerOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public AmazonSellerPartnerOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public AmazonSellerPartnerOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
-  /**
-   * Depending on the OAuth flow implementation, the URL to grant user's consent may differ,
-   * especially in the query parameters to be provided. This function should generate such consent URL
-   * accordingly.
-   *
-   * @param definitionId The configured definition ID of this client
-   * @param clientId The configured client ID
-   * @param redirectUrl the redirect URL
+  /*
+   * Overriden default method to provide possibility to retrieve `app_id` from
+   * `sourceOAuthParamConfig` bypassing `formatConsentUrl()` method.
    */
   @Override
-  protected String formatConsentUrl(final UUID definitionId,
-                                    final String clientId,
+  public String getSourceConsentUrl(final UUID workspaceId,
+                                    final UUID sourceDefinitionId,
                                     final String redirectUrl,
-                                    final JsonNode inputOAuthConfiguration)
-      throws IOException {
+                                    final JsonNode inputOAuthConfiguration,
+                                    final OAuthConfigSpecification oauthConfigSpecification,
+                                    final JsonNode sourceOAuthParamConfig)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
 
-    // getting application_id value from user's config
-    final String application_id = getConfigValueUnsafe(inputOAuthConfiguration, "app_id");
+    if (sourceOAuthParamConfig == null) {
+      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "Undefined OAuth Parameter.");
+    }
 
     try {
       return new URIBuilder(AUTHORIZE_URL)
-          .addParameter("application_id", application_id)
+          /*
+           * Airbyte Amazon Seller Partner `application_id`, to provide native OAuth integration for
+           * 3rd-parties.
+           */
+          // get the `app_id` parameter from instance-wide params
+          .addParameter("application_id", getConfigValueUnsafe(sourceOAuthParamConfig, "app_id"))
           .addParameter("redirect_uri", redirectUrl)
           .addParameter("state", getState())
-          .addParameter("version", "beta")
+          /*
+           * Use `version=beta` for OAuth tests only, or when the OAuth App is in `draft` status
+           * https://developer-docs.amazon.com/amazon-shipping/docs/authorizing-selling-partner-api-
+           * applications#constructing-an-oauth-authorization-uri .addParameter("version", "beta")
+           */
           .build().toString();
     } catch (final URISyntaxException e) {
       throw new IOException("Failed to format Consent URL for OAuth flow", e);
     }
+
   }
 
   @Override
@@ -110,6 +122,18 @@ public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
   @Override
   public List<String> getDefaultOAuthOutputPath() {
     return List.of();
+  }
+
+  /*
+   * Should be overriden to satisfy the BaseOAuth2Flow abstraction requirements
+   */
+  @Override
+  protected String formatConsentUrl(final UUID definitionId,
+                                    final String clientId,
+                                    final String redirectUrl,
+                                    final JsonNode inputOAuthConfiguration)
+      throws IOException {
+    return "";
   }
 
 }

@@ -16,11 +16,13 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -67,7 +69,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private final String dataPlaneCredsSecretMountPath;
   private final AtomicReference<Optional<Integer>> cachedExitValue;
   private final Map<String, String> environmentVariables;
+  private final Map<String, String> annotations;
   private final Integer serverPort;
+  private final String serviceAccount;
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
@@ -79,7 +83,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final String dataPlaneCredsSecretMountPath,
                                      final String googleApplicationCredentials,
                                      final Map<String, String> environmentVariables,
-                                     final Integer serverPort) {
+                                     final Map<String, String> annotations,
+                                     final Integer serverPort,
+                                     final String serviceAccount) {
     this.kubePodInfo = kubePodInfo;
     this.documentStoreClient = documentStoreClient;
     this.kubernetesClient = kubernetesClient;
@@ -90,7 +96,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.googleApplicationCredentials = googleApplicationCredentials;
     this.cachedExitValue = new AtomicReference<>(Optional.empty());
     this.environmentVariables = environmentVariables;
+    this.annotations = annotations;
     this.serverPort = serverPort;
+    this.serviceAccount = serviceAccount;
   }
 
   /**
@@ -179,13 +187,13 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
   @Override
   public void destroy() {
-    final var wasDestroyed = kubernetesClient.pods()
+    final List<StatusDetails> destroyed = kubernetesClient.pods()
         .inNamespace(getInfo().namespace())
         .withName(getInfo().name())
         .withPropagationPolicy(DeletionPropagation.FOREGROUND)
         .delete();
 
-    if (wasDestroyed) {
+    if (CollectionUtils.isNotEmpty(destroyed)) {
       log.info("Deleted pod {} in namespace {}", getInfo().name(), getInfo().namespace());
     } else {
       log.warn("Wasn't able to delete pod {} from namespace {}", getInfo().name(), getInfo().namespace());
@@ -446,9 +454,10 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withName(getInfo().name())
         .withNamespace(getInfo().namespace())
         .withLabels(allLabels)
+        .withAnnotations(annotations)
         .endMetadata()
         .withNewSpec()
-        .withServiceAccount("airbyte-admin")
+        .withServiceAccount(serviceAccount)
         .withAutomountServiceAccountToken(true)
         .withRestartPolicy("Never")
         .withContainers(mainContainer)

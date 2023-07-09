@@ -94,7 +94,8 @@ class ConnectionSchedulerHelperTest {
   void testAvailableCronTimeZonesStayTheSame() {
     /*
      * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of
-     * supported timezones is copied from airbyte-webapp/src/config/availableCronTimeZones.json. If this
+     * supported timezones is copied from
+     * oss/airbyte-webapp/src/components/connection/ConnectionForm/availableCronTimeZones.json. If this
      * test fails, then THAT file must be updated with the new timezones.
      */
     String[] timezoneStrings = {
@@ -672,7 +673,7 @@ class ConnectionSchedulerHelperTest {
         assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().getCron().getCronExpression());
       } catch (IllegalArgumentException | JsonValidationException e) {
         throw (RuntimeException) new RuntimeException(
-            "One of the timezones is not supported - update airbyte-webapp/src/config/availableCronTimeZones.json!")
+            "One of the timezones is not supported - update oss/airbyte-webapp/src/components/connection/ConnectionForm/availableCronTimeZones.json!")
                 .initCause(e);
       }
     }

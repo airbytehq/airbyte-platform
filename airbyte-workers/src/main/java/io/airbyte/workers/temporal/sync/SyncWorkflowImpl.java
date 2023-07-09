@@ -27,9 +27,12 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WebhookOperationSummary;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
@@ -47,21 +50,19 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
   private static final String VERSION_LABEL = "sync-workflow";
-  private static final int CURRENT_VERSION = 2;
-  private static final String NORMALIZATION_SUMMARY_CHECK_TAG = "normalization_summary_check";
-  private static final int NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION = 1;
+  private static final int CURRENT_VERSION = 3;
   private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
   private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
   private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
+  private static final String USE_NORMALIZATION_WITH_CONNECTION = "use_normalization_with_connection";
+  private static final int USE_NORMALIZATION_WITH_CONNECTION_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private NormalizationActivity normalizationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private DbtTransformationActivity dbtTransformationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private PersistStateActivity persistActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -85,7 +86,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             sourceLauncherConfig.getDockerImage(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
 
-    final int version = Workflow.getVersion(VERSION_LABEL, Workflow.DEFAULT_VERSION, CURRENT_VERSION);
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
     final int autoDetectSchemaVersion =
@@ -106,7 +106,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
       final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
       if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
-        LOGGER.info("Connection is disabled. Cancelling run.");
+        LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
         final StandardSyncOutput output =
             new StandardSyncOutput()
                 .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
@@ -117,42 +117,23 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     StandardSyncOutput syncOutput =
         replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
 
-    if (version > Workflow.DEFAULT_VERSION) {
-      // the state is persisted immediately after the replication succeeded, because the
-      // state is a checkpoint of the raw data that has been copied to the destination;
-      // normalization & dbt does not depend on it
-      final ConfiguredAirbyteCatalog configuredCatalog = syncInput.getCatalog();
-      persistActivity.persist(connectionId, syncOutput, configuredCatalog);
-    }
-
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
         if (standardSyncOperation.getOperatorType() == OperatorType.NORMALIZATION) {
-          final int normalizationSummaryCheckVersion =
-              Workflow.getVersion(NORMALIZATION_SUMMARY_CHECK_TAG, Workflow.DEFAULT_VERSION, NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION);
-          if (normalizationSummaryCheckVersion >= NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION) {
-            Boolean shouldRun;
-            try {
-              shouldRun = normalizationSummaryCheckActivity.shouldRunNormalization(Long.valueOf(jobRunConfig.getJobId()), jobRunConfig.getAttemptId(),
-                  Optional.ofNullable(syncOutput.getStandardSyncSummary().getTotalStats().getRecordsCommitted()));
-            } catch (final Exception e) {
-              shouldRun = true;
-            }
-            if (!shouldRun) {
-              LOGGER.info("No records to normalize detected");
-              // Normalization skip has been disabled: issue #5417
-              // LOGGER.info("Skipping normalization because there are no records to normalize.");
-              // continue;
-            }
+          if (syncInput.getNormalizeInDestinationContainer()) {
+            LOGGER.info("Not Running Normalization Container for connection {}, because it ran in destination", connectionId);
+          } else {
+            LOGGER.info("generating normalization input");
+            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
+            final NormalizationSummary normalizationSummary =
+                normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
+            syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
+            MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_NORMALIZATION_CONTAINER, 1,
+                new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
           }
-
-          LOGGER.info("generating normalization input");
-          final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
-          final NormalizationSummary normalizationSummary =
-              normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
-          syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
           final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
+              .withConnectionId(syncInput.getConnectionId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
               .withOperatorDbt(standardSyncOperation.getOperatorDbt());
 
@@ -195,9 +176,18 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
     } else {
-      return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
-          syncOutput.getOutputCatalog(),
-          syncInput.getWorkspaceId());
+      final int withConnectionVersion =
+          Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
+      if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId());
+      } else {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId(),
+            syncInput.getConnectionId());
+      }
     }
   }
 

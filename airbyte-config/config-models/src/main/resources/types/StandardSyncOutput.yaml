@@ -4,7 +4,7 @@
 title: StandardSyncOutput
 description: job sync config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - standardSyncSummary
   - state

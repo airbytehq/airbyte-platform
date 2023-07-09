@@ -4,7 +4,7 @@
 title: ActorCatalog
 description: Catalog of an actor.
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - id
   - catalog

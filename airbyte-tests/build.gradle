@@ -34,11 +34,16 @@ configurations {
     automaticMigrationAcceptanceTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut.email'
+}
+
 dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-container-orchestrator')
 
-    implementation 'io.fabric8:kubernetes-client:5.12.2'
+    implementation libs.bundles.kubernetes.client
     implementation libs.platform.testcontainers
 
     acceptanceTestsImplementation project(':airbyte-api')
@@ -82,6 +87,12 @@ task copyComposeFileForMigrationAcceptanceTests(type: Copy) {
 assemble.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
 assemble.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
 
+checkstyleAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
+pmdAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
+
+checkstyleAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+pmdAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+
 task acceptanceTests(type: Test) {
     testClassesDirs += sourceSets.acceptanceTests.output.classesDirs
     classpath += sourceSets.acceptanceTests.runtimeClasspath
@@ -92,6 +103,8 @@ task acceptanceTests(type: Test) {
         exceptionFormat "full"
     }
     mustRunAfter test
+    // Ensure they re-run since these are integration tests.
+    outputs.upToDateWhen { false }
 }
 
 task automaticMigrationAcceptanceTest(type: Test) {

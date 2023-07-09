@@ -34,12 +34,11 @@ import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.commons.server.helpers.DestinationDefinitionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
-import io.airbyte.commons.server.helpers.SourceDefinitionHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -47,6 +46,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -63,9 +63,11 @@ import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.protocol.models.AirbyteStream;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +94,11 @@ class JobHistoryHandlerTest {
   private static final JobConfigType CONFIG_TYPE_FOR_API = JobConfigType.CHECK_CONNECTION_SOURCE;
   private static final JobConfig JOB_CONFIG = new JobConfig()
       .withConfigType(CONFIG_TYPE)
-      .withCheckConnection(new JobCheckConnectionConfig());
+      .withCheckConnection(new JobCheckConnectionConfig())
+      .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(
+          new ConfiguredAirbyteCatalog().withStreams(List.of(
+              new ConfiguredAirbyteStream().withStream(new AirbyteStream().withNamespace("ns1").withName("stream1")),
+              new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("stream2"))))));
   private static final Path LOG_PATH = Path.of("log_path");
   private static final LogRead EMPTY_LOG_READ = new LogRead().logLines(new ArrayList<>());
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;
@@ -123,6 +129,10 @@ class JobHistoryHandlerTest {
   private static JobRead toJobInfo(final Job job) {
     return new JobRead().id(job.getId())
         .configId(job.getScope())
+        .enabledStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
+            .stream()
+            .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace()))
+            .collect(Collectors.toList()))
         .status(Enums.convertTo(job.getStatus(), io.airbyte.api.model.generated.JobStatus.class))
         .configType(Enums.convertTo(job.getConfigType(), io.airbyte.api.model.generated.JobConfigType.class))
         .createdAt(job.getCreatedAtInSecond())
@@ -331,12 +341,16 @@ class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the right info to debug this job")
-  void testGetDebugJobInfo() throws IOException, JsonValidationException, ConfigNotFoundException, URISyntaxException {
-    final StandardSourceDefinition standardSourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
+  void testGetDebugJobInfo() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo");
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceRead sourceRead = SourceHelpers.getSourceRead(source, standardSourceDefinition);
 
-    final StandardDestinationDefinition standardDestinationDefinition = DestinationDefinitionHelpers.generateDestination();
+    final StandardDestinationDefinition standardDestinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("db2");
     final DestinationConnection destination = DestinationHelpers.generateDestination(UUID.randomUUID());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, standardDestinationDefinition);
 

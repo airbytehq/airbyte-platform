@@ -1,0 +1,22 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.listboxContainer {
+  width: variables.$width-extra-wide-menu;
+}
+
+.caret {
+  color: colors.$grey-300;
+  width: variables.$spacing-md;
+}
+
+.controlButtonLabel {
+  width: calc(100% - variables.$spacing-lg);
+
+  p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+  }
+}

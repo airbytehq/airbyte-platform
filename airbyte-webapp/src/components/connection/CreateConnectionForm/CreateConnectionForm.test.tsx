@@ -3,15 +3,16 @@ import { act, render as tlr } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
+
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
-import { TestWrapper } from "test-utils/testutils";
+import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
+import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import * as sourceHook from "hooks/services/useSourceHook";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";
@@ -32,9 +33,21 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
-  useCurrentWorkspace: () => ({}),
+jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
+}));
+
+jest.mock("core/api", () => ({
+  useCurrentWorkspace: () => ({}),
+  useInvalidateWorkspaceStateQuery: () => () => null,
+}));
+
+jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({
+  useGetSourceFromSearchParams: () => mockConnection.source,
+}));
+
+jest.mock("hooks/domain/connector/useGetDestinationFromParams", () => ({
+  useGetDestinationFromSearchParams: () => mockConnection.destination,
 }));
 
 jest.setTimeout(20000);
@@ -47,7 +60,7 @@ describe("CreateConnectionForm", () => {
     await act(async () => {
       renderResult = tlr(
         <Wrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </Wrapper>
       );
     });
@@ -61,6 +74,10 @@ describe("CreateConnectionForm", () => {
     catalogId: "",
     onDiscoverSchema: () => Promise.resolve(),
   };
+
+  beforeEach(() => {
+    useMockIntersectionObserver();
+  });
 
   it("should render", async () => {
     jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);
@@ -97,7 +114,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 
@@ -118,7 +135,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 
@@ -140,7 +157,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper features={featuresToInject}>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 

@@ -6,7 +6,7 @@ import { Card } from "components/ui/Card";
 
 import LogsContent from "./components/LogsContent";
 
-const ConfigurationsPage: React.FC = () => {
+export const ConfigurationsPage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "admin.configuration" }]} />
@@ -16,5 +16,3 @@ const ConfigurationsPage: React.FC = () => {
     </>
   );
 };
-
-export default ConfigurationsPage;

@@ -4,14 +4,11 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_LIMIT;
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_REQUEST;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
-import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_STEP;
-import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import com.google.common.base.Stopwatch;
 import datadog.trace.api.Trace;
@@ -20,6 +17,9 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.featureflag.ConcurrentSocatResources;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -36,6 +36,7 @@ import io.airbyte.workers.process.KubeProcessFactory;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.micronaut.core.util.StringUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -49,6 +50,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coordinates configuring and managing the state of an async process. This is tied to the (job_id,
@@ -58,11 +61,19 @@ import lombok.extern.slf4j.Slf4j;
  * @param <OUTPUT> either {@link Void} or a json-serializable output class for the worker
  */
 @Slf4j
-public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(LauncherWorker.class);
 
   private static final Duration MAX_DELETION_TIMEOUT = Duration.ofSeconds(45);
 
-  private final UUID connectionId;
+  /**
+   * Pod label used to unique identify the pod launched by this worker.
+   */
+  static final String PROCESS_ID_LABEL_KEY = "process_id";
+
+  final UUID connectionId;
+  final UUID processId;
   private final String application;
   private final String podNamePrefix;
   private final JobRunConfig jobRunConfig;
@@ -78,6 +89,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private final boolean isCustomConnector;
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private AsyncOrchestratorPodProcess process;
+  private final FeatureFlagClient featureFlagClient;
 
   public LauncherWorker(final UUID connectionId,
                         final String application,
@@ -91,6 +103,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
                         final Integer serverPort,
                         final TemporalUtils temporalUtils,
                         final WorkerConfigs workerConfigs,
+                        final FeatureFlagClient featureFlagClient,
                         final boolean isCustomConnector) {
 
     this.connectionId = connectionId;
@@ -105,7 +118,11 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
     this.serverPort = serverPort;
     this.temporalUtils = temporalUtils;
     this.workerConfigs = workerConfigs;
+    this.featureFlagClient = featureFlagClient;
     this.isCustomConnector = isCustomConnector;
+
+    // Generate a random UUID to unique identify the pod process
+    processId = UUID.randomUUID();
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -123,11 +140,24 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         // Manually add the worker environment to the env var map
         envMap.put(WorkerConstants.WORKER_ENVIRONMENT, containerOrchestratorConfig.workerEnvironment().name());
 
+        // Merge in the env from the ContainerOrchestratorConfig
+        containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
+
+        // Allow for the override of the socat pod CPU resources as part of the concurrent source read
+        // experimentation
+        final String socatResources = featureFlagClient.stringVariation(ConcurrentSocatResources.INSTANCE, new Connection(connectionId));
+        if (StringUtils.isNotEmpty(socatResources)) {
+          LOGGER.info("Overriding Socat CPU limit and request to {}.", socatResources);
+          envMap.put(SOCAT_KUBE_CPU_LIMIT, socatResources);
+          envMap.put(SOCAT_KUBE_CPU_REQUEST, socatResources);
+        }
+
         final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
         fileMap.putAll(Map.of(
             OrchestratorConstants.INIT_FILE_APPLICATION, application,
             OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, Jsons.serialize(jobRunConfig),
             OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input),
+            // OrchestratorConstants.INIT_FILE_ENV_MAP might be duplicated since the pod env contains everything
             OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)));
 
         final Map<Integer, Integer> portMap = Map.of(
@@ -140,7 +170,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         final var allLabels = KubeProcessFactory.getLabels(
             jobRunConfig.getJobId(),
             Math.toIntExact(jobRunConfig.getAttemptId()),
-            Map.of(CONNECTION_ID_LABEL_KEY, connectionId.toString(), SYNC_STEP_KEY, ORCHESTRATOR_STEP));
+            generateMetadataLabels());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";
         final var podName = podNameAndJobPrefix + jobRunConfig.getAttemptId();
@@ -150,7 +180,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             podName,
             mainContainerInfo);
 
-        ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, JOB_ID_KEY, jobRunConfig.getJobId(), JOB_ROOT_KEY, jobRoot));
+        ApmTraceUtils.addTagsToTrace(connectionId, jobRunConfig.getJobId(), jobRoot);
 
         // Use the configuration to create the process.
         process = new AsyncOrchestratorPodProcess(
@@ -162,8 +192,10 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             containerOrchestratorConfig.dataPlaneCredsSecretName(),
             containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
             containerOrchestratorConfig.googleApplicationCredentials(),
-            containerOrchestratorConfig.environmentVariables(),
-            serverPort);
+            envMap,
+            workerConfigs.getWorkerKubeAnnotations(),
+            serverPort,
+            containerOrchestratorConfig.serviceAccount());
 
         // Define what to do on cancellation.
         cancellationCallback.set(() -> {
@@ -236,6 +268,18 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
       }
     }, activityContext);
   }
+
+  private Map<String, String> generateMetadataLabels() {
+    final Map<String, String> metadataLabels = new HashMap<>();
+    metadataLabels.put(PROCESS_ID_LABEL_KEY, processId.toString());
+    metadataLabels.putAll(generateCustomMetadataLabels());
+    if (connectionId != null) {
+      metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
+    }
+    return metadataLabels;
+  }
+
+  protected abstract Map<String, String> generateCustomMetadataLabels();
 
   /**
    * It is imperative that we do not run multiple replications, normalizations, syncs, etc. at the

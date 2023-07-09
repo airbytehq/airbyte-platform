@@ -1,7 +1,4 @@
 @use "scss/variables";
-@use "scss/colors";
-
-$icon-size: 16px;
 
 .flexHeight {
   flex: 1;
@@ -23,22 +20,5 @@ $icon-size: 16px;
   &.flush {
     padding: 0;
     gap: 0;
-  }
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-
-  .arrow {
-    font-size: $icon-size;
-    line-height: $icon-size;
-    color: colors.$dark-blue;
-    transition: 0.3s;
-    cursor: pointer;
-
-    &.expanded {
-      transform: rotate(90deg);
-    }
   }
 }

@@ -23,10 +23,14 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DefaultGetSpecWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -41,6 +45,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -52,7 +57,7 @@ import java.util.function.Supplier;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class SpecActivityImpl implements SpecActivity {
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
@@ -63,8 +68,8 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public SpecActivityImpl(@Named("specWorkerConfigs") final WorkerConfigs workerConfigs,
-                          @Named("specProcessFactory") final ProcessFactory processFactory,
+  public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
+                          final ProcessFactory processFactory,
                           @Named("workspaceRoot") final Path workspaceRoot,
                           final WorkerEnvironment workerEnvironment,
                           final LogConfigs logConfigs,
@@ -73,7 +78,7 @@ public class SpecActivityImpl implements SpecActivity {
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                           final FeatureFlags featureFlags) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -88,6 +93,8 @@ public class SpecActivityImpl implements SpecActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public ConnectorJobOutput run(final JobRunConfig jobRunConfig, final IntegrationLauncherConfig launcherConfig) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_SPEC, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), DOCKER_IMAGE_KEY, launcherConfig.getDockerImage(),
         JOB_ID_KEY, jobRunConfig.getJobId()));
 
@@ -114,6 +121,7 @@ public class SpecActivityImpl implements SpecActivity {
   private CheckedSupplier<Worker<JobGetSpecConfig, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                     final IntegrationLauncherConfig launcherConfig) {
     return () -> {
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.SPEC);
       final AirbyteStreamFactory streamFactory = getStreamFactory(launcherConfig);
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),
@@ -123,7 +131,8 @@ public class SpecActivityImpl implements SpecActivity {
           workerConfigs.getResourceRequirements(),
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags);
+          featureFlags,
+          Collections.emptyMap());
 
       return new DefaultGetSpecWorker(integrationLauncher, streamFactory);
     };

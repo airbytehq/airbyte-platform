@@ -1,5 +1,5 @@
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics/useAnalyticsService";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics/useAnalyticsService";
 
 interface Values {
   connectorType: string;

@@ -6,16 +6,17 @@ import * as yup from "yup";
 import { LabeledInput } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
-import { ToastType } from "components/ui/Toast";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import { BottomBlock, FieldItem, Form } from "../components/FormComponents";
 import { FormTitle } from "../components/FormTitle";
+import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 
 const ResetPasswordPageValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
@@ -28,7 +29,7 @@ export const ResetPasswordPage: React.FC = () => {
 
   useTrackPage(PageTrackingCodes.RESET_PASSWORD);
   return (
-    <div>
+    <FlexContainer direction="column" gap="xl">
       <HeadTitle titles={[{ id: "login.resetPassword" }]} />
       <FormTitle>
         <FormattedMessage id="login.resetPassword" />
@@ -45,7 +46,7 @@ export const ResetPasswordPage: React.FC = () => {
             registerNotification({
               id: "resetPassword.emailSent",
               text: formatMessage({ id: "login.resetPassword.emailSent" }),
-              type: ToastType.SUCCESS,
+              type: "success",
             });
           } catch (err) {
             err.message.includes("user-not-found")
@@ -85,6 +86,7 @@ export const ResetPasswordPage: React.FC = () => {
           </Form>
         )}
       </Formik>
-    </div>
+      <LoginSignupNavigation to="signup" />
+    </FlexContainer>
   );
 };

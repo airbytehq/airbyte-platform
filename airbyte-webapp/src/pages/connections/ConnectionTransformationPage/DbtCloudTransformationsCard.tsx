@@ -4,10 +4,10 @@ import { FormattedMessage } from "react-intl";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useDbtIntegration, useAvailableDbtJobs } from "core/api/cloud";
 import { WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useDbtIntegration, useAvailableDbtJobs } from "packages/cloud/services/dbtCloud";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./DbtCloudTransformationsCard/DbtCloudTransformationsCard.module.scss";
 import { DbtJobsForm } from "./DbtCloudTransformationsCard/DbtJobsForm";
@@ -34,7 +34,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
 
   componentDidCatch(error: Error) {
     const { trackError, workspaceId } = this.props;
-    trackError(error, { workspaceId });
+    trackError(error, { workspaceId, errorBoundary: this.constructor.name });
   }
 
   render() {
@@ -48,7 +48,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
             </span>
           }
         >
-          <Text centered className={styles.cardBodyContainer}>
+          <Text align="center" className={styles.cardBodyContainer}>
             {displayMessage ? (
               <FormattedMessage id="connection.dbtCloudJobs.dbtError" values={{ displayMessage }} />
             ) : (

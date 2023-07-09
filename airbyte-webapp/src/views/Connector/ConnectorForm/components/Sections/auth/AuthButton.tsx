@@ -10,7 +10,9 @@ import { ConnectorIds } from "utils/connectors";
 
 import styles from "./AuthButton.module.scss";
 import GoogleAuthButton from "./GoogleAuthButton";
-import { useFormikOauthAdapter } from "./useOauthFlowAdapter";
+import QuickBooksAuthButton from "./QuickBooksAuthButton";
+import { useFormOauthAdapter } from "./useOauthFlowAdapter";
+import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
 
@@ -36,6 +38,9 @@ function getButtonComponent(connectorDefinitionId: string) {
   if (isGoogleConnector(connectorDefinitionId)) {
     return GoogleAuthButton;
   }
+  if (connectorDefinitionId === ConnectorIds.Sources.QuickBooks) {
+    return QuickBooksAuthButton;
+  }
   return Button;
 }
 
@@ -50,11 +55,15 @@ export const AuthButton: React.FC<{
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
+
   const { hiddenAuthFieldErrors } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run, hasRun } = useFormikOauthAdapter(selectedConnectorDefinitionSpecification);
+  const { loading, done, run } = useFormOauthAdapter(
+    selectedConnectorDefinitionSpecification,
+    selectedConnectorDefinition
+  );
 
   if (!selectedConnectorDefinition) {
     console.error("Entered non-auth flow while no supported connector is selected");
@@ -77,20 +86,15 @@ export const AuthButton: React.FC<{
     />
   );
   return (
-    <div className={styles.authSectionRow}>
-      <Component isLoading={loading} type="button" onClick={run}>
+    <FlexContainer alignItems="center">
+      <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
         {buttonLabel}
       </Component>
-      {done && hasRun && (
-        <Text as="div" size="lg" className={messageStyle}>
-          <FormattedMessage id="connectorForm.authenticate.succeeded" />
-        </Text>
-      )}
       {authRequiredError && (
         <Text as="div" size="lg" className={messageStyle}>
           <FormattedMessage id="connectorForm.authenticate.required" />
         </Text>
       )}
-    </div>
+    </FlexContainer>
   );
 };

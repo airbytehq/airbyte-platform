@@ -12,11 +12,11 @@ HERE = pathlib.Path(__file__).parent
 # The text of the README file
 README = (HERE / "README.md").read_text()
 
-CDK_VERSION = (HERE / "CDK_VERSION").read_text()
+CDK_VERSION = (HERE.parent / "airbyte-connector-builder-resources" / "CDK_VERSION").read_text()
 
 setup(
     name="connector-builder-server",
-    version="0.41.0",
+    version="0.50.6",
     description="",
     long_description=README,
     author="Airbyte",

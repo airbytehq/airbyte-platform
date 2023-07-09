@@ -1,10 +1,11 @@
 import { render } from "@testing-library/react";
+
 import { mockDestinationDefinition } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition } from "test-utils/mock-data/mockSource";
 import { mockConnection, TestWrapper } from "test-utils/testutils";
 
 import { ConnectionStatus, SchemaChange } from "core/request/AirbyteClient";
-import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
+import { defaultOssFeatures, FeatureItem } from "core/services/features";
 
 // eslint-disable-next-line css-modules/no-unused-class
 import styles from "./ConnectionInfoCard.module.scss";

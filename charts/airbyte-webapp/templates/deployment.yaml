@@ -57,21 +57,6 @@ spec:
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if eq .Values.global.deploymentMode "oss"  }}
-        - name: AIRBYTE_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: AIRBYTE_VERSION
-        - name: API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: API_URL
-        - name: CONNECTOR_BUILDER_API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONNECTOR_BUILDER_API_URL
         - name: TRACKING_STRATEGY
           valueFrom:
             configMapKeyRef:
@@ -87,6 +72,21 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONNECTOR_BUILDER_API_HOST
+        - name: AIRBYTE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_VERSION
+        - name: API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: API_URL
+        - name: CONNECTOR_BUILDER_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_BUILDER_API_URL
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}
@@ -100,7 +100,7 @@ spec:
         {{- end }}
 
         # Values from env
-        {{- if .Values.env_vars }}
+        {{- if or .Values.env_vars .Values.global.env_vars }}
         {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
         - name: {{ $k }}
           value: {{ $v | quote }}

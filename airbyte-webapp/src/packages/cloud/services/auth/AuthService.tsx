@@ -1,23 +1,22 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { User as FirebaseUser, AuthErrorCodes } from "firebase/auth";
 import React, { useCallback, useContext, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
-import { useQueryClient } from "react-query";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 
-import { ToastType } from "components/ui/Toast";
-
-import { Action, Namespace } from "core/analytics";
+import { useGetUserService } from "core/api/cloud";
+import { UserRead } from "core/api/types/CloudApi";
 import { isCommonRequestError } from "core/request/CommonRequestError";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
-import { User } from "packages/cloud/lib/domain/users";
-import { useGetUserService } from "packages/cloud/services/users/UserService";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
+import { trackSignup } from "utils/fathom";
 
 import { FREE_EMAIL_SERVICE_PROVIDERS } from "./freeEmailProviders";
 import { actions, AuthServiceState, authStateReducer, initialState } from "./reducer";
@@ -38,7 +37,6 @@ export type AuthSignUp = (form: {
   news: boolean;
 }) => Promise<void>;
 
-export type AuthChangeEmail = (email: string, password: string) => Promise<void>;
 export type AuthChangeName = (name: string) => Promise<void>;
 
 export type AuthSendEmailVerification = () => Promise<void>;
@@ -47,14 +45,15 @@ export type AuthLogout = () => Promise<void>;
 
 type OAuthLoginState = "waiting" | "loading" | "done";
 
-enum FirebaseAuthMessageId {
+export enum FirebaseAuthMessageId {
   NetworkFailure = "firebase.auth.error.networkRequestFailed",
   TooManyRequests = "firebase.auth.error.tooManyRequests",
+  InvalidPassword = "firebase.auth.error.invalidPassword",
   DefaultError = "firebase.auth.error.default",
 }
 
 interface AuthContextApi {
-  user: User | null;
+  user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
   isLoading: boolean;
@@ -67,7 +66,6 @@ interface AuthContextApi {
   signUpWithEmailLink: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
   signUp: AuthSignUp;
   updatePassword: AuthUpdatePassword;
-  updateEmail: AuthChangeEmail;
   updateName: AuthChangeName;
   requirePasswordReset: AuthRequirePasswordReset;
   confirmPasswordReset: AuthConfirmPasswordReset;
@@ -99,7 +97,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   const createAirbyteUser = async (
     firebaseUser: FirebaseUser,
     userData: { name?: string; companyName?: string; news?: boolean } = {}
-  ): Promise<User> => {
+  ): Promise<UserRead> => {
     // Create the Airbyte user on our server
     const user = await userService.create({
       authProvider: AuthProviders.GoogleIdentityPlatform,
@@ -109,22 +107,25 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       companyName: userData.companyName ?? "",
       news: userData.news ?? false,
     });
+    const isCorporate = ctx.hasCorporateEmail(user.email);
 
     analytics.track(Namespace.USER, Action.CREATE, {
       actionDescription: "New user registered",
       user_id: firebaseUser.uid,
       name: user.name,
       email: user.email,
-      isCorporate: ctx.hasCorporateEmail(user.email),
+      isCorporate,
       // Which login provider was used, e.g. "password", "google.com", "github.com"
       provider: firebaseUser.providerData[0]?.providerId,
     });
+
+    trackSignup(isCorporate);
 
     return user;
   };
 
   const onAfterAuth = useCallback(
-    async (currentUser: FirebaseUser, user?: User) => {
+    async (currentUser: FirebaseUser, user?: UserRead) => {
       try {
         user ??= await userService.getByAuthId(currentUser.uid, AuthProviders.GoogleIdentityPlatform);
         loggedIn({
@@ -230,10 +231,6 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         await authService.updateProfile(name);
         updateUserName({ value: name });
       },
-      async updateEmail(email, password): Promise<void> {
-        await userService.changeEmail(email);
-        return authService.updateEmail(email, password);
-      },
       async updatePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
         // re-authentication may be needed before updating password
         // https://firebase.google.com/docs/auth/web/manage-users#re-authenticate_a_user
@@ -252,7 +249,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.NetworkFailure,
                 }),
-                type: ToastType.ERROR,
+                type: "error",
               });
               break;
             case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
@@ -261,7 +258,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.TooManyRequests,
                 }),
-                type: ToastType.WARNING,
+                type: "warning",
               });
               break;
             default:
@@ -270,7 +267,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.DefaultError,
                 }),
-                type: ToastType.ERROR,
+                type: "error",
               });
           }
         });
@@ -345,7 +342,7 @@ export const useAuthService = (): AuthContextApi => {
   return authService;
 };
 
-export const useCurrentUser = (): User => {
+export const useCurrentUser = (): UserRead => {
   const { user } = useAuthService();
   if (!user) {
     throw new Error("useCurrentUser must be used only within authorised flow");

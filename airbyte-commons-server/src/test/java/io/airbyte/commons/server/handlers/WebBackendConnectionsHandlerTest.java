@@ -77,9 +77,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.commons.server.helpers.DestinationDefinitionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
-import io.airbyte.commons.server.helpers.SourceDefinitionHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
@@ -91,6 +89,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
@@ -136,6 +135,7 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -160,6 +160,7 @@ class WebBackendConnectionsHandlerTest {
     configRepository = mock(ConfigRepository.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
         stateHandler,
@@ -169,15 +170,20 @@ class WebBackendConnectionsHandlerTest {
         schedulerHandler,
         operationsHandler,
         eventRunner,
-        configRepository);
+        configRepository,
+        actorDefinitionVersionHelper);
 
-    final StandardSourceDefinition sourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
-    sourceDefinition.setIcon(SOURCE_ICON);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo")
+        .withIcon(SOURCE_ICON);
     final SourceConnection source = SourceHelpers.generateSource(sourceDefinition.getSourceDefinitionId());
     sourceRead = SourceHelpers.getSourceRead(source, sourceDefinition);
 
-    final StandardDestinationDefinition destinationDefinition = DestinationDefinitionHelpers.generateDestination();
-    destinationDefinition.setIcon(DESTINATION_ICON);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("db2")
+        .withIcon(DESTINATION_ICON);
     final DestinationConnection destination = DestinationHelpers.generateDestination(destinationDefinition.getDestinationDefinitionId());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, destinationDefinition);
 
@@ -335,7 +341,9 @@ class WebBackendConnectionsHandlerTest {
             .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
             .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
             .memoryRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
-            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()));
+            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
   }
 
   @Test
@@ -670,7 +678,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .notifySchemaChanges(false);
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -687,6 +696,7 @@ class WebBackendConnectionsHandlerTest {
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true)
         .breakingChange(false);
 
     final ConnectionUpdate actual = WebBackendConnectionsHandler.toConnectionPatch(input, operationIds, false);
@@ -699,7 +709,8 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
-            "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges");
+            "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
+            "notifySchemaChangesByEmail");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)
@@ -721,7 +732,8 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
-            "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "nonBreakingChangesPreference");
+            "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "notifySchemaChangesByEmail",
+            "nonBreakingChangesPreference");
 
     final Set<String> methods = Arrays.stream(ConnectionUpdate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionUpdate.class)
@@ -748,7 +760,9 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .status(expected.getStatus())
         .syncCatalog(expected.getSyncCatalog())
-        .sourceCatalogId(expected.getCatalogId());
+        .sourceCatalogId(expected.getCatalogId())
+        .notifySchemaChanges(expected.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail());
 
     when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
@@ -771,7 +785,10 @@ class WebBackendConnectionsHandlerTest {
             .prefix(expected.getPrefix())
             .syncCatalog(expected.getSyncCatalog())
             .status(expected.getStatus())
-            .schedule(expected.getSchedule()).breakingChange(false));
+            .schedule(expected.getSchedule())
+            .breakingChange(false)
+            .notifySchemaChanges(expected.getNotifySchemaChanges())
+            .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail()));
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(connectionRead.getConnectionId());
 
@@ -1082,7 +1099,7 @@ class WebBackendConnectionsHandlerTest {
         .skipReset(false)
         .connectionId(expected.getConnectionId());
 
-    final UUID sourceId = UUID.randomUUID();
+    final UUID sourceId = sourceRead.getSourceId();
 
     // existing connection has a breaking change
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
@@ -1120,9 +1137,9 @@ class WebBackendConnectionsHandlerTest {
     assertEquals(expectedWithNewSchema.getSyncCatalog(), result.getSyncCatalog());
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
-    ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
+    final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
     verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture());
-    List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
+    final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
     // Expect the ConnectionUpdate object to have breakingChange: false
     assertEquals(false, connectionUpdateValues.get(0).getBreakingChange());
 

@@ -10,20 +10,22 @@ import { Label, LabeledSwitch } from "components";
 import { DocsIcon } from "components/icons/DocsIcon";
 import { PlayIcon } from "components/icons/PlayIcon";
 import { Cell, Row } from "components/SimpleTableComponents";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
-import { ToastType } from "components/ui/Toast";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useNotificationConfigTest } from "core/api";
+import { Notification, NotificationType } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 import useWorkspace, { WebhookPayload } from "hooks/services/useWorkspace";
 import { links } from "utils/links";
 
 import help from "./help.png";
 import styles from "./WebHookForm.module.scss";
-import { Content, SettingsCard } from "../../SettingsComponents";
 
 const enum WebhookAction {
   Test = "test",
@@ -49,8 +51,9 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
   const [webhookViewGuide, setWebhookViewGuide] = useState(false);
   const [formAction, setFormAction] = useState<FormActionType>({ test: false, save: false });
   const { registerNotification, unregisterAllNotifications } = useNotificationService();
-  const { updateWebhook, testWebhook } = useWorkspace();
+  const { updateWebhook } = useWorkspace();
   const { formatMessage } = useIntl();
+  const testWebhook = useNotificationConfigTest();
 
   const webhookAction = async (action: WebhookAction, data: WebhookPayload) => {
     unregisterAllNotifications();
@@ -61,7 +64,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
           registerNotification({
             id: "settings.webhook.test.passed",
             text: formatMessage({ id: "settings.webhook.test.passed" }),
-            type: ToastType.SUCCESS,
+            type: "success",
           });
           break;
         }
@@ -69,7 +72,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
           registerNotification({
             id: "settings.webhook.test.failed",
             text: formatMessage({ id: "settings.webhook.test.failed" }),
-            type: ToastType.ERROR,
+            type: "error",
           });
           break;
         }
@@ -88,7 +91,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
             registerNotification({
               id: "settings.webhook.save.failed",
               text: formatMessage({ id: "settings.webhook.save.failed" }),
-              type: ToastType.ERROR,
+              type: "error",
             });
             break;
           }
@@ -101,7 +104,14 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
   const testWebhookAction = async (data: WebhookPayload): Promise<boolean> => {
     try {
       // TODO: Temporary solution. The current implementation of the back-end requires at least one selected trigger). Should be removed after back-end fixes
-      const payload = { ...data, sendOnSuccess: true };
+      const payload: Notification = {
+        notificationType: NotificationType.slack,
+        sendOnFailure: !!data.sendOnFailure,
+        sendOnSuccess: true,
+        slackConfiguration: {
+          webhook: data.webhook ?? "",
+        },
+      };
       return (await testWebhook(payload))?.status === "succeeded";
     } catch (e) {
       return false;
@@ -119,8 +129,8 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
     >
       {({ dirty, errors, values }) => (
         <Form>
-          <SettingsCard title={<FormattedMessage id="settings.notificationSettings" />}>
-            <Content>
+          <Card title={<FormattedMessage id="settings.notificationSettings" />}>
+            <Box p="xl">
               <div className={classNames(styles.webhookGuide, { [styles.active]: webhookViewGuide })}>
                 <div className={styles.webhookGuideTitle}>
                   <Heading as="h5">
@@ -217,7 +227,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
                         disabled={!values.webhook || !!errors.webhook || formAction.save}
                         onClick={() => webhookAction(WebhookAction.Test, values)}
                       >
-                        <FormattedMessage id="settings.test" />
+                        <FormattedMessage id="settings.notifications.testWebhookButtonLabel" />
                       </Button>
                     }
                   >
@@ -257,8 +267,8 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
                   </Field>
                 </Cell>
               </Row>
-            </Content>
-          </SettingsCard>
+            </Box>
+          </Card>
           <div className={styles.action}>
             <Button
               type="submit"

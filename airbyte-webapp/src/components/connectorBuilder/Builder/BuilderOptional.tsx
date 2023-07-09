@@ -1,26 +1,21 @@
-import { faAngleDown, faAngleRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import classNames from "classnames";
-import React, { useState } from "react";
-import { FormattedMessage } from "react-intl";
+import React from "react";
+import { useIntl } from "react-intl";
 
-import styles from "./BuilderOptional.module.scss";
+import { Collapsible } from "components/ui/Collapsible";
+import { FlexContainer } from "components/ui/Flex";
 
-export const BuilderOptional: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
+interface BuilderOptionalProps {
+  label?: string;
+}
+
+export const BuilderOptional: React.FC<React.PropsWithChildren<BuilderOptionalProps>> = ({ children, label }) => {
+  const { formatMessage } = useIntl();
+
   return (
-    <div className={styles.wrapper}>
-      <button
-        type="button"
-        onClick={() => {
-          setIsOpen(!isOpen);
-        }}
-        className={classNames(styles.label, { [styles.closed]: !isOpen })}
-      >
-        {isOpen ? <FontAwesomeIcon icon={faAngleDown} /> : <FontAwesomeIcon icon={faAngleRight} />}
-        <FormattedMessage id="connectorBuilder.optionalFieldsLabel" />
-      </button>
-      {isOpen && <div className={styles.container}>{children}</div>}
-    </div>
+    <Collapsible label={label ?? formatMessage({ id: "connectorBuilder.optionalFieldsLabel" })} type="footer">
+      <FlexContainer direction="column" gap="xl">
+        {children}
+      </FlexContainer>
+    </Collapsible>
   );
 };

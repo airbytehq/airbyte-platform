@@ -7,23 +7,27 @@
  */
 
 export interface Experiments {
-  "connector.inviteUsersHint.visible": boolean;
-  "connector.inviteUsersHint.linkToUsersPage": boolean;
+  "autopropagation.enabled": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
-  "connector.form.useDatepicker": boolean;
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
-  "authPage.hideSelfHostedCTA": boolean;
   "authPage.signup.hideName": boolean;
   "authPage.signup.hideCompanyName": boolean;
   "onboarding.speedyConnection": boolean;
-  "authPage.signup.simplifyLeftSide": boolean;
   "connection.onboarding.sources": string;
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.newTableDesign": boolean;
-  "workspace.freeConnectorsProgram.visible": boolean;
-  "connectorBuilder.showNavigationLinks": boolean;
+  "connection.streamCentricUI.v2": boolean;
+  "connection.streamCentricUI.lateMultiplier": number;
+  "connection.streamCentricUI.errorMultiplier": number;
+  "connection.streamCentricUI.numberOfLogsToLoad": number;
+  "connection.searchableJobLogs": boolean;
+  "connector.showRequestSchemabutton": boolean;
+  "connection.syncCatalog.simplifiedCatalogRow": boolean;
+  "upcomingFeaturesPage.url": string;
+  "billing.newTrialPolicy": boolean;
+  "connector.allowlistIpBanner": boolean;
+  "settings.emailNotifications": boolean;
 }

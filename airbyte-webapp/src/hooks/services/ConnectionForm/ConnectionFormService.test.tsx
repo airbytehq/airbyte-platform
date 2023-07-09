@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react-hooks";
 import React from "react";
+
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -33,7 +34,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 
@@ -142,6 +143,44 @@ describe("ConnectionFormService", () => {
       expect(result.current.getErrorMessage(false, true)).toBe(errMsg);
       expect(result.current.getErrorMessage(true, false)).toBe(errMsg);
       expect(result.current.getErrorMessage(true, true)).toBe(errMsg);
+    });
+
+    it("should show a streams error if the form is invalid and not dirty", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: Wrapper,
+        initialProps: {
+          connection: mockConnection,
+          mode: "create",
+          refreshSchema,
+        },
+      });
+
+      const errors = {
+        syncCatalog: {
+          streams: "There's an error",
+        },
+      };
+
+      expect(result.current.getErrorMessage(false, true, errors)).toBe("Select at least 1 stream to sync.");
+    });
+
+    it("should not show a streams error if the form is valid", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: Wrapper,
+        initialProps: {
+          connection: mockConnection,
+          mode: "create",
+          refreshSchema,
+        },
+      });
+
+      const errors = {
+        syncCatalog: {
+          streams: "There's an error",
+        },
+      };
+
+      expect(result.current.getErrorMessage(true, true, errors)).toBe(null);
     });
   });
 });

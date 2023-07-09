@@ -1,7 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult } from "@testing-library/react";
 import React, { Suspense } from "react";
 import { IntlProvider } from "react-intl";
-import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
@@ -13,13 +13,13 @@ import {
   SourceRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
+import { AnalyticsProvider } from "core/services/analytics";
+import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { ServicesProvider } from "core/servicesProvider";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { defaultOssFeatures, FeatureItem, FeatureService } from "hooks/services/Feature";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import en from "locales/en.json";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
 
 interface WrapperProps {
   children?: React.ReactElement;
@@ -28,10 +28,14 @@ interface WrapperProps {
 export async function render<
   Q extends Queries = typeof queries,
   Container extends Element | DocumentFragment = HTMLElement
->(ui: React.ReactNode, renderOptions?: RenderOptions<Q, Container>): Promise<RenderResult<Q, Container>> {
+>(
+  ui: React.ReactNode,
+  renderOptions?: RenderOptions<Q, Container>,
+  features?: FeatureItem[]
+): Promise<RenderResult<Q, Container>> {
   const Wrapper = ({ children }: WrapperProps) => {
     return (
-      <TestWrapper>
+      <TestWrapper features={features}>
         <Suspense fallback={<div>testutils render fallback content</div>}>{children}</Suspense>
       </TestWrapper>
     );
@@ -126,5 +130,6 @@ export const mockConnection: WebBackendConnectionRead = {
   isSyncing: false,
   schemaChange: "no_change",
   notifySchemaChanges: true,
+  notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
 };

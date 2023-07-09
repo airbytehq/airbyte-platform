@@ -5,10 +5,10 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead;
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList;
-import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
@@ -28,15 +28,17 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
-import io.airbyte.commons.util.MoreLists;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
-import io.airbyte.config.ActorType;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -46,12 +48,13 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -97,20 +100,22 @@ public class SourceDefinitionsHandler {
   }
 
   @VisibleForTesting
-  static SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition) {
+  static SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition,
+                                                        final ActorDefinitionVersion sourceVersion) {
     try {
       return new SourceDefinitionRead()
           .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
           .name(standardSourceDefinition.getName())
           .sourceType(getSourceType(standardSourceDefinition))
-          .dockerRepository(standardSourceDefinition.getDockerRepository())
-          .dockerImageTag(standardSourceDefinition.getDockerImageTag())
-          .documentationUrl(new URI(standardSourceDefinition.getDocumentationUrl()))
+          .dockerRepository(sourceVersion.getDockerRepository())
+          .dockerImageTag(sourceVersion.getDockerImageTag())
+          .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
           .icon(loadIcon(standardSourceDefinition.getIcon()))
-          .protocolVersion(standardSourceDefinition.getProtocolVersion())
-          .releaseStage(getReleaseStage(standardSourceDefinition))
-          .releaseDate(getReleaseDate(standardSourceDefinition))
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()));
+          .protocolVersion(sourceVersion.getProtocolVersion())
+          .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
+          .releaseDate(ApiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
+          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
+          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
 
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest source definitions list", e);
@@ -124,58 +129,62 @@ public class SourceDefinitionsHandler {
     return SourceTypeEnum.fromValue(standardSourceDefinition.getSourceType().value());
   }
 
-  private static ReleaseStage getReleaseStage(final StandardSourceDefinition standardSourceDefinition) {
-    if (standardSourceDefinition.getReleaseStage() == null) {
-      return null;
-    }
-    return ReleaseStage.fromValue(standardSourceDefinition.getReleaseStage().value());
+  public SourceDefinitionReadList listSourceDefinitions() throws IOException {
+    final List<StandardSourceDefinition> standardSourceDefinitions = configRepository.listStandardSourceDefinitions(false);
+    final Map<UUID, ActorDefinitionVersion> sourceDefinitionVersionMap = getVersionsForSourceDefinitions(standardSourceDefinitions);
+    return toSourceDefinitionReadList(standardSourceDefinitions, sourceDefinitionVersionMap);
   }
 
-  private static LocalDate getReleaseDate(final StandardSourceDefinition standardSourceDefinition) {
-    if (standardSourceDefinition.getReleaseDate() == null || standardSourceDefinition.getReleaseDate().isBlank()) {
-      return null;
-    }
-
-    return LocalDate.parse(standardSourceDefinition.getReleaseDate());
+  private Map<UUID, ActorDefinitionVersion> getVersionsForSourceDefinitions(final List<StandardSourceDefinition> sourceDefinitions)
+      throws IOException {
+    return configRepository.getActorDefinitionVersions(sourceDefinitions
+        .stream()
+        .map(StandardSourceDefinition::getDefaultVersionId)
+        .collect(Collectors.toList()))
+        .stream().collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, v -> v));
   }
 
-  public SourceDefinitionReadList listSourceDefinitions() throws IOException, JsonValidationException {
-    return toSourceDefinitionReadList(configRepository.listStandardSourceDefinitions(false));
-  }
-
-  private static SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs) {
+  private static SourceDefinitionReadList toSourceDefinitionReadList(final List<StandardSourceDefinition> defs,
+                                                                     final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<SourceDefinitionRead> reads = defs.stream()
-        .map(SourceDefinitionsHandler::buildSourceDefinitionRead)
+        .map(d -> buildSourceDefinitionRead(d, defIdToVersionMap.get(d.getSourceDefinitionId())))
         .collect(Collectors.toList());
     return new SourceDefinitionReadList().sourceDefinitions(reads);
   }
 
   public SourceDefinitionReadList listLatestSourceDefinitions() {
-    return toSourceDefinitionReadList(getLatestSources());
-  }
-
-  private List<StandardSourceDefinition> getLatestSources() {
-    return remoteOssCatalog.getSourceDefinitions();
+    final List<ConnectorRegistrySourceDefinition> latestSources = remoteOssCatalog.getSourceDefinitions();
+    final List<StandardSourceDefinition> sourceDefs = latestSources.stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList();
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = latestSources
+        .stream().collect(Collectors.toMap(
+            ConnectorRegistrySourceDefinition::getSourceDefinitionId,
+            ConnectorRegistryConverters::toActorDefinitionVersion));
+    return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap);
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
-    return toSourceDefinitionReadList(MoreLists.concat(
-        configRepository.listPublicSourceDefinitions(false),
-        configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false)));
+    final List<StandardSourceDefinition> sourceDefs = Stream.concat(
+        configRepository.listPublicSourceDefinitions(false).stream(),
+        configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = getVersionsForSourceDefinitions(sourceDefs);
+    return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap);
   }
 
   public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
     final List<Entry<StandardSourceDefinition, Boolean>> standardSourceDefinitionBooleanMap =
         configRepository.listGrantableSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false);
-    return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap);
+    final Map<UUID, ActorDefinitionVersion> sourceDefinitionVersionMap =
+        getVersionsForSourceDefinitions(standardSourceDefinitionBooleanMap.stream().map(Entry::getKey).toList());
+    return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap, sourceDefinitionVersionMap);
   }
 
-  private static PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs) {
+  private static PrivateSourceDefinitionReadList toPrivateSourceDefinitionReadList(final List<Entry<StandardSourceDefinition, Boolean>> defs,
+                                                                                   final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateSourceDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateSourceDefinitionRead()
-            .sourceDefinition(buildSourceDefinitionRead(entry.getKey()))
+            .sourceDefinition(buildSourceDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getSourceDefinitionId())))
             .granted(entry.getValue()))
         .collect(Collectors.toList());
     return new PrivateSourceDefinitionReadList().sourceDefinitions(reads);
@@ -183,7 +192,22 @@ public class SourceDefinitionsHandler {
 
   public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    return buildSourceDefinitionRead(configRepository.getStandardSourceDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId()));
+    final StandardSourceDefinition sourceDefinition =
+        configRepository.getStandardSourceDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+    return buildSourceDefinitionRead(sourceDefinition, sourceVersion);
+  }
+
+  public SourceDefinitionRead getSourceDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
+    final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
+    final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
+    if (!configRepository.scopeCanUseDefinition(definitionId, scopeId, scopeType.value())) {
+      final String message = String.format("Cannot find the requested definition with given id for this %s", scopeType);
+      throw new IdNotFoundKnownException(message, definitionId.toString());
+    }
+    return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
   }
 
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
@@ -196,21 +220,39 @@ public class SourceDefinitionsHandler {
     return getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(definitionId));
   }
 
-  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate)
-      throws IOException {
-    final StandardSourceDefinition sourceDefinition = sourceDefinitionFromCreate(customSourceDefinitionCreate.getSourceDefinition())
-        .withPublic(false)
-        .withCustom(true);
-    if (!protocolVersionRange.isSupported(new Version(sourceDefinition.getProtocolVersion()))) {
-      throw new UnsupportedProtocolVersionException(sourceDefinition.getProtocolVersion(), protocolVersionRange.min(), protocolVersionRange.max());
-    }
-    configRepository.writeCustomSourceDefinition(sourceDefinition, customSourceDefinitionCreate.getWorkspaceId());
+  public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) throws IOException {
+    final UUID id = uuidSupplier.get();
+    final SourceDefinitionCreate sourceDefinitionCreate = customSourceDefinitionCreate.getSourceDefinition();
+    final ActorDefinitionVersion actorDefinitionVersion = defaultDefinitionVersionFromCreate(sourceDefinitionCreate)
+        .withActorDefinitionId(id);
 
-    return buildSourceDefinitionRead(sourceDefinition);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(id)
+        .withName(sourceDefinitionCreate.getName())
+        .withIcon(sourceDefinitionCreate.getIcon())
+        .withTombstone(false)
+        .withPublic(false)
+        .withCustom(true)
+        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
+
+    if (!protocolVersionRange.isSupported(new Version(actorDefinitionVersion.getProtocolVersion()))) {
+      throw new UnsupportedProtocolVersionException(actorDefinitionVersion.getProtocolVersion(), protocolVersionRange.min(),
+          protocolVersionRange.max());
+    }
+
+    // legacy call; todo: remove once we drop workspace_id column
+    if (customSourceDefinitionCreate.getWorkspaceId() != null) {
+      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+          customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
+    } else {
+      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+          customSourceDefinitionCreate.getScopeId(), ScopeType.fromValue(customSourceDefinitionCreate.getScopeType().toString()));
+    }
+
+    return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
   }
 
-  private StandardSourceDefinition sourceDefinitionFromCreate(final SourceDefinitionCreate sourceDefinitionCreate)
-      throws IOException {
+  private ActorDefinitionVersion defaultDefinitionVersionFromCreate(final SourceDefinitionCreate sourceDefinitionCreate) throws IOException {
     final ConnectorSpecification spec =
         getSpecForImage(
             sourceDefinitionCreate.getDockerRepository(),
@@ -219,35 +261,29 @@ public class SourceDefinitionsHandler {
             true);
 
     final Version airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.getProtocolVersion());
-
-    final UUID id = uuidSupplier.get();
-    return new StandardSourceDefinition()
-        .withSourceDefinitionId(id)
-        .withDockerRepository(sourceDefinitionCreate.getDockerRepository())
+    return new ActorDefinitionVersion()
         .withDockerImageTag(sourceDefinitionCreate.getDockerImageTag())
-        .withDocumentationUrl(sourceDefinitionCreate.getDocumentationUrl().toString())
-        .withName(sourceDefinitionCreate.getName())
-        .withIcon(sourceDefinitionCreate.getIcon())
+        .withDockerRepository(sourceDefinitionCreate.getDockerRepository())
         .withSpec(spec)
+        .withDocumentationUrl(sourceDefinitionCreate.getDocumentationUrl().toString())
         .withProtocolVersion(airbyteProtocolVersion.serialize())
-        .withTombstone(false)
-        .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
-        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
   }
 
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
+    final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
 
     // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
     // to allow for easier iteration of dev images
-    final boolean specNeedsUpdate = !currentSourceDefinition.getDockerImageTag().equals(sourceDefinitionUpdate.getDockerImageTag())
+    final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(sourceDefinitionUpdate.getDockerImageTag())
         || ServerConstants.DEV_IMAGE_TAG.equals(sourceDefinitionUpdate.getDockerImageTag());
     final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentSourceDefinition.getDockerRepository(), sourceDefinitionUpdate.getDockerImageTag(),
+        ? getSpecForImage(currentVersion.getDockerRepository(), sourceDefinitionUpdate.getDockerImageTag(),
             currentSourceDefinition.getCustom())
-        : currentSourceDefinition.getSpec();
+        : currentVersion.getSpec();
     final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
@@ -257,26 +293,31 @@ public class SourceDefinitionsHandler {
       throw new UnsupportedProtocolVersionException(airbyteProtocolVersion, protocolVersionRange.min(), protocolVersionRange.max());
     }
 
+    final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(currentVersion.getActorDefinitionId())
+        .withDockerRepository(currentVersion.getDockerRepository())
+        .withDockerImageTag(sourceDefinitionUpdate.getDockerImageTag())
+        .withSpec(spec)
+        .withDocumentationUrl(currentVersion.getDocumentationUrl())
+        .withProtocolVersion(airbyteProtocolVersion.serialize())
+        .withReleaseStage(currentVersion.getReleaseStage())
+        .withReleaseDate(currentVersion.getReleaseDate())
+        .withSuggestedStreams(currentVersion.getSuggestedStreams())
+        .withAllowedHosts(currentVersion.getAllowedHosts());
+
     final StandardSourceDefinition newSource = new StandardSourceDefinition()
         .withSourceDefinitionId(currentSourceDefinition.getSourceDefinitionId())
-        .withDockerImageTag(sourceDefinitionUpdate.getDockerImageTag())
-        .withDockerRepository(currentSourceDefinition.getDockerRepository())
-        .withDocumentationUrl(currentSourceDefinition.getDocumentationUrl())
         .withName(currentSourceDefinition.getName())
         .withIcon(currentSourceDefinition.getIcon())
-        .withSpec(spec)
-        .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(currentSourceDefinition.getTombstone())
         .withPublic(currentSourceDefinition.getPublic())
         .withCustom(currentSourceDefinition.getCustom())
-        .withReleaseStage(currentSourceDefinition.getReleaseStage())
-        .withReleaseDate(currentSourceDefinition.getReleaseDate())
+        .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
-    configRepository.writeStandardSourceDefinition(newSource);
-    configRepository.clearUnsupportedProtocolVersionFlag(newSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
+    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
 
-    return buildSourceDefinitionRead(newSource);
+    return buildSourceDefinitionRead(newSource, newVersion);
   }
 
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
@@ -311,24 +352,26 @@ public class SourceDefinitionsHandler {
     }
   }
 
-  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(
-                                                                      final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
+  public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspaceOrOrganization(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSourceDefinition standardSourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
+        configRepository.getStandardSourceDefinition(actorDefinitionIdWithScope.getActorDefinitionId());
+    final ActorDefinitionVersion actorDefinitionVersion = configRepository.getActorDefinitionVersion(standardSourceDefinition.getDefaultVersionId());
     configRepository.writeActorDefinitionWorkspaceGrant(
-        sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId(),
-        sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
     return new PrivateSourceDefinitionRead()
-        .sourceDefinition(buildSourceDefinitionRead(standardSourceDefinition))
+        .sourceDefinition(buildSourceDefinitionRead(standardSourceDefinition, actorDefinitionVersion))
         .granted(true);
   }
 
-  public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
+  public void revokeSourceDefinition(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(
-        sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId(),
-        sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionIdWithScope.getActorDefinitionId(),
+        actorDefinitionIdWithScope.getScopeId(),
+        ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString()));
   }
 
 }

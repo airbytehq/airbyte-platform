@@ -12,3 +12,7 @@ export const isDbtTransformation = (op: OperationCreate): op is OperationRead =>
 export const isNormalizationTransformation = (op: OperationCreate): op is OperationRead => {
   return op.operatorConfiguration.operatorType === OperatorType.normalization;
 };
+
+export const isWebhookTransformation = (op: OperationCreate): op is OperationRead => {
+  return op.operatorConfiguration.operatorType === OperatorType.webhook;
+};

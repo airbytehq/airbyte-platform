@@ -1,0 +1,55 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$colorMap: (
+  "primary": colors.$blue,
+  "disabled": colors.$grey,
+  "action": colors.$grey,
+  "success": colors.$green,
+  "error": colors.$red,
+  "warning": colors.$yellow,
+  "affordance": colors.$dark-blue,
+);
+
+$baseIconSize: 12px;
+$iconClassname: "icon";
+
+.#{$iconClassname} {
+  display: inline-block;
+  height: $baseIconSize;
+  width: $baseIconSize;
+  vertical-align: -6%;
+
+  &.#{$iconClassname}--withBackground {
+    color: colors.$white;
+    box-sizing: content-box;
+    border-radius: variables.$border-radius-pill;
+    padding: 4px;
+    background-color: colors.$black; // default if color isn't specified
+  }
+
+  @each $name, $color in $colorMap {
+    &--#{$name} {
+      color: $color;
+
+      &.#{$iconClassname}--withBackground {
+        background-color: $color;
+      }
+    }
+  }
+}
+
+$sizes: "xs" calc(1 / 2.618) 12% -6%, "sm" calc(1 / 1.618) 3% -13%, "md" 1 -6% -30%, "lg" 1.618 -27% -41%,
+  "xl" 2.618 -60% -73%;
+
+@each $name, $sizeModifier, $verticalAlign, $verticalAlignWithBackground in $sizes {
+  .#{$name} {
+    height: $baseIconSize * $sizeModifier;
+    width: $baseIconSize * $sizeModifier;
+    vertical-align: #{$verticalAlign};
+
+    &.#{$iconClassname}--withBackground {
+      vertical-align: #{$verticalAlignWithBackground};
+    }
+  }
+}

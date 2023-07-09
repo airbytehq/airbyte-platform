@@ -26,8 +26,7 @@ public class TrackingIdentity {
     return new TrackingIdentity(null, null, null, null, null, null);
   }
 
-  public TrackingIdentity(
-                          final AirbyteVersion airbyteVersion,
+  public TrackingIdentity(final AirbyteVersion airbyteVersion,
                           final UUID customerId,
                           final String email,
                           final Boolean anonymousDataCollection,

@@ -10,12 +10,21 @@ spec:
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
   strategy:
     type: Recreate # Needed due to volume claims
   template:
     metadata:
       labels:
         {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
       {{- if .Values.podAnnotations }}
       annotations:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
@@ -42,10 +51,14 @@ spec:
       {{- toYaml .Values.extraInitContainers | nindent 6 }}
       {{- end }}
       containers:
-      - name: airbyte-server-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "connectorBuilderServer.imageTag" .) }}
+      - name: airbyte-connector-builder-server
+        image: {{ printf "%s:%s" .Values.image.repository (include "connector-builder-server.imageTag" .) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
+        {{- if .Values.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
         {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: AIRBYTE_VERSION
           valueFrom:
@@ -53,7 +66,7 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
         {{- end }}
-        
+
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}
@@ -66,7 +79,7 @@ spec:
         {{- end }}
 
         # Values from env
-        {{- if .Values.env_vars }}
+        {{- if or .Values.env_vars .Values.global.env_vars }}
         {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
         - name: {{ $k }}
           value: {{ $v | quote }}
@@ -78,34 +91,38 @@ spec:
         {{- toYaml .Values.extraEnv | nindent 8 }}
         {{- end }}
 
-        # TODO: add a health check endpoint to connector builder server
-        # {{- if .Values.livenessProbe.enabled }}
-        # livenessProbe:
-        #   httpGet:
-        #     path: /api/v1/health
-        #     port: http
-        #   initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
-        #   successThreshold: {{ .Values.livenessProbe.successThreshold }}
-        #   failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
-        # {{- end }}
-        # {{- if .Values.readinessProbe.enabled }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: /api/v1/health
-        #     port: http
-        #   initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-        #   successThreshold: {{ .Values.readinessProbe.successThreshold }}
-        #   failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
-        # {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
 
         ports:
         - name: http
           containerPort: 80
           protocol: TCP
+        {{- if .Values.debug.enabled }}
+        - name: debug 
+          containerPort: {{ .Values.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
         {{- if .Values.resources }}
         resources: {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}

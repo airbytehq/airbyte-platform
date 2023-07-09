@@ -1,36 +1,45 @@
-import { faClose, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocalStorage } from "react-use";
 
 import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
-import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
 import { ConfigMenuErrorBoundaryComponent } from "./ConfigMenuErrorBoundary";
 
 interface ConfigMenuProps {
-  className?: string;
   testInputJsonErrors: number;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJsonErrors, isOpen, setIsOpen }) => {
+export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
+  const {
+    testInputJson,
+    setTestInputJson,
+    testInputJsonDirty,
+    streamRead: { isFetching },
+  } = useConnectorBuilderTestRead();
+  const { trackError } = useAppMonitoringService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
@@ -61,6 +70,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
               data-testid="test-inputs"
               onClick={() => setIsOpen(true)}
               disabled={
+                isFetching ||
                 !jsonManifest.spec ||
                 Object.keys(jsonManifest.spec.connection_specification?.properties || {}).length === 0
               }
@@ -74,7 +84,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
           </>
         }
         placement={editorView === "yaml" ? "left" : "top"}
-        containerClassName={className}
+        containerClassName={styles.container}
       >
         {jsonManifest.spec ? (
           <FormattedMessage id="connectorBuilder.inputsTooltip" />
@@ -91,41 +101,50 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
           title={<FormattedMessage id="connectorBuilder.configMenuTitle" />}
         >
           <ModalBody>
-            <ConfigMenuErrorBoundaryComponent currentView={editorView} closeAndSwitchToYaml={switchToYaml}>
-              <>
+            <ConfigMenuErrorBoundaryComponent
+              currentView={editorView}
+              closeAndSwitchToYaml={switchToYaml}
+              trackError={trackError}
+            >
+              <FlexContainer direction="column">
                 {showInputsWarning && (
-                  <Callout className={styles.warningBox}>
-                    <div className={styles.warningBoxContainer}>
-                      <div>
-                        <FormattedMessage id="connectorBuilder.inputsFormWarning" />
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setShowInputsWarning(false);
-                        }}
-                        variant="clear"
-                        icon={<FontAwesomeIcon icon={faClose} />}
-                      />
-                    </div>
-                  </Callout>
+                  <Message
+                    className={styles.warningBox}
+                    type="warning"
+                    onClose={() => {
+                      setShowInputsWarning(false);
+                    }}
+                    text={<FormattedMessage id="connectorBuilder.inputsFormWarning" />}
+                  />
                 )}
                 <ConnectorForm
+                  // re-mount the form when the form values change from the outside to avoid stale data in the form
+                  key={testInputJsonDirty ? "with-testinput" : "without-testinput"}
                   formType="source"
                   bodyClassName={styles.formContent}
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
                   formValues={{ connectionConfiguration: testInputJson }}
                   onSubmit={async (values) => {
-                    setTestInputJson(values.connectionConfiguration as StreamReadRequestBodyConfig);
+                    setTestInputJson(values.connectionConfiguration as ConnectorConfig);
                     setIsOpen(false);
                   }}
+                  isEditMode
                   renderFooter={({ dirty, isSubmitting, resetConnectorForm }) => (
                     <div className={styles.inputFormModalFooter}>
                       <FlexContainer>
                         <FlexItem grow>
                           <Button
                             onClick={() => {
-                              resetConnectorForm();
-                              setTestInputJson({});
+                              openConfirmationModal({
+                                title: "connectorBuilder.resetTestingValues.title",
+                                text: "connectorBuilder.resetTestingValues.text",
+                                submitButtonText: "connectorBuilder.resetTestingValues.submit",
+                                onSubmit: () => {
+                                  closeConfirmationModal();
+                                  setTestInputJson(undefined);
+                                  resetConnectorForm();
+                                },
+                              });
                             }}
                             type="button"
                             variant="danger"
@@ -143,7 +162,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
                     </div>
                   )}
                 />
-              </>
+              </FlexContainer>
             </ConfigMenuErrorBoundaryComponent>
           </ModalBody>
         </Modal>

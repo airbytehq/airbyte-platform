@@ -2,11 +2,16 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 
 import { Notification, useNotificationService } from "./services/Notification";
-import { ToastType } from "../components/ui/Toast";
 
 const useLoadingState = (): {
   isLoading: boolean;
-  startAction: ({ action, feedbackAction }: { action: () => void; feedbackAction?: () => void }) => Promise<void>;
+  startAction: ({
+    action,
+    feedbackAction,
+  }: {
+    action: () => Promise<void>;
+    feedbackAction?: () => void;
+  }) => Promise<void>;
   showFeedback: boolean;
 } => {
   const { formatMessage } = useIntl();
@@ -17,15 +22,21 @@ const useLoadingState = (): {
   const errorNotification: Notification = {
     id: "notifications.error.somethingWentWrong",
     text: formatMessage({ id: `notifications.error.somethingWentWrong` }),
-    type: ToastType.ERROR,
+    type: "error",
   };
 
-  const startAction = async ({ action, feedbackAction }: { action: () => void; feedbackAction?: () => void }) => {
+  const startAction = async ({
+    action,
+    feedbackAction,
+  }: {
+    action: () => Promise<void>;
+    feedbackAction?: () => void;
+  }) => {
     try {
       setIsLoading(true);
       setShowFeedback(false);
 
-      action();
+      await action();
 
       setIsLoading(false);
       setShowFeedback(true);

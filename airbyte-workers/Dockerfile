@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:1.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
 FROM ${JDK_IMAGE} AS worker
 
 ARG DOCKER_BUILD_ARCH=amd64
@@ -10,18 +10,22 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
         && chmod +x kubectl && mv kubectl /usr/local/bin/
 
 # Don't change this manually.  Bump version expects to make moves based on this string
-ARG VERSION=0.41.0
+ARG VERSION=0.50.6
 
 ENV APPLICATION airbyte-workers
 ENV VERSION ${VERSION}
 
 WORKDIR /app
 
+COPY WellKnownTypes.json /app
+
 # Move worker app
 ADD bin/${APPLICATION}-${VERSION}.tar /app
 
 # Grab well-known types file
 COPY WellKnownTypes.json /app
+
+EXPOSE 5005
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]

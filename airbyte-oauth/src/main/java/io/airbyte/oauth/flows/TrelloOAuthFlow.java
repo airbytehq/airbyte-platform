@@ -14,7 +14,6 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -42,14 +41,12 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
   private static final OAuthHmacSigner signer = new OAuthHmacSigner();
   private final HttpTransport transport;
 
-  public TrelloOAuthFlow(final ConfigRepository configRepository) {
-    super(configRepository);
+  public TrelloOAuthFlow() {
     transport = new NetHttpTransport();
   }
 
   @VisibleForTesting
-  public TrelloOAuthFlow(final ConfigRepository configRepository, final HttpTransport transport) {
-    super(configRepository);
+  public TrelloOAuthFlow(final HttpTransport transport) {
     this.transport = transport;
   }
 
@@ -58,10 +55,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                     final UUID sourceDefinitionId,
                                     final String redirectUrl,
                                     final JsonNode inputOAuthConfiguration,
-                                    final OAuthConfigSpecification oauthConfigSpecification)
+                                    final OAuthConfigSpecification oauthConfigSpecification,
+                                    JsonNode sourceOAuthParamConfig)
       throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
-    return getConsentUrl(oAuthParamConfig, redirectUrl);
+    return getConsentUrl(sourceOAuthParamConfig, redirectUrl);
   }
 
   @Override
@@ -69,10 +66,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                          final UUID destinationDefinitionId,
                                          final String redirectUrl,
                                          final JsonNode inputOAuthConfiguration,
-                                         final OAuthConfigSpecification oauthConfigSpecification)
-      throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
-    return getConsentUrl(oAuthParamConfig, redirectUrl);
+                                         final OAuthConfigSpecification oauthConfigSpecification,
+                                         JsonNode destinationOAuthParamConfig)
+      throws IOException {
+    return getConsentUrl(destinationOAuthParamConfig, redirectUrl);
   }
 
   private String getConsentUrl(final JsonNode oauthParamConfig, final String redirectUrl) throws IOException {
@@ -89,6 +86,7 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
 
     final OAuthAuthorizeTemporaryTokenUrl oAuthAuthorizeTemporaryTokenUrl = new OAuthAuthorizeTemporaryTokenUrl(AUTHENTICATE_URL);
     oAuthAuthorizeTemporaryTokenUrl.temporaryToken = temporaryTokenResponse.token;
+    oAuthAuthorizeTemporaryTokenUrl.set("expiration", "never");
     signer.tokenSharedSecret = temporaryTokenResponse.tokenSecret;
     return oAuthAuthorizeTemporaryTokenUrl.build();
   }
@@ -98,10 +96,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
-    return formatOAuthOutput(oAuthParamConfig, internalCompleteOAuth(oAuthParamConfig, queryParams), getDefaultOAuthOutputPath());
+    return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), getDefaultOAuthOutputPath());
   }
 
   @Override
@@ -110,10 +108,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  final JsonNode inputOAuthConfiguration,
-                                                 final OAuthConfigSpecification oauthConfigSpecification)
+                                                 final OAuthConfigSpecification oauthConfigSpecification,
+                                                 final JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, sourceDefinitionId);
-    return formatOAuthOutput(oAuthParamConfig, internalCompleteOAuth(oAuthParamConfig, queryParams), oauthConfigSpecification);
+    return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), oauthConfigSpecification);
   }
 
   @Override
@@ -121,10 +119,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
                                                       final Map<String, Object> queryParams,
-                                                      final String redirectUrl)
+                                                      final String redirectUrl,
+                                                      JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
-    return formatOAuthOutput(oAuthParamConfig, internalCompleteOAuth(oAuthParamConfig, queryParams), getDefaultOAuthOutputPath());
+    return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), getDefaultOAuthOutputPath());
   }
 
   @Override
@@ -133,10 +131,10 @@ public class TrelloOAuthFlow extends BaseOAuthFlow {
                                                       final Map<String, Object> queryParams,
                                                       final String redirectUrl,
                                                       final JsonNode inputOAuthConfiguration,
-                                                      final OAuthConfigSpecification oauthConfigSpecification)
+                                                      final OAuthConfigSpecification oauthConfigSpecification,
+                                                      JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
-    final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
-    return formatOAuthOutput(oAuthParamConfig, internalCompleteOAuth(oAuthParamConfig, queryParams), oauthConfigSpecification);
+    return formatOAuthOutput(oauthParamConfig, internalCompleteOAuth(oauthParamConfig, queryParams), oauthConfigSpecification);
   }
 
   private Map<String, Object> internalCompleteOAuth(final JsonNode oauthParamConfig, final Map<String, Object> queryParams)

@@ -1,4 +1,4 @@
-import { JSONSchema7, JSONSchema7Definition } from "json-schema";
+import { JSONSchema7Definition } from "json-schema";
 import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { AnySchema } from "yup";
@@ -12,14 +12,20 @@ import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/sour
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
-import { FormBlock, FormGroupItem } from "core/form/types";
+import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
+import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { FeatureItem, useFeature } from "core/services/features";
 
 import { ConnectorFormValues } from "./types";
+import { authPredicateMatchesPath } from "./utils";
+
+const NAME_GROUP_ID = "__name_group";
 
 export interface BuildFormHook {
   initialValues: ConnectorFormValues;
-  formFields: FormBlock;
+  formFields: FormBlock[];
   validationSchema: AnySchema;
+  groups: GroupDetails[];
 }
 
 export function setDefaultValues(
@@ -31,7 +37,7 @@ export function setDefaultValues(
     if (property.const && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.const;
     }
-    if (property.default && (!options.respectExistingValues || !values[property.fieldKey])) {
+    if ("default" in property && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.default;
     }
     switch (property._type) {
@@ -68,20 +74,21 @@ export function useBuildForm(
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
+  const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
 
   const isDraft =
     selectedConnectorDefinitionSpecification &&
     isSourceDefinitionSpecificationDraft(selectedConnectorDefinitionSpecification);
 
   try {
-    const jsonSchema: JSONSchema7 = useMemo(() => {
+    const jsonSchema: AirbyteJSONSchema = useMemo(() => {
       if (!selectedConnectorDefinitionSpecification) {
         return {
           type: "object",
           properties: {},
         };
       }
-      const schema: JSONSchema7 = {
+      const schema: AirbyteJSONSchema = {
         type: "object",
         properties: {
           connectionConfiguration:
@@ -96,20 +103,23 @@ export function useBuildForm(
           type: "string",
           title: formatMessage({ id: `form.${formType}Name` }),
           description: formatMessage({ id: `form.${formType}Name.message` }),
+          // setting order and group to ensure that the name input comes first on the form in a separate group
+          order: Number.MIN_SAFE_INTEGER,
+          group: NAME_GROUP_ID,
         },
         ...schema.properties,
       };
-      schema.required = ["name"];
+      schema.required = ["name", "connectionConfiguration"];
       return schema;
     }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification]);
 
-    const formFields = useMemo<FormBlock>(() => jsonSchemaToFormBlock(jsonSchema), [jsonSchema]);
+    const formBlock = useMemo<FormBlock>(() => jsonSchemaToFormBlock(jsonSchema), [jsonSchema]);
 
-    if (formFields._type !== "formGroup") {
+    if (formBlock._type !== "formGroup") {
       throw new FormBuildError("connectorForm.error.topLevelNonObject");
     }
 
-    const validationSchema = useMemo(() => buildYupFormForJsonSchema(jsonSchema, formFields), [formFields, jsonSchema]);
+    const validationSchema = useMemo(() => buildYupFormForJsonSchema(jsonSchema, formBlock), [formBlock, jsonSchema]);
 
     const startValues = useMemo<ConnectorFormValues>(() => {
       let baseValues = {
@@ -131,15 +141,49 @@ export function useBuildForm(
         return baseValues;
       }
 
-      setDefaultValues(formFields, baseValues as Record<string, unknown>, { respectExistingValues: Boolean(isDraft) });
+      setDefaultValues(formBlock, baseValues as Record<string, unknown>, { respectExistingValues: Boolean(isDraft) });
 
       return baseValues;
-    }, [formFields, initialValues, isDraft, isEditMode, validationSchema]);
+    }, [formBlock, initialValues, isDraft, isEditMode, validationSchema]);
+
+    // flatten out the connectionConfiguration properties so they are displayed properly in the ConnectorForm
+    const flattenedFormFields = useMemo(
+      () =>
+        formBlock.properties.flatMap((block) =>
+          block._type === "formGroup" && block.fieldKey === "connectionConfiguration"
+            ? allowOAuthConnector && authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
+              ? // OAuth button needs to be rendered at root level, so keep around an empty FormGroup for it to be rendered in.
+                // Order it after name and before the rest of the fields.
+                [{ ...block, properties: [], order: Number.MIN_SAFE_INTEGER + 1 }, ...block.properties]
+              : block.properties
+            : block
+        ),
+      [allowOAuthConnector, formBlock.properties, selectedConnectorDefinitionSpecification]
+    );
+
+    const groups: GroupDetails[] = useMemo(() => {
+      // ensure that the name group comes first
+      const baseGroups = [{ id: NAME_GROUP_ID }];
+      const spec = selectedConnectorDefinitionSpecification?.connectionSpecification;
+      if (!spec || typeof spec !== "object" || !("groups" in spec) || !Array.isArray(spec.groups)) {
+        return baseGroups;
+      }
+      return [
+        ...baseGroups,
+        ...spec.groups.map(({ id, title }) => {
+          return {
+            id,
+            title,
+          };
+        }),
+      ];
+    }, [selectedConnectorDefinitionSpecification]);
 
     return {
       initialValues: startValues,
-      formFields,
+      formFields: flattenedFormFields,
       validationSchema,
+      groups,
     };
   } catch (e) {
     // catch and re-throw form-build errors to enrich them with the connector id

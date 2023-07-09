@@ -1,0 +1,5 @@
+A schema change for %s was detected and affects the connection %s. Airbyte has automatically disabled this connection because a required field was changed or deleted.
+
+Visit your connection page here: %s
+
+Your review is required. Visit your connection's replication settings to review your source schema and reset your data in order to fix this connection.

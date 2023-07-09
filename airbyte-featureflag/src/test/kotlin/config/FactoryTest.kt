@@ -17,25 +17,25 @@ import kotlin.test.assertNull
 
 @MicronautTest(rebuildContext = true)
 class FactoryTest {
-    @Inject
-    var ldClient: LDClient? = null
+  @Inject
+  var ldClient: LDClient? = null
 
-    @Test
-    fun `LDClient is null when property is not defined`() {
-        assertNull(ldClient)
-    }
+  @Test
+  fun `LDClient is null when property is not defined`() {
+    assertNull(ldClient)
+  }
 
-    @Test
-    @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
-    @Property(name = CONFIG_FF_APIKEY, value = "api-key")
-    fun `LDClient is not null when property is defined`() {
-        assertNotNull(ldClient)
-    }
+  @Test
+  @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
+  @Property(name = CONFIG_FF_APIKEY, value = "api-key")
+  fun `LDClient is not null when property is defined`() {
+    assertNotNull(ldClient)
+  }
 
-    @Test
-    @Property(name = CONFIG_FF_CLIENT, value = "random-value")
-    @Property(name = CONFIG_FF_APIKEY, value = "api-key")
-    fun `LDClient is null when property is defined but incorrectly`() {
-        assertNull(ldClient)
-    }
+  @Test
+  @Property(name = CONFIG_FF_CLIENT, value = "random-value")
+  @Property(name = CONFIG_FF_APIKEY, value = "api-key")
+  fun `LDClient is null when property is defined but incorrectly`() {
+    assertNull(ldClient)
+  }
 }

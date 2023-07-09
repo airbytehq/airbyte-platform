@@ -38,6 +38,7 @@ class TrelloOAuthFlowTest {
   private ConfigRepository configRepository;
   private TrelloOAuthFlow trelloOAuthFlow;
   private HttpTransport transport;
+  private SourceOAuthParameter sourceOAuthParameter;
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException {
@@ -64,21 +65,21 @@ class TrelloOAuthFlowTest {
 
     };
     configRepository = mock(ConfigRepository.class);
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    sourceOAuthParameter = new SourceOAuthParameter()
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", "test_client_id")
             .put("client_secret", "test_client_secret")
-            .build()))));
-    trelloOAuthFlow = new TrelloOAuthFlow(configRepository, transport);
+            .build()));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    trelloOAuthFlow = new TrelloOAuthFlow(transport);
   }
 
   @Test
   void testGetSourceConsentUrl() throws IOException, InterruptedException, ConfigNotFoundException {
-    final String consentUrl =
-        trelloOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
-    assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token", consentUrl);
+    final String consentUrl = trelloOAuthFlow.getSourceConsentUrl(
+        workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
+    assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token&expiration=never", consentUrl);
   }
 
   @Test
@@ -90,7 +91,7 @@ class TrelloOAuthFlowTest {
         "client_secret", MoreOAuthParameters.SECRET_MASK);
     final Map<String, Object> queryParams = Map.of("oauth_token", "token", "oauth_verifier", "verifier");
     final Map<String, Object> actualParams =
-        trelloOAuthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL);
+        trelloOAuthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.getConfiguration());
     assertEquals(actualParams, expectedParams);
     assertEquals(expectedParams.size(), actualParams.size(),
         String.format("Expected %s values but got %s", expectedParams.size(), actualParams));

@@ -11,7 +11,7 @@ required:
   - destinationId
   - configuration
   - tombstone
-additionalProperties: false
+additionalProperties: true
 properties:
   name:
     type: string
@@ -22,6 +22,10 @@ properties:
     type: string
     format: uuid
   destinationId:
+    type: string
+    format: uuid
+  defaultVersionId:
+    description: References the Actor Definition Version to use for the connection.
     type: string
     format: uuid
   configuration:

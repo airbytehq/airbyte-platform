@@ -4,10 +4,9 @@
 title: ReplicationOutput
 description: metadata summary of a replication attempt
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - replicationAttemptSummary
-  - state
   - output_catalog
 properties:
   replicationAttemptSummary:

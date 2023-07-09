@@ -1,8 +1,9 @@
 import { screen, render } from "@testing-library/react";
+
 import { TestWrapper } from "test-utils/testutils";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { useFormikOauthAdapter } from "views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
+import { useFormOauthAdapter } from "views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -29,8 +30,8 @@ jest.mock("formik", () => {
  */
 
 jest.mock("views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter");
-const mockUseFormikOauthAdapter = useFormikOauthAdapter as unknown as jest.Mock<Partial<typeof useFormikOauthAdapter>>;
-const baseUseFormikOauthAdapterValues = {
+const mockUseFormOauthAdapter = useFormOauthAdapter as unknown as jest.Mock<Partial<typeof useFormOauthAdapter>>;
+const baseUseFormOauthAdapterValues = {
   run: jest.fn(),
   loading: false,
 };
@@ -61,9 +62,9 @@ describe("auth button", () => {
     });
 
     // not done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = false;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading };
     });
@@ -85,10 +86,6 @@ describe("auth button", () => {
     // no error message
     const errorMessage = screen.queryByText(/Authentication required/i);
     expect(errorMessage).not.toBeInTheDocument();
-
-    // no success message
-    const successMessage = screen.queryByText(/Authentication succeeded/i);
-    expect(successMessage).not.toBeInTheDocument();
   });
 
   it("after successful authentication, it renders with correct message and success message", () => {
@@ -100,9 +97,9 @@ describe("auth button", () => {
     });
 
     // done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = true;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading, hasRun: done };
     });
@@ -120,10 +117,6 @@ describe("auth button", () => {
     // correct button text
     const button = screen.getByRole("button", { name: "Re-authenticate" });
     expect(button).toBeInTheDocument();
-
-    // success message
-    const successMessage = screen.getByText(/Authentication succeeded/i);
-    expect(successMessage).toBeInTheDocument();
   });
 
   it("renders an error if there are any auth fields with empty values", () => {
@@ -137,9 +130,9 @@ describe("auth button", () => {
     });
 
     // not done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = false;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading };
     });
