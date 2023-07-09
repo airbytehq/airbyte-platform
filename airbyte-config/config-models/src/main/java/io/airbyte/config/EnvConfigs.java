@@ -209,7 +209,7 @@ public class EnvConfigs implements Configs {
   private static final String DEFAULT_SPEC_CACHE_BUCKET = "io-airbyte-cloud-spec-cache";
   private static final String DEFAULT_GITHUB_STORE_BRANCH = "master";
   private static final String DEFAULT_JOB_KUBE_NAMESPACE = "default";
-  private static final String DEFAULT_JOB_KUBE_SERVICE_ACCOUNT = "default";
+  private static final String DEFAULT_JOB_KUBE_SERVICE_ACCOUNT = "airbyte-admin";
   private static final String DEFAULT_JOB_CPU_REQUIREMENT = null;
   private static final String DEFAULT_JOB_MEMORY_REQUIREMENT = null;
   private static final String DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent";
