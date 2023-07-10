@@ -143,6 +143,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private IntegrationLauncherConfig getSourceIntegrationLauncherConfig(final long jobId,
                                                                        final int attempt,
+                                                                       final UUID connectionId,
                                                                        final JobSyncConfig config,
                                                                        @Nullable final ActorDefinitionVersion sourceVersion,
                                                                        final JsonNode sourceConfiguration)
@@ -152,6 +153,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
     final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
         .withAttemptId((long) attempt)
+        .withConnectionId(connectionId)
+        .withWorkspaceId(config.getWorkspaceId())
         .withDockerImage(config.getSourceDockerImage())
         .withProtocolVersion(config.getSourceProtocolVersion())
         .withIsCustomConnector(config.getIsSourceCustomConnector());
@@ -181,6 +184,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private IntegrationLauncherConfig getDestinationIntegrationLauncherConfig(final long jobId,
                                                                             final int attempt,
+                                                                            final UUID connectionId,
                                                                             final JobSyncConfig config,
                                                                             final ActorDefinitionVersion destinationVersion,
                                                                             final JsonNode destinationConfiguration,
@@ -198,6 +202,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
     return new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
         .withAttemptId((long) attempt)
+        .withConnectionId(connectionId)
+        .withWorkspaceId(config.getWorkspaceId())
         .withDockerImage(config.getDestinationDockerImage())
         .withProtocolVersion(config.getDestinationProtocolVersion())
         .withIsCustomConnector(config.getIsDestinationCustomConnector())
@@ -272,6 +278,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attemptNumber,
+          connectionId,
           jobSyncConfig,
           sourceVersion,
           sourceConfiguration);
@@ -280,6 +287,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           getDestinationIntegrationLauncherConfig(
               jobId,
               attemptNumber,
+              connectionId,
               jobSyncConfig,
               destinationVersion,
               destinationConfiguration,
@@ -373,10 +381,10 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
               normalizationInDestinationMinSupportedVersion);
 
       reportNormalizationInDestinationMetrics(shouldNormalizeInDestination, config, connectionId);
-
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attempt,
+          connectionId,
           config,
           sourceVersion,
           attemptSyncConfig.getSourceConfiguration());
@@ -384,6 +392,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final IntegrationLauncherConfig destinationLauncherConfig = getDestinationIntegrationLauncherConfig(
           jobId,
           attempt,
+          connectionId,
           config,
           destinationVersion,
           attemptSyncConfig.getDestinationConfiguration(),
@@ -410,7 +419,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withResourceRequirements(config.getResourceRequirements())
           .withSourceResourceRequirements(config.getSourceResourceRequirements())
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
-          .withConnectionId(standardSync.getConnectionId())
+          .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
           .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
           .withIsReset(ConfigType.RESET_CONNECTION.equals(jobConfigType));

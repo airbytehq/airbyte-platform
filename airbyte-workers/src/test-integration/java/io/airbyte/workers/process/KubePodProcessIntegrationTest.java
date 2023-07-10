@@ -83,6 +83,8 @@ class KubePodProcessIntegrationTest {
   private static final int RANDOM_FILE_LINE_LENGTH = 100;
 
   private static final boolean IS_MINIKUBE = Boolean.parseBoolean(Optional.ofNullable(System.getenv("IS_MINIKUBE")).orElse("false"));
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static List<Integer> openPorts;
   @Value("${micronaut.server.port}")
   private Integer heartbeatPort;
@@ -428,7 +430,8 @@ class KubePodProcessIntegrationTest {
 
   private Process getProcess(final Map<String, String> customLabels, final String entrypoint, final Map<String, String> files)
       throws WorkerException {
-    return processFactory.create(ResourceType.DEFAULT, "tester", "some-id", 0, Path.of("/tmp/job-root"), "busybox:latest", false, false, files,
+    return processFactory.create(ResourceType.DEFAULT, "tester", "some-id", 0, CONNECTION_ID, WORKSPACE_ID, Path.of("/tmp/job-root"),
+        "busybox:latest", false, false, files,
         entrypoint,
         DEFAULT_RESOURCE_REQUIREMENTS, null, customLabels, Collections.emptyMap(), Collections.emptyMap(),
         Collections.emptyMap());

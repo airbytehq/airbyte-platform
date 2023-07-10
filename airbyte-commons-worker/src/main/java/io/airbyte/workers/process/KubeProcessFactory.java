@@ -19,6 +19,7 @@ import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +88,8 @@ public class KubeProcessFactory implements ProcessFactory {
                         final String jobType,
                         final String jobId,
                         final int attempt,
+                        final UUID connectionId,
+                        final UUID workspaceId,
                         final Path jobRoot,
                         final String imageName,
                         final boolean isCustomConnector,
@@ -113,7 +116,7 @@ public class KubeProcessFactory implements ProcessFactory {
       final int stderrLocalPort = KubePortManagerSingleton.getInstance().take();
       LOGGER.info("{} stderrLocalPort = {}", podName, stderrLocalPort);
 
-      final var allLabels = getLabels(jobId, attempt, customLabels);
+      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, customLabels);
 
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
 
@@ -159,12 +162,18 @@ public class KubeProcessFactory implements ProcessFactory {
    * Returns general labels to be applied to all Kubernetes pods. All general labels should be added
    * here.
    */
-  public static Map<String, String> getLabels(final String jobId, final int attemptId, final Map<String, String> customLabels) {
+  public static Map<String, String> getLabels(final String jobId,
+                                              final int attemptId,
+                                              final UUID connectionId,
+                                              final UUID workspaceId,
+                                              final Map<String, String> customLabels) {
     final var allLabels = new HashMap<>(customLabels);
 
     final var generalKubeLabels = Map.of(
         Metadata.JOB_LABEL_KEY, jobId,
         Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptId),
+        Metadata.CONNECTION_ID_LABEL_KEY, String.valueOf(connectionId),
+        Metadata.WORKSPACE_LABEL_KEY, String.valueOf(workspaceId),
         Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE);
 
     allLabels.putAll(generalKubeLabels);

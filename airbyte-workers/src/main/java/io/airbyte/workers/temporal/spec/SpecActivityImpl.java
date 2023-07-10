@@ -126,6 +126,8 @@ public class SpecActivityImpl implements SpecActivity {
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),
           launcherConfig.getAttemptId().intValue(),
+          launcherConfig.getConnectionId(),
+          launcherConfig.getWorkspaceId(),
           launcherConfig.getDockerImage(),
           processFactory,
           workerConfigs.getResourceRequirements(),

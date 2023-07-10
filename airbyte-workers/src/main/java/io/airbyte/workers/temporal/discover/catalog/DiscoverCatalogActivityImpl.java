@@ -138,7 +138,8 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     return () -> {
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DISCOVER);
       final IntegrationLauncher integrationLauncher =
-          new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getDockerImage(),
+          new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getConnectionId(),
+              launcherConfig.getWorkspaceId(), launcherConfig.getDockerImage(),
               processFactory, workerConfigs.getResourceRequirements(), launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
               featureFlags, Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =

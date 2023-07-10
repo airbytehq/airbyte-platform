@@ -30,6 +30,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
   public DbtLauncherWorker(final UUID connectionId,
+                           final UUID workspaceId,
                            final IntegrationLauncherConfig destinationLauncherConfig,
                            final JobRunConfig jobRunConfig,
                            final WorkerConfigs workerConfigs,
@@ -40,6 +41,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
                            final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
+        workspaceId,
         DBT,
         POD_NAME_PREFIX,
         jobRunConfig,

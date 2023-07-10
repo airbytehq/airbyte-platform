@@ -59,6 +59,8 @@ public class AirbyteIntegrationLauncherFactory {
     return new AirbyteIntegrationLauncher(
         launcherConfig.getJobId(),
         Math.toIntExact(launcherConfig.getAttemptId()),
+        launcherConfig.getConnectionId(),
+        launcherConfig.getWorkspaceId(),
         launcherConfig.getDockerImage(),
         processFactory,
         resourceRequirements,

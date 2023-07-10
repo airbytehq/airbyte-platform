@@ -103,7 +103,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.CHECK_CONNECTION_SOURCE,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, taskQueue, jobCheckConnectionConfig),
+        () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.getWorkspaceId(), taskQueue, jobCheckConnectionConfig),
         ConnectorJobOutput::getCheckConnection,
         source.getWorkspaceId(),
         source.getSourceId());
@@ -137,7 +137,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.CHECK_CONNECTION_DESTINATION,
         jobReportingContext,
         destination.getDestinationDefinitionId(),
-        () -> temporalClient.submitCheckConnection(jobId, 0, taskQueue, jobCheckConnectionConfig),
+        () -> temporalClient.submitCheckConnection(jobId, 0, destination.getWorkspaceId(), taskQueue, jobCheckConnectionConfig),
         ConnectorJobOutput::getCheckConnection,
         destination.getWorkspaceId(),
         destination.getDestinationId());
@@ -173,7 +173,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.DISCOVER_SCHEMA,
         jobReportingContext,
         source.getSourceDefinitionId(),
-        () -> temporalClient.submitDiscoverSchema(jobId, 0, taskQueue, jobDiscoverCatalogConfig),
+        () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig),
         ConnectorJobOutput::getDiscoverCatalogId,
         source.getWorkspaceId(),
         source.getSourceId());

@@ -35,6 +35,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
   public ReplicationLauncherWorker(final UUID connectionId,
+                                   final UUID workspaceId,
                                    final ContainerOrchestratorConfig containerOrchestratorConfig,
                                    final IntegrationLauncherConfig sourceLauncherConfig,
                                    final IntegrationLauncherConfig destinationLauncherConfig,
@@ -47,6 +48,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
                                    final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
+        workspaceId,
         REPLICATION,
         POD_NAME_PREFIX,
         jobRunConfig,
