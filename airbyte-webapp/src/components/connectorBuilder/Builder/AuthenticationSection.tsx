@@ -1,7 +1,7 @@
 import { OAuthAuthenticatorRefreshTokenUpdater } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";

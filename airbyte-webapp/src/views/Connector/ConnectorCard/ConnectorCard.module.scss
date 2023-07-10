@@ -1,4 +1,5 @@
 @use "scss/variables";
+@use "scss/colors";
 
 .loaderContainer {
   display: flex;
@@ -14,4 +15,8 @@
 
 .header {
   padding-bottom: variables.$spacing-lg;
+}
+
+.collapsibleIpAddresses {
+  gap: variables.$spacing-md;
 }

@@ -20,12 +20,12 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { copyToClipboard } from "core/utils/clipboard";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
-import { copyToClipboard } from "utils/clipboard";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
 
 import { JobLogsModalContent } from "./JobLogsModalContent";
 import { JobStatusIcon } from "./JobStatusIcon";

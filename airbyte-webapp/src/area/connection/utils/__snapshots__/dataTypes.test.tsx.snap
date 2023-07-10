@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`getDataType should translate array 1`] = `"airbyte.datatype.array"`;
+
+exports[`getDataType should translate big_integer 1`] = `"airbyte.datatype.big_integer"`;
+
+exports[`getDataType should translate big_number 1`] = `"airbyte.datatype.big_number"`;
+
+exports[`getDataType should translate boolean 1`] = `"airbyte.datatype.boolean"`;
+
+exports[`getDataType should translate date 1`] = `"airbyte.datatype.date"`;
+
+exports[`getDataType should translate datetime 1`] = `"airbyte.datatype.datetime"`;
+
+exports[`getDataType should translate integer 1`] = `"airbyte.datatype.integer"`;
+
+exports[`getDataType should translate number 1`] = `"airbyte.datatype.number"`;
+
+exports[`getDataType should translate object 1`] = `"airbyte.datatype.object"`;
+
+exports[`getDataType should translate string 1`] = `"airbyte.datatype.string"`;
+
+exports[`getDataType should translate timestamp_with_timezone 1`] = `"airbyte.datatype.timestamp_with_timezone"`;
+
+exports[`getDataType should translate timestamp_without_timezone 1`] = `"airbyte.datatype.timestamp_without_timezone"`;
+
+exports[`getDataType should translate union 1`] = `"airbyte.datatype.union"`;
+
+exports[`getDataType should translate untyped 1`] = `"airbyte.datatype.untyped"`;

@@ -4,8 +4,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { DocsIcon } from "components/icons/DocsIcon";
 
+import { links } from "core/utils/links";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { links } from "utils/links";
 import { NavDropdown } from "views/layout/SideBar/components/NavDropdown";
 import StatusIcon from "views/layout/SideBar/components/StatusIcon";
 

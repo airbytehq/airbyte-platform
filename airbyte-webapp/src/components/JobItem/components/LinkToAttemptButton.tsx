@@ -7,7 +7,7 @@ import { useDebounce } from "react-use";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { copyToClipboard } from "utils/clipboard";
+import { copyToClipboard } from "core/utils/clipboard";
 
 import { buildAttemptLink } from "../attemptLinkUtils";
 

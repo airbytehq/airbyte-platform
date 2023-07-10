@@ -1,6 +1,6 @@
 import React from "react";
 
-import styles from "./imageUtils.module.scss";
+import styles from "./icons.module.scss";
 
 const noIconPlaceholder = `
   <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250" fill="none">

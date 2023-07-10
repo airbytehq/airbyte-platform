@@ -4,9 +4,9 @@ import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
 import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionSpecificationService } from "core/domain/connector/DestinationDefinitionSpecificationService";
+import { isDefined } from "core/utils/common";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { isDefined } from "utils/common";
 
 import { DestinationDefinitionSpecificationRead } from "../../core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../Scope";

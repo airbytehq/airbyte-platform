@@ -18,9 +18,9 @@ import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/clou
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { links } from "core/utils/links";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { links } from "utils/links";
 
 import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";

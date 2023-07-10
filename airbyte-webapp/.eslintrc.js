@@ -64,7 +64,7 @@ module.exports = {
             group: "internal",
           },
           {
-            pattern: "+(area|config|core|hooks|locales|packages|pages|services|types|utils|views){/**,}",
+            pattern: "+(area|config|core|hooks|locales|packages|pages|services|types|views){/**,}",
             group: "internal",
             position: "after",
           },

@@ -14,9 +14,9 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
-import { links } from "utils/links";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
 import {

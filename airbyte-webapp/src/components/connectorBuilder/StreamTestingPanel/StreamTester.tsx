@@ -11,11 +11,11 @@ import { Text } from "components/ui/Text";
 import { StreamsListReadStreamsItem } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { links } from "core/utils/links";
 import {
   useConnectorBuilderTestRead,
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { links } from "utils/links";
 
 import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";

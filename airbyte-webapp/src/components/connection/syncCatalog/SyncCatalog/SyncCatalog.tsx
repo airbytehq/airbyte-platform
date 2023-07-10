@@ -5,8 +5,8 @@ import { useToggle } from "react-use";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
 import { SyncSchemaStream } from "core/domain/catalog";
+import { naturalComparatorBy } from "core/utils/objects";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { naturalComparatorBy } from "utils/objects";
 
 import { DisabledStreamsSwitch } from "./DisabledStreamsSwitch";
 import styles from "./SyncCatalog.module.scss";

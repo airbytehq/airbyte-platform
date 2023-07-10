@@ -14,10 +14,10 @@ import { Text } from "components/ui/Text";
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
 import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { isFulfilled } from "core/utils/promises";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
-import { isFulfilled } from "utils/promises";
 
 import { formValuesToNotificationSettings } from "./formValuesToNotificationSettings";
 import { NotificationItemField } from "./NotificationItemField";

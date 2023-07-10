@@ -7,8 +7,8 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { RequestOption } from "core/api/types/ConnectorManifest";
+import { links } from "core/utils/links";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";

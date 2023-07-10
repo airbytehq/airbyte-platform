@@ -15,6 +15,8 @@ export interface CheckBoxProps extends InputHTMLAttributes<HTMLInputElement> {
 export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize = "lg", ...inputProps }) => {
   const { checked, disabled, className } = inputProps;
 
+  const checkMarkSize = checkboxSize === "lg" ? "sm" : "xs";
+
   return (
     <label
       className={classNames(
@@ -31,9 +33,9 @@ export const CheckBox: React.FC<CheckBoxProps> = ({ indeterminate, checkboxSize 
     >
       <input type="checkbox" aria-checked={indeterminate ? "mixed" : checked} {...inputProps} />
       {indeterminate ? (
-        <FontAwesomeIcon size={checkboxSize} icon={faMinus} />
+        <FontAwesomeIcon size={checkMarkSize} icon={faMinus} />
       ) : (
-        checked && <FontAwesomeIcon size={checkboxSize} icon={faCheck} />
+        checked && <FontAwesomeIcon size={checkMarkSize} icon={faCheck} />
       )}
     </label>
   );

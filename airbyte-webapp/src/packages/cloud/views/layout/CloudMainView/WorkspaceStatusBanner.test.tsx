@@ -9,7 +9,7 @@ import {
   CloudWorkspaceReadCreditStatus as CreditStatus,
   CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
 } from "core/api/types/CloudApi";
-import { I18nProvider } from "core/i18n";
+import { I18nProvider } from "core/services/i18n";
 
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import cloudLocales from "../../../locales/en.json";

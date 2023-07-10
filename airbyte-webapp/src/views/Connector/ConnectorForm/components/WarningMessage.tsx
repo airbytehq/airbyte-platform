@@ -6,7 +6,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 interface WarningMessageProps {
   stage: typeof ReleaseStage.alpha | typeof ReleaseStage.beta;

@@ -3,7 +3,7 @@ import { CSSObjectWithLabel, GroupBase, Props, SelectComponentsConfig, StylesCon
 import { PortalStyleArgs } from "react-select/dist/declarations/src/components/Menu";
 import Select from "react-select/dist/declarations/src/Select";
 
-import { equal, naturalComparatorBy } from "utils/objects";
+import { equal, naturalComparatorBy } from "core/utils/objects";
 
 import { DropdownIndicator } from "./components/DropdownIndicator";
 import { Menu } from "./components/Menu";

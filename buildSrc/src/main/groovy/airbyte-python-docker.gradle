@@ -41,7 +41,14 @@ class AirbytePythonDockerPlugin implements Plugin<Project> {
                 d = project.projectDir.getAbsolutePath()
             }
 
-            commandLine "docker", "run", "-v", "${d}:/home", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home"
+            // TODO: Don't use CI env var here, use some Dagger specific line
+            // In Dagger, it's way easier to run these tests via the container API
+            // rather than worry about mounting from guest container into a new container
+            if ( System.getenv("CI") == "false") {
+                commandLine "docker", "run", "-v", "${d}:/home", "-v", "${d}/run_tests.sh:/home/run_tests.sh", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home" 
+            } else {
+                commandLine "echo", "Skipping Python tests via Gradle in CI, these will be run via Dagger in a separate pipeline"
+            }
         }
 
         project.assemble.dependsOn project.airbytePythonDockerApply

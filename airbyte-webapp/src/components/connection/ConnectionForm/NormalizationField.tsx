@@ -6,8 +6,8 @@ import { LabeledRadioButton } from "components";
 import { ExternalLink } from "components/ui/Link";
 
 import { NormalizationType } from "core/domain/connection/operation";
+import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { links } from "utils/links";
 
 import styles from "./NormalizationField.module.scss";
 

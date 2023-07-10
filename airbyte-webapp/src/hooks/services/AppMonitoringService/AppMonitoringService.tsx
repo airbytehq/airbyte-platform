@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
 
-import { trackAction, trackError } from "utils/datadog";
+import { trackAction, trackError } from "core/utils/datadog";
 
 import { AppActionCodes } from "./actionCodes";
 

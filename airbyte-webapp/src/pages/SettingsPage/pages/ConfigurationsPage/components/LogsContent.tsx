@@ -7,8 +7,8 @@ import { Button } from "components/ui/Button";
 
 import { useGetLogs } from "core/api";
 import { LogType } from "core/api/types/AirbyteClient";
+import { downloadFile } from "core/utils/file";
 import { useNotificationService } from "hooks/services/Notification";
-import { downloadFile } from "utils/file";
 
 import styles from "./LogsContainer.module.scss";
 

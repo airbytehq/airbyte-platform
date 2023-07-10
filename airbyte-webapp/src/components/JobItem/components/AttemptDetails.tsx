@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { AttemptRead, AttemptStatus } from "core/request/AirbyteClient";
-import { formatBytes } from "utils/numberHelper";
+import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./AttemptDetails.module.scss";
 import { getFailureFromAttempt, isCancelledAttempt } from "../utils";

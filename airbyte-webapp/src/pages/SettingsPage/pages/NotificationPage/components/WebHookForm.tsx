@@ -20,9 +20,9 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useNotificationConfigTest } from "core/api";
 import { Notification, NotificationType } from "core/api/types/AirbyteClient";
+import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
 import useWorkspace, { WebhookPayload } from "hooks/services/useWorkspace";
-import { links } from "utils/links";
 
 import help from "./help.png";
 import styles from "./WebHookForm.module.scss";

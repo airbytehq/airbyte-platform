@@ -1,5 +1,5 @@
+import { trackError } from "core/utils/datadog";
 import { shortUuid } from "core/utils/uuid";
-import { trackError } from "utils/datadog";
 
 import { CommonRequestError } from "../request/CommonRequestError";
 import { RequestMiddleware } from "../request/RequestMiddleware";

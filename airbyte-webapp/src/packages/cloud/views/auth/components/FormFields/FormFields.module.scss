@@ -1,10 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.disclaimer {
-  margin-top: variables.$spacing-xl;
-}
-
 .passwordCheck {
   &__container {
     margin-top: variables.$spacing-lg;

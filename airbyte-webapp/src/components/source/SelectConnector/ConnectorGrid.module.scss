@@ -15,6 +15,12 @@
     display: flex;
     flex-direction: column;
     gap: variables.$spacing-lg;
-    padding-bottom: variables.$spacing-xl;
+    padding: variables.$spacing-xl 0 variables.$spacing-2xl;
+  }
+}
+
+@container (max-width: 800px) {
+  .connectorGrid {
+    --grid-columns: 2;
   }
 }

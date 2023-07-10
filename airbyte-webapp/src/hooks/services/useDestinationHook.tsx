@@ -6,8 +6,8 @@ import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
-import { isDefined } from "utils/common";
 
 import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";

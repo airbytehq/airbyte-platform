@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo } from "react";
 import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
 
-import { isDevelopment } from "utils/isDevelopment";
+import { isDevelopment } from "core/utils/isDevelopment";
 
 export type ContextKind =
   | "user"

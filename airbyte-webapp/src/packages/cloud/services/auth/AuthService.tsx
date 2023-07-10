@@ -10,13 +10,13 @@ import { UserRead } from "core/api/types/CloudApi";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { trackSignup } from "core/utils/fathom";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
-import { trackSignup } from "utils/fathom";
 
 import { FREE_EMAIL_SERVICE_PROVIDERS } from "./freeEmailProviders";
 import { actions, AuthServiceState, authStateReducer, initialState } from "./reducer";

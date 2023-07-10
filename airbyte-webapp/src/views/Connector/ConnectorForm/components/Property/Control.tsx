@@ -9,7 +9,7 @@ import { TagInput } from "components/ui/TagInput/TagInput";
 import { TextArea } from "components/ui/TextArea";
 
 import { FormBaseItem } from "core/form/types";
-import { isDefined } from "utils/common";
+import { isDefined } from "core/utils/common";
 
 import SecretConfirmationControl from "./SecretConfirmationControl";
 

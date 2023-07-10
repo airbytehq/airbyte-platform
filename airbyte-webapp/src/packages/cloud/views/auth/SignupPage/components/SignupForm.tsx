@@ -1,15 +1,16 @@
 import { Formik, Form } from "formik";
 import React, { useMemo } from "react";
+import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
 
+import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useExperiment } from "hooks/services/Experiment";
 import { FieldError } from "packages/cloud/lib/errors/FieldError";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { isGdprCountry } from "utils/dataPrivacy";
 
 import styles from "./SignupForm.module.scss";
 import { BottomBlock, FieldItem, RowFieldItem } from "../../components/FormComponents";
@@ -31,6 +32,9 @@ interface SignupButtonProps {
 
 export const passwordSchema = yup.string().required("form.empty.error").min(12, "signup.password.minLength");
 
+/**
+ * @deprecated Will be replaced by `SignupButtonHookForm`
+ **/
 export const SignupButton: React.FC<SignupButtonProps> = ({
   isLoading,
   disabled,
@@ -40,6 +44,18 @@ export const SignupButton: React.FC<SignupButtonProps> = ({
     <FormattedMessage id={buttonMessageId} />
   </Button>
 );
+
+// react-hook-form control
+// TODO: rename to "SignupButton" and remove old "SignupButton" after migration to react-hook-form
+export const SignupButtonHookForm: React.FC<{ buttonMessageId?: string }> = ({ buttonMessageId }) => {
+  const { isSubmitting, isValid } = useFormState();
+
+  return (
+    <Button full size="lg" type="submit" isLoading={isSubmitting} disabled={!isValid}>
+      <FormattedMessage id={buttonMessageId} />
+    </Button>
+  );
+};
 
 export const SignupFormStatusMessage: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <div className={styles.statusMessage}>{children}</div>

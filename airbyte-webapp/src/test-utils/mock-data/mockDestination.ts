@@ -1,5 +1,5 @@
+import { ConnectorIds } from "area/connector/utils";
 import { DestinationDefinitionSpecificationRead, DestinationDefinitionRead } from "core/request/AirbyteClient";
-import { ConnectorIds } from "utils/connectors";
 
 export const mockDestinationDefinition: DestinationDefinitionRead = {
   destinationDefinitionId: ConnectorIds.Destinations.Postgres,

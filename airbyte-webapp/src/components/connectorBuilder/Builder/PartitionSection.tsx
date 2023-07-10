@@ -1,7 +1,7 @@
 import { useIntl } from "react-intl";
 
 import { RequestOption } from "core/api/types/ConnectorManifest";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";

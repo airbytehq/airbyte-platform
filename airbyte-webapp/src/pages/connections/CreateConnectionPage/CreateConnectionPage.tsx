@@ -2,20 +2,18 @@ import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
-import { MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
 import { SelectSource } from "components/connection/CreateConnection/SelectSource";
-import { FormPageContent } from "components/ConnectorBlocks";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackAction } from "core/utils/datadog";
 import { AppActionCodes } from "hooks/services/AppMonitoringService";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
-import { trackAction } from "utils/datadog";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { CreateConnectionTitleBlock } from "./CreateConnectionTitleBlock";
@@ -72,16 +70,11 @@ export const CreateConnectionPage: React.FC = () => {
 
   return (
     <ConnectorDocumentationWrapper>
-      <MainPageWithScroll
-        headTitle={<HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />}
-        pageTitle={
-          <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-            <CreateConnectionTitleBlock />
-          </NextPageHeaderWithNavigation>
-        }
-      >
-        <FormPageContent>{currentStep}</FormPageContent>
-      </MainPageWithScroll>
+      <HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />
+      <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+        <CreateConnectionTitleBlock />
+      </NextPageHeaderWithNavigation>
+      {currentStep}
     </ConnectorDocumentationWrapper>
   );
 };

@@ -4,7 +4,7 @@ import { useIntl } from "react-intl";
 import { LabelInfo } from "components/Label";
 
 import { RequestOption } from "core/api/types/ConnectorManifest";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";

@@ -9,8 +9,8 @@ import { Heading } from "components/ui/Heading";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
+import { FormError } from "core/utils/errorStatusMessage";
 import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
-import { FormError } from "utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 

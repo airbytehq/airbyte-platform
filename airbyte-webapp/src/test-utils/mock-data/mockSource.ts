@@ -1,6 +1,6 @@
 import { SourceDefinitionRead, SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
 
-import { ConnectorIds } from "../../utils/connectors";
+import { ConnectorIds } from "../../area/connector/utils";
 
 export const mockSourceDefinition: SourceDefinitionRead = {
   sourceDefinitionId: ConnectorIds.Sources.Postgres,

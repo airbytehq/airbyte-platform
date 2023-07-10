@@ -4,7 +4,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
 import { DefaultErrorHandlerBackoffStrategiesItem, HttpResponseFilter } from "core/api/types/ConnectorManifest";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";

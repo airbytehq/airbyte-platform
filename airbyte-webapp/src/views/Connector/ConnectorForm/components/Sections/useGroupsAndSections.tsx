@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { FormBlock, GroupDetails } from "core/form/types";
-import { naturalComparator } from "utils/objects";
+import { naturalComparator } from "core/utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
 import { OrderComparator } from "../../utils";

@@ -5,8 +5,8 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 
+import { ConnectorIds } from "area/connector/utils";
 import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
-import { ConnectorIds } from "utils/connectors";
 
 import styles from "./AuthButton.module.scss";
 import GoogleAuthButton from "./GoogleAuthButton";

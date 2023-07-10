@@ -13,10 +13,10 @@ import { Text } from "components/ui/Text";
 import { useUpdateWorkspace } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackError } from "core/utils/datadog";
+import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { trackError } from "utils/datadog";
-import { links } from "utils/links";
 
 const schema = yup.object().shape({
   defaultGeography: yup.mixed<Geography>().optional(),

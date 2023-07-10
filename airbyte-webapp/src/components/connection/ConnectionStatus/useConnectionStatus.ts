@@ -13,9 +13,9 @@ import {
   JobStatus,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
+import { moveTimeToFutureByPeriod } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useGetConnection } from "hooks/services/useConnectionHook";
-import { moveTimeToFutureByPeriod } from "utils/time";
 
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 import { jobStatusesIndicatingFinishedExecution } from "../ConnectionSync/ConnectionSyncContext";
