@@ -14,6 +14,7 @@ interface ConnectorGridProps<T extends ConnectorDefinition> {
   onConnectorButtonClick: (definition: T) => void;
   onOpenRequestConnectorModal: () => void;
   showConnectorBuilderButton?: boolean;
+  searchResultsHiddenByFilters: boolean;
 }
 
 export const ConnectorGrid = <T extends ConnectorDefinition>({
@@ -21,6 +22,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
   onConnectorButtonClick,
   onOpenRequestConnectorModal,
   showConnectorBuilderButton = false,
+  searchResultsHiddenByFilters,
 }: ConnectorGridProps<T>) => {
   return (
     <>
@@ -29,6 +31,11 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
           <Text size="lg" align="center">
             <FormattedMessage id="connector.noSearchResults" />
           </Text>
+          {searchResultsHiddenByFilters && (
+            <Text size="sm" align="center">
+              <FormattedMessage id="connector.searchResultsHiddenByFilters" />
+            </Text>
+          )}
         </div>
       )}
       <div className={styles.connectorGrid}>

@@ -10,7 +10,11 @@ const schemaInput = "[data-testid='tag-input'] input";
 const destinationPathInput = "input[name='connectionConfiguration.destination_path']";
 const optionalFieldsButton = "button[data-testid='optional-fields']";
 
-export const selectServiceType = (type: string) => cy.contains("button", type).click();
+export const selectServiceType = (type: string) => {
+  // Make sure alpha connectors are visible in the grid, since they are hidden by default
+  cy.contains("label", "Alpha").click();
+  cy.contains("button", type).click();
+};
 
 export const enterName = (name: string) => {
   cy.get(nameInput).clear();

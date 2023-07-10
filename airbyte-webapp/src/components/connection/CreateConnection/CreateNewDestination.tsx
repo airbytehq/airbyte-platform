@@ -1,31 +1,25 @@
-import { useMemo, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { DestinationForm } from "components/destination/DestinationForm";
 import { DestinationFormValues } from "components/destination/DestinationForm/DestinationForm";
-import { ConnectorGrid } from "components/source/SelectConnector/ConnectorGrid";
+import { PageContainer } from "components/PageContainer";
+import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { SearchInput } from "components/ui/SearchInput";
 
-import { useCurrentWorkspace } from "core/api";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useModalService } from "hooks/services/Modal";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
-import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";
 
 export const DESTINATION_DEFINITION_PARAM = "destinationDefinitionId";
 
 export const CreateNewDestination: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedDestinationDefinitionId = searchParams.get(DESTINATION_DEFINITION_PARAM);
 
@@ -33,14 +27,10 @@ export const CreateNewDestination: React.FC = () => {
   const { trackAction } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: createDestination } = useCreateDestination();
-  const { openModal, closeModal } = useModalService();
-  const { email } = useCurrentWorkspace();
-  const { formatMessage } = useIntl();
 
   const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
 
   const onSelectDestinationDefinitionId = (destinationDefinitionId: string) => {
-    setSearchTerm("");
     searchParams.set(DESTINATION_DEFINITION_PARAM, destinationDefinitionId);
     setSearchParams(searchParams);
   };
@@ -84,52 +74,32 @@ export const CreateNewDestination: React.FC = () => {
     }
   };
 
-  const filteredDestinationDefinitions = useMemo(
-    () =>
-      destinationDefinitions.filter((item) => item.name.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase())),
-    [destinationDefinitions, searchTerm]
-  );
-
-  const onOpenRequestConnectorModal = () =>
-    openModal({
-      title: formatMessage({ id: "connector.requestConnector" }),
-      content: () => (
-        <RequestConnectorModal
-          connectorType="destination"
-          workspaceEmail={email}
-          searchedConnectorName={searchTerm}
-          onClose={closeModal}
-        />
-      ),
-    });
-
   if (selectedDestinationDefinitionId) {
     return (
-      <>
-        <Box mb="md">
-          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-            <FormattedMessage id="connectorBuilder.backButtonLabel" />
-          </Button>
-        </Box>
-        <DestinationForm
-          selectedDestinationDefinitionId={selectedDestinationDefinitionId}
-          destinationDefinitions={destinationDefinitions}
-          onSubmit={onCreateDestination}
-        />
-      </>
+      <Box px="md">
+        <PageContainer centered>
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+          <DestinationForm
+            selectedDestinationDefinitionId={selectedDestinationDefinitionId}
+            destinationDefinitions={destinationDefinitions}
+            onSubmit={onCreateDestination}
+          />
+        </PageContainer>
+      </Box>
     );
   }
 
   return (
-    <FlexContainer gap="xl" direction="column">
-      <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-      <ConnectorGrid
-        connectorDefinitions={filteredDestinationDefinitions}
-        onConnectorButtonClick={(destinationDefinition) =>
-          onSelectDestinationDefinitionId(destinationDefinition.destinationDefinitionId)
-        }
-        onOpenRequestConnectorModal={onOpenRequestConnectorModal}
-      />
-    </FlexContainer>
+    <SelectConnector
+      connectorDefinitions={destinationDefinitions}
+      connectorType="destination"
+      onSelectConnectorDefinition={(destinationDefinitionId) =>
+        onSelectDestinationDefinitionId(destinationDefinitionId)
+      }
+    />
   );
 };

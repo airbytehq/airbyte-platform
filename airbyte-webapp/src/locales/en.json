@@ -692,7 +692,9 @@
   "settings.defaultDataResidencyUpdateError": "There was an error updating the default data residency for this workspace.",
   "settings.defaultDataResidencyUpdateSuccess": "Data residency preference has been updated!",
 
+  "connector.connectorCount": "{count, plural, one {# connector} other {# connectors}}",
   "connector.noSearchResults": "No connectors match your search.",
+  "connector.searchResultsHiddenByFilters": "Some matching connectors are hidden by filters.",
   "connector.requestConnectorBlock": "Request a new connector",
   "connector.requestConnector": "Request a new connector",
   "connector.request": "Request",

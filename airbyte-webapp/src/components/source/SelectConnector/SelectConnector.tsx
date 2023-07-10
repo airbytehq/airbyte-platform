@@ -3,30 +3,34 @@ import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Heading } from "components/ui/Heading";
+import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
+import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
+import { ReleaseStage } from "core/request/AirbyteClient";
 import { useModalService } from "hooks/services/Modal";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { ConnectorGrid } from "./ConnectorGrid";
+import { FilterReleaseStage } from "./FilterReleaseStage";
 import styles from "./SelectConnector.module.scss";
 import { useTrackSelectConnector } from "./useTrackSelectConnector";
 
 interface SelectConnectorProps {
   connectorType: "source" | "destination";
   connectorDefinitions: ConnectorDefinition[];
-  headingKey: string;
   onSelectConnectorDefinition: (id: string) => void;
 }
+
+const RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "alpha", "custom"];
+const DEFAULT_SELECTED_RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "custom"];
 
 export const SelectConnector: React.FC<SelectConnectorProps> = ({
   connectorType,
   connectorDefinitions,
-  headingKey,
   onSelectConnectorDefinition,
 }) => {
   const { formatMessage } = useIntl();
@@ -34,6 +38,11 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal, closeModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedReleaseStages, setSelectedReleaseStages] = useState<ReleaseStage[]>(
+    DEFAULT_SELECTED_RELEASE_STAGES.filter((stage) =>
+      connectorDefinitions.some((definition) => definition.releaseStage === stage)
+    )
+  );
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
@@ -59,7 +68,15 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       size: "sm",
     });
 
-  const filteredDefinitions = useMemo(
+  const filteredSearchResults = useMemo(
+    () =>
+      connectorDefinitions
+        .filter((definition) => definition.releaseStage && selectedReleaseStages.includes(definition.releaseStage))
+        .filter((definition) => definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())),
+    [searchTerm, connectorDefinitions, selectedReleaseStages]
+  );
+
+  const allSearchResults = useMemo(
     () =>
       connectorDefinitions.filter((definition) =>
         definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())
@@ -71,18 +88,29 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     <div className={styles.selectConnector}>
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--left"])} />
       <div className={styles.selectConnector__header}>
-        <Heading as="h2" size="lg">
-          <FormattedMessage id={headingKey} />
-        </Heading>
+        <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+
         <Box mt="lg">
-          <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <FlexContainer justifyContent="space-between">
+            <FilterReleaseStage
+              availableReleaseStages={RELEASE_STAGES.filter((stage) =>
+                connectorDefinitions.some((d) => d.releaseStage === stage)
+              )}
+              selectedReleaseStages={selectedReleaseStages}
+              onUpdateSelectedReleaseStages={setSelectedReleaseStages}
+            />
+            <Text color="grey">
+              <FormattedMessage id="connector.connectorCount" values={{ count: filteredSearchResults.length }} />
+            </Text>
+          </FlexContainer>
         </Box>
       </div>
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
 
       <div className={styles.selectConnector__grid}>
         <ConnectorGrid
-          connectorDefinitions={filteredDefinitions}
+          searchResultsHiddenByFilters={allSearchResults.length > filteredSearchResults.length}
+          connectorDefinitions={filteredSearchResults}
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}
           showConnectorBuilderButton={connectorType === "source"}
