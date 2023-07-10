@@ -9,10 +9,7 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
 import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.util.Optional;
@@ -45,11 +42,6 @@ public class ProgressChecker {
   public boolean check(final long jobId, final int attemptNo) {
     final var resp = fetchAttemptStats(jobId, attemptNo);
 
-    if (resp.isEmpty()) {
-      recordCheckFailure(jobId, attemptNo);
-      log.info(String.format("Unable to check progress stats for job: %d attempt: %d", jobId, attemptNo));
-    }
-
     return resp
         .map(predicate::test)
         .orElse(false);
@@ -74,15 +66,6 @@ public class ProgressChecker {
     }
 
     return Optional.ofNullable(resp);
-  }
-
-  private void recordCheckFailure(final long jobId, final int attemptNo) {
-    final var attrs = new MetricAttribute[] {
-      new MetricAttribute(MetricTags.JOB_ID, String.valueOf(jobId)),
-      new MetricAttribute(MetricTags.ATTEMPT_NUMBER, String.valueOf(attemptNo))
-    };
-
-    metricClient.count(OssMetricsRegistry.REPLICATION_PROGRESS_CHECK_FAIL, 1, attrs);
   }
 
 }
