@@ -5,6 +5,7 @@ import * as yup from "yup";
 
 import { LabeledRadioButton } from "components";
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Input } from "components/ui/Input";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
@@ -144,9 +145,25 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
                     : values.namespaceDefinition
                 }.description`}
               />
-              <Text className={styles.generalInfo}>
-                <FormattedMessage id="connectionForm.modal.destinationNamespace.description" />
-              </Text>
+              <Box py="lg">
+                <Text color="grey">
+                  <FormattedMessage id="connectionForm.modal.destinationNamespace.description" />
+                </Text>
+              </Box>
+              {values.namespaceDefinition === NamespaceDefinitionType.source && (
+                <Box pb="lg">
+                  <Text color="grey">
+                    <FormattedMessage id="connectionForm.modal.destinationNamespace.description.emptySource" />
+                  </Text>
+                </Box>
+              )}
+              {values.namespaceDefinition === NamespaceDefinitionType.customformat && (
+                <Box pb="lg">
+                  <Text color="grey">
+                    <FormattedMessage id="connectionForm.modal.destinationNamespace.description.emptyCustom" />
+                  </Text>
+                </Box>
+              )}
               <ExampleSettingsTable namespaceDefinitionType={values.namespaceDefinition} />
               <a className={styles.namespaceLink} href={links.namespaceLink} target="_blank" rel="noreferrer">
                 <Text className={styles.text} size="xs">

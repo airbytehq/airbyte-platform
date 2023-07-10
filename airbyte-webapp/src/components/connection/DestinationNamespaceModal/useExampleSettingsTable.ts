@@ -142,7 +142,7 @@ export const useExampleTableData = (
               id: "connectionForm.modal.destinationNamespace.table.data.public",
             }),
             destinationNamespace: formatMessage({
-              id: "connectionForm.modal.destinationNamespace.table.data.myPublicSchema",
+              id: "connectionForm.modal.destinationNamespace.table.data.anotherPublicSchema",
             }),
           },
           {
@@ -152,6 +152,30 @@ export const useExampleTableData = (
             }),
             destinationNamespace: formatMessage({
               id: "connectionForm.modal.destinationNamespace.table.data.mySchema",
+            }),
+          },
+          {
+            customFormat: formatMessage(
+              {
+                id: "connectionForm.modal.destinationNamespace.table.data.exampleSourceNamespace",
+              },
+              { symbol: (node: React.ReactNode) => `{${node}}` }
+            ),
+            sourceNamespace: "",
+            destinationNamespace: formatMessage({
+              id: "connectionForm.modal.destinationNamespace.table.data.mySchema",
+            }),
+          },
+          {
+            customFormat: formatMessage(
+              {
+                id: "connectionForm.modal.destinationNamespace.table.data.exampleMySourceNamespace",
+              },
+              { symbol: (node: React.ReactNode) => `{${node}}` }
+            ),
+            sourceNamespace: "",
+            destinationNamespace: formatMessage({
+              id: "connectionForm.modal.destinationNamespace.table.data.exampleMySourceNamespaceEmpty",
             }),
           },
         ],
