@@ -13,7 +13,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
@@ -231,10 +230,6 @@ public class JobNotifier {
 
   public void autoDisableConnectionWarning(final Job job) {
     notifyJob(null, CONNECTION_DISABLED_WARNING_NOTIFICATION, job);
-  }
-
-  protected NotificationClient getNotificationClient(final Notification notification) {
-    return NotificationClient.createNotificationClient(notification);
   }
 
   private void sendNotification(final NotificationItem notificationItem,

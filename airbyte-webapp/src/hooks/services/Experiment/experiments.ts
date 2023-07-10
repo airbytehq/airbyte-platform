@@ -9,7 +9,6 @@
 export interface Experiments {
   "autopropagation.enabled": boolean;
   "connector.orderOverwrite": Record<string, number>;
-  "connector.frequentlyUsedDestinationIds": string[];
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideName": boolean;
@@ -30,4 +29,5 @@ export interface Experiments {
   "billing.newTrialPolicy": boolean;
   "connector.allowlistIpBanner": boolean;
   "settings.emailNotifications": boolean;
+  "connector.airbyteCloudIpAddresses": string;
 }

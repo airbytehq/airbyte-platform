@@ -29,6 +29,7 @@
   "login.companyName.placeholder": "Acme Inc.",
   "login.disclaimer": "By signing up and continuing, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
   "login.inviteTitle": "Invite access",
+  "login.inviteMismatch": "This email does not match the email address sent to this invite.",
   "login.inviteLinkExpired": "This invite link expired. A new invite link was sent to your email.",
   "login.inviteLinkInvalid": "This invite link is no longer valid.",
   "login.rightSideFrameTitle": "More about Airbyte",
@@ -196,7 +197,6 @@
   "email.duplicate": "Email already exists",
   "email.notfound": "Email not found",
   "email.disabled": "Your account is disabled",
-  "email.inviteMismatch": "This email does not match the email address sent to this invite.",
   "password.validation": "Your password is too weak",
   "password.invalid": "Invalid password",
 

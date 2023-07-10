@@ -3,8 +3,10 @@ import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
+import { PageContainer } from "components/PageContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -75,41 +77,51 @@ export const SelectDestination: React.FC = () => {
   };
 
   return (
-    <>
-      {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
-        <Card withPadding>
-          <Heading as="h2">
-            <FormattedMessage id="connectionForm.defineDestination" />
-          </Heading>
-          <Box mt="md">
-            <RadioButtonTiles
-              name="destinationType"
-              options={[
-                {
-                  value: EXISTING_DESTINATION_TYPE,
-                  label: "connectionForm.destinationExisting",
-                  description: "connectionForm.destinationExistingDescription",
-                  disabled: destinations.length === 0,
-                },
-                {
-                  value: NEW_DESTINATION_TYPE,
-                  label: "connectionForm.destinationNew",
-                  description: "connectionForm.destinationNewDescription",
-                },
-              ]}
-              selectedValue={selectedDestinationType}
-              onSelectRadioButton={(id) => onSelectDestinationType(id)}
-            />
+    <Box py="xl">
+      <FlexContainer direction="column">
+        {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
+          <Box px="md">
+            <PageContainer centered>
+              <Card withPadding>
+                <Heading as="h2">
+                  <FormattedMessage id="connectionForm.defineDestination" />
+                </Heading>
+                <Box mt="md">
+                  <RadioButtonTiles
+                    name="destinationType"
+                    options={[
+                      {
+                        value: EXISTING_DESTINATION_TYPE,
+                        label: "connectionForm.destinationExisting",
+                        description: "connectionForm.destinationExistingDescription",
+                        disabled: destinations.length === 0,
+                      },
+                      {
+                        value: NEW_DESTINATION_TYPE,
+                        label: "connectionForm.destinationNew",
+                        description: "connectionForm.destinationNewDescription",
+                      },
+                    ]}
+                    selectedValue={selectedDestinationType}
+                    onSelectRadioButton={(id) => onSelectDestinationType(id)}
+                  />
+                </Box>
+              </Card>
+            </PageContainer>
           </Box>
-        </Card>
-      )}
-      <Box mt="xl">
-        {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
-          <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />
         )}
-        {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
-      </Box>
-      <CloudInviteUsersHint connectorType="destination" />
-    </>
+        <Box mt="xl">
+          {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
+            <Box px="md">
+              <PageContainer centered>
+                <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />
+              </PageContainer>
+            </Box>
+          )}
+          {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
+        </Box>
+        <CloudInviteUsersHint connectorType="destination" />
+      </FlexContainer>
+    </Box>
   );
 };

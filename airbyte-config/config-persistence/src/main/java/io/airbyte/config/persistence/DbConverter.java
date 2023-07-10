@@ -206,6 +206,7 @@ public class DbConverter {
         .withSourceId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
+        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));
@@ -222,6 +223,7 @@ public class DbConverter {
         .withDestinationId(record.get(ACTOR.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
+        .withDefaultVersionId(record.get(ACTOR.DEFAULT_VERSION_ID))
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME));

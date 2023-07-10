@@ -1,5 +1,6 @@
 export type IconType =
   | "arrowRight"
+  | "check"
   | "credits"
   | "cross"
   | "chevronLeft"

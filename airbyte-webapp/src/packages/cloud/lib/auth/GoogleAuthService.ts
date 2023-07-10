@@ -138,7 +138,8 @@ export class GoogleAuthService {
     } catch (e) {
       switch (e?.code) {
         case AuthErrorCodes.INVALID_EMAIL:
-          throw new FieldError("email", EmailLinkErrorCodes.EMAIL_MISMATCH);
+          // The invitation link was sent to a different email
+          throw new Error(EmailLinkErrorCodes.EMAIL_MISMATCH);
         case AuthErrorCodes.INVALID_OOB_CODE:
           // The link was already used
           throw new Error(EmailLinkErrorCodes.LINK_INVALID);
