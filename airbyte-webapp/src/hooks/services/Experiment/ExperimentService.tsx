@@ -83,6 +83,8 @@ function useExperimentWithOverwrites<K extends keyof Experiments>(
 }
 
 // Allow overwriting values via the .experiments.dev file (and thus the REACT_APP_EXPERIMENT_OVERWRITES env variable) only during development
-export const useExperiment = process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
+const isCypress = window.hasOwnProperty("Cypress");
+export const useExperiment =
+  !isCypress && process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
 
 export const ExperimentProvider = experimentContext.Provider;
