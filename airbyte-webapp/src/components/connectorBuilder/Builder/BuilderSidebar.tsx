@@ -14,8 +14,8 @@ import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { links } from "core/utils/links";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { links } from "utils/links";
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";

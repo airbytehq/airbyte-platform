@@ -11,8 +11,8 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { useOssSecurityCheck } from "core/api";
+import { links } from "core/utils/links";
 import { CheckBoxControl } from "packages/cloud/views/auth/components/CheckBoxControl";
-import { links } from "utils/links";
 
 import { SetupFormValues } from "./SetupForm";
 

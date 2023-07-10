@@ -6,7 +6,7 @@ import type { FirebaseApp, FirebaseOptions } from "firebase/app";
 import { getApps, initializeApp, registerVersion } from "firebase/app";
 import * as React from "react";
 
-import { equal } from "utils/objects";
+import { equal } from "core/utils/objects";
 
 const DEFAULT_APP_NAME = "[DEFAULT]";
 

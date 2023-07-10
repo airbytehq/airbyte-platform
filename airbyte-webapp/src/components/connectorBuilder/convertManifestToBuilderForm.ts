@@ -27,7 +27,7 @@ import {
   CursorPagination,
   DeclarativeComponentSchemaMetadata,
 } from "core/api/types/ConnectorManifest";
-import { removeEmptyProperties } from "utils/form";
+import { removeEmptyProperties } from "core/utils/form";
 
 import {
   authTypeToKeyToInferredInput,

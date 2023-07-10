@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 
 import { useCurrentWorkspace } from "core/api";
 import { JobDebugInfoRead } from "core/request/AirbyteClient";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 
 interface DownloadButtonProps {
   jobDebugInfo: JobDebugInfoRead;

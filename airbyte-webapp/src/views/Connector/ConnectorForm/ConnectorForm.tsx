@@ -8,8 +8,8 @@ import {
   ConnectorDefinitionSpecification,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
+import { removeEmptyProperties } from "core/utils/form";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { removeEmptyProperties } from "utils/form";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
 import { FormRootProps, FormRoot } from "./FormRoot";

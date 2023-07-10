@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { CheckBox } from "components/ui/CheckBox";
 import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { TableStream } from "./StreamFieldsTable";
 

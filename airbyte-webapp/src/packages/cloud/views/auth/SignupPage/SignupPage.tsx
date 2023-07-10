@@ -11,8 +11,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackPageview } from "core/utils/fathom";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { trackPageview } from "utils/fathom";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";

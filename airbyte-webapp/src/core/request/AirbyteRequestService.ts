@@ -1,7 +1,7 @@
 import merge from "lodash/merge";
 
+import { trackError } from "core/utils/datadog";
 import { shortUuid } from "core/utils/uuid";
-import { trackError } from "utils/datadog";
 
 import { CommonRequestError } from "./CommonRequestError";
 import { RequestMiddleware } from "./RequestMiddleware";

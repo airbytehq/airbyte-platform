@@ -10,8 +10,8 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 
 import { useCreateCloudWorkspace, useListCloudWorkspaces } from "core/api/cloud";
+import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
-import { trackError } from "utils/datadog";
 
 interface CreateWorkspaceFormValues {
   name: string;

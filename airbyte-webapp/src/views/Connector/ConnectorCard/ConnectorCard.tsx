@@ -19,9 +19,9 @@ import {
 } from "core/domain/connector";
 import { DestinationRead, ReleaseStage, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
-import { isCloudApp } from "utils/app";
-import { generateMessageFromError } from "utils/errorStatusMessage";
-import { links } from "utils/links";
+import { isCloudApp } from "core/utils/app";
+import { generateMessageFromError } from "core/utils/errorStatusMessage";
+import { links } from "core/utils/links";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";

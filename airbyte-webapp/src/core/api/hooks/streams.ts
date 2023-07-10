@@ -1,5 +1,4 @@
-import { getStreamKey } from "area/connection/utils/computeStreamStatus";
-import { sortStreamStatuses } from "area/connection/utils/useStreamsStatuses";
+import { getStreamKey, sortStreamStatuses } from "area/connection/utils";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { getStreamStatusesByRunState } from "../generated/AirbyteClient";

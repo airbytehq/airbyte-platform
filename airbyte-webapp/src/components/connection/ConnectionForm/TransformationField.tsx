@@ -6,8 +6,8 @@ import ArrayOfObjectsEditor from "components/ArrayOfObjectsEditor";
 import TransformationForm from "components/connection/TransformationForm";
 
 import { OperationRead } from "core/request/AirbyteClient";
+import { isDefined } from "core/utils/common";
 import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { isDefined } from "utils/common";
 
 import { useDefaultTransformation } from "./formConfig";
 

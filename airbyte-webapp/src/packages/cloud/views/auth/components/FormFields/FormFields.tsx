@@ -15,7 +15,7 @@ import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import styles from "./FormFields.module.scss";
 

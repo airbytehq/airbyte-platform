@@ -8,7 +8,7 @@ import { getJobStatus } from "components/JobItem/utils";
 import { Text } from "components/ui/Text";
 
 import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
-import { formatBytes } from "utils/numberHelper";
+import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./JobProgress.module.scss";
 import { ProgressLine } from "./JobProgressLine";

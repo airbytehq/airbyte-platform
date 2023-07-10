@@ -7,10 +7,10 @@ import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
 
+import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useExperiment } from "hooks/services/Experiment";
 import { FieldError } from "packages/cloud/lib/errors/FieldError";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { isGdprCountry } from "utils/dataPrivacy";
 
 import styles from "./SignupForm.module.scss";
 import { BottomBlock, FieldItem, RowFieldItem } from "../../components/FormComponents";

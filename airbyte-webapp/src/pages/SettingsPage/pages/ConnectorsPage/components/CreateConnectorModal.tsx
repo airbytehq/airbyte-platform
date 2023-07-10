@@ -10,8 +10,8 @@ import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { isCloudApp } from "utils/app";
-import { links } from "utils/links";
+import { isCloudApp } from "core/utils/app";
+import { links } from "core/utils/links";
 
 interface ConnectorDefinition {
   name: string;

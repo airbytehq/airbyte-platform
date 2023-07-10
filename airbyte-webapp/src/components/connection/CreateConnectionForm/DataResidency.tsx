@@ -8,7 +8,7 @@ import { ControlLabels } from "components/LabeledControl";
 
 import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { FormFieldLayout } from "../ConnectionForm/FormFieldLayout";
 

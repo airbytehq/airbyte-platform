@@ -1,4 +1,4 @@
-import { ConnectorIds } from "utils/connectors";
+import { ConnectorIds } from "area/connector/utils";
 
 import { ReleaseStage } from "../../core/request/AirbyteClient";
 

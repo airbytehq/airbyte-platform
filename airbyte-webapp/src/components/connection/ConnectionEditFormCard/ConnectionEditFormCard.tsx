@@ -6,8 +6,8 @@ import { useIntl } from "react-intl";
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { CollapsibleCardProps, CollapsibleCard } from "components/ui/CollapsibleCard";
 
+import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { generateMessageFromError } from "utils/errorStatusMessage";
 
 import styles from "./ConnectionEditFormCard.module.scss";
 import EditControls from "../ConnectionForm/EditControls";

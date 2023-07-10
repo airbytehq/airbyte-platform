@@ -10,7 +10,7 @@ import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-ut
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
-import { FormError } from "utils/errorStatusMessage";
+import { FormError } from "core/utils/errorStatusMessage";
 
 import {
   ConnectionFormServiceProvider,

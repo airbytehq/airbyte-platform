@@ -8,11 +8,11 @@ import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 
+import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { EmailLinkErrorCodes } from "packages/cloud/services/auth/types";
-import { isGdprCountry } from "utils/dataPrivacy";
 
 import { Disclaimer, PasswordFieldHookForm } from "./auth/components/FormFields/FormFields";
 import { FormTitle } from "./auth/components/FormTitle";

@@ -10,7 +10,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { JobConfigType, SynchronousJobRead } from "core/request/AirbyteClient";
-import { downloadFile } from "utils/file";
+import { downloadFile } from "core/utils/file";
 
 import styles from "./JobFailure.module.scss";
 

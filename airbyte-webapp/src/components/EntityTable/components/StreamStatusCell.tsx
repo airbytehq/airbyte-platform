@@ -12,8 +12,7 @@ import { StreamWithStatus, sortStreams } from "components/connection/StreamStatu
 import { StreamStatusIndicator, StreamStatusLoadingSpinner } from "components/connection/StreamStatusIndicator";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { AirbyteStreamAndConfigurationWithEnforcedStream } from "area/connection/utils/computeStreamStatus";
-import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
+import { AirbyteStreamAndConfigurationWithEnforcedStream, useStreamsStatuses } from "area/connection/utils";
 
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";

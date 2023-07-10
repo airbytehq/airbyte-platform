@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { DocsIcon } from "components/icons/DocsIcon";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import { NavDropdown } from "./NavDropdown";
 import RecipesIcon from "./RecipesIcon";

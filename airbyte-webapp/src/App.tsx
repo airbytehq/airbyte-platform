@@ -7,9 +7,9 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { config } from "config";
 import { QueryProvider } from "core/api";
-import { I18nProvider } from "core/i18n";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
+import { I18nProvider } from "core/services/i18n";
 import { ServicesProvider } from "core/servicesProvider";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";

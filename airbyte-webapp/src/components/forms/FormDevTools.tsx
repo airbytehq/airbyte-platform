@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 
-import { isDevelopment } from "utils/isDevelopment";
+import { isDevelopment } from "core/utils/isDevelopment";
 
 const FormDevToolsInternal = React.lazy(() => import("./FormDevToolsInternal"));
 

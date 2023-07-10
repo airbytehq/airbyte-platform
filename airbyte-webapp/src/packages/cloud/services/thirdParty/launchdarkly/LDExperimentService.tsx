@@ -8,16 +8,16 @@ import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
-import { useI18nContext } from "core/i18n";
 import { useAnalyticsService } from "core/services/analytics";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
+import { useI18nContext } from "core/services/i18n";
 import { useDebugVariable } from "core/utils/debug";
+import { isDevelopment } from "core/utils/isDevelopment";
+import { rejectAfter } from "core/utils/promises";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
 import { ContextKind, ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { isDevelopment } from "utils/isDevelopment";
-import { rejectAfter } from "utils/promises";
 
 import { contextReducer } from "./contextReducer";
 import { createLDContext, createMultiContext, createUserContext } from "./contexts";

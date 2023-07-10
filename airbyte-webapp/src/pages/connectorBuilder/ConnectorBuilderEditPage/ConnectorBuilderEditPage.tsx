@@ -16,6 +16,7 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { removeEmptyProperties } from "core/utils/form";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
   ConnectorBuilderTestReadProvider,
@@ -24,7 +25,6 @@ import {
   ConnectorBuilderFormManagementStateProvider,
   ConnectorBuilderMainRHFContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { removeEmptyProperties } from "utils/form";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
 

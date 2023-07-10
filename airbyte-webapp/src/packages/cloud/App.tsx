@@ -8,9 +8,9 @@ import LoadingPage from "components/LoadingPage";
 
 import { ConfigServiceProvider, config } from "config";
 import { QueryProvider } from "core/api";
-import { I18nProvider } from "core/i18n";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
+import { I18nProvider } from "core/services/i18n";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";

@@ -9,11 +9,11 @@ import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageH
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { trackAction } from "core/utils/datadog";
 import { AppActionCodes } from "hooks/services/AppMonitoringService";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
-import { trackAction } from "utils/datadog";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { CreateConnectionTitleBlock } from "./CreateConnectionTitleBlock";

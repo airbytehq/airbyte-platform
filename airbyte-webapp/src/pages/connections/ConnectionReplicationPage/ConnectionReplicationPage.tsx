@@ -23,6 +23,7 @@ import { SchemaChange } from "core/request/AirbyteClient";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
+import { equal } from "core/utils/objects";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -32,7 +33,6 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 import { useConnectionService, ValuesProps } from "hooks/services/useConnectionHook";
-import { equal } from "utils/objects";
 
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";

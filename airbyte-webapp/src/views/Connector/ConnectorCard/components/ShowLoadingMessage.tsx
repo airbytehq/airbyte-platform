@@ -3,8 +3,8 @@ import { FormattedMessage } from "react-intl";
 
 import { ExternalLink } from "components/ui/Link";
 
-import { isCloudApp } from "utils/app";
-import { links } from "utils/links";
+import { isCloudApp } from "core/utils/app";
+import { links } from "core/utils/links";
 
 interface ShowLoadingMessageProps {
   connector?: string;

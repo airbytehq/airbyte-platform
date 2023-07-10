@@ -10,11 +10,11 @@ import { Switch } from "components/ui/Switch";
 import { Table } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
+import { getDataType } from "area/connection/utils";
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
-import { getDataType } from "utils/useTranslateDataType";
 
 import { CursorCell } from "./CursorCell";
 import { PKCell } from "./PKCell";

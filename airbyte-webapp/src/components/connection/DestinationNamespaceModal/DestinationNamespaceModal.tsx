@@ -12,7 +12,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import styles from "./DestinationNamespaceModal.module.scss";
 import { ExampleSettingsTable } from "./ExampleSettingsTable";

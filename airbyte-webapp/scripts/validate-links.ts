@@ -2,7 +2,7 @@
 
 import fetch from "node-fetch";
 
-import { links } from "../src/utils/links";
+import { links } from "../src/core/utils/links";
 
 const IGNORED_LINKS = [
   // Cloudflare in front prevents us from checking this without a real browser.

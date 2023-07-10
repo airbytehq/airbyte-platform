@@ -9,7 +9,7 @@ import { Text } from "components/ui/Text";
 
 import { useGetDebugInfoJob } from "core/api";
 import { FailureType } from "core/request/AirbyteClient";
-import { formatBytes } from "utils/numberHelper";
+import { formatBytes } from "core/utils/numberHelper";
 
 import { DownloadLogsButton } from "./DownloadLogsButton";
 import styles from "./JobLogsModalContent.module.scss";

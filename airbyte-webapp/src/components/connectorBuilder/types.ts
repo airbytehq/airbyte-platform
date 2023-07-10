@@ -41,7 +41,7 @@ import {
   DefaultPaginator,
   DeclarativeComponentSchemaMetadata,
 } from "core/api/types/ConnectorManifest";
-import { naturalComparator } from "utils/objects";
+import { naturalComparator } from "core/utils/objects";
 
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";

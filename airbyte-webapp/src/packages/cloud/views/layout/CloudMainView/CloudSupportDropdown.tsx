@@ -5,8 +5,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
+import { links } from "core/utils/links";
 import { useZendesk } from "packages/cloud/services/thirdParty/zendesk";
-import { links } from "utils/links";
 import ChatIcon from "views/layout/SideBar/components/ChatIcon";
 import { NavDropdown } from "views/layout/SideBar/components/NavDropdown";
 

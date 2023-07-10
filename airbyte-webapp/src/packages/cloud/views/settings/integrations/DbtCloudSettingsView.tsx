@@ -11,9 +11,9 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useDbtCloudServiceToken } from "core/api/cloud";
+import { trackError } from "core/utils/datadog";
+import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
-import { trackError } from "utils/datadog";
-import { links } from "utils/links";
 
 import { useDbtTokenRemovalModal } from "./useDbtTokenRemovalModal";
 

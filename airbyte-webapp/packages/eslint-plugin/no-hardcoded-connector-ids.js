@@ -1,5 +1,5 @@
-const destinations = require("../../src/utils/connectors/destinations.json");
-const sources = require("../../src/utils/connectors/sources.json");
+const destinations = require("../../src/area/connector/utils/destinations.json");
+const sources = require("../../src/area/connector/utils/sources.json");
 
 // Create a map for connector id to variable name (i.e. flip the direction of the map)
 const sourceIdToName = Object.fromEntries(Object.entries(sources).map((entry) => [entry[1], entry[0]]));
@@ -7,7 +7,11 @@ const destinationIdToName = Object.fromEntries(Object.entries(destinations).map(
 
 const validateStringContent = (context, node, nodeContent) => {
   if (nodeContent in destinationIdToName) {
-    context.report({ node, messageId: "destinationId", data: { id: nodeContent, name: destinationIdToName[nodeContent] } });
+    context.report({
+      node,
+      messageId: "destinationId",
+      data: { id: nodeContent, name: destinationIdToName[nodeContent] },
+    });
   } else if (nodeContent in sourceIdToName) {
     context.report({ node, messageId: "sourceId", data: { id: nodeContent, name: sourceIdToName[nodeContent] } });
   }

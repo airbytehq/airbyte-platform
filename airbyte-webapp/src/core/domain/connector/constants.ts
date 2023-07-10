@@ -1,5 +1,5 @@
-import { isCloudApp } from "utils/app";
-import { ConnectorIds } from "utils/connectors";
+import { ConnectorIds } from "area/connector/utils";
+import { isCloudApp } from "core/utils/app";
 
 export const DEV_IMAGE_TAG = "dev";
 

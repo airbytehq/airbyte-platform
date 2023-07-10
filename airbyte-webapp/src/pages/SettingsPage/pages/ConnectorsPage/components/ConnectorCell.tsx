@@ -3,9 +3,9 @@ import React from "react";
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 
+import { getIcon } from "area/connector/utils";
 import { ReleaseStage } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { getIcon } from "utils/imageUtils";
 
 import styles from "./ConnectorCell.module.scss";
 import { ConnectorsViewProps } from "./ConnectorsView";

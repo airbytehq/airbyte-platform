@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { RadioButton } from "components/ui/RadioButton";
 import { Tooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import styles from "./CursorCell.module.scss";
 import { TableStream } from "./StreamFieldsTable";

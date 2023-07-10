@@ -19,11 +19,11 @@ import {
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
+import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
-import { FormError, generateMessageFromError } from "utils/errorStatusMessage";
 
 import { useUniqueFormId } from "../FormChangeTracker";
 import { ValuesProps } from "../useConnectionHook";

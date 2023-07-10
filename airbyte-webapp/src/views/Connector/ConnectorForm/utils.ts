@@ -2,7 +2,7 @@ import toLower from "lodash/toLower";
 
 import { FormBaseItem, FormBlock } from "core/form/types";
 import { AdvancedAuth, SourceAuthSpecification } from "core/request/AirbyteClient";
-import { naturalComparator } from "utils/objects";
+import { naturalComparator } from "core/utils/objects";
 
 import { ConnectorDefinitionSpecification } from "../../../core/domain/connector";
 

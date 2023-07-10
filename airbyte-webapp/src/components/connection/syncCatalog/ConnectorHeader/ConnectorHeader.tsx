@@ -1,7 +1,7 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { getIcon } from "utils/imageUtils";
+import { getIcon } from "area/connector/utils";
 
 import styles from "./ConnectorHeader.module.scss";
 
