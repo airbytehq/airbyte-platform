@@ -572,7 +572,7 @@ public class SchedulerHandler {
       connectionsHandler.updateConnection(updateObject);
 
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
-        final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
+        final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
         final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
         eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), connectionRead.getName(), sourceName, url, containsBreakingChange);
       }

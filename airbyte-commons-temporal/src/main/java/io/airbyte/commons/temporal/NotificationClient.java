@@ -57,7 +57,7 @@ public class NotificationClient {
       message = renderTemplate(
           containsBreakingChange ? "slack/breaking_schema_change_slack_notification_template.txt"
               : "slack/non_breaking_schema_change_slack_notification_template.txt",
-          connectionId.toString(), connectionName, sourceName, url);
+          connectionName, sourceName, url);
 
     } catch (final IOException e) {
       log.error("There was an error while rendering a Schema Change Notification", e);

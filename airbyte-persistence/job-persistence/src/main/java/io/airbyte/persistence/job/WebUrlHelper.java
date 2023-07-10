@@ -52,4 +52,8 @@ public class WebUrlHelper {
     return String.format("%s/connections/%s", getWorkspaceUrl(workspaceId), connectionId);
   }
 
+  public String getConnectionReplicationPageUrl(final UUID workspaceId, final UUID connectionId) {
+    return String.format("%s/connections/%s/replication", getWorkspaceUrl(workspaceId), connectionId);
+  }
+
 }

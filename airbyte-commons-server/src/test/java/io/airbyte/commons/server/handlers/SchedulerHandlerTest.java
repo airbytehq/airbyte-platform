@@ -893,7 +893,7 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
@@ -954,7 +954,7 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
@@ -1078,7 +1078,7 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
@@ -1144,7 +1144,7 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
@@ -1279,9 +1279,9 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false))
         .thenReturn(discoverResponse);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId2)).thenReturn(CONNECTION_URL);
-    when(webUrlHelper.getConnectionUrl(source.getWorkspaceId(), connectionId3)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId2)).thenReturn(CONNECTION_URL);
+    when(webUrlHelper.getConnectionReplicationPageUrl(source.getWorkspaceId(), connectionId3)).thenReturn(CONNECTION_URL);
 
     when(discoverResponse.isSuccess()).thenReturn(true);
     when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
