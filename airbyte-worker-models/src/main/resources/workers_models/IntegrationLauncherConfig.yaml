@@ -4,7 +4,7 @@
 title: IntegrationLauncherConfig
 description: integration launcher config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - jobId
   - attemptId
@@ -14,12 +14,6 @@ properties:
     type: string
   attemptId:
     type: integer
-  connectionId:
-    type: string
-    format: uuid
-  workspaceId:
-    type: string
-    format: uuid
   dockerImage:
     type: string
   normalizationDockerImage:

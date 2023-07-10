@@ -31,7 +31,6 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
   public NormalizationLauncherWorker(final UUID connectionId,
-                                     final UUID workspaceId,
                                      final IntegrationLauncherConfig destinationLauncherConfig,
                                      final JobRunConfig jobRunConfig,
                                      final WorkerConfigs workerConfigs,
@@ -42,7 +41,6 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
                                      final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
-        workspaceId,
         NORMALIZATION,
         POD_NAME_PREFIX,
         jobRunConfig,

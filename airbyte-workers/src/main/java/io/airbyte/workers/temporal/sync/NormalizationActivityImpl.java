@@ -263,7 +263,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                                                                                                          final UUID connectionId) {
     return () -> new NormalizationLauncherWorker(
         connectionId,
-        null,
         destinationLauncherConfig,
         jobRunConfig,
         workerConfigs,

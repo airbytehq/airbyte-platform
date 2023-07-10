@@ -73,7 +73,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   static final String PROCESS_ID_LABEL_KEY = "process_id";
 
   final UUID connectionId;
-  final UUID workspaceId;
   final UUID processId;
   private final String application;
   private final String podNamePrefix;
@@ -93,7 +92,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   private final FeatureFlagClient featureFlagClient;
 
   public LauncherWorker(final UUID connectionId,
-                        final UUID workspaceId,
                         final String application,
                         final String podNamePrefix,
                         final JobRunConfig jobRunConfig,
@@ -109,7 +107,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
                         final boolean isCustomConnector) {
 
     this.connectionId = connectionId;
-    this.workspaceId = workspaceId;
     this.application = application;
     this.podNamePrefix = podNamePrefix;
     this.jobRunConfig = jobRunConfig;
@@ -173,8 +170,6 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
         final var allLabels = KubeProcessFactory.getLabels(
             jobRunConfig.getJobId(),
             Math.toIntExact(jobRunConfig.getAttemptId()),
-            connectionId,
-            workspaceId,
             generateMetadataLabels());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";

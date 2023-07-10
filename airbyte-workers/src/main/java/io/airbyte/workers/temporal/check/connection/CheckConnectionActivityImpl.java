@@ -146,8 +146,6 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),
           Math.toIntExact(launcherConfig.getAttemptId()),
-          launcherConfig.getConnectionId(),
-          launcherConfig.getWorkspaceId(),
           launcherConfig.getDockerImage(),
           processFactory,
           workerConfigs.getResourceRequirements(),

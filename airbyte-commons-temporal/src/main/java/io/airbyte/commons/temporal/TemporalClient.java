@@ -387,14 +387,12 @@ public class TemporalClient {
    */
   public TemporalResponse<ConnectorJobOutput> submitCheckConnection(final UUID jobId,
                                                                     final int attempt,
-                                                                    final UUID workspaceId,
                                                                     final String taskQueue,
                                                                     final JobCheckConnectionConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
-        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());
@@ -418,14 +416,12 @@ public class TemporalClient {
    */
   public TemporalResponse<ConnectorJobOutput> submitDiscoverSchema(final UUID jobId,
                                                                    final int attempt,
-                                                                   final UUID workspaceId,
                                                                    final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
-        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());

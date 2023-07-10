@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Launcher creates process for each protocol method.
@@ -48,8 +47,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
 
   private final String jobId;
   private final int attempt;
-  private final UUID connectionId;
-  private final UUID workspaceId;
   private final String imageName;
   private final ProcessFactory processFactory;
   private final ResourceRequirements resourceRequirement;
@@ -67,8 +64,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
 
   public AirbyteIntegrationLauncher(final String jobId,
                                     final int attempt,
-                                    final UUID connectionId,
-                                    final UUID workspaceId,
                                     final String imageName,
                                     final ProcessFactory processFactory,
                                     final ResourceRequirements resourceRequirement,
@@ -78,8 +73,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
                                     final Map<String, String> additionalEnvironmentVariables) {
     this.jobId = jobId;
     this.attempt = attempt;
-    this.connectionId = connectionId;
-    this.workspaceId = workspaceId;
     this.imageName = imageName;
     this.processFactory = processFactory;
     this.resourceRequirement = resourceRequirement;
@@ -98,8 +91,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         SPEC_JOB,
         jobId,
         attempt,
-        connectionId,
-        workspaceId,
         jobRoot,
         imageName,
         useIsolatedPool,
@@ -124,8 +115,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         CHECK_JOB,
         jobId,
         attempt,
-        connectionId,
-        workspaceId,
         jobRoot,
         imageName,
         useIsolatedPool,
@@ -151,8 +140,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         DISCOVER_JOB,
         jobId,
         attempt,
-        connectionId,
-        workspaceId,
         jobRoot,
         imageName,
         useIsolatedPool,
@@ -202,8 +189,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         READ_STEP,
         jobId,
         attempt,
-        connectionId,
-        workspaceId,
         jobRoot,
         imageName,
         useIsolatedPool,
@@ -237,8 +222,6 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         WRITE_STEP,
         jobId,
         attempt,
-        connectionId,
-        workspaceId,
         jobRoot,
         imageName,
         useIsolatedPool,

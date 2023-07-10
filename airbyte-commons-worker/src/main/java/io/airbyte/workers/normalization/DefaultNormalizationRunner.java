@@ -133,8 +133,6 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
           NORMALIZE_STEP,
           jobId,
           attempt,
-          null, // TODO: Provide connectionId
-          null, // TODO: Provide workspaceId
           jobRoot,
           normalizationImageName,
           // custom connector does not use normalization

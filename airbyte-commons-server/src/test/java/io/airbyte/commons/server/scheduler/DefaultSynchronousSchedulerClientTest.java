@@ -79,12 +79,10 @@ class DefaultSynchronousSchedulerClientTest {
       .put("password", "abc")
       .build());
   private static final SourceConnection SOURCE_CONNECTION = new SourceConnection()
-      .withWorkspaceId(WORKSPACE_ID)
       .withSourceId(UUID1)
       .withSourceDefinitionId(UUID2)
       .withConfiguration(CONFIGURATION);
   private static final DestinationConnection DESTINATION_CONNECTION = new DestinationConnection()
-      .withWorkspaceId(WORKSPACE_ID)
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
       .withConfiguration(CONFIGURATION);
@@ -225,7 +223,7 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
@@ -248,7 +246,7 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
@@ -267,7 +265,7 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false);
@@ -279,9 +277,8 @@ class DefaultSynchronousSchedulerClientTest {
     void testCreateDiscoverSchemaJob() throws IOException {
       final UUID expectedCatalogId = UUID.randomUUID();
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId);
-      when(
-          temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class)))
-              .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
+      when(temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class)))
+          .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
           schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
       assertEquals(expectedCatalogId, response.getOutput());

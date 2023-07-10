@@ -158,7 +158,7 @@ class GenerateInputActivityTest {
             .state(STATE.getState()));
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-        .withWorkspaceId(WORKSPACE_ID)
+        .withWorkspaceId(UUID.randomUUID())
         .withDestinationDockerImage("destinationDockerImage")
         .withSourceDockerImage("sourceDockerImage")
         .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
@@ -171,7 +171,6 @@ class GenerateInputActivityTest {
     when(job.getScope()).thenReturn(CONNECTION_ID.toString());
 
     final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
-        .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(jobSyncConfig.getWorkspaceId())
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID)
@@ -179,6 +178,7 @@ class GenerateInputActivityTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE)
         .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
+        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
         .withIsReset(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
@@ -188,15 +188,11 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(WORKSPACE_ID)
         .withDockerImage(jobSyncConfig.getSourceDockerImage());
 
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(WORKSPACE_ID)
         .withDockerImage(jobSyncConfig.getDestinationDockerImage())
         .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
@@ -232,7 +228,7 @@ class GenerateInputActivityTest {
             .state(STATE.getState()));
 
     final JobResetConnectionConfig jobResetConfig = new JobResetConnectionConfig()
-        .withWorkspaceId(WORKSPACE_ID)
+        .withWorkspaceId(UUID.randomUUID())
         .withDestinationDockerImage("destinationDockerImage")
         .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
 
@@ -244,13 +240,13 @@ class GenerateInputActivityTest {
     when(job.getScope()).thenReturn(CONNECTION_ID.toString());
 
     final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
+        .withWorkspaceId(jobResetConfig.getWorkspaceId())
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(Jsons.emptyObject())
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE)
         .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
-        .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(jobResetConfig.getWorkspaceId())
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true);
@@ -262,15 +258,11 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(WORKSPACE_ID)
         .withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB);
 
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(WORKSPACE_ID)
         .withDockerImage(jobResetConfig.getDestinationDockerImage())
         .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
@@ -312,7 +304,7 @@ class GenerateInputActivityTest {
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-        .withWorkspaceId(WORKSPACE_ID)
+        .withWorkspaceId(UUID.randomUUID())
         .withDestinationDockerImage("destinationDockerImage")
         .withSourceDockerImage("sourceDockerImage")
         .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
@@ -327,15 +319,11 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withConnectionId(CONNECTION_ID)
         .withDockerImage(jobSyncConfig.getSourceDockerImage());
 
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withConnectionId(CONNECTION_ID)
         .withDockerImage(jobSyncConfig.getDestinationDockerImage())
         .withAdditionalEnvironmentVariables(Collections.emptyMap());
 

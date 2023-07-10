@@ -30,7 +30,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +50,6 @@ class DockerProcessFactoryTest {
   private static final Path TEST_ROOT = Path.of("/tmp/airbyte_tests");
   private static final String PROCESS_FACTORY = "process_factory";
   private static final String BUSYBOX = "busybox";
-  private static final UUID CONNECTION_ID = null;
-  private static final UUID WORKSPACE_ID = null;
 
   /**
    * {@link DockerProcessFactoryTest#testImageExists()} will fail if jq is not installed. The logs get
@@ -101,7 +98,7 @@ class DockerProcessFactoryTest {
 
     final DockerProcessFactory processFactory =
         new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
-    processFactory.create(ResourceType.DEFAULT, "tester", "job_id", 0, CONNECTION_ID, WORKSPACE_ID, jobRoot, BUSYBOX, false, false,
+    processFactory.create(ResourceType.DEFAULT, "tester", "job_id", 0, jobRoot, BUSYBOX, false, false,
         ImmutableMap.of("config.json", "{\"data\": 2}"),
         "echo hi", new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), null, Map.of(), Map.of(), Map.of(), Collections.emptyMap());
 
@@ -137,8 +134,6 @@ class DockerProcessFactoryTest {
         "tester",
         "job_id",
         0,
-        CONNECTION_ID,
-        WORKSPACE_ID,
         jobRoot,
         BUSYBOX,
         false,
@@ -174,8 +169,6 @@ class DockerProcessFactoryTest {
           "tester",
           "job_id_" + RandomStringUtils.randomAlphabetic(4),
           0,
-          CONNECTION_ID,
-          WORKSPACE_ID,
           jobRoot,
           BUSYBOX,
           false,
