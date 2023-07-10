@@ -1,10 +1,16 @@
 import { Form as FormikForm } from "formik";
 import styled from "styled-components";
 
+/**
+ * @deprecated Styled component will be replaced by `Box` component
+ **/
 export const Form = styled(FormikForm)`
   margin-top: 40px;
 `;
 
+/**
+ * @deprecated Styled component will be replaced by `Box` component
+ **/
 export const FieldItem = styled.div`
   margin-bottom: 21px;
 `;

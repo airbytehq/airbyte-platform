@@ -3,6 +3,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
+import { ReactComponent as CheckIcon } from "./icons/checkIcon.svg";
 import { ReactComponent as ChevronLeftIcon } from "./icons/chevronLeftIcon.svg";
 import { ReactComponent as ChevronRightIcon } from "./icons/chevronRightIcon.svg";
 import { ReactComponent as CreditsIcon } from "./icons/creditsIcon.svg";
@@ -42,6 +43,7 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
 
 const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   arrowRight: ArrowRightIcon,
+  check: CheckIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
   docs: DocsIcon,
