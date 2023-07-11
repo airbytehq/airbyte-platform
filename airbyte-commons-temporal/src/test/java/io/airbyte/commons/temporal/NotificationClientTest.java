@@ -51,13 +51,13 @@ class NotificationClientTest {
         .thenReturn(notificationWorkflow);
 
     notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, false);
-    verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+    verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt",
         CONNECTION_NAME,
         SOURCE_NAME,
         WEBHOOK_URL);
 
     notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, true);
-    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt",
         CONNECTION_NAME,
         SOURCE_NAME,
         WEBHOOK_URL);

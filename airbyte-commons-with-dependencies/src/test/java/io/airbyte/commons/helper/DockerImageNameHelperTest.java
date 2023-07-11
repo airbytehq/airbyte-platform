@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.helper;
+package io.airbyte.commons.helper;
 
 import io.airbyte.commons.version.Version;
 import java.util.stream.Stream;
@@ -36,7 +36,7 @@ class DockerImageNameHelperTest {
   static class ExtractImageVersionArgumentsProvider implements ArgumentsProvider {
 
     @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+    public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
       return Stream.of(
           Arguments.of("hello:1.1.1", new Version("1.1.1")),
           Arguments.of("hello:1", null),

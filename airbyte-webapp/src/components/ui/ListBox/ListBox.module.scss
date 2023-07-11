@@ -54,11 +54,6 @@
   overflow: hidden;
 }
 
-.optionsMenuConnectorStyle {
-  padding: variables.$spacing-md;
-  gap: variables.$spacing-sm;
-}
-
 .caret {
   color: colors.$grey-300;
 }
@@ -71,10 +66,6 @@
 .optionValue {
   padding: (variables.$spacing-xs + variables.$spacing-md) variables.$spacing-lg;
   cursor: pointer;
-}
-
-.optionValueConnectorStyle {
-  border-radius: variables.$border-radius-md;
 }
 
 .icon {

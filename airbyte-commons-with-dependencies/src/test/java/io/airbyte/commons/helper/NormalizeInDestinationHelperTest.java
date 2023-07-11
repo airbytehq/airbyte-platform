@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.helper;
+package io.airbyte.commons.helper;
 
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -34,7 +34,7 @@ class NormalizeInDestinationHelperTest {
   public static class NormalizeStepRequiredArgumentsProvider implements ArgumentsProvider {
 
     @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+    public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
 
       return Stream.of(
           Arguments.of(List.of(SOMETHING_ELSE), false),
@@ -70,7 +70,7 @@ class NormalizeInDestinationHelperTest {
     private static final String MIN_SUPPORTED_VERSION_SNOWFLAKE = "1.0.0";
 
     @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+    public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
       return Stream.of(
           // Normalization not required
           Arguments.of(List.of(SOMETHING_ELSE), "destination-bigquery:1.3.2", MIN_SUPPORTED_VERSION_BIGQUERY, false),

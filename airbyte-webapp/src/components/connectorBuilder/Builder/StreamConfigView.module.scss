@@ -72,6 +72,11 @@ $controlButtonWidth: 24px;
   flex: 1 1 0;
 }
 
+.autoSchemaContainer {
+  overflow-y: auto;
+  flex: 1 1 0;
+}
+
 .multiStreams {
   padding: 0 50px;
 }

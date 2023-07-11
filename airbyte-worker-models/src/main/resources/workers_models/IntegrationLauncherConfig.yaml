@@ -4,7 +4,7 @@
 title: IntegrationLauncherConfig
 description: integration launcher config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - jobId
   - attemptId

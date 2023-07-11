@@ -4,11 +4,11 @@
 
 package io.airbyte.workers.process;
 
+import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.regex.Matcher;

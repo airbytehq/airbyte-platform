@@ -29,6 +29,7 @@ dependencies {
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-featureflag')
