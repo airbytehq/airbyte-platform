@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers;
+package io.airbyte.commons.server;
 
 /**
  * Indicates whether the worker's underlying process was successful. E.g this should return
