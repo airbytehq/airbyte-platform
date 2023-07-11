@@ -8,19 +8,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.UseActorScopedDefaultVersions;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +80,7 @@ class ActorDefinitionVersionHelperTest {
     when(mOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
     mFeatureFlagClient = mock(TestClient.class);
+    when(mFeatureFlagClient.boolVariation(eq(UseActorScopedDefaultVersions.INSTANCE), any())).thenReturn(false);
 
     mConfigRepository = mock(ConfigRepository.class);
     when(mConfigRepository.getActorDefinitionVersion(DEFAULT_VERSION_ID)).thenReturn(DEFAULT_VERSION);
@@ -82,7 +89,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersion() throws ConfigNotFoundException, IOException {
+  void testGetSourceVersion() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -92,7 +99,20 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersionWithOverride() throws ConfigNotFoundException, IOException {
+  void testGetSourceVersionFromActorDefault() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(UUID.randomUUID());
+
+    when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    when(mConfigRepository.getSourceConnection(ACTOR_ID)).thenReturn(new SourceConnection().withDefaultVersionId(DEFAULT_VERSION_ID));
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, actual);
+  }
+
+  @Test
+  void testGetSourceVersionWithOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(mOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
@@ -105,7 +125,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersionForWorkspace() throws ConfigNotFoundException, IOException {
+  void testGetSourceVersionForWorkspace() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -115,7 +135,19 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException {
+  void testGetSourceVersionForWorkspaceWithActorScopedFF() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
+    assertEquals(DEFAULT_VERSION, actual);
+  }
+
+  @Test
+  void testGetSourceVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(mOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
@@ -128,7 +160,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersion() throws ConfigNotFoundException, IOException {
+  void testGetDestinationVersion() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -138,7 +170,20 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersionWithOverride() throws ConfigNotFoundException, IOException {
+  void testGetDestinationVersionFromActorDefault() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(UUID.randomUUID());
+
+    when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    when(mConfigRepository.getDestinationConnection(ACTOR_ID)).thenReturn(new DestinationConnection().withDefaultVersionId(DEFAULT_VERSION_ID));
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, actual);
+  }
+
+  @Test
+  void testGetDestinationVersionWithOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(mOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
@@ -151,7 +196,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersionForWorkspace() throws ConfigNotFoundException, IOException {
+  void testGetDestinationVersionForWorkspace() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -161,7 +206,19 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException {
+  void testGetDestinationVersionForWorkspaceWithActorScopedFF() throws ConfigNotFoundException, IOException, JsonValidationException {
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
+
+    when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
+    assertEquals(DEFAULT_VERSION, actual);
+  }
+
+  @Test
+  void testGetDestinationVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(mOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
@@ -174,7 +231,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDefaultSourceVersion() throws ConfigNotFoundException, IOException {
+  void testGetDefaultSourceVersion() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);
@@ -186,7 +243,7 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDefaultDestinationVersion() throws ConfigNotFoundException, IOException {
+  void testGetDefaultDestinationVersion() throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);
@@ -204,7 +261,7 @@ class ActorDefinitionVersionHelperTest {
 
     final RuntimeException exception =
         assertThrows(RuntimeException.class, () -> actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID));
-    assertTrue(exception.getMessage().contains("has no default version"));
+    assertTrue(exception.getMessage().contains("Default version for source is not set"));
   }
 
   @Test
@@ -214,7 +271,7 @@ class ActorDefinitionVersionHelperTest {
 
     final RuntimeException exception =
         assertThrows(RuntimeException.class, () -> actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID));
-    assertTrue(exception.getMessage().contains("has no default version"));
+    assertTrue(exception.getMessage().contains("Default version for destination is not set"));
   }
 
   @ParameterizedTest
