@@ -7,7 +7,7 @@ import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
 import { useCurrentWorkspace } from "core/api";
-import { useGetCloudWorkspace } from "core/api/cloud";
+import { useGetCloudWorkspaceAsync } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -36,7 +36,8 @@ import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
-  const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
+  const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
+
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
   const { trackError } = useAppMonitoringService();
@@ -45,10 +46,12 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { isExperimentVariant } = useExperimentSpeedyConnection();
 
   const { hasCorporateEmail } = useAuthService();
+
   const isTrial = isNewTrialPolicy
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
-      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
-    : Boolean(cloudWorkspace.trialExpiryTimestamp);
+    ? cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
+      cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
+    : Boolean(cloudWorkspace?.trialExpiryTimestamp);
+
   const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
 
   return (
@@ -73,7 +76,8 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
                 withNotification={
-                  !cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD
+                  cloudWorkspace &&
+                  (!cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD)
                 }
               />
               <CloudResourcesDropdown /> <CloudSupportDropdown />
@@ -86,7 +90,12 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
           </MenuContent>
         </SideBar>
         <div className={styles.content}>
-          {showExperimentBanner ? <SpeedyConnectionBanner /> : <WorkspaceStatusBanner />}
+          {cloudWorkspace &&
+            (showExperimentBanner ? (
+              <SpeedyConnectionBanner />
+            ) : (
+              <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />
+            ))}
           <div className={styles.dataBlock}>
             <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
               <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>

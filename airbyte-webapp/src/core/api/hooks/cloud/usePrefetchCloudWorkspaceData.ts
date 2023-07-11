@@ -4,12 +4,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
 import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
 
-import {
-  getCloudWorkspaceQueryKey,
-  getListCloudWorkspacesAsyncQueryKey,
-  useGetCloudWorkspaceQuery,
-  useListCloudWorkspacesAsyncQuery,
-} from "./cloudWorkspaces";
+import { getListCloudWorkspacesAsyncQueryKey, useListCloudWorkspacesAsyncQuery } from "./cloudWorkspaces";
 import { getListUsersQueryKey, useListUsersQuery } from "./users";
 import {
   getCurrentWorkspaceStateQueryKey,
@@ -30,12 +25,6 @@ export const usePrefetchCloudWorkspaceData = () => {
       {
         queryKey: getWorkspaceQueryKey(workspaceId),
         queryFn: useGetWorkspaceQuery(workspaceId),
-        suspense: true,
-        staleTime: 10000,
-      },
-      {
-        queryKey: getCloudWorkspaceQueryKey(workspaceId),
-        queryFn: useGetCloudWorkspaceQuery(workspaceId),
         suspense: true,
         staleTime: 10000,
       },

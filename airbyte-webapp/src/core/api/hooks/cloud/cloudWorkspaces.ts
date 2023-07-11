@@ -133,6 +133,13 @@ export function useGetCloudWorkspace(workspaceId: string) {
   return useSuspenseQuery(queryKey, queryFn);
 }
 
+export function useGetCloudWorkspaceAsync(workspaceId: string) {
+  const queryKey = getCloudWorkspaceQueryKey(workspaceId);
+  const queryFn = useGetCloudWorkspaceQuery(workspaceId);
+
+  return useQuery(queryKey, queryFn).data;
+}
+
 export function useInvalidateCloudWorkspace(workspaceId: string): () => Promise<void> {
   const queryClient = useQueryClient();
 
