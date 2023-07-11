@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.helper;
+package io.airbyte.commons.helper;
 
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.StandardSyncOperation;
