@@ -55,10 +55,7 @@ export interface ListBoxProps<T> {
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
   "data-testid"?: string;
   hasError?: boolean;
-  /**
-   * If true, the ListBox option will have rounded corners and menu will have a padding
-   */
-  connectorStyle?: boolean;
+
   /**
    * Floating menu placement
    */
@@ -86,7 +83,6 @@ export const ListBox = <T,>({
   selectedOptionClassName,
   "data-testid": testId,
   hasError,
-  connectorStyle,
   isDisabled,
   placement = "bottom",
   adaptiveWidth = true,
@@ -115,9 +111,7 @@ export const ListBox = <T,>({
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
-          <Listbox.Options
-            className={classNames(styles.optionsMenu, { [styles.optionsMenuConnectorStyle]: connectorStyle })}
-          >
+          <Listbox.Options className={styles.optionsMenu}>
             {options.length > 0 && (
               <>
                 {options.map(({ label, value, icon, disabled }, index) => (
@@ -127,7 +121,6 @@ export const ListBox = <T,>({
                     disabled={disabled}
                     className={classNames(styles.option, optionClassName, {
                       [styles.disabled]: disabled,
-                      [styles.optionValueConnectorStyle]: connectorStyle,
                     })}
                   >
                     {({ active, selected }) => (
