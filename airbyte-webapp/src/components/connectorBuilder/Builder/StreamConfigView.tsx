@@ -263,10 +263,12 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
           <FormattedMessage id="connectorBuilder.useSchemaButton" />
         </Button>
       )}
-      <div className={styles.editorContainer}>
-        {autoImportSchema ? (
+      {autoImportSchema ? (
+        <div className={styles.autoSchemaContainer}>
           <Pre>{schema}</Pre>
-        ) : (
+        </div>
+      ) : (
+        <div className={styles.editorContainer}>
           <CodeEditor
             key={schemaFieldPath}
             value={schema || ""}
@@ -281,8 +283,8 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
               });
             }}
           />
-        )}
-      </div>
+        </div>
+      )}
       {error && (
         <Text className={styles.errorMessage}>
           <FormattedMessage id={error.message} />
