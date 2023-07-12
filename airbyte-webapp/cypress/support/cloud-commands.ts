@@ -3,8 +3,9 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 /// <reference types="cypress" />
-import type { FeatureSet } from "@src/core/services/features";
 import type { Experiments } from "@src/hooks/services/Experiment/experiments";
+
+import { FeatureItem } from "@src/core/services/features";
 
 import { TestUserCredentials, testUser } from "./test-users";
 
@@ -48,7 +49,9 @@ Cypress.Commands.add("selectWorkspace", (workspace?: string | number) => {
 
   function selectWorkspaceFromList(workspaceId: string | number) {
     typeof workspaceId === "number"
-      ? cy.get(`[data-testid="select-workspace-${workspaceId}"]`).click()
+      ? cy
+          .get(`[data-testid="select-workspace-${workspaceId}"]`, { timeout: Cypress.config("pageLoadTimeout") })
+          .click()
       : cy.visit(`/workspaces/${workspaceId}`);
   }
 
@@ -71,7 +74,10 @@ Cypress.Commands.add("hasNavigatedTo", (pathSpec: string | RegExp) => {
   return cy.location("pathname", { timeout: Cypress.config("pageLoadTimeout") }).should(match, pathSpec);
 });
 
-type FeatureFlagOverrides = Partial<FeatureSet & Experiments>;
+// Override the launchdarkly API to force a response containing specific flag variants.
+// Also silences the events and clientstream APIs, since they clutter up the command log
+// and add no value to our test setup.
+type FeatureFlagOverrides = Partial<Record<FeatureItem, { enabled: boolean }> & Experiments>;
 type FlagKey = keyof FeatureFlagOverrides;
 type FeatureFlagOverrideResponse = Partial<Record<FlagKey, { value: FeatureFlagOverrides[FlagKey] }>>;
 Cypress.Commands.add("setFeatureFlags", (flagOverrides: FeatureFlagOverrides) => {
@@ -89,7 +95,11 @@ Cypress.Commands.add("setFeatureFlags", (flagOverrides: FeatureFlagOverrides) =>
   cy.intercept({ hostname: /.*app.launchdarkly.com/ }, (req) => {
     const body: FeatureFlagOverrideResponse = {};
     Object.entries(flagOverrides).forEach(([featureFlagName, featureFlagValue]) => {
-      body[featureFlagName as FlagKey] = { value: featureFlagValue };
+      let flagName = featureFlagName;
+      if (Object.values(FeatureItem).includes(featureFlagName as FeatureItem)) {
+        flagName = `featureService.${featureFlagName}`;
+      }
+      body[flagName as FlagKey] = { value: featureFlagValue };
     });
     req.reply({ body });
   });
