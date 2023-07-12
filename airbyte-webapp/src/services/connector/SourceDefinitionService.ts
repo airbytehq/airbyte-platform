@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
@@ -34,11 +35,43 @@ export function useGetSourceDefinitionService(): SourceDefinitionService {
   );
 }
 
-export const useSourceDefinitionList = (): SourceDefinitionReadList => {
+interface SourceDefinitions {
+  sourceDefinitions: SourceDefinitionRead[];
+  sourceDefinitionMap: Map<string, SourceDefinitionRead>;
+}
+
+export const useSourceDefinitionList = (): SourceDefinitions => {
   const service = useGetSourceDefinitionService();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(sourceDefinitionKeys.lists(), () => service.list(workspaceId));
+  return useQuery(
+    sourceDefinitionKeys.lists(),
+    async () => {
+      const { sourceDefinitions } = await service.list(workspaceId);
+      const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
+      sourceDefinitions.forEach((sourceDefinition) => {
+        sourceDefinitionMap.set(sourceDefinition.sourceDefinitionId, sourceDefinition);
+      });
+      return {
+        sourceDefinitions,
+        sourceDefinitionMap,
+      };
+    },
+    { suspense: true, staleTime: Infinity }
+  ).data as SourceDefinitions;
+};
+
+export const useSourceDefinitionMap = (): Map<string, SourceDefinitionRead> => {
+  const sourceDefinitions = useSourceDefinitionList();
+
+  return useMemo(() => {
+    const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
+    sourceDefinitions.sourceDefinitions.forEach((sourceDefinition) => {
+      sourceDefinitionMap.set(sourceDefinition.sourceDefinitionId, sourceDefinition);
+    });
+
+    return sourceDefinitionMap;
+  }, [sourceDefinitions]);
 };
 
 /**

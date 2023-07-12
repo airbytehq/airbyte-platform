@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
@@ -43,11 +43,30 @@ export const useLatestDestinationDefinitionList = (): DestinationDefinitionReadL
   return useSuspenseQuery(destinationDefinitionKeys.listLatest(), () => service.listLatest(), { staleTime: 60_000 });
 };
 
-export const useDestinationDefinitionList = (): DestinationDefinitionReadList => {
+interface DestinationDefinitions {
+  destinationDefinitions: DestinationDefinitionRead[];
+  destinationDefinitionMap: Map<string, DestinationDefinitionRead>;
+}
+
+export const useDestinationDefinitionList = (): DestinationDefinitions => {
   const service = useGetDestinationDefinitionService();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(destinationDefinitionKeys.lists(), () => service.list(workspaceId));
+  return useQuery(
+    destinationDefinitionKeys.lists(),
+    async () => {
+      const { destinationDefinitions } = await service.list(workspaceId);
+      const destinationDefinitionMap = new Map<string, DestinationDefinitionRead>();
+      destinationDefinitions.forEach((destinationDefinition) => {
+        destinationDefinitionMap.set(destinationDefinition.destinationDefinitionId, destinationDefinition);
+      });
+      return {
+        destinationDefinitions,
+        destinationDefinitionMap,
+      };
+    },
+    { suspense: true }
+  ).data as DestinationDefinitions;
 };
 
 export const useDestinationDefinition = <T extends string | undefined>(

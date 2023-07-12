@@ -11,6 +11,7 @@ import { Heading } from "components/ui/Heading";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
+import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 
 import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
@@ -26,6 +27,7 @@ export const DESTINATION_ID_PARAM = "destinationId";
 
 export const SelectDestination: React.FC = () => {
   const { destinations } = useDestinationList();
+  const { connectionsByConnectorId } = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
@@ -76,6 +78,15 @@ export const SelectDestination: React.FC = () => {
     }
   };
 
+  const sortedDestinations = useMemo(() => {
+    return destinations
+      .map((destination) => ({
+        ...destination,
+        connectionCount: connectionsByConnectorId.get(destination.destinationId)?.length || 0,
+      }))
+      .sort((a, b) => b.connectionCount - a.connectionCount || a.name.localeCompare(b.name));
+  }, [destinations, connectionsByConnectorId]);
+
   return (
     <Box py="xl">
       <FlexContainer direction="column">
@@ -114,7 +125,7 @@ export const SelectDestination: React.FC = () => {
           {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
             <Box px="md">
               <PageContainer centered>
-                <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />
+                <SelectExistingConnector connectors={sortedDestinations} selectConnector={selectDestination} />
               </PageContainer>
             </Box>
           )}
