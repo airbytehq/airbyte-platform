@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
@@ -30,6 +31,24 @@ import org.mockito.Mockito;
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class ConnectionApiTest extends BaseControllerTest {
+
+  @Test
+  void testAutoDisableConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+    Mockito.when(connectionsHandler.autoDisableConnection(Mockito.any()))
+        .thenReturn(new InternalOperationResult())
+        .thenThrow(new ConstraintViolationException(new HashSet<>()))
+        .thenThrow(new ConfigNotFoundException("", ""));
+    final String path = "/api/v1/connections/auto_disable";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpStatus.OK);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpStatus.BAD_REQUEST);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new ConnectionUpdate())),
+        HttpStatus.NOT_FOUND);
+  }
 
   @Test
   void testCreateConnection() throws JsonValidationException, ConfigNotFoundException, IOException {

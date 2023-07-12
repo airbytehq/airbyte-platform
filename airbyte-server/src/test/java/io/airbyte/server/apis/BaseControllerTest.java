@@ -30,6 +30,7 @@ import io.airbyte.commons.server.handlers.WorkspacesHandler;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
+import io.airbyte.persistence.job.JobNotifier;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
@@ -268,6 +269,12 @@ abstract class BaseControllerTest {
   @Replaces(TemporalClient.class)
   TemporalClient mmTemporalClient() {
     return Mockito.mock(TemporalClient.class);
+  }
+
+  @MockBean(JobNotifier.class)
+  @Replaces(JobNotifier.class)
+  JobNotifier mmJobNotifier() {
+    return Mockito.mock(JobNotifier.class);
   }
 
   @Replaces(DSLContext.class)

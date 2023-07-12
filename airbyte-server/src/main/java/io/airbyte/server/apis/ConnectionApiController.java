@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
@@ -16,6 +17,7 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
@@ -49,6 +51,15 @@ public class ConnectionApiController implements ConnectionApi {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
+  }
+
+  @Override
+  @Post(uri = "/auto_disable")
+  @Secured({ADMIN})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
   }
 
   @Override
