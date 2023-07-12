@@ -747,7 +747,48 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public List<Job> listJobs(final Set<ConfigType> configTypes, final List<UUID> workspaceIds, final int limit, final int offset) throws IOException {
+  public List<Job> listJobs(final Set<ConfigType> configTypes,
+                            final String configId,
+                            final int limit,
+                            final int offset,
+                            final JobStatus status,
+                            final OffsetDateTime createdAtStart,
+                            final OffsetDateTime createdAtEnd,
+                            final OffsetDateTime updatedAtStart,
+                            final OffsetDateTime updatedAtEnd)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .and(JOBS.SCOPE.eq(configId))
+          .and(status == null ? DSL.noCondition()
+              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtEnd))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      LOGGER.info("subquery: {}", jobsSubquery);
+      LOGGER.info("full query: {}", jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME);
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes,
+                            final List<UUID> workspaceIds,
+                            final int limit,
+                            final int offset,
+                            final JobStatus status,
+                            final OffsetDateTime createdAtStart,
+                            final OffsetDateTime createdAtEnd,
+                            final OffsetDateTime updatedAtStart,
+                            final OffsetDateTime updatedAtEnd)
+      throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
           .join(Tables.CONNECTION)
@@ -756,6 +797,12 @@ public class DefaultJobPersistence implements JobPersistence {
           .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
           .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
           .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .and(status == null ? DSL.noCondition()
+              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status))))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtEnd))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
           .limit(limit)
           .offset(offset)

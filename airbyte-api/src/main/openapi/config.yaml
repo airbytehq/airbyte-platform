@@ -5035,6 +5035,25 @@ components:
           $ref: "#/components/schemas/JobId"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        status:
+          description: The Job status you want to filter by
+          $ref: "#/components/schemas/JobStatus"
+        created_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        created_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
+        updated_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        updated_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
     JobListForWorkspacesRequestBody:
       type: object
       required:
@@ -5052,6 +5071,25 @@ components:
             $ref: "#/components/schemas/WorkspaceId"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        status:
+          description: The Job status you want to filter by
+          $ref: "#/components/schemas/JobStatus"
+        created_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        created_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
+        updated_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        updated_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
     JobIdRequestBody:
       type: object
       required:

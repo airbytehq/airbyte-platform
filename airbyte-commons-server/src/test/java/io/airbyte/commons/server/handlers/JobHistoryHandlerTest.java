@@ -204,8 +204,16 @@ class JobHistoryHandlerTest {
           new Job(jobId2, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING,
               null, createdAt2, createdAt2);
 
-      when(jobPersistence.listJobs(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID, pagesize, rowOffset))
-          .thenReturn(List.of(latestJobNoAttempt, successfulJob));
+      when(jobPersistence.listJobs(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)),
+          JOB_CONFIG_ID,
+          pagesize,
+          rowOffset,
+          null,
+          null,
+          null,
+          null,
+          null))
+              .thenReturn(List.of(latestJobNoAttempt, successfulJob));
       when(jobPersistence.getJobCount(Set.of(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType.class)), JOB_CONFIG_ID)).thenReturn(2L);
       when(jobPersistence.getAttemptStats(List.of(200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), ATTEMPT_STATS,
@@ -249,7 +257,8 @@ class JobHistoryHandlerTest {
       final var latestJob =
           new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3);
 
-      when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset)).thenReturn(List.of(latestJob, secondJob, firstJob));
+      when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset, null, null, null, null, null))
+          .thenReturn(List.of(latestJob, secondJob, firstJob));
       when(jobPersistence.getJobCount(configTypes, JOB_CONFIG_ID)).thenReturn(3L);
       when(jobPersistence.getAttemptStats(List.of(300L, 200L, 100L))).thenReturn(Map.of(
           new JobAttemptPair(100, 0), ATTEMPT_STATS,

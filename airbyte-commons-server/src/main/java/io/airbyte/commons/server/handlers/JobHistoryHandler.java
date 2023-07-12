@@ -129,10 +129,19 @@ public class JobHistoryHandler {
     final List<Job> jobs;
 
     if (request.getIncludingJobId() != null) {
-      jobs = jobPersistence.listJobsIncludingId(configTypes, configId, request.getIncludingJobId(), pageSize);
+      jobs = jobPersistence.listJobsIncludingId(
+          configTypes,
+          configId,
+          request.getIncludingJobId(),
+          pageSize);
     } else {
       jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
-          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0);
+          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
+          request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+          request.getCreatedAtStart(),
+          request.getCreatedAtEnd(),
+          request.getUpdatedAtStart(),
+          request.getUpdatedAtEnd());
     }
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
@@ -170,7 +179,16 @@ public class JobHistoryHandler {
     final int offset =
         (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0;
 
-    final List<Job> jobs = jobPersistence.listJobs(configTypes, request.getWorkspaceIds(), pageSize, offset);
+    final List<Job> jobs = jobPersistence.listJobs(
+        configTypes,
+        request.getWorkspaceIds(),
+        pageSize,
+        offset,
+        request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
     final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();

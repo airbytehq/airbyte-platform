@@ -22,6 +22,7 @@ import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -234,6 +235,26 @@ public interface JobPersistence {
   List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
 
   /**
+   * List jobs of a connection with filters. Pageable.
+   *
+   * @param configTypes - type of config, e.g. sync
+   * @param configId - id of that config
+   * @return lists job in descending order by created_at
+   * @throws IOException - what you do when you IO
+   */
+  List<Job> listJobs(
+                     Set<JobConfig.ConfigType> configTypes,
+                     String configId,
+                     int limit,
+                     int offset,
+                     JobStatus status,
+                     OffsetDateTime createdAtStart,
+                     OffsetDateTime createdAtEnd,
+                     OffsetDateTime updatedAtStart,
+                     OffsetDateTime updatedAtEnd)
+      throws IOException;
+
+  /**
    * List jobs of a connection. Pageable.
    *
    * @param configTypes - type of config, e.g. sync
@@ -241,7 +262,17 @@ public interface JobPersistence {
    * @return lists job in descending order by created_at
    * @throws IOException - what you do when you IO
    */
-  List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, List<UUID> workspaceIds, int limit, int offset) throws IOException;
+  List<Job> listJobs(
+                     Set<JobConfig.ConfigType> configTypes,
+                     List<UUID> workspaceIds,
+                     int limit,
+                     int offset,
+                     JobStatus status,
+                     OffsetDateTime createdAtStart,
+                     OffsetDateTime createdAtEnd,
+                     OffsetDateTime updatedAtStart,
+                     OffsetDateTime updatedAtEnd)
+      throws IOException;
 
   /**
    * List jobs of a config type after a certain time.
