@@ -11,7 +11,7 @@ describe("AllowDBTCloudIntegration", () => {
   describe("when true, show dbt-Cloud-specific UI", () => {
     before(() =>
       cy.setFeatureFlags({
-        [FeatureItem.AllowDBTCloudIntegration]: true,
+        [FeatureItem.AllowDBTCloudIntegration]: { enabled: true },
       })
     );
     it("shows the dbt Cloud Integration link in the settings page", () => {
@@ -19,8 +19,9 @@ describe("AllowDBTCloudIntegration", () => {
     });
   });
   describe("when false, hide dbt-Cloud-specific UI", () => {
-    before(() => cy.setFeatureFlags({ [FeatureItem.AllowDBTCloudIntegration]: false }));
+    before(() => cy.setFeatureFlags({ [FeatureItem.AllowDBTCloudIntegration]: { enabled: false } }));
     it("has no dbt Cloud Integration link in the settings page", () => {
+      cy.contains("User settings").should("exist");
       cy.contains("dbt Cloud Integration").should("not.exist");
     });
   });

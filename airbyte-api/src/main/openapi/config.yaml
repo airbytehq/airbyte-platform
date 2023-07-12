@@ -1886,6 +1886,31 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/auto_disable:
+    post:
+      tags:
+        - connection
+        - internal
+      summary: >
+        Sets connection to inactive if it has met any of the auto-disable conditions (i.e. it hits the max number of consecutive job failures
+        or if it hits the max number of days with only failed jobs). Additionally, notifications will be sent if a connection is disabled or
+        warned if it has reached halfway to disable limits. This endpoint is only able to inactivate connections with more than one non-cancelled job.
+      operationId: autoDisableConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connections/reset/stream:
     post:
       tags:

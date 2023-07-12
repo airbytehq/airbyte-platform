@@ -955,8 +955,9 @@ class ConnectionManagerWorkflowTest {
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity, atLeastOnce()).attemptFailureWithAttemptNumber(Mockito.any());
       Mockito.verify(mJobCreationAndStatusUpdateActivity, atLeastOnce()).jobFailure(Mockito.any());
-      Mockito.verify(mAutoDisableConnectionActivity)
-          .autoDisableFailingConnection(new AutoDisableConnectionActivityInput(connectionId, Mockito.any()));
+      final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
+      autoDisableConnectionActivityInput.setConnectionId(connectionId);
+      Mockito.verify(mAutoDisableConnectionActivity).autoDisableFailingConnection(autoDisableConnectionActivityInput);
     }
 
     @Test

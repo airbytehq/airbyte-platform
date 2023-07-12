@@ -198,9 +198,6 @@ airbyte:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
-      failed:
-        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
-        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:100}
       kube:
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
