@@ -14,6 +14,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.connector_builder.ApmTraceConstants;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
+import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreamsInner;
@@ -91,8 +92,9 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     response.setTestReadLimitReached(data.get("test_read_limit_reached").asBoolean());
     response.setLatestConfigUpdate(data.get("latest_config_update"));
     response.setInferredDatetimeFormats(data.get("inferred_datetime_formats"));
+    final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = convertToList(data.get("auxiliary_requests"), new TypeReference<>() {});
+    response.setAuxiliaryRequests(auxiliaryRequests);
     return response;
-
   }
 
   /**

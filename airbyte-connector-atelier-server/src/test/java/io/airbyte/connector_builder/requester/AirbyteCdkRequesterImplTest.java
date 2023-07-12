@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
+import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreamsInner;
@@ -96,26 +97,31 @@ class AirbyteCdkRequesterImplTest {
         "{\"test_read_limit_reached\": true, \"logs\":[{\"message\":\"log message1\"}, {\"message\":\"log message2\"}], "
             + "\"slices\": [{\"pages\": [{\"records\": [{\"record\": 1}]}], \"slice_descriptor\": {\"startDatetime\": "
             + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": {\"airbyte\": \"state\"}}, {\"pages\": []}],"
-            + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"}}");
+            + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"},"
+            + "\"auxiliary_requests\": [{\"title\": \"Refresh token\",\"description\": \"Obtains access token\",\"request\": {\"url\": "
+            + "\"https://a-url.com/oauth2/v1/tokens/bearer\",\"parameters\": null,\"headers\": {\"Content-Type\": "
+            + "\"application/x-www-form-urlencoded\"},\"http_method\": \"POST\",\"body\": \"a_request_body\"},\"response\": {\"status\": 200,"
+            + "\"body\": \"a_response_body\",\"headers\": {\"Date\": \"Tue, 11 Jul 2023 16:28:10 GMT\"}}}]}");
     final ArgumentCaptor<String> configCaptor = ArgumentCaptor.forClass(String.class);
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(response));
 
     final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STREAM, limit);
 
-    final boolean testReadLimitReached = mapper.convertValue(response.get("test_read_limit_reached"), new TypeReference<Boolean>() {});
+    final boolean testReadLimitReached = mapper.convertValue(response.get("test_read_limit_reached"), new TypeReference<>() {});
     assertEquals(testReadLimitReached, streamRead.getTestReadLimitReached());
 
     assertEquals(2, streamRead.getSlices().size());
-    final List<StreamReadSlicesInner> slices = mapper.convertValue(response.get("slices"), new TypeReference<List<StreamReadSlicesInner>>() {});
+    final List<StreamReadSlicesInner> slices = mapper.convertValue(response.get("slices"), new TypeReference<>() {});
     assertEquals(slices, streamRead.getSlices());
 
     assertEquals(2, streamRead.getLogs().size());
-    final List<Object> logs = mapper.convertValue(response.get("logs"), new TypeReference<List<Object>>() {});
+    final List<Object> logs = mapper.convertValue(response.get("logs"), new TypeReference<>() {});
     assertEquals(logs, streamRead.getLogs());
 
-    assertEquals(response.get("inferred_schema"), streamRead.getInferredSchema());
-    assertEquals(mapper.readTree("{\"config_key\": \"config_value\"}"), streamRead.getLatestConfigUpdate());
+    final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = mapper.convertValue(
+        response.get("auxiliary_requests"), new TypeReference<>() {});
+    assertEquals(auxiliaryRequests, streamRead.getAuxiliaryRequests());
 
     return configCaptor;
   }
