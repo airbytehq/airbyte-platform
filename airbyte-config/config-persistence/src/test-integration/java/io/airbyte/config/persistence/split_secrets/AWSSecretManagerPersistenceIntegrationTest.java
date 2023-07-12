@@ -10,27 +10,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("MissingJavadocType")
 public class AWSSecretManagerPersistenceIntegrationTest {
 
   public String coordinateBase;
   private AWSSecretManagerPersistence persistence;
-  private final Configs configs = new EnvConfigs();
 
   @BeforeEach
   void setup() {
-    persistence = new AWSSecretManagerPersistence(configs.getAwsAccessKey(), configs.getAwsSecretAccessKey());
     coordinateBase = "aws/airbyte/secret/integration/" + RandomUtils.nextInt() % 20000;
   }
 
-  @Test
-  void testReadWriteUpdate() throws InterruptedException {
+  private static Stream<Arguments> credentials() {
+    Configs configs = new EnvConfigs();
+
+    return Stream.of(
+        Arguments.of(configs.getAwsAccessKey(), configs.getAwsSecretAccessKey()),
+        Arguments.of(null, null));
+  }
+
+  @ParameterizedTest
+  @MethodSource("credentials")
+  void testReadWriteUpdate(String awsAccessKey, String awsSecretAccessKey) throws InterruptedException {
     SecretCoordinate secretCoordinate = new SecretCoordinate(coordinateBase, 1);
+    persistence = new AWSSecretManagerPersistence(awsAccessKey, awsSecretAccessKey);
 
     // try reading a non-existent secret
     Optional<String> firstRead = persistence.read(secretCoordinate);
