@@ -260,6 +260,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_close_successful",
       "number of final to connection exiting with the a successful final stats flush"),
+  STATE_ERROR_COLLISION_FROM_SOURCE(MetricEmittingApps.WORKER,
+      "state_error_collision_from_source",
+      "number of state collision from source"),
+  STATE_ERROR_UNKNOWN_FROM_DESTINATION(MetricEmittingApps.WORKER,
+      "state_error_unknown_from_destination",
+      "number of unknown states from destination"),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "
