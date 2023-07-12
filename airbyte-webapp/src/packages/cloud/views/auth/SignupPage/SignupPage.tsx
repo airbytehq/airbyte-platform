@@ -16,8 +16,8 @@ import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";
-import { Disclaimer } from "../components/FormFields/FormFields";
-import { LoginSignupNavigation } from "../components/LoginSignupNavigation/LoginSignupNavigation";
+import { Disclaimer } from "../components/Disclaimer";
+import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 import { OAuthLogin } from "../OAuthLogin";
 
 interface SignupPageProps {

@@ -7,6 +7,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
 import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -14,9 +15,9 @@ import { useNotificationService } from "hooks/services/Notification";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { EmailLinkErrorCodes } from "packages/cloud/services/auth/types";
 
-import { Disclaimer, PasswordFieldHookForm } from "./auth/components/FormFields/FormFields";
-import { FormTitle } from "./auth/components/FormTitle";
-import { passwordSchema, SignupButtonHookForm } from "./auth/SignupPage/components/SignupForm";
+import { Disclaimer } from "./auth/components/Disclaimer";
+import { PasswordFormControl } from "./auth/components/PasswordFormControl";
+import { passwordSchema, SignupSubmissionButton } from "./auth/SignupPage/components/SignupForm";
 
 interface AcceptEmailInviteFormValues {
   name: string;
@@ -50,7 +51,7 @@ export const AcceptEmailInvite: React.FC = () => {
       EmailLinkErrorCodes.LINK_INVALID,
       EmailLinkErrorCodes.EMAIL_MISMATCH,
     ].includes(e.message as EmailLinkErrorCodes)
-      ? `login.${e.message}`
+      ? `login.invite.${e.message}`
       : "errorView.unknownError";
 
     registerNotification({
@@ -65,9 +66,9 @@ export const AcceptEmailInvite: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "login.inviteTitle" }]} />
-      <FormTitle>
+      <Heading as="h1" size="xl" color="blue">
         <FormattedMessage id="login.inviteTitle" />
-      </FormTitle>
+      </Heading>
       <Form
         defaultValues={{
           name: "",
@@ -96,9 +97,9 @@ export const AcceptEmailInvite: React.FC = () => {
             placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
             autoComplete="email"
           />
-          <PasswordFieldHookForm label="login.createPassword" />
+          <PasswordFormControl label="login.createPassword" />
           <Box mt="xl">
-            <SignupButtonHookForm buttonMessageId="login.activateAccess.submitButton" />
+            <SignupSubmissionButton buttonMessageId="login.activateAccess.submitButton" />
           </Box>
           <Disclaimer />
         </FlexContainer>

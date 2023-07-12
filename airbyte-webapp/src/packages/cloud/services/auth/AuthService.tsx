@@ -15,6 +15,7 @@ import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
+import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
 
@@ -29,13 +30,7 @@ export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Pr
 
 export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
 
-export type AuthSignUp = (form: {
-  email: string;
-  password: string;
-  companyName: string;
-  name: string;
-  news: boolean;
-}) => Promise<void>;
+export type AuthSignUp = (form: SignupFormValues) => Promise<void>;
 
 export type AuthChangeName = (name: string) => Promise<void>;
 
@@ -299,13 +294,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
           await onAfterAuth(firebaseUser, { ...user, name });
         }
       },
-      async signUp(form: {
-        email: string;
-        password: string;
-        companyName: string;
-        name: string;
-        news: boolean;
-      }): Promise<void> {
+      async signUp(form: SignupFormValues): Promise<void> {
         // Create a user account in firebase
         const { user: firebaseUser } = await authService.signUp(form.email, form.password);
 
