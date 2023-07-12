@@ -6,8 +6,7 @@
 import type { Experiments } from "@src/hooks/services/Experiment/experiments";
 
 import { FeatureItem } from "@src/core/services/features";
-
-import { TestUserCredentials, testUser } from "./test-users";
+import { TestUserCredentials, testUser } from "support/test-users";
 
 // TODO rewrite to login programmatically, instead of by clicking through the UI. This
 // will be faster and less brittle.
