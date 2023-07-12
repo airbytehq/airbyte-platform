@@ -86,9 +86,9 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
     // Applying the migration
     devConfigsDbMigrator.migrate();
 
-    Assertions.assertTrue(scopeColumnsExists(context));
-    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId1));
-    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId2));
+    Assertions.assertTrue(scopeColumnsExists(context), "column is missing");
+    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId1), "workspace id 1 doesn't match");
+    Assertions.assertTrue(scopeColumnsMatchWorkspaceId(context, actorDefinitionId, workspaceId2), "workspace id 2 doesn't match");
   }
 
   protected static boolean scopeColumnsExists(final DSLContext ctx) {
@@ -110,7 +110,7 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest extends Abst
         .and(DSL.field(WORKSPACE_ID).eq(workspaceId)));
 
     assert record != null;
-    return record.get(SCOPE_ID).equals(workspaceId) && record.get(SCOPE_TYPE).equals(ScopeTypeEnum.workspace);
+    return record.get(SCOPE_ID).equals(workspaceId) && record.get(SCOPE_TYPE).toString().equals(ScopeTypeEnum.workspace.getLiteral());
   }
 
   private static void addWorkspace(final DSLContext ctx, final UUID workspaceId) {
