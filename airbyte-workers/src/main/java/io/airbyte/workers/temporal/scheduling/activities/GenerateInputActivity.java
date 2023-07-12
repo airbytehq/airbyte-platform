@@ -5,9 +5,8 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import io.airbyte.config.StandardCheckConnectionInput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
-import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.JobInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import lombok.AllArgsConstructor;
@@ -62,31 +61,16 @@ public interface GenerateInputActivity {
   }
 
   /**
-   * Generated job input.
+   * This generate the input needed by the child sync workflow.
    */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  class GeneratedJobInput {
-
-    private JobRunConfig jobRunConfig;
-    private IntegrationLauncherConfig sourceLauncherConfig;
-    private IntegrationLauncherConfig destinationLauncherConfig;
-    private StandardSyncInput syncInput;
-
-  }
+  @ActivityMethod
+  JobInput getSyncWorkflowInput(SyncInput input) throws Exception;
 
   /**
    * This generate the input needed by the child sync workflow.
    */
   @ActivityMethod
-  GeneratedJobInput getSyncWorkflowInput(SyncInput input);
-
-  /**
-   * This generate the input needed by the child sync workflow.
-   */
-  @ActivityMethod
-  GeneratedJobInput getSyncWorkflowInputWithAttemptNumber(SyncInputWithAttemptNumber input);
+  JobInput getSyncWorkflowInputWithAttemptNumber(SyncInputWithAttemptNumber input) throws Exception;
 
   @ActivityMethod
   SyncJobCheckConnectionInputs getCheckConnectionInputs(SyncInputWithAttemptNumber input);

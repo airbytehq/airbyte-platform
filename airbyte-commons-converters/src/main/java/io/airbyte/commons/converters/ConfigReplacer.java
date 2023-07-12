@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.utils;
+package io.airbyte.commons.converters;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -27,7 +27,7 @@ public class ConfigReplacer {
   private final Logger logger;
   private final AlwaysAllowedHosts alwaysAllowedHosts = new AlwaysAllowedHosts();
 
-  public ConfigReplacer(Logger logger) {
+  public ConfigReplacer(final Logger logger) {
     this.logger = logger;
   }
 
@@ -36,7 +36,7 @@ public class ConfigReplacer {
    * replacement values are not secret (e.g. host vs password). This also assumed that the JSON config
    * for a connector has a single depth.
    */
-  public AllowedHosts getAllowedHosts(AllowedHosts allowedHosts, JsonNode config) throws IOException {
+  public AllowedHosts getAllowedHosts(final AllowedHosts allowedHosts, final JsonNode config) throws IOException {
     if (allowedHosts == null || allowedHosts.getHosts() == null) {
       return null;
     }
@@ -45,7 +45,7 @@ public class ConfigReplacer {
     final Map<String, String> valuesMap = new HashMap<>();
     final JsonParser jsonParser = config.traverse();
 
-    List<String> prefixes = new ArrayList<>();
+    final List<String> prefixes = new ArrayList<>();
     while (!jsonParser.isClosed()) {
       final JsonToken type = jsonParser.nextToken();
       if (type == JsonToken.FIELD_NAME) {
@@ -79,7 +79,7 @@ public class ConfigReplacer {
 
     final StringSubstitutor sub = new StringSubstitutor(valuesMap);
     final List<String> hosts = allowedHosts.getHosts();
-    for (String host : hosts) {
+    for (final String host : hosts) {
       final String replacedString = sub.replace(host);
       if (!replacedString.contains("${")) {
         resolvedHosts.add(replacedString);

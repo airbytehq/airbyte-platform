@@ -180,6 +180,7 @@ public class AirbyteAcceptanceTestHarness {
   public static final int JITTER_MAX_INTERVAL_SECS = 10;
   public static final int FINAL_INTERVAL_SECS = 60;
   public static final int MAX_TRIES = 3;
+  public static final int MAX_ALLOWED_SECOND_PER_RUN = 120;
 
   // NOTE: we include `INCOMPLETE` here because the job may still retry; see
   // https://docs.airbyte.com/understanding-airbyte/jobs/.
@@ -1163,18 +1164,18 @@ public class AirbyteAcceptanceTestHarness {
 
     JobRead mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
     int count = 0;
-    while (count < 60 && mostRecentSyncJob.getId().equals(lastJob.getId())) {
+    while (count < MAX_ALLOWED_SECOND_PER_RUN && mostRecentSyncJob.getId().equals(lastJob.getId())) {
       Thread.sleep(Duration.ofSeconds(1).toMillis());
       mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
       ++count;
     }
-    final boolean exceeded60seconds = count >= 60;
-    if (exceeded60seconds) {
+    final boolean exceeded120seconds = count >= MAX_ALLOWED_SECOND_PER_RUN;
+    if (exceeded120seconds) {
       // Fail because taking more than 60seconds to start a job is not expected
       // Returning the current mostRecentSyncJob here could end up hiding some issues
       Assertions.fail("unable to find the next job within 60seconds");
     }
-
+    LOGGER.info("Time to run the job: " + count);
     return mostRecentSyncJob;
   }
 

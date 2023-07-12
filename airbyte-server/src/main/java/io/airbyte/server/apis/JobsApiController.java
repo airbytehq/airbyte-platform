@@ -19,8 +19,10 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
+import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
+import io.airbyte.commons.server.handlers.JobInputHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -38,10 +40,14 @@ public class JobsApiController implements JobsApi {
 
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
+  private final JobInputHandler jobInputHandler;
 
-  public JobsApiController(final JobHistoryHandler jobHistoryHandler, final SchedulerHandler schedulerHandler) {
+  public JobsApiController(final JobHistoryHandler jobHistoryHandler,
+                           final SchedulerHandler schedulerHandler,
+                           final JobInputHandler jobInputHandler) {
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
+    this.jobInputHandler = jobInputHandler;
   }
 
   @Post("/cancel")
@@ -86,6 +92,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody));
+  }
+
+  @Post("/get_input")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public Object getJobInput(final SyncInput syncInput) {
+    return ApiHelper.execute(() -> jobInputHandler.getJobInput(syncInput));
   }
 
   @Post("/get_light")

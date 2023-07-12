@@ -8,6 +8,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
@@ -32,7 +33,7 @@ import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
 import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.WorkerConstants;
+import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
@@ -43,7 +44,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Get
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput;
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivityImpl;
@@ -170,7 +170,7 @@ class ConnectionManagerWorkflowTest {
   }
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
     Mockito.reset(mConfigFetchActivity);
     Mockito.reset(mSubmitCheckConnectionActivity);
     Mockito.reset(mGenerateInputActivityImpl);
@@ -204,7 +204,7 @@ class ConnectionManagerWorkflowTest {
 
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
-            new GeneratedJobInput(
+            new JobInput(
                 new JobRunConfig(),
                 new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
                 new IntegrationLauncherConfig(),
@@ -256,7 +256,7 @@ class ConnectionManagerWorkflowTest {
     temporalProxyHelper = new TemporalProxyHelper(List.of(activityOptionsBeanRegistration));
   }
 
-  private void returnTrueForLastJobOrAttemptFailure() {
+  private void returnTrueForLastJobOrAttemptFailure() throws Exception {
     when(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(Mockito.any()))
         .thenReturn(true);
 
@@ -265,7 +265,7 @@ class ConnectionManagerWorkflowTest {
     jobRunConfig.setAttemptId((long) ATTEMPT_ID);
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
-            new GeneratedJobInput(
+            new JobInput(
                 jobRunConfig,
                 new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE).withProtocolVersion(new Version("0.2.0")),
                 new IntegrationLauncherConfig().withProtocolVersion(new Version("0.2.0")),
@@ -278,7 +278,7 @@ class ConnectionManagerWorkflowTest {
     TestStateListener.reset();
   }
 
-  private void mockResetJobInput(final JobRunConfig jobRunConfig) {
+  private void mockResetJobInput(final JobRunConfig jobRunConfig) throws Exception {
     when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
             new SyncJobCheckConnectionInputs(
@@ -288,7 +288,7 @@ class ConnectionManagerWorkflowTest {
                 new StandardCheckConnectionInput()));
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
-            new GeneratedJobInput(
+            new JobInput(
                 jobRunConfig,
                 new IntegrationLauncherConfig().withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB),
                 new IntegrationLauncherConfig(),
@@ -308,7 +308,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that a successful workflow restarts waits")
-    void runSuccess() throws InterruptedException {
+    void runSuccess() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
           .thenReturn(new ScheduleRetrieverOutput(SCHEDULE_WAIT));
@@ -353,7 +353,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow does not wait to run after a failure")
-    void retryAfterFail() throws InterruptedException {
+    void retryAfterFail() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
           .thenReturn(new ScheduleRetrieverOutput(SCHEDULE_WAIT));
@@ -396,7 +396,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives a manual run signal stops waiting")
-    void manualRun() throws InterruptedException {
+    void manualRun() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -445,7 +445,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives an update signal stops waiting, doesn't run, and doesn't update the job status")
-    void updatedSignalReceived() throws InterruptedException {
+    void updatedSignalReceived() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -494,7 +494,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that cancelling a non-running workflow doesn't do anything")
-    void cancelNonRunning() throws InterruptedException {
+    void cancelNonRunning() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -539,7 +539,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that the sync is properly deleted")
-    void deleteSync() throws InterruptedException {
+    void deleteSync() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -587,7 +587,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that fresh workflow cleans the job state")
-    void testStartFromCleanJobState() throws InterruptedException {
+    void testStartFromCleanJobState() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
@@ -620,7 +620,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives a manual sync while running a scheduled sync does nothing")
-    void manualRun() throws InterruptedException {
+    void manualRun() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
           .thenReturn(new ScheduleRetrieverOutput(SCHEDULE_WAIT));
@@ -661,7 +661,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that cancelling a running workflow cancels the sync")
-    void cancelRunning() throws InterruptedException {
+    void cancelRunning() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -711,7 +711,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 40,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that deleting a running workflow cancels the sync")
-    void deleteRunning() throws InterruptedException {
+    void deleteRunning() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -766,7 +766,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a non-running workflow starts a reset job")
-    void resetStart() throws InterruptedException {
+    void resetStart() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -799,7 +799,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a non-running workflow starts a reset job")
-    void resetAndContinue() throws InterruptedException {
+    void resetAndContinue() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -835,7 +835,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 60,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a running workflow cancels the running workflow")
-    void resetCancelRunningWorkflow() throws InterruptedException {
+    void resetCancelRunningWorkflow() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -878,7 +878,7 @@ class ConnectionManagerWorkflowTest {
 
     @Test
     @DisplayName("Test that running workflow which receives an update signal waits for the current run and reports the job status")
-    void updatedSignalReceivedWhileRunning() throws InterruptedException {
+    void updatedSignalReceivedWhileRunning() throws Exception {
 
       returnTrueForLastJobOrAttemptFailure();
       final UUID testId = UUID.randomUUID();
@@ -949,7 +949,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that auto disable activity is touched during failure")
-    void testAutoDisableOnFailure() throws InterruptedException {
+    void testAutoDisableOnFailure() throws Exception {
       final UUID connectionId = UUID.randomUUID();
       setupSourceAndDestinationFailure(connectionId);
 
@@ -964,7 +964,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that auto disable activity is not touched during job success")
-    void testNoAutoDisableOnSuccess() throws InterruptedException {
+    void testNoAutoDisableOnSuccess() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(EmptySyncWorkflow.class);
@@ -1013,7 +1013,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failures are recorded")
-    void testSourceCheckFailuresRecorded() throws InterruptedException {
+    void testSourceCheckFailuresRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
           .thenReturn(new JobCreationOutput(JOB_ID));
@@ -1056,7 +1056,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failures are recorded when running in child workflow")
-    void testSourceCheckInChildWorkflowFailuresRecorded() throws InterruptedException {
+    void testSourceCheckInChildWorkflowFailuresRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
           .thenReturn(new JobCreationOutput(JOB_ID));
@@ -1097,7 +1097,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failure reasons are recorded")
-    void testSourceCheckFailureReasonsRecorded() throws InterruptedException {
+    void testSourceCheckFailureReasonsRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
           .thenReturn(new JobCreationOutput(JOB_ID));
@@ -1138,7 +1138,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that Destination CHECK failures are recorded")
-    void testDestinationCheckFailuresRecorded() throws InterruptedException {
+    void testDestinationCheckFailuresRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
           .thenReturn(new JobCreationOutput(JOB_ID));
@@ -1185,7 +1185,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that Destination CHECK failure reasons are recorded")
-    void testDestinationCheckFailureReasonsRecorded() throws InterruptedException {
+    void testDestinationCheckFailureReasonsRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
           .thenReturn(new JobCreationOutput(JOB_ID));
@@ -1232,7 +1232,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that reset workflows do not CHECK the source")
-    void testSourceCheckSkippedWhenReset() throws InterruptedException {
+    void testSourceCheckSkippedWhenReset() throws Exception {
 
       when(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(Mockito.any()))
           .thenReturn(true);
@@ -1242,7 +1242,7 @@ class ConnectionManagerWorkflowTest {
       jobRunConfig.setAttemptId((long) ATTEMPT_ID);
       when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
           .thenReturn(
-              new GeneratedJobInput(
+              new JobInput(
                   jobRunConfig,
                   new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
                   new IntegrationLauncherConfig(),
@@ -1290,7 +1290,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that source and destination failures are recorded")
-    void testSourceAndDestinationFailuresRecorded() throws InterruptedException {
+    void testSourceAndDestinationFailuresRecorded() throws Exception {
       setupSourceAndDestinationFailure(UUID.randomUUID());
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity)
@@ -1303,7 +1303,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that normalization failure is recorded")
-    void testNormalizationFailure() throws InterruptedException {
+    void testNormalizationFailure() throws Exception {
       setupNormalizationFailure();
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity)
@@ -1314,7 +1314,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that normalization trace failure is recorded")
-    void testNormalizationTraceFailure() throws InterruptedException {
+    void testNormalizationTraceFailure() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(NormalizationTraceFailureSyncWorkflow.class);
@@ -1351,7 +1351,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that dbt failure is recorded")
-    void testDbtFailureRecorded() throws InterruptedException {
+    void testDbtFailureRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(DbtFailureSyncWorkflow.class);
@@ -1388,7 +1388,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that persistence failure is recorded")
-    void testPersistenceFailureRecorded() throws InterruptedException {
+    void testPersistenceFailureRecorded() throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(PersistFailureSyncWorkflow.class);
@@ -1425,7 +1425,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Test that replication worker failure is recorded")
-    void testReplicationFailureRecorded() throws InterruptedException {
+    void testReplicationFailureRecorded() throws Exception {
       setupReplicationFailure();
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity)
@@ -1440,7 +1440,7 @@ class ConnectionManagerWorkflowTest {
 
     @ParameterizedTest
     @MethodSource("getSetupFailingActivity")
-    void testWorkflowRestartedAfterFailedActivity(final Thread mockSetup, final int expectedEventsCount) throws InterruptedException {
+    void testWorkflowRestartedAfterFailedActivity(final Thread mockSetup, final int expectedEventsCount) throws Exception {
       returnTrueForLastJobOrAttemptFailure();
       mockSetup.run();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
@@ -1499,8 +1499,14 @@ class ConnectionManagerWorkflowTest {
                   .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
               1),
           Arguments.of(new Thread(
-              () -> when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
-                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              () -> {
+                try {
+                  when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
+                      .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""));
+                } catch (final Exception e) {
+                  throw new RuntimeException(e);
+                }
+              }),
               1));
     }
 
@@ -1520,7 +1526,7 @@ class ConnectionManagerWorkflowTest {
              unit = TimeUnit.SECONDS)
     @DisplayName("We check the progress of the last attempt on failure")
     @MethodSource("coreFailureTypesMatrix")
-    void checksProgressOnFailure(final Class<? extends SyncWorkflow> failureCase) throws InterruptedException {
+    void checksProgressOnFailure(final Class<? extends SyncWorkflow> failureCase) throws Exception {
       // We check attempt progress using the 0-based attempt number counting system used everywhere except
       // the ConnectionUpdaterInput where it is 1-based. This will be fixed to be more consistent later.
       // The concrete value passed here is inconsequential—the important part is that it is _not_ the
@@ -1680,7 +1686,7 @@ class ConnectionManagerWorkflowTest {
    * ConnectionUpdaterInput is pluggable for various test needs. Feel free to update input/return
    * values as is necessary.
    */
-  private void setupFailureCase(final Class<? extends SyncWorkflow> failureClass, final ConnectionUpdaterInput input) throws InterruptedException {
+  private void setupFailureCase(final Class<? extends SyncWorkflow> failureClass, final ConnectionUpdaterInput input) throws Exception {
     returnTrueForLastJobOrAttemptFailure();
     final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
     syncWorker.registerWorkflowImplementationTypes(failureClass);
@@ -1699,13 +1705,13 @@ class ConnectionManagerWorkflowTest {
     Thread.sleep(500); // any time after no-waiting manual run
   }
 
-  private void setupFailureCase(final Class<? extends SyncWorkflow> failureClass) throws InterruptedException {
+  private void setupFailureCase(final Class<? extends SyncWorkflow> failureClass) throws Exception {
     final var input = testInputBuilder().build();
 
     setupFailureCase(failureClass, input);
   }
 
-  private void setupSourceAndDestinationFailure(final UUID connectionId) throws InterruptedException {
+  private void setupSourceAndDestinationFailure(final UUID connectionId) throws Exception {
     final ConnectionUpdaterInput input = testInputBuilder()
         .connectionId(connectionId)
         .build();
@@ -1713,11 +1719,11 @@ class ConnectionManagerWorkflowTest {
     setupFailureCase(SourceAndDestinationFailureSyncWorkflow.class, input);
   }
 
-  private void setupReplicationFailure() throws InterruptedException {
+  private void setupReplicationFailure() throws Exception {
     setupFailureCase(ReplicateFailureSyncWorkflow.class);
   }
 
-  private void setupNormalizationFailure() throws InterruptedException {
+  private void setupNormalizationFailure() throws Exception {
     setupFailureCase(NormalizationFailureSyncWorkflow.class);
   }
 

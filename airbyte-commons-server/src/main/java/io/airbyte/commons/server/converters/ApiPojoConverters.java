@@ -76,9 +76,9 @@ public class ApiPojoConverters {
     return internalAttemptSyncConfig;
   }
 
-  public static io.airbyte.api.client.model.generated.AttemptSyncConfig attemptSyncConfigToClient(final io.airbyte.config.AttemptSyncConfig attemptSyncConfig,
-                                                                                                  final UUID connectionId,
-                                                                                                  final boolean useStreamCapableState) {
+  public static io.airbyte.api.model.generated.AttemptSyncConfig attemptSyncConfigToApi(final io.airbyte.config.AttemptSyncConfig attemptSyncConfig,
+                                                                                        final UUID connectionId,
+                                                                                        final boolean useStreamCapableState) {
     if (attemptSyncConfig == null) {
       return null;
     }
@@ -87,10 +87,10 @@ public class ApiPojoConverters {
     final Optional<StateWrapper> optStateWrapper = state != null ? StateMessageHelper.getTypedState(
         state.getState(), useStreamCapableState) : Optional.empty();
 
-    return new io.airbyte.api.client.model.generated.AttemptSyncConfig()
+    return new io.airbyte.api.model.generated.AttemptSyncConfig()
         .sourceConfiguration(attemptSyncConfig.getSourceConfiguration())
         .destinationConfiguration(attemptSyncConfig.getDestinationConfiguration())
-        .state(StateConverter.toClient(connectionId, optStateWrapper.orElse(null)));
+        .state(StateConverter.toApi(connectionId, optStateWrapper.orElse(null)));
   }
 
   public static ActorDefinitionResourceRequirements actorDefResourceReqsToApi(final io.airbyte.config.ActorDefinitionResourceRequirements actorDefResourceReqs) {

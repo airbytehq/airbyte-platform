@@ -7,34 +7,26 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.generated.AttemptApi;
+import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionState;
-import io.airbyte.api.client.model.generated.ConnectionStateType;
-import io.airbyte.api.client.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
-import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
@@ -46,12 +38,8 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.WorkerConstants;
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import java.io.IOException;
@@ -77,6 +65,7 @@ class GenerateInputActivityTest {
   private static Job job;
   private static FeatureFlagClient featureFlagClient;
   private static Map<String, Boolean> featureFlagMap;
+  private static JobsApi jobsApi;
   private static ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
@@ -108,9 +97,10 @@ class GenerateInputActivityTest {
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
+    jobsApi = mock(JobsApi.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     generateInputActivity = new GenerateInputActivityImpl(jobPersistence, configRepository, stateApi, attemptApi, featureFlags,
-        featureFlagClient, oAuthConfigSupplier, configInjector, actorDefinitionVersionHelper);
+        featureFlagClient, oAuthConfigSupplier, configInjector, jobsApi, actorDefinitionVersionHelper);
 
     job = mock(Job.class);
 
@@ -134,158 +124,6 @@ class GenerateInputActivityTest {
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID);
     when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
-  }
-
-  @Test
-  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
-    final SyncInput syncInput = new SyncInput(ATTEMPT_ID, JOB_ID);
-
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final SourceConnection sourceConnection = new SourceConnection()
-        .withSourceId(SOURCE_ID)
-        .withSourceDefinitionId(sourceDefinitionId)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withConfiguration(SOURCE_CONFIGURATION);
-    when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
-    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
-        .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
-    when(configInjector.injectConfig(SOURCE_CONFIG_WITH_OAUTH, sourceDefinitionId))
-        .thenReturn(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG);
-
-    when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
-        .thenReturn(new ConnectionState()
-            .stateType(ConnectionStateType.LEGACY)
-            .state(STATE.getState()));
-
-    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-        .withWorkspaceId(UUID.randomUUID())
-        .withDestinationDockerImage("destinationDockerImage")
-        .withSourceDockerImage("sourceDockerImage")
-        .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
-
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(ConfigType.SYNC)
-        .withSync(jobSyncConfig);
-
-    when(job.getConfig()).thenReturn(jobConfig);
-    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
-
-    final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
-        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withSourceId(SOURCE_ID)
-        .withDestinationId(DESTINATION_ID)
-        .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
-        .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
-        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withIsReset(false);
-
-    final JobRunConfig expectedJobRunConfig = new JobRunConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID);
-
-    final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getSourceDockerImage());
-
-    final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
-        .withAdditionalEnvironmentVariables(Collections.emptyMap());
-
-    final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
-        expectedJobRunConfig,
-        expectedSourceLauncherConfig,
-        expectedDestinationLauncherConfig,
-        expectedStandardSyncInput);
-
-    final GeneratedJobInput generatedJobInput = generateInputActivity.getSyncWorkflowInput(syncInput);
-    assertEquals(expectedGeneratedJobInput, generatedJobInput);
-
-    final AttemptSyncConfig expectedAttemptSyncConfig = new AttemptSyncConfig()
-        .withSourceConfiguration(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG)
-        .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE);
-
-    verify(oAuthConfigSupplier).injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION);
-    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
-
-    verify(attemptApi).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
-        .jobId(JOB_ID)
-        .attemptNumber(ATTEMPT_ID)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToClient(expectedAttemptSyncConfig, CONNECTION_ID, true)));
-  }
-
-  @Test
-  void testGetResetSyncWorkflowInput() throws IOException, ApiException, JsonValidationException, ConfigNotFoundException {
-    final SyncInput syncInput = new SyncInput(ATTEMPT_ID, JOB_ID);
-    when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
-        .thenReturn(new ConnectionState()
-            .stateType(ConnectionStateType.LEGACY)
-            .state(STATE.getState()));
-
-    final JobResetConnectionConfig jobResetConfig = new JobResetConnectionConfig()
-        .withWorkspaceId(UUID.randomUUID())
-        .withDestinationDockerImage("destinationDockerImage")
-        .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
-
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(ConfigType.RESET_CONNECTION)
-        .withResetConnection(jobResetConfig);
-
-    when(job.getConfig()).thenReturn(jobConfig);
-    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
-
-    final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
-        .withWorkspaceId(jobResetConfig.getWorkspaceId())
-        .withSourceId(SOURCE_ID)
-        .withDestinationId(DESTINATION_ID)
-        .withSourceConfiguration(Jsons.emptyObject())
-        .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE)
-        .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
-        .withWorkspaceId(jobResetConfig.getWorkspaceId())
-        .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
-        .withIsReset(true);
-
-    final JobRunConfig expectedJobRunConfig = new JobRunConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID);
-
-    final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB);
-
-    final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
-        .withJobId(String.valueOf(JOB_ID))
-        .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobResetConfig.getDestinationDockerImage())
-        .withAdditionalEnvironmentVariables(Collections.emptyMap());
-
-    final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
-        expectedJobRunConfig,
-        expectedSourceLauncherConfig,
-        expectedDestinationLauncherConfig,
-        expectedStandardSyncInput);
-
-    final GeneratedJobInput generatedJobInput = generateInputActivity.getSyncWorkflowInput(syncInput);
-    assertEquals(expectedGeneratedJobInput, generatedJobInput);
-
-    final AttemptSyncConfig expectedAttemptSyncConfig = new AttemptSyncConfig()
-        .withSourceConfiguration(Jsons.emptyObject())
-        .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withState(STATE);
-
-    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
-
-    verify(attemptApi).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
-        .jobId(JOB_ID)
-        .attemptNumber(ATTEMPT_ID)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToClient(expectedAttemptSyncConfig, CONNECTION_ID, true)));
   }
 
   @Test

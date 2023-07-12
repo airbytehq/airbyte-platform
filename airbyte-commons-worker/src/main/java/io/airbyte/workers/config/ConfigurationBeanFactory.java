@@ -6,10 +6,10 @@ package io.airbyte.workers.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.TolerationPOJO;
-import io.airbyte.workers.WorkerConstants;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;

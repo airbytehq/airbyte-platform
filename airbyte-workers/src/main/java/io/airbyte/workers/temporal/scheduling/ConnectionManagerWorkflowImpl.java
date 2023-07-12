@@ -10,6 +10,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
@@ -37,8 +38,8 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.CheckConnectionInput;
@@ -54,7 +55,6 @@ import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivit
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
@@ -250,7 +250,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
-      GeneratedJobInput jobInputs = null;
+      JobInput jobInputs = null;
       final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration();
       if (!shouldRunCheckInputGeneration) {
         jobInputs = getJobInput();
@@ -477,7 +477,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return runMandatoryActivityWithOutput(checkActivity::runWithJobOutput, checkInput);
   }
 
-  private SyncJobCheckConnectionInputs getCheckConnectionInputFromSync(final GenerateInputActivity.GeneratedJobInput jobInputs) {
+  private SyncJobCheckConnectionInputs getCheckConnectionInputFromSync(final JobInput jobInputs) {
     final StandardSyncInput syncInput = jobInputs.getSyncInput();
     final JsonNode sourceConfig = syncInput.getSourceConfiguration();
     final JsonNode destinationConfig = syncInput.getDestinationConfiguration();
@@ -502,7 +502,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
-                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs,
+                                                     @Nullable final JobInput jobInputs,
                                                      final Map<String, Boolean> featureFlags) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
@@ -876,7 +876,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * Generate the input that is needed by the job. It will generate the configuration needed by the
    * job and will generate a different output if the job is a sync or a reset.
    */
-  private GeneratedJobInput getJobInput() {
+  private JobInput getJobInput() {
     final Long jobId = workflowInternalState.getJobId();
     final Integer attemptNumber = workflowInternalState.getAttemptNumber();
 
@@ -884,8 +884,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         attemptNumber,
         jobId);
 
-    final GeneratedJobInput syncWorkflowInputs = runMandatoryActivityWithOutput(
-        getSyncInputActivity::getSyncWorkflowInputWithAttemptNumber,
+    final JobInput syncWorkflowInputs = runMandatoryActivityWithOutput(
+        (input) -> {
+          try {
+            return getSyncInputActivity.getSyncWorkflowInputWithAttemptNumber(input);
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        },
         getSyncInputActivitySyncInput);
 
     return syncWorkflowInputs;
@@ -964,7 +970,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * since the latter is a long running workflow, in the future, using a different Node pool would
    * make sense.
    */
-  private StandardSyncOutput runChildWorkflow(final GeneratedJobInput jobInputs) {
+  private StandardSyncOutput runChildWorkflow(final JobInput jobInputs) {
     final String taskQueue = getSyncTaskQueue();
 
     final SyncWorkflow childSync = Workflow.newChildWorkflowStub(SyncWorkflow.class,

@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.commons.converters.ConfigReplacer;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.constants.AlwaysAllowedHosts;
 import java.io.IOException;
@@ -104,12 +105,12 @@ class ConfigReplacerTest {
 
   @Test
   void alwaysAllowedHostsListIsImmutable() {
-    List<String> hosts = alwaysAllowedHosts.getHosts();
+    final List<String> hosts = alwaysAllowedHosts.getHosts();
 
     try {
       hosts.add("foo.com");
       throw new IOException("should not get here");
-    } catch (Exception e) {
+    } catch (final Exception e) {
       assertThat(e).isInstanceOf(UnsupportedOperationException.class);
     }
   }

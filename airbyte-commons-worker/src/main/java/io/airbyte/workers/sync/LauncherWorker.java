@@ -12,6 +12,7 @@ import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
 
 import com.google.common.base.Stopwatch;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.TemporalUtils;
@@ -25,7 +26,6 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;

@@ -2657,6 +2657,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptNormalizationStatusReadList"
+  /v1/jobs/get_input:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the job input in order to be able to start a synchronization.
+      operationId: getJobInput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncInput"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncJobInputRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
   /v1/health:
     get:
@@ -5130,6 +5152,18 @@ components:
           $ref: "#/components/schemas/JobStatus"
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
+    SyncInput:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+    SyncJobInputRead:
+      description: This return a json blob aimed to be used as a JobInput. It is serialized by the JobInput java class and should be deserialized into it.
     ResetConfig:
       type: object
       description: contains information about how a reset was configured. only populated if the job was a reset.
