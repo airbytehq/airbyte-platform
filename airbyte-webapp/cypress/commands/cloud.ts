@@ -16,7 +16,7 @@ Cypress.Commands.add("login", (user: TestUserCredentials = testUser) => {
   }
   cy.visit("/login");
 
-  cy.get("[data-testid='input.email']", { timeout: 10000 }).type(user.email);
+  cy.get("[data-testid='login.email']", { timeout: 10000 }).type(user.email);
   cy.get("[data-testid='login.password']").type(user.password);
   cy.get("[data-testid='login.submit']").click();
   cy.hasNavigatedTo("/workspaces");

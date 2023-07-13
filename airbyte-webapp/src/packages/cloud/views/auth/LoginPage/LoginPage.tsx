@@ -111,7 +111,7 @@ export const LoginPage: React.FC = () => {
           label={formatMessage({ id: "login.yourEmail" })}
           placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
           autoComplete="email"
-          data-testid="login.ema"
+          data-testid="login.email"
         />
         <FormControl
           name="password"

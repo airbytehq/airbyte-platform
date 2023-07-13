@@ -140,6 +140,7 @@ export const SignupForm: React.FC = () => {
         label={formatMessage({ id: "login.yourEmail" })}
         placeholder={formatMessage({ id: "login.yourEmail.placeholder" })}
         autoComplete="email"
+        data-testid="signup.email"
       />
       <PasswordFormControl label="login.password" />
       <Box mt="xl">
