@@ -21,10 +21,7 @@ export const ConnectionStatusCard: React.FC = () => {
       title={
         <FlexContainer justifyContent="space-between" alignItems="center">
           <ConnectionStatusOverview />
-          <ConnectionSyncButtons
-            buttonText={<FormattedMessage id="connection.stream.status.table.syncButton" values={{ streamCount }} />}
-            variant="secondary"
-          />
+          <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" values={{ streamCount }} />} />
         </FlexContainer>
       }
     >

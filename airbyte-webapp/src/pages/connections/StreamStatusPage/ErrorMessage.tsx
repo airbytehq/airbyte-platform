@@ -7,10 +7,11 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { FailureOrigin, FailureType, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ConnectionRoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ErrorMessage.module.scss";
 
@@ -19,6 +20,8 @@ const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   if (latestAttempt?.failureSummary?.failures?.[0]?.failureType !== "manual_cancellation") {
     return {
       errorMessage: latestAttempt?.failureSummary?.failures?.[0]?.externalMessage,
+      failureOrigin: latestAttempt?.failureSummary?.failures?.[0]?.failureOrigin,
+      failureType: latestAttempt?.failureSummary?.failures?.[0]?.failureType,
       attemptId: latestAttempt?.id,
       jobId: job?.job?.id,
     };
@@ -31,6 +34,7 @@ export const ErrorMessage: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
 
+  const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
   const { lastCompletedSyncJob } = useConnectionSyncContext();
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
@@ -41,9 +45,25 @@ export const ErrorMessage: React.FC = () => {
     buttonMessage: string;
     variant: "error" | "warning";
   } | null>(() => {
-    const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
+    const { jobId, attemptId, errorMessage, failureType, failureOrigin } =
+      getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
     // If we have an error message and no breaking schema changes, show the error message
     if (errorMessage && !hasBreakingSchemaChange) {
+      const isConfigError = failureType === FailureType.config_error;
+      const isSourceError = failureOrigin === FailureOrigin.source;
+      const isDestinationError = failureOrigin === FailureOrigin.destination;
+
+      if (isConfigError && (isSourceError || isDestinationError)) {
+        const targetRoute = isSourceError ? RoutePaths.Source : RoutePaths.Destination;
+        const targetRouteId = isSourceError ? connection.sourceId : connection.destinationId;
+        return {
+          errorMessage,
+          errorAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
+          buttonMessage: formatMessage({ id: "connection.stream.status.gotoSettings" }),
+          variant: "warning",
+        };
+      }
+
       return {
         errorMessage,
         errorAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
@@ -66,7 +86,16 @@ export const ErrorMessage: React.FC = () => {
     }
 
     return null;
-  }, [formatMessage, hasBreakingSchemaChange, hasSchemaChanges, lastCompletedSyncJob, navigate]);
+  }, [
+    formatMessage,
+    hasBreakingSchemaChange,
+    hasSchemaChanges,
+    lastCompletedSyncJob,
+    navigate,
+    connection.sourceId,
+    connection.destinationId,
+    workspaceId,
+  ]);
 
   if (calloutDetails) {
     return (

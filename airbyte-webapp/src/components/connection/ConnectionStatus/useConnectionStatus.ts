@@ -9,8 +9,10 @@ import { useListJobsForConnectionStatus } from "core/api";
 import {
   ConnectionScheduleType,
   ConnectionStatus,
+  FailureType,
   JobConfigType,
   JobStatus,
+  JobWithAttemptsRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
@@ -64,6 +66,22 @@ export interface UIConnectionStatus {
   isRunning: boolean;
 }
 
+const getConfigErrorFromJobs = (jobs: JobWithAttemptsRead[]) => {
+  const sortedAttempts = [...(jobs?.[0]?.attempts ?? [])].sort((a, b) => {
+    if (a.createdAt < b.createdAt) {
+      return 1;
+    } else if (a.createdAt > b.createdAt) {
+      return -1;
+    }
+    return 0;
+  });
+  const latestAttempt = sortedAttempts[0];
+  const configErrorFailure = latestAttempt?.failureSummary?.failures.find(
+    (failure) => failure.failureType === FailureType.config_error
+  );
+  return configErrorFailure;
+};
+
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
   const connection = useGetConnection(connectionId);
 
@@ -72,6 +90,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   const {
     data: { jobs },
   } = useListJobsForConnectionStatus(connectionId);
+
+  const configError = getConfigErrorFromJobs(jobs);
 
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
@@ -108,7 +128,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     );
   }
 
-  if (hasBreakingSchemaChange) {
+  if (hasBreakingSchemaChange || configError) {
     return {
       status: ConnectionStatusIndicatorStatus.ActionRequired,
       lastSyncJobStatus,
