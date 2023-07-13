@@ -1,7 +1,7 @@
 import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import React from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -225,6 +225,7 @@ const StreamTab = ({
 );
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
@@ -237,6 +238,13 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
+  const formattedSchema = useMemo(() => {
+    try {
+      return schema ? formatJson(JSON.parse(schema)) : undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }, [schema]);
 
   return (
     <>
@@ -244,7 +252,9 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
         label="Automatically import detected schema"
         path={autoImportSchemaFieldPath}
         type="boolean"
-        tooltip="Automatically sets the declared schema to the schema that is detected when clicking Test for this stream.<br></br>Disable this in order to manually edit the schema."
+        tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
+        disabled={error && !streamRead.data?.inferred_schema}
+        disabledTooltip={formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })}
       />
       {showImportButton && (
         <Button
@@ -265,7 +275,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
       )}
       {autoImportSchema ? (
         <div className={styles.autoSchemaContainer}>
-          <Pre>{schema}</Pre>
+          <Pre>{formattedSchema}</Pre>
         </div>
       ) : (
         <div className={styles.editorContainer}>

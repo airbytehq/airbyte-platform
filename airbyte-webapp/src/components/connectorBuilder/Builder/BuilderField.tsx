@@ -15,6 +15,7 @@ import { Input } from "components/ui/Input";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
+import { Tooltip } from "components/ui/Tooltip";
 import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
@@ -61,7 +62,7 @@ export type BuilderFieldProps = BaseFieldProps &
         disabled?: boolean;
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
-    | { type: "boolean"; onChange?: (newValue: boolean) => void }
+    | { type: "boolean"; onChange?: (newValue: boolean) => void; disabled?: boolean; disabledTooltip?: string }
     | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
@@ -144,7 +145,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   }, [path, scrollToField, setScrollToField]);
 
   if (props.type === "boolean") {
-    return (
+    const labeledSwitch = (
       <LabeledSwitch
         {...field}
         ref={(ref) => {
@@ -158,8 +159,18 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             {label} {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
           </>
         }
+        disabled={props.disabled}
       />
     );
+
+    if (props.disabled && props.disabledTooltip) {
+      return (
+        <Tooltip control={labeledSwitch} placement="bottom-start">
+          {props.disabledTooltip}
+        </Tooltip>
+      );
+    }
+    return labeledSwitch;
   }
 
   const setValue = (newValue: unknown) => {
