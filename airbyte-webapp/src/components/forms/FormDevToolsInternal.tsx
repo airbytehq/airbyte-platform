@@ -8,6 +8,7 @@ const FormDevToolsInternal = () => {
   return (
     <>
       <button
+        type="button"
         className={styles.button}
         title="Open dev tools"
         onClick={() => {

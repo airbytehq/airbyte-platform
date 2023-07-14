@@ -50,7 +50,9 @@ export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ em
       </div>
       {emailNotificationsFeature && (
         <FlexContainer justifyContent="center">
-          {!emailNotificationRequired && <Switch onChange={onToggleEmailNotification} checked={field.customerio} />}
+          {!emailNotificationRequired && (
+            <Switch onChange={onToggleEmailNotification} checked={field.customerio} data-testid={`${name}.email`} />
+          )}
           {emailNotificationRequired && (
             <Tooltip control={<Switch checked disabled />}>
               <FormattedMessage id="settings.notifications.requiredNotificationTooltip" />
@@ -59,7 +61,7 @@ export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ em
         </FlexContainer>
       )}
       <FlexContainer justifyContent="center">
-        <Switch onChange={onToggleSlackNotification} checked={field.slack} />
+        <Switch onChange={onToggleSlackNotification} checked={field.slack} data-testid={`${name}.slack`} />
       </FlexContainer>
       <SlackNotificationUrlInput name={`${name}.slackWebhookLink`} disabled={!field.slack} />
       <TestWebhookButton disabled={!field.slack} webhookUrl={field.slackWebhookLink ?? ""} notificationTrigger={name} />

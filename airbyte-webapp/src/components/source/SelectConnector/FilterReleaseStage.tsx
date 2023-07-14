@@ -33,7 +33,7 @@ export const FilterReleaseStage: React.FC<FilterReleaseStageProps> = ({
         const id = `filter-release-stage-${stage}`;
         const isChecked = selectedReleaseStages.includes(stage);
         return (
-          <label htmlFor={id} className={styles.checkboxLabel}>
+          <label htmlFor={id} className={styles.checkboxLabel} key={id}>
             <FlexContainer alignItems="center" gap="sm">
               <CheckBox
                 checkboxSize="sm"

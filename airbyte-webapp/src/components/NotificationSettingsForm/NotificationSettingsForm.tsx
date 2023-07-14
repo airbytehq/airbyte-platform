@@ -12,21 +12,28 @@ import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
-import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/request/AirbyteClient";
+import {
+  NotificationReadStatus,
+  NotificationSettings,
+  NotificationTrigger,
+  WorkspaceRead,
+} from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isFulfilled } from "core/utils/promises";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
 
 import { formValuesToNotificationSettings } from "./formValuesToNotificationSettings";
 import { NotificationItemField } from "./NotificationItemField";
 import styles from "./NotificationSettingsForm.module.scss";
 import { notificationSettingsToFormValues } from "./notificationSettingsToFormValues";
 
-export const NotificationSettingsForm: React.FC = () => {
+interface NotificationSettingsFormProps {
+  updateNotificationSettings: (notificationSettings: NotificationSettings) => Promise<WorkspaceRead>;
+}
+
+export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> = ({ updateNotificationSettings }) => {
   const emailNotificationsFeature = useFeature(FeatureItem.EmailNotifications);
-  const updateNotificationSettings = useUpdateNotificationSettings();
   const { notificationSettings } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();
@@ -47,8 +54,11 @@ export const NotificationSettingsForm: React.FC = () => {
         notificationKeys.map(async (key) => {
           const notification = values[key];
 
-          // If slack is not set as a notification type, we can skip the validation
-          if (!notification.slack) {
+          // If slack is not set as a notification type, or if the webhook has not changed, we can skip the validation
+          if (
+            !notification.slack ||
+            (!methods.formState.dirtyFields[key]?.slack && !methods.formState.dirtyFields[key]?.slackWebhookLink)
+          ) {
             return { key, isValid: true };
           }
 
@@ -81,7 +91,7 @@ export const NotificationSettingsForm: React.FC = () => {
       );
     } else {
       // If there are no invalid webhooks we can actually update the workspace with the new notification settings
-      updateEmailNotifications(values);
+      await updateEmailNotifications(values);
     }
   };
 
@@ -113,7 +123,7 @@ export const NotificationSettingsForm: React.FC = () => {
     <Card title="Notification settings">
       <Box p="xl">
         <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)}>
+          <form onSubmit={methods.handleSubmit(onSubmit)} data-testid="notification-settings-form">
             <FormDevTools />
             <Box mb="xl">
               <Text>

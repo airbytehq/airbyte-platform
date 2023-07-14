@@ -12,4 +12,24 @@ export const mockWorkspace: WorkspaceRead = {
   news: false,
   securityUpdates: false,
   notifications: [],
+  notificationSettings: {
+    sendOnFailure: {
+      notificationType: ["customerio"],
+    },
+    sendOnSuccess: {
+      notificationType: ["customerio"],
+    },
+    sendOnConnectionUpdate: {
+      notificationType: [],
+    },
+    sendOnConnectionUpdateActionRequired: {
+      notificationType: [],
+    },
+    sendOnSyncDisabled: {
+      notificationType: [],
+    },
+    sendOnSyncDisabledWarning: {
+      notificationType: [],
+    },
+  },
 };
