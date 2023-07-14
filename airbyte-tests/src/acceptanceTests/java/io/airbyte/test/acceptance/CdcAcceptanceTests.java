@@ -93,6 +93,8 @@ class CdcAcceptanceTests {
 
   private static final String POSTGRES_INIT_SQL_FILE = "postgres_init_cdc.sql";
   private static final String CDC_METHOD = "CDC";
+  // must match Postgres's default CDC cursor name
+  private static final String POSTGRES_DEFAULT_CDC_CURSOR = "_ab_cdc_lsn";
   // must match replication slot name used in the above POSTGRES_INIT_SQL_FILE
   private static final String REPLICATION_SLOT = "airbyte_slot";
   // must match publication name used in the above POSTGRES_INIT_SQL_FILE
@@ -477,7 +479,7 @@ class CdcAcceptanceTests {
 
     assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
     assertTrue(stream.getSourceDefinedCursor());
-    assertTrue(stream.getDefaultCursorField().isEmpty());
+    assertEquals(List.of(POSTGRES_DEFAULT_CDC_CURSOR), stream.getDefaultCursorField());
     assertEquals(List.of(List.of("id")), stream.getSourceDefinedPrimaryKey());
 
     final SyncMode syncMode = SyncMode.INCREMENTAL;
