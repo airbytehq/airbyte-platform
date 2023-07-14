@@ -55,6 +55,7 @@ export const useStreamsStatuses = (
   const errorMultiplier = useErrorMultiplierExperiment();
 
   const connectionStatus = useConnectionStatus(connectionId);
+  const isConnectionDisabled = connectionStatus.status === ConnectionStatusIndicatorStatus.Disabled;
 
   const enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[] = connection.syncCatalog.streams.filter(
     (stream) => stream.config?.selected && stream.stream
@@ -88,7 +89,9 @@ export const useStreamsStatuses = (
       const streamStatus: StreamWithStatus = {
         streamName: enabledStream.stream.name,
         streamNamespace: enabledStream.stream.namespace === "" ? undefined : enabledStream.stream.namespace,
-        status: ConnectionStatusIndicatorStatus.Pending,
+        status: isConnectionDisabled
+          ? ConnectionStatusIndicatorStatus.Disabled
+          : ConnectionStatusIndicatorStatus.Pending,
         isRunning: false,
         relevantHistory: [],
       };
@@ -106,7 +109,7 @@ export const useStreamsStatuses = (
       return streamStatuses;
     }, streamStatuses);
 
-    if (hasPerStreamStatuses) {
+    if (hasPerStreamStatuses && !isConnectionDisabled) {
       // push each stream status entry into to the corresponding stream's history
       data.streamStatuses.reduce((streamStatuses, streamStatus) => {
         const streamKey = getStreamKey(streamStatus);
