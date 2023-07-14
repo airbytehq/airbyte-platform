@@ -14,7 +14,7 @@ spec:
       {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: Recreate # Needed due to volume claims
+    type: {{ .Values.deploymentStrategyType }}
   template:
     metadata:
       labels:
