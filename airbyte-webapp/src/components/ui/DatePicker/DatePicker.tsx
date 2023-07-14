@@ -57,6 +57,7 @@ export interface DatePickerProps {
   withTime?: boolean;
   withMilliseconds?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   onBlur?: () => void;
   placeholder?: string;
 }
@@ -88,6 +89,7 @@ const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
 
 export const DatePicker: React.FC<DatePickerProps> = ({
   disabled,
+  readOnly,
   error,
   onChange,
   onBlur,
@@ -159,6 +161,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         onFocus={() => datepickerRef.current?.setOpen(true)}
         className={styles.input}
         ref={inputRef}
+        disabled={disabled}
+        readOnly={readOnly}
       />
       <div className={styles.datepickerButtonContainer}>
         <ReactDatePicker
@@ -169,6 +173,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           showPopperArrow={false}
           showTimeSelect={withTime}
           disabled={disabled}
+          readOnly={readOnly}
           locale={locale}
           selected={localDate}
           onChange={handleDatepickerChange}

@@ -162,6 +162,7 @@ const defaultFields = [
   "const",
   "title",
   "enum",
+  "readOnly",
 
   // airbyte specific fields
   "airbyte_hidden",

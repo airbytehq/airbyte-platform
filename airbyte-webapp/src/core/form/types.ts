@@ -26,6 +26,7 @@ type FormRelevantJSONSchema = Pick<
   | "always_show"
   | "pattern_descriptor"
   | "group"
+  | "readOnly"
 >;
 
 interface FormItem extends FormRelevantJSONSchema {
