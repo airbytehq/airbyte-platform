@@ -1,8 +1,11 @@
 import groovy.json.JsonBuilder
 import groovy.yaml.YamlSlurper
 
+import java.util.zip.ZipFile
+
 plugins {
-    id 'application'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
 }
 
 configurations {
@@ -21,13 +24,17 @@ configurations.all {
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
+    annotationProcessor libs.lombok
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.guava
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
     implementation libs.kubernetes.client
     implementation libs.bundles.datadog
+    implementation libs.bundles.log4j
+    compileOnly libs.lombok
 
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
@@ -58,38 +65,34 @@ dependencies {
     }
 }
 
-application {
-    applicationName = "airbyte-container-orchestrator"
-    mainClass = "io.airbyte.container_orchestrator.Application"
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+airbyte {
+    application {
+        mainClass = "io.airbyte.container_orchestrator.Application"
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+    }
+    docker {
+        imageName = "container-orchestrator"
+    }
 }
 
 // Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
-task generateWellKnownTypes() {
+def generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
     doLast {
         def wellKnownTypesYamlPath = 'airbyte_protocol/well_known_types.yaml'
         configurations.airbyteProtocol.getFiles().each {
-            def zip = new java.util.zip.ZipFile(it)
+            def zip = new ZipFile(it)
             def entry = zip.getEntry(wellKnownTypesYamlPath)
 
             def wellKnownTypesYaml = zip.getInputStream(entry).text
             def parsedYaml = new YamlSlurper().parseText(wellKnownTypesYaml)
             def wellKnownTypesJson = new JsonBuilder(parsedYaml).toPrettyString()
-            def targetFile = project.file("build/docker/WellKnownTypes.json")
+            def targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
             targetFile.getParentFile().mkdirs()
             targetFile.text = wellKnownTypesJson
         }
     }
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
-    dependsOn generateWellKnownTypes
-}
-
-// Ideally, we would have buildDockerImage depend on generateWellKnownTypes
-// but some of our actions use copyGeneratedTar as the "set up the docker build context" task
-// so we'll just add it here.
-tasks.named("copyGeneratedTar") {
+tasks.named("dockerBuildImage") {
     dependsOn generateWellKnownTypes
 }

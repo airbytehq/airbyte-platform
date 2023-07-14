@@ -14,71 +14,72 @@ import org.junit.jupiter.api.Test
 import java.io.IOException
 
 class WebhookNotificationSenderTest {
-    private val httpClient: OkHttpClient = mockk()
-    private val webhookNotificationSender = WebhookNotificationSender(httpClient)
+  private val httpClient: OkHttpClient = mockk()
+  private val webhookNotificationSender = WebhookNotificationSender(httpClient)
 
-    private val subject = "subject"
-    private val message = "message"
-    private val webhook = WebhookConfig("http://webhook")
+  private val subject = "subject"
+  private val message = "message"
+  private val webhook = WebhookConfig("http://webhook")
 
-    @BeforeEach
-    fun init() {
-        clearMocks(httpClient)
+  @BeforeEach
+  fun init() {
+    clearMocks(httpClient)
+  }
+
+  @Test
+  fun testSendNotificationSuccessful() {
+    val successfulCall: Call = mockk()
+    val response: Response = mockk(relaxed = true)
+
+    every {
+      response.isSuccessful
+    } returns true
+
+    justRun {
+      response.close()
     }
 
-    @Test
-    fun testSendNotificationSuccessful() {
-        val successfulCall: Call = mockk()
-        val response: Response = mockk(relaxed = true)
+    every {
+      successfulCall.execute()
+    } returns response
 
-        every {
-            response.isSuccessful
-        } returns true
+    every {
+      httpClient.newCall(any())
+    } returns successfulCall
 
-        justRun {
-            response.close()
-        }
+    webhookNotificationSender.sendNotification(webhook, subject, message)
 
-        every {
-            successfulCall.execute()
-        } returns response
+    verify {
+      httpClient.newCall(any())
+      successfulCall.execute()
+    }
+  }
 
-        every {
-            httpClient.newCall(any())
-        } returns successfulCall
+  @Test
+  fun testFailedNotification() {
+    val unSuccessfulCall: Call = mockk()
+    val response: Response = mockk(relaxed = true)
 
-        webhookNotificationSender.sendNotification(webhook, subject, message)
+    every {
+      response.isSuccessful
+    } returns false
 
-        verify {
-            httpClient.newCall(any())
-            successfulCall.execute()
-        }
+    justRun {
+      response.close()
     }
 
-    @Test
-    fun testFailedNotification() {
-        val unSuccessfulCall: Call = mockk()
-        val response: Response = mockk(relaxed = true)
+    every {
+      unSuccessfulCall.execute()
+    } returns response
 
-        every {
-            response.isSuccessful
-        } returns false
+    every {
+      httpClient.newCall(any())
+    } returns unSuccessfulCall
 
-        justRun {
-            response.close()
-        }
-
-        every {
-            unSuccessfulCall.execute()
-        } returns response
-
-        every {
-            httpClient.newCall(any())
-        } returns unSuccessfulCall
-
-        Assertions.assertThrows(IOException::class.java
-        ) {
-            webhookNotificationSender.sendNotification(webhook, subject, message)
-        }
+    Assertions.assertThrows(
+      IOException::class.java,
+    ) {
+      webhookNotificationSender.sendNotification(webhook, subject, message)
     }
+  }
 }

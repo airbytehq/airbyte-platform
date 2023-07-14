@@ -41,7 +41,7 @@ class NotificationClientTest {
 
     notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, "", false);
 
-    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.onNonBreakingChange));
+    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.ON_NON_BREAKING_CHANGE));
   }
 
   @Test

@@ -1,6 +1,6 @@
 plugins {
-    id 'java-library'
-    id 'airbyte-integration-test-java'
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations.all {
@@ -10,6 +10,9 @@ configurations.all {
 dependencies {
     annotationProcessor libs.bundles.micronaut.annotation.processor
     api libs.bundles.micronaut.annotation
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
@@ -22,6 +25,9 @@ dependencies {
     implementation libs.airbyte.protocol
     implementation project(':airbyte-metrics:metrics-lib')
 
+    implementation libs.bundles.apache
+    implementation libs.google.cloud.storage
+
     implementation 'commons-io:commons-io:2.7'
     implementation 'com.google.cloud:google-cloud-secretmanager:2.0.5'
     implementation 'com.bettercloud:vault-java-driver:5.1.0'
@@ -33,7 +39,13 @@ dependencies {
     testImplementation libs.mockito.inline
     testImplementation project(':airbyte-test-utils')
     testImplementation "org.testcontainers:vault:1.18.3"
-    integrationTestJavaImplementation project(':airbyte-config:config-persistence')
-}
 
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+    integrationTestImplementation project(':airbyte-config:config-persistence')
+
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+}

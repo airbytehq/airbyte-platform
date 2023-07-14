@@ -21,7 +21,7 @@ import jakarta.inject.Singleton
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempFile
 import kotlin.io.path.writeText
@@ -137,13 +137,15 @@ class ConfigFileClientTest {
             |    enabled: true
             |  - name: reload-test-false
             |    enabled: false
-            |    """.trimMargin()
+            |    
+    """.trimMargin()
     val contents1 = """flags:
             |  - name: reload-test-true
             |    enabled: false
             |  - name: reload-test-false
             |    enabled: true
-            |    """.trimMargin()
+            |    
+    """.trimMargin()
 
     // write to a temp config
     val tmpConfig = createTempFile(prefix = "reload-config", suffix = "yml").apply {
@@ -205,12 +207,10 @@ class LaunchDarklyClientTest {
     val testFalse = Temporary(key = "test-false", default = true)
     val testBoolDne = Temporary(key = "test-bool-dne", default = false)
 
-
     val ctx = Workspace(workspaceId)
 
     val ldClient: LDClient = mockk()
     val flag = slot<String>()
-
 
     every {
       ldClient.boolVariation(capture(flag), any<LDContext>(), any())
@@ -256,7 +256,6 @@ class LaunchDarklyClientTest {
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
       assertEquals(intFlagValue, intVariation(testInt, ctx))
       assertEquals(testIntDne.default, intVariation(testIntDne, ctx))
-
     }
 
     verify {

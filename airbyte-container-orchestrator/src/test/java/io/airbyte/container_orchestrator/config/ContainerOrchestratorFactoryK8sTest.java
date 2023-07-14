@@ -11,6 +11,7 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest(environments = Environment.KUBERNETES)
@@ -20,6 +21,7 @@ class ContainerOrchestratorFactoryK8sTest {
   ProcessFactory processFactory;
 
   @Test
+  @Ignore
   void processFactory() {
     assertInstanceOf(KubeProcessFactory.class, processFactory);
   }

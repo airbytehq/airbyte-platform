@@ -3,6 +3,6 @@ FROM temporalio/auto-setup:1.20.1
 
 ENV TEMPORAL_HOME /etc/temporal
 
-COPY bin/scripts/update-and-start-temporal.sh update-and-start-temporal.sh
+COPY update-and-start-temporal.sh update-and-start-temporal.sh
 
 ENTRYPOINT ["./update-and-start-temporal.sh"]

@@ -1,13 +1,21 @@
 import org.jsonschema2pojo.SourceType
 
 plugins {
-    id "java-library"
-    alias(libs.plugins.js2p)
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
+    id "com.github.eirnym.js2p"
 }
 
 dependencies {
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation libs.bundles.jackson
     implementation project(':airbyte-commons')
     implementation project(path: ':airbyte-config:config-models')
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
 }
 
 jsonSchema2Pojo {
@@ -23,5 +31,3 @@ jsonSchema2Pojo {
     includeConstructors = false
     includeSetters = true
 }
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

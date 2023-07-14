@@ -28,11 +28,13 @@ sealed class Flag<T>(
  * @param [default] is the default value of the flag.
  * @param [attrs] attributes associated with this flag
  */
-open class Temporary<T> @JvmOverloads constructor(
-  key: String,
-  default: T,
-  attrs: Map<String, String> = mapOf(),
-) : Flag<T>(key = key, default = default, attrs = attrs)
+open class Temporary<T>
+  @JvmOverloads
+  constructor(
+    key: String,
+    default: T,
+    attrs: Map<String, String> = mapOf(),
+  ) : Flag<T>(key = key, default = default, attrs = attrs)
 
 /**
  * Permanent is an open class (non-final) that all permanent feature-flags should inherit from.
@@ -44,11 +46,13 @@ open class Temporary<T> @JvmOverloads constructor(
  * @param [default] is the default value of the flag.
  * @param [attrs] attributes associated with this flag
  */
-open class Permanent<T> @JvmOverloads constructor(
-  key: String,
-  default: T,
-  attrs: Map<String, String> = mapOf(),
-) : Flag<T>(key = key, default = default, attrs = attrs)
+open class Permanent<T>
+  @JvmOverloads
+  constructor(
+    key: String,
+    default: T,
+    attrs: Map<String, String> = mapOf(),
+  ) : Flag<T>(key = key, default = default, attrs = attrs)
 
 /**
  * Environment-Variable based feature-flag.
@@ -60,25 +64,27 @@ open class Permanent<T> @JvmOverloads constructor(
  * @param [default] the default value of this flag, if the environment variable is not defined
  * @param [attrs] attributes associated with this flag
  */
-open class EnvVar @JvmOverloads constructor(
-  envVar: String,
-  default: Boolean = false,
-  attrs: Map<String, String> = mapOf(),
-) : Flag<Boolean>(key = envVar, default = default, attrs = attrs) {
-  /**
-   * Function used to retrieve the environment-variable, overrideable for testing purposes only.
-   *
-   * This is internal so that it can be modified for unit-testing purposes only!
-   */
-  internal var fetcher: (String) -> String? = { s -> System.getenv(s) }
+open class EnvVar
+  @JvmOverloads
+  constructor(
+    envVar: String,
+    default: Boolean = false,
+    attrs: Map<String, String> = mapOf(),
+  ) : Flag<Boolean>(key = envVar, default = default, attrs = attrs) {
+    /**
+     * Function used to retrieve the environment-variable, overrideable for testing purposes only.
+     *
+     * This is internal so that it can be modified for unit-testing purposes only!
+     */
+    internal var fetcher: (String) -> String? = { s -> System.getenv(s) }
 
-  /**
-   * Returns true if, and only if, the environment-variable is defined and evaluates to "true".  Otherwise, returns false.
-   */
-  internal open fun enabled(ctx: Context): Boolean {
-    return fetcher(key)
-      ?.takeIf { it.isNotEmpty() }
-      ?.let { it.toBoolean() }
-      ?: default
+    /**
+     * Returns true if, and only if, the environment-variable is defined and evaluates to "true".  Otherwise, returns false.
+     */
+    internal open fun enabled(ctx: Context): Boolean {
+      return fetcher(key)
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { it.toBoolean() }
+        ?: default
+    }
   }
-}

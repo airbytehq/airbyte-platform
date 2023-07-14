@@ -1,6 +1,13 @@
 plugins {
-    id "java-library"
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
     id "de.undercouch.download" version "5.4.0"
+}
+
+airbyte {
+    spotless {
+        excludes = ["src/main/resources/seed/specs_secrets_mask.yaml"]
+    }
 }
 
 dependencies {
@@ -8,12 +15,12 @@ dependencies {
     implementation project(':airbyte-config:config-models')
 }
 
-task downloadSpecSecretMask(type: Download) {
+def downloadSpecSecretMask = tasks.register("downloadSpecSecretMask", Download) {
     src 'https://connectors.airbyte.com/files/registries/v0/specs_secrets_mask.yaml'
     dest new File(projectDir, 'src/main/resources/seed/specs_secrets_mask.yaml')
     overwrite true
 }
 
-tasks.processResources.dependsOn(downloadSpecSecretMask)
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+tasks.named("processResources") {
+    dependsOn(downloadSpecSecretMask)
+}

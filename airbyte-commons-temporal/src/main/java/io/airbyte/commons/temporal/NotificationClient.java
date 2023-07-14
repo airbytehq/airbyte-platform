@@ -65,7 +65,7 @@ public class NotificationClient {
     }
     try {
       notificationWorkflow.sendNotification(connectionId, SCHEMA_CHANGE_SUBJECT, message,
-          containsBreakingChange ? NotificationEvent.onBreakingChange : NotificationEvent.onNonBreakingChange);
+          containsBreakingChange ? NotificationEvent.ON_BREAKING_CHANGE : NotificationEvent.ON_NON_BREAKING_CHANGE);
     } catch (final RuntimeException e) {
       log.error("There was an error while sending a Schema Change Notification", e);
       throw e;

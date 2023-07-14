@@ -191,6 +191,7 @@ public class AirbyteApiClient {
     try {
       return retryWithJitterThrows(call, desc, jitterMaxIntervalSecs, finalIntervalSecs, maxTries);
     } catch (final Exception e) {
+      LOGGER.error("retryWithJitter caught and ignoring exception:\n{}: {}", desc, e.getMessage(), e);
       // Swallowing exception on purpose
       return null;
     }

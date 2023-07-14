@@ -1,5 +1,7 @@
 plugins {
-    id 'java-library'
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 // Add a configuration for our migrations tasks defined below to encapsulate their dependencies
@@ -14,6 +16,12 @@ configurations.all {
     }
 }
 
+airbyte {
+    docker {
+        imageName = "db"
+    }
+}
+
 dependencies {
     api libs.hikaricp
     api libs.jooq.meta
@@ -25,6 +33,10 @@ dependencies {
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-config:config-models')
     implementation libs.flyway.core
+    implementation libs.guava
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
+    implementation libs.bundles.jackson
+    implementation libs.commons.io
 
     migrations libs.platform.testcontainers.postgresql
     migrations sourceSets.main.output
@@ -41,56 +53,63 @@ dependencies {
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.apache.commons.lang
     testImplementation libs.platform.testcontainers.postgresql
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+
+    testImplementation libs.junit.pioneer
     testImplementation libs.json.assert
 }
 
-task(newConfigsMigration, dependsOn: 'classes', type: JavaExec) {
+tasks.register("newConfigsMigration", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'configs', 'create'
+    dependsOn(tasks.named("classes"))
 }
 
-task(runConfigsMigration, dependsOn: 'classes', type: JavaExec) {
+tasks.register("runConfigsMigration", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'configs', 'migrate'
+    dependsOn(tasks.named("classes"))
 }
 
-task(dumpConfigsSchema, dependsOn: 'classes', type: JavaExec) {
+tasks.register("dumpConfigsSchema", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'configs', 'dump_schema'
+    dependsOn(tasks.named("classes"))
 }
 
-task(newJobsMigration, dependsOn: 'classes', type: JavaExec) {
+tasks.register("newJobsMigration", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'jobs', 'create'
+    dependsOn(tasks.named("classes"))
 }
 
-task(runJobsMigration, dependsOn: 'classes', type: JavaExec) {
+tasks.register("runJobsMigration", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'jobs', 'migrate'
+    dependsOn(tasks.named("classes"))
 }
 
-task(dumpJobsSchema, dependsOn: 'classes', type: JavaExec) {
+tasks.register("dumpJobsSchema", JavaExec) {
     mainClass = 'io.airbyte.db.instance.development.MigrationDevCenter'
     classpath = files(configurations.migrations.files)
     args 'jobs', 'dump_schema'
+    dependsOn(tasks.named("classes"))
 }
 
-task copyInitSql(type: Copy) {
-    dependsOn copyDocker
-
+def copyInitSql = tasks.register("copyInitSql", Copy) {
     from('src/main/resources') {
         include 'init.sql'
     }
-    into 'build/docker/bin'
+    into 'build/airbyte/docker/bin'
 }
 
-tasks.named("buildDockerImage") {
+tasks.named("dockerBuildImage") {
     dependsOn copyInitSql
 }
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

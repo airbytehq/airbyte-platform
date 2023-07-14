@@ -7,7 +7,7 @@ micronaut:
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}  # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}

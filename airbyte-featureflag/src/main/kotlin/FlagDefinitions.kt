@@ -41,11 +41,12 @@ object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection
 
 object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)
 
-object ShouldRunOnGkeDataplane : Temporary<Boolean>(key="should-run-on-gke-dataplane", default = false)
+object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
 
-object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key="should-run-on-expanded-gke-dataplane", default = false)
+object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
 
-object ShouldRunRefreshSchema : Temporary<Boolean>(key="should-run-refresh-schema", default = true)
+object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
+
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -58,7 +59,7 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = false)
 
-object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
+object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
@@ -66,7 +67,7 @@ object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.reso
 
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
-object CheckReplicationProgress : Temporary<Boolean>(key="check-replication-progress", default = false)
+object CheckReplicationProgress : Temporary<Boolean>(key = "check-replication-progress", default = false)
 
 object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
 

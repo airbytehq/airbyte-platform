@@ -1,15 +1,5 @@
 ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
-FROM ${JDK_IMAGE} AS metrics-reporter
-
-ARG VERSION=0.50.7
-
-ENV APPLICATION airbyte-metrics-reporter
-ENV VERSION ${VERSION}
-
+FROM ${JDK_IMAGE}
 WORKDIR /app
-
-ADD bin/${APPLICATION}-${VERSION}.tar /app
-
-
-# wait for upstream dependencies to become available before starting server
-ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
+ADD airbyte-app.tar /app
+ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/airbyte-metrics-reporter"]

@@ -35,7 +35,7 @@ class WorkspaceNotificationConfigFetcherTest {
             new WorkspaceRead().email(email).notificationSettings(new NotificationSettings().sendOnConnectionUpdateActionRequired(notificationItem)));
 
     NotificationItemWithCustomerIoConfig result =
-        workspaceNotificationConfigFetcher.fetchNotificationConfig(connectionId, NotificationEvent.onBreakingChange);
+        workspaceNotificationConfigFetcher.fetchNotificationConfig(connectionId, NotificationEvent.ON_BREAKING_CHANGE);
     assertEquals(notificationItem, result.getNotificationItem());
     assertEquals(email, result.getCustomerIoEmailConfig().getTo());
   }

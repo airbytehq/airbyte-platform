@@ -14,14 +14,13 @@ ARG VERSION=0.50.7
 
 ENV APPLICATION airbyte-container-orchestrator
 ENV VERSION=${VERSION}
-ENV AIRBYTE_ENTRYPOINT "/app/${APPLICATION}-${VERSION}/bin/${APPLICATION}"
 
 WORKDIR /app
 
 COPY WellKnownTypes.json /app
 
 # Move orchestrator app
-ADD bin/${APPLICATION}-${VERSION}.tar /app
+ADD airbyte-app.tar /app
 
 # wait for upstream dependencies to become available before starting server
-ENTRYPOINT ["/bin/bash", "-c", "/app/${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
+ENTRYPOINT ["/bin/bash", "-c", "/app/airbyte-app/bin/${APPLICATION}"]

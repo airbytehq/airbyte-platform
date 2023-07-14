@@ -478,7 +478,7 @@ class CdcAcceptanceTests {
     LOGGER.info("stream: {}", stream);
 
     assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream.getSupportedSyncModes());
-    assertTrue(stream.getSourceDefinedCursor());
+    assertTrue(stream.getSourceDefinedCursor(), "missing source defined cursor");
     assertEquals(List.of(POSTGRES_DEFAULT_CDC_CURSOR), stream.getDefaultCursorField());
     assertEquals(List.of(List.of("id")), stream.getSourceDefinedPrimaryKey());
 

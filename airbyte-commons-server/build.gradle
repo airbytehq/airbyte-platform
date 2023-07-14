@@ -1,5 +1,6 @@
 plugins {
-    id "java-library"
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations.all {
@@ -43,16 +44,24 @@ dependencies {
     implementation project(':airbyte-worker-models')
     implementation project(':airbyte-notification')
 
+    implementation libs.bundles.apache
     implementation libs.slugify
     implementation libs.quartz.scheduler
     implementation libs.temporal.sdk
     implementation libs.swagger.annotations
+    implementation libs.bundles.log4j
+    implementation libs.commons.io
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
     testImplementation libs.mockito.inline
-}
 
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
+}

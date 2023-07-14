@@ -65,11 +65,11 @@ public class WorkspaceNotificationConfigFetcher {
     NotificationItem item;
 
     switch (notificationEvent) {
-      case onBreakingChange -> {
+      case ON_BREAKING_CHANGE -> {
         item = workspaceRead.getNotificationSettings().getSendOnConnectionUpdateActionRequired();
         break;
       }
-      case onNonBreakingChange -> {
+      case ON_NON_BREAKING_CHANGE -> {
         item = workspaceRead.getNotificationSettings().getSendOnConnectionUpdate();
         break;
       }

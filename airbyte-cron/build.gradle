@@ -1,8 +1,13 @@
 plugins {
-    id 'application'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
 }
 
 dependencies {
+    annotationProcessor libs.lombok
+    implementation libs.lombok
+    implementation libs.commons.io
+
     implementation 'com.auth0:java-jwt:3.19.2'
     implementation libs.bundles.kubernetes.client
     implementation libs.sentry.java
@@ -29,24 +34,20 @@ dependencies {
     implementation libs.bundles.micronaut
 }
 
-application {
-    mainClass = 'io.airbyte.cron.MicronautCronRunner'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
-}
-
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
-run {
-    // default for running on local machine.
-    env.each { entry ->
-        environment entry.getKey(), entry.getValue()
+airbyte {
+    application {
+        mainClass = 'io.airbyte.cron.MicronautCronRunner'
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+        localEnvVars = env + [
+                "AIRBYTE_ROLE"   : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION": env.VERSION
+        ] as Map<String, String>
     }
 
-    environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
-    environment 'AIRBYTE_VERSION', env.VERSION
-}
-
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
+    docker {
+        imageName = "cron"
+    }
 }

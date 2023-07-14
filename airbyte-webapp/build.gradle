@@ -1,5 +1,6 @@
 plugins {
     id "base"
+    id 'com.bmuschko.docker-remote-api'
     alias(libs.plugins.node.gradle)
 }
 
@@ -12,12 +13,12 @@ def pnpmVer = new groovy.json.JsonSlurper().parse(new File("${projectDir}/packag
 // This array should contain a path to all configs that are common to most build tasks and
 // might affect them (i.e. if any of those files change we want to rerun most tasks)
 def commonConfigs = [
-    '.env',
-    '.env.production',
-    'package.json',
-    'pnpm-lock.yaml',
-    'tsconfig.json',
-    '.prettierrc.js'
+        '.env',
+        '.env.production',
+        'package.json',
+        'pnpm-lock.yaml',
+        'tsconfig.json',
+        '.prettierrc.js'
 ]
 
 node {
@@ -27,7 +28,7 @@ node {
     distBaseUrl = "https://nodejs.org/dist"
 }
 
-task validateLockFiles {
+tasks.register("validateLockFiles") {
     description "Validate only a pnpm-lock.yaml lock file exists"
     inputs.files "pnpm-lock.yaml", "package-lock.json", "yarn.lock"
 
@@ -42,10 +43,12 @@ task validateLockFiles {
     }
 }
 
-pnpmInstall.dependsOn validateLockFiles
-// Add patches folder to inputs of pnpmInstall task, since it has pnpm-lock.yml as an output
-// thus wouldn't rerun in case a patch get changed
-pnpmInstall.inputs.dir "patches"
+tasks.named("pnpmInstall") {
+    dependsOn tasks.named("validateLockFiles")
+    // Add patches folder to inputs of pnpmInstall task, since it has pnpm-lock.yml as an output
+    // thus wouldn't rerun in case a patch get changed
+    inputs.dir "patches"
+}
 
 // fileTree to watch node_modules, but exclude the .cache dir since that might have changes on every build
 def nodeModules = fileTree('node_modules').matching {
@@ -58,8 +61,8 @@ def publicDir = fileTree('public').matching {
     exclude 'buildInfo.json'
 }
 
-task pnpmBuild(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("pnpmBuild", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     environment = ["VERSION": rootProject.ext.version]
 
@@ -80,8 +83,8 @@ task pnpmBuild(type: PnpmTask) {
     outputs.dir 'build/app'
 }
 
-task test(type: PnpmTask) {
-    dependsOn assemble
+tasks.register("test", PnpmTask) {
+    dependsOn tasks.named("assemble")
 
     args = ['run', 'test:ci']
     inputs.files commonConfigs
@@ -94,8 +97,8 @@ task test(type: PnpmTask) {
     outputs.upToDateWhen { true }
 }
 
-task e2etest(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("e2etest", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     // If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
     // we'll record the cypress session, otherwise we're not recording
@@ -112,8 +115,8 @@ task e2etest(type: PnpmTask) {
     outputs.upToDateWhen { false }
 }
 
-task cloudE2eTest(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("cloudE2eTest", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     args = ['run', 'cloud-test:stage']
 
@@ -122,8 +125,8 @@ task cloudE2eTest(type: PnpmTask) {
     outputs.upToDateWhen { false }
 }
 
-task licenseCheck(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("licenseCheck", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     args = ['run', 'license-check']
 
@@ -136,8 +139,8 @@ task licenseCheck(type: PnpmTask) {
     outputs.upToDateWhen { true }
 }
 
-task validateLinks(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("validateLinks", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     args = ['run', 'validate-links']
 
@@ -152,8 +155,8 @@ task validateLinks(type: PnpmTask) {
     }
 }
 
-task buildStorybook(type: PnpmTask) {
-    dependsOn pnpmInstall
+tasks.register("buildStorybook", PnpmTask) {
+    dependsOn tasks.named("pnpmInstall")
 
     args = ['run', 'build:storybook']
 
@@ -170,30 +173,35 @@ task buildStorybook(type: PnpmTask) {
     ]
 }
 
-task copyBuildOutput(type: Copy) {
-    dependsOn copyDocker, pnpmBuild
+tasks.register("copyBuildOutput", Copy) {
+    dependsOn tasks.named("copyDocker"), tasks.named("pnpmBuild")
 
     from "${project.projectDir}/build/app"
     into 'build/docker/bin/build'
 }
 
-task copyNginx(type: Copy) {
-    dependsOn copyDocker
+tasks.register("copyNginx", Copy) {
+    dependsOn tasks.named("copyDocker")
 
     from "${project.projectDir}/nginx"
     into "build/docker/bin/nginx"
 }
 
 // Those tasks should be run as part of the "check" task
-check.dependsOn validateLinks, licenseCheck, test
+tasks.named("check") {
+    dependsOn tasks.named("validateLinks"), tasks.named("licenseCheck"), tasks.named("test")
+}
 
-build.dependsOn buildStorybook
+
+tasks.named("build") {
+    dependsOn tasks.named("buildStorybook")
+}
 
 tasks.named("buildDockerImage") {
-    dependsOn copyDocker, copyNginx, copyBuildOutput
+    dependsOn tasks.named("copyDocker"), tasks.named("copyNginx"), tasks.named("copyBuildOutput")
 }
 
 // Include some cloud-specific tasks only in the airbyte-platform-internal environment
 if (file("${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle").exists()) {
-   apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
+    apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
 }

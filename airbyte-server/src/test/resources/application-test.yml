@@ -11,7 +11,6 @@ airbyte:
   shutdown:
     delay_ms: 0
 
-
 datasources:
   config:
     url: jdbc:h2:mem:default

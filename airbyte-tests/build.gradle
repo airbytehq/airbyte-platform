@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id "io.airbyte.gradle.jvm.lib"
 }
 
 // The java plugin automatically compiles/runs tests in the test source set (./src/test directory). Since we want acceptance tests to run
@@ -72,28 +72,39 @@ dependencies {
 
 
     automaticMigrationAcceptanceTestImplementation libs.platform.testcontainers
+
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+
+    testImplementation libs.junit.pioneer
 }
 
 // test should run using the current version of the docker compose configuration.
-task copyComposeFileForAcceptanceTests(type: Copy) {
+def taskAcceptance = tasks.register("copyComposeFileForAcceptanceTests", Copy) {
     from "${rootDir}/docker-compose.yaml"
     into "${sourceSets.acceptanceTests.output.resourcesDir}"
 }
-task copyComposeFileForMigrationAcceptanceTests(type: Copy) {
+def taskMigration = tasks.register("copyComposeFileForMigrationAcceptanceTests", Copy) {
     from "${rootDir}/docker-compose.yaml"
     into "${sourceSets.automaticMigrationAcceptanceTest.output.resourcesDir}"
 }
 
-assemble.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
-assemble.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+// this fixes an non-explicit dependency issue
+tasks.named("pmdAutomaticMigrationAcceptanceTest") {
+    dependsOn(taskMigration)
+}
 
-checkstyleAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
-pmdAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
+assemble.dependsOn(taskAcceptance)
+assemble.dependsOn(taskMigration)
 
-checkstyleAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
-pmdAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+checkstyleAcceptanceTests.dependsOn(taskAcceptance)
+pmdAcceptanceTests.dependsOn(taskAcceptance)
 
-task acceptanceTests(type: Test) {
+checkstyleAutomaticMigrationAcceptanceTest.dependsOn(taskMigration)
+pmdAutomaticMigrationAcceptanceTest.dependsOn(taskAcceptance)
+
+tasks.register("acceptanceTests", Test) {
     testClassesDirs += sourceSets.acceptanceTests.output.classesDirs
     classpath += sourceSets.acceptanceTests.runtimeClasspath
     useJUnitPlatform()
@@ -107,7 +118,7 @@ task acceptanceTests(type: Test) {
     outputs.upToDateWhen { false }
 }
 
-task automaticMigrationAcceptanceTest(type: Test) {
+tasks.register("automaticMigrationAcceptanceTest", Test) {
     testClassesDirs += sourceSets.automaticMigrationAcceptanceTest.output.classesDirs
     classpath += sourceSets.automaticMigrationAcceptanceTest.runtimeClasspath
     useJUnitPlatform()

@@ -1,8 +1,9 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    id 'application'
-    alias(libs.plugins.openapi.generator)
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
+    id "org.openapi.generator"
 }
 
 dependencies {
@@ -13,6 +14,8 @@ dependencies {
     implementation libs.bundles.datadog
     // implementation libs.bundles.temporal  uncomment this when we start using temporal to invoke connector commands
     implementation libs.sentry.java
+
+    implementation libs.guava
 
     // Micronaut dependencies
     annotationProcessor platform(libs.micronaut.bom)
@@ -37,36 +40,41 @@ dependencies {
     implementation project(':airbyte-config:init')
 
     implementation libs.airbyte.protocol
-}
 
-mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
 
-application {
-    mainClass = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+    testImplementation libs.junit.pioneer
 }
 
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
-run {
-    // default for running on local machine.
-    env.each { entry ->
-        environment entry.getKey(), entry.getValue()
+airbyte {
+    application {
+        mainClass = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+        localEnvVars = env + [
+                "AIRBYTE_ROLE"   : System.getenv("AIRBYTE_ROLE") ?: "",
+                "AIRBYTE_VERSION": env.VERSION,
+                // path to CDK virtual environment
+                "CDK_PYTHON"     : System.getenv('CDK_PYTHON') ?: "",
+                // path to CDK connector builder's main.py
+                "CDK_ENTRYPOINT" : System.getenv('CDK_ENTRYPOINT') ?: ""
+        ] as Map<String, String>
     }
-
-    environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
-    environment 'AIRBYTE_VERSION', env.VERSION
-
-    // Required for local, non-dockerized development
-    environment 'CDK_PYTHON', System.getenv('CDK_PYTHON')  // path to CDK virtual environment
-    environment 'CDK_ENTRYPOINT', System.getenv('CDK_ENTRYPOINT')  // path to CDK connector builder's main.py
+    docker {
+        imageName = "connector-atelier-server"
+    }
 }
 
-task generateOpenApiServer(type: GenerateTask) {
+def generateOpenApiServer = tasks.register("generateOpenApiServer", GenerateTask) {
     def generatedCodeDir = "$buildDir/generated/api/server"
+    def specFile = "$projectDir/src/main/openapi/openapi.yaml"
 
-    inputSpec = "$projectDir/src/main/openapi/openapi.yaml"
+    inputs.file specFile
+    inputSpec = specFile
     outputDir = generatedCodeDir
 
     generatorName = "jaxrs-spec"
@@ -94,7 +102,10 @@ task generateOpenApiServer(type: GenerateTask) {
             additionalModelTypeAnnotations: "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
     ]
 }
-compileJava.dependsOn tasks.generateOpenApiServer
+
+tasks.named("compileJava") {
+    dependsOn generateOpenApiServer
+}
 
 // Ensures that the generated models are compiled during the build step so they are available for use at runtime
 sourceSets {
@@ -108,16 +119,12 @@ sourceSets {
     }
 }
 
-task copyPythonDependencies(type: Copy) {
+def copyPythonDeps = tasks.register("copyPythonDependencies", Copy) {
     from "${project.projectDir}/requirements.txt"
-    into "build/docker/"
+    into "build/airbyte/docker/"
 }
 
-def readValueFromFile(String filePath) {
-    return new File(filePath).text.trim()
-}
-
-tasks.named("buildDockerImage") {
+tasks.named("dockerBuildImage") {
     // Set build args
     // Current CDK version used by the Connector Builder and workers running Connector Builder connectors
     String cdkVersion = new File(
@@ -125,7 +132,6 @@ tasks.named("buildDockerImage") {
             'airbyte-connector-builder-resources/CDK_VERSION').text.trim()
     buildArgs['CDK_VERSION'] = cdkVersion
 
-    dependsOn copyPythonDependencies
+    dependsOn copyPythonDeps
     dependsOn generateOpenApiServer
-    dependsOn copyGeneratedTar
 }

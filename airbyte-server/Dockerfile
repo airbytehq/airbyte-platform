@@ -11,7 +11,7 @@ ENV VERSION ${VERSION}
 WORKDIR /app
 
 # This is automatically unzipped by Docker
-ADD bin/${APPLICATION}-${VERSION}.tar /app
+ADD airbyte-app.tar /app
 
 # wait for upstream dependencies to become available before starting server
-ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
+ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
