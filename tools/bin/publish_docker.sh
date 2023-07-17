@@ -7,8 +7,8 @@ projectDir=(
   "config/init"
   "container-orchestrator"
   "cron"
-  "connector-builder-server"
   "connector-atelier-server"
+  "connector-builder-server"
   "db/db-lib"
   "metrics/reporter"
   "proxy"
@@ -29,12 +29,12 @@ POSTGRES_IMAGE=${POSTGRES_IMAGE:-postgres:13-alpine}
 for workdir in "${projectDir[@]}"
   do
     case $workdir in
-      "metrics/reporter")
-        artifactName="metrics-reporter"
-        ;;
-
       "config/init")
         artifactName="init"
+        ;;
+
+      "metrics/reporter")
+        artifactName="metrics-reporter"
         ;;
 
       "workers")
@@ -43,6 +43,20 @@ for workdir in "${projectDir[@]}"
 
       *)
         artifactName=${workdir%/*}
+        ;;
+    esac
+
+    case $workdir in
+      "connector-builder-server")
+        dockerDir="build/docker"
+        ;;
+
+      "webapp")
+        dockerDir="build/docker"
+        ;;
+
+      *)
+        dockerDir="build/airbyte/docker"
         ;;
     esac
 
@@ -57,6 +71,6 @@ for workdir in "${projectDir[@]}"
       --build-arg POSTGRES_IMAGE=$POSTGRES_IMAGE            \
       --build-arg JDK_VERSION=$JDK_VERSION                  \
       --push                                                \
-      airbyte-$workdir/build/docker
+      airbyte-$workdir/$dockerDir
     docker buildx rm $artifactName
 done
