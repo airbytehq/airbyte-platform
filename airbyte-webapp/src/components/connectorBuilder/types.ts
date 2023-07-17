@@ -547,6 +547,12 @@ const schemaIfNotDataFeed = (schema: yup.AnySchema) =>
     then: schema,
   });
 
+const schemaIfRangeFilter = (schema: yup.AnySchema) =>
+  yup.mixed().when("filter_mode", {
+    is: (val: string) => val === "range",
+    then: schema,
+  });
+
 const jsonString = yup.string().test({
   test: (val: string | undefined) => {
     if (!val) {
@@ -806,7 +812,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            end_datetime: schemaIfNotDataFeed(
+            end_datetime: schemaIfRangeFilter(
               yup.object().shape({
                 value: yup.mixed().when("type", {
                   is: (val: string) => val === "custom",
@@ -817,7 +823,7 @@ export const builderFormValidationSchema = yup.object().shape({
             ),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
-            end_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
+            end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
             stream_state_field_start: yup.string(),
             stream_state_field_end: yup.string(),
             lookback_window: yup.string(),
@@ -946,7 +952,6 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
       type: "DatetimeBasedCursor",
       ...regularFields,
       start_time_option,
-      end_time_option,
       start_datetime: startDatetime,
     };
   }
