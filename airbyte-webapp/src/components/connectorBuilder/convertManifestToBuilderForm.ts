@@ -74,7 +74,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
   builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
 
-  const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [JSON.stringify(stream), index]));
+  const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [formatJson(stream, true), index]));
   builderFormValues.streams = streams.map((stream, index) =>
     manifestStreamToBuilder(
       stream,
@@ -268,7 +268,7 @@ function manifestPartitionRouterToBuilder(
     }
     const parentStreamConfig = manifestSubstreamPartitionRouter.parent_stream_configs[0];
 
-    const matchingStreamIndex = serializedStreamToIndex[JSON.stringify(parentStreamConfig.stream)];
+    const matchingStreamIndex = serializedStreamToIndex[formatJson(parentStreamConfig.stream, true)];
     if (matchingStreamIndex === undefined) {
       throw new ManifestCompatibilityError(
         streamName,
