@@ -3,6 +3,12 @@ plugins {
     id "io.airbyte.gradle.docker"
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.jsonsmart
+    }
+}
+
 dependencies {
     annotationProcessor libs.lombok
     implementation libs.lombok
