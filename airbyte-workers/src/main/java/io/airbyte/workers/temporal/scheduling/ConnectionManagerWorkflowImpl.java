@@ -408,8 +408,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           : "Job failed after too many retries for connection " + connectionId;
       failJob(connectionUpdaterInput, failureReason);
 
+      final var attrs = new MetricAttribute[] {
+        new MetricAttribute(MetricTags.MADE_PROGRESS, String.valueOf(madeProgress))
+      };
       // Record the failure metric
-      recordMetric(new RecordMetricInput(connectionUpdaterInput, Optional.of(failureCause), OssMetricsRegistry.TEMPORAL_WORKFLOW_FAILURE, null));
+      recordMetric(new RecordMetricInput(connectionUpdaterInput, Optional.of(failureCause), OssMetricsRegistry.TEMPORAL_WORKFLOW_FAILURE, attrs));
       // Record whether we made progress
       if (madeProgress) {
         recordProgressMetric(connectionUpdaterInput, failureCause, false);

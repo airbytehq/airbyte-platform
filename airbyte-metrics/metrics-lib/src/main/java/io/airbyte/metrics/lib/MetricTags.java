@@ -32,6 +32,7 @@ public class MetricTags {
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
   public static final String JOB_ID = "job_id";
   public static final String JOB_STATUS = "job_status";
+  public static final String MADE_PROGRESS = "made_progress";
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   public static final String MAX_CONNECTOR_RELEASE_STATE = "max_connector_release_stage";
   // the release stage of the lowest release stage connector in the sync (GA > Beta > Alpha)
