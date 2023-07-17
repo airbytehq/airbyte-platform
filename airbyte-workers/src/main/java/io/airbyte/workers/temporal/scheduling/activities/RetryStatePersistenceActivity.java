@@ -27,6 +27,7 @@ public interface RetryStatePersistenceActivity {
   class HydrateInput {
 
     private Long jobId;
+    private UUID connectionId;
 
   }
 

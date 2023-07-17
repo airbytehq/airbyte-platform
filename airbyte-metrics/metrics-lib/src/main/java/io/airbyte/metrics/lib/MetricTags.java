@@ -15,6 +15,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
 public class MetricTags {
 
   public static final String ACTIVITY_NAME = "activity_name";
+  public static final String ACTIVITY_METHOD = "activity_method";
   public static final String ATTEMPT_ID = "attempt_id"; // the row id of the attempt
   public static final String ATTEMPT_NUMBER = "attempt_number"; // 0|1|2|3
   public static final String ATTEMPT_OUTCOME = "attempt_outcome"; // succeeded|failed

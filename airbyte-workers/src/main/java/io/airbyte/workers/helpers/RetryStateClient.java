@@ -51,13 +51,13 @@ public class RetryStateClient {
    * Returns a RetryManager hydrated from persistence or a fresh RetryManager if there's no persisted
    * data.
    *
-   * @param jobId — the job in question.
+   * @param jobId — the job in question. May be null if there is no job yet.
    * @return RetryManager — a hydrated RetryManager or new RetryManager if no state exists in
-   *         persistence.
+   *         persistence or null job id passed.
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
-  public RetryManager hydrateRetryState(final long jobId) throws RetryableException {
+  public RetryManager hydrateRetryState(final Long jobId) throws RetryableException {
     final var manager = RetryManager.builder()
         .completeFailureBackoffPolicy(completeFailureBackoffPolicy)
         .successiveCompleteFailureLimit(successiveCompleteFailureLimit)
@@ -65,7 +65,7 @@ public class RetryStateClient {
         .totalCompleteFailureLimit(totalCompleteFailureLimit)
         .totalPartialFailureLimit(totalPartialFailureLimit);
 
-    final var state = fetchRetryState(jobId);
+    final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
     // if there is retry state we hydrate
     // otherwise we will build with default 0 values

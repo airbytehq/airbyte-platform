@@ -4,9 +4,11 @@
 
 package io.airbyte.commons.temporal.scheduling.retries;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.jackson.Jacksonized;
 
 /**
  * Keeps track of the number and sequence of adverse effects observed, determines whether we should
@@ -22,6 +24,8 @@ import lombok.Getter;
  */
 @Getter
 @Builder
+@Jacksonized
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RetryManager {
 
   private BackoffPolicy completeFailureBackoffPolicy;

@@ -4,14 +4,18 @@
 
 package io.airbyte.commons.temporal.scheduling.retries;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import lombok.Builder;
+import lombok.extern.jackson.Jacksonized;
 
 /**
  * Calculates how much we should wait based off the provided configuration. Uses exponential backoff
  * clamped to a min/max interval.
  */
 @Builder
+@Jacksonized
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BackoffPolicy {
 
   @Builder.Default

@@ -17,6 +17,7 @@ import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowInternalState;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.temporal.scheduling.state.listener.NoopStateListener;
@@ -72,6 +73,11 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.FailureCause;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.RecordMetricInput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateOutput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistOutput;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueInput;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput;
@@ -109,10 +115,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final String CHECK_WITH_CHILD_WORKFLOW_TAG = "check_with_child_workflow";
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
   private static final String CHECK_RUN_PROGRESS_TAG = "check_run_progress";
+  private static final String NEW_RETRIES_TAG = "new_retries";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
   private static final int CHECK_RUN_PROGRESS_VERSION = 1;
+  private static final int NEW_RETRIES_VERSION = 1;
 
   private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -146,12 +154,16 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private FeatureFlagFetchActivity featureFlagFetchActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private CheckRunProgressActivity checkRunProgressActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private RetryStatePersistenceActivity retryStatePersistenceActivity;
 
   private CancellationScope cancellableSyncWorkflow;
 
   private UUID connectionId;
 
   private Duration workflowDelay;
+
+  private RetryManager retryManager;
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
@@ -226,10 +238,24 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       // actively running, leaving that job in an orphaned and non-terminal state.
       ensureCleanJobState(connectionUpdaterInput);
 
-      final Duration timeToWait = getTimeToWait(connectionUpdaterInput.getConnectionId());
+      hydrateIdsFromPreviousRun(connectionUpdaterInput, workflowInternalState);
 
-      Workflow.await(timeToWait,
-          () -> skipScheduling() || connectionUpdaterInput.isFromFailure());
+      // setup retry manager before scheduling to resolve schedule with backoff
+      retryManager = hydrateRetryManager();
+
+      final Duration timeTilScheduledRun = getTimeTilScheduledRun(connectionUpdaterInput.getConnectionId());
+
+      final Duration timeToWait;
+      if (connectionUpdaterInput.isFromFailure()) {
+        // note this can fail the job if the backoff is longer than scheduled time to wait
+        timeToWait = resolveBackoff(connectionUpdaterInput, timeTilScheduledRun);
+      } else {
+        timeToWait = timeTilScheduledRun;
+      }
+
+      if (!timeToWait.isZero()) {
+        Workflow.await(timeToWait, this::shouldInterruptWaiting);
+      }
 
       workflowState.setDoneWaiting(true);
 
@@ -242,6 +268,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         // Act as a return
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
       }
+
+      // re-hydrate retry manager on run-start because FFs may have changed
+      retryManager = hydrateRetryManager();
 
       // This var is unused since not feature flags are currently required in this workflow
       // We keep the activity around to get any feature flags that might be needed in the future
@@ -359,7 +388,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     // This is outside the retry if/else block because we will pass it to our retry manager regardless
     // of retry state.
     // This will be added in a future PR as we develop this feature.
-    final boolean madeProgress = checkRunProgress(connectionUpdaterInput);
+    final boolean madeProgress = checkRunProgress();
+    accumulateFailureAndPersist(madeProgress);
 
     final FailureType failureType =
         standardSyncOutput != null ? standardSyncOutput.getFailures().isEmpty() ? null : standardSyncOutput.getFailures().get(0).getFailureType()
@@ -376,16 +406,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     } else {
       final String failureReason = failureType == FailureType.CONFIG_ERROR ? "Connection Check Failed " + connectionId
           : "Job failed after too many retries for connection " + connectionId;
-      runMandatoryActivity(jobCreationAndStatusUpdateActivity::jobFailure, new JobFailureInput(connectionUpdaterInput.getJobId(),
-          connectionUpdaterInput.getAttemptNumber(), connectionUpdaterInput.getConnectionId(), failureReason));
-
-      final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
-      autoDisableConnectionActivityInput.setConnectionId(connectionId);
-      final AutoDisableConnectionOutput output = runMandatoryActivityWithOutput(
-          autoDisableConnectionActivity::autoDisableFailingConnection, autoDisableConnectionActivityInput);
-      if (output.isDisabled()) {
-        log.info("Auto-disabled for constantly failing for Connection {}", connectionId);
-      }
+      failJob(connectionUpdaterInput, failureReason);
 
       // Record the failure metric
       recordMetric(new RecordMetricInput(connectionUpdaterInput, Optional.of(failureCause), OssMetricsRegistry.TEMPORAL_WORKFLOW_FAILURE, null));
@@ -398,6 +419,25 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
+  private void failJob(final ConnectionUpdaterInput input, final String failureReason) {
+    runMandatoryActivity(
+        jobCreationAndStatusUpdateActivity::jobFailure,
+        new JobFailureInput(
+            input.getJobId(),
+            input.getAttemptNumber(),
+            input.getConnectionId(),
+            failureReason));
+
+    final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
+    autoDisableConnectionActivityInput.setConnectionId(connectionId);
+    final AutoDisableConnectionOutput output = runMandatoryActivityWithOutput(
+        autoDisableConnectionActivity::autoDisableFailingConnection,
+        autoDisableConnectionActivityInput);
+    if (output.isDisabled()) {
+      log.info("Auto-disabled for constantly failing for Connection {}", connectionId);
+    }
+  }
+
   private void recordProgressMetric(final ConnectionUpdaterInput input, final FailureCause cause, final boolean willRetry) {
     // job id and other attrs get populated by the wrapping activity
     final var attrs = new MetricAttribute[] {
@@ -405,24 +445,22 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       new MetricAttribute(MetricTags.ATTEMPT_NUMBER, String.valueOf(workflowInternalState.getAttemptNumber()))
     };
 
-    // we don't use `runMandatoryActivity` to prevent an infinite loop (reportFailure ->
-    // runMandatoryActivity -> reportFailure...)
-    try {
-      recordMetricActivity.recordWorkflowCountMetric(
-          new RecordMetricInput(input, Optional.ofNullable(cause), OssMetricsRegistry.REPLICATION_MADE_PROGRESS, attrs));
-    } catch (final Exception e) {
-      // let's not blow up the workflow if this fails
-      log.error(String.format(
-          "FAILED to report progress metric for connection: %s — attempt: %d",
-          input.getConnectionId(),
-          workflowInternalState.getAttemptNumber()));
-    }
+    tryRecordCountMetric(
+        new RecordMetricInput(
+            input,
+            Optional.ofNullable(cause),
+            OssMetricsRegistry.REPLICATION_MADE_PROGRESS,
+            attrs));
   }
 
   private boolean isWithinRetryLimit(final int attemptNumber) {
-    final int maxAttempt = configFetchActivity.getMaxAttempt().getMaxAttempt();
+    if (useAttemptCountRetries()) {
+      final int maxAttempt = configFetchActivity.getMaxAttempt().getMaxAttempt();
 
-    return maxAttempt > attemptNumber;
+      return maxAttempt > attemptNumber;
+    }
+
+    return retryManager.shouldRetry();
   }
 
   private boolean shouldCheckRunProgress() {
@@ -430,36 +468,24 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return version >= CHECK_RUN_PROGRESS_VERSION;
   }
 
-  private boolean checkRunProgress(final ConnectionUpdaterInput input) {
+  private boolean checkRunProgress() {
     if (!shouldCheckRunProgress()) {
       return false;
     }
 
     // we don't use `runMandatoryActivity` to prevent an infinite loop (reportFailure ->
     // runMandatoryActivity -> reportFailure...)
-    try {
-      final CheckRunProgressActivity.Output progressCheck =
-          checkRunProgressActivity.checkProgress(
-              new CheckRunProgressActivity.Input(
-                  workflowInternalState.getJobId(),
-                  workflowInternalState.getAttemptNumber(),
-                  input.getConnectionId()));
+    final var result = runActivityWithFallback(
+        checkRunProgressActivity::checkProgress,
+        new CheckRunProgressActivity.Input(
+            workflowInternalState.getJobId(),
+            workflowInternalState.getAttemptNumber(),
+            connectionId),
+        new CheckRunProgressActivity.Output(false),
+        CheckRunProgressActivity.class.getName(),
+        "checkProgress");
 
-      return progressCheck.madeProgress();
-    } catch (final Exception e) {
-      final var attrs = new MetricAttribute[] {
-        new MetricAttribute(MetricTags.ACTIVITY_NAME, CheckRunProgressActivity.class.getName())
-      };
-      // allow the workflow to continue if we fail to check progress
-      recordMetricActivity.recordWorkflowCountMetric(
-          new RecordMetricInput(input, Optional.empty(), OssMetricsRegistry.ACTIVITY_FAILURE, attrs));
-      log.error(String.format(
-          "FAILED check progress activity for connection: %s — attempt: %d",
-          input.getConnectionId(),
-          workflowInternalState.getAttemptNumber()));
-
-      return false;
-    }
+    return result.madeProgress();
   }
 
   /**
@@ -698,7 +724,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * will: - restart for an update - Update the connection status and terminate the workflow for a
    * delete
    */
-  private Boolean skipScheduling() {
+  private Boolean shouldInterruptWaiting() {
     return workflowState.isSkipScheduling() || workflowState.isDeleted() || workflowState.isUpdated();
   }
 
@@ -789,13 +815,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   /**
    * Calculate the duration to wait so the workflow adheres to its schedule. This lets us 'schedule'
    * the next run.
-   *
+   * <p>
    * This is calculated by {@link ConfigFetchActivity#getTimeToWait(ScheduleRetrieverInput)} and
    * depends on the last successful run and the schedule.
-   *
+   * <p>
    * Wait time is infinite If the workflow is manual or disabled since we never want to schedule this.
    */
-  private Duration getTimeToWait(final UUID connectionId) {
+  private Duration getTimeTilScheduledRun(final UUID connectionId) {
     // Scheduling
     final ScheduleRetrieverInput scheduleRetrieverInput = new ScheduleRetrieverInput(connectionId);
 
@@ -816,6 +842,17 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private void recordMetric(final RecordMetricInput recordMetricInput) {
     runMandatoryActivity(recordMetricActivity::recordWorkflowCountMetric, recordMetricInput);
+  }
+
+  /**
+   * Unlike `recordMetric` above, we won't fail the attempt if this metric recording fails.
+   */
+  private void tryRecordCountMetric(final RecordMetricInput recordMetricInput) {
+    try {
+      recordMetricActivity.recordWorkflowCountMetric(recordMetricInput);
+    } catch (final Exception e) {
+      logActivityFailure(recordMetricActivity.getClass().getName(), "recordWorkflowCountMetric");
+    }
   }
 
   /**
@@ -1076,6 +1113,131 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void setConnectionId(final ConnectionUpdaterInput connectionUpdaterInput) {
     connectionId = Objects.requireNonNull(connectionUpdaterInput.getConnectionId());
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
+  }
+
+  private boolean isBeforeNewRetriesVersion() {
+    final int version = Workflow.getVersion(NEW_RETRIES_TAG, Workflow.DEFAULT_VERSION, NEW_RETRIES_VERSION);
+    return version < NEW_RETRIES_VERSION;
+  }
+
+  private boolean useAttemptCountRetries() {
+    // the manager can be null if
+    // - the activity failed unexpectedly
+    // - we haven't enabled the rollout flag yet
+    // in which case we fall back to simple attempt count retries (attempt count < 3)
+    if (retryManager == null) {
+      return true;
+    }
+
+    return isBeforeNewRetriesVersion();
+  }
+
+  private Duration resolveBackoff(final ConnectionUpdaterInput input, final Duration timeTilScheduledRun) {
+    if (useAttemptCountRetries()) {
+      return Duration.ZERO;
+    }
+
+    final Duration backoff = retryManager.getBackoff();
+
+    // Backoff goes beyond next scheduled run time, so we fail the attempt and let the connection resume
+    // with the next job.
+    if (backoff.compareTo(timeTilScheduledRun) >= 0) {
+      failJob(input, "Retry backoff longer than time til next schedule run.");
+      resetNewConnectionInput(input);
+      prepareForNextRunAndContinueAsNew(input);
+      return Duration.ZERO; // unreachable
+    }
+
+    return backoff;
+  }
+
+  private RetryManager hydrateRetryManager() {
+    if (isBeforeNewRetriesVersion()) {
+      return null;
+    }
+
+    final var result = runActivityWithFallback(
+        retryStatePersistenceActivity::hydrateRetryState,
+        new HydrateInput(workflowInternalState.getJobId(), connectionId),
+        new HydrateOutput(null),
+        RetryStatePersistenceActivity.class.getName(),
+        "hydrateRetryState");
+
+    return result.getManager();
+  }
+
+  private void accumulateFailureAndPersist(final boolean madeProgress) {
+    if (useAttemptCountRetries()) {
+      return;
+    }
+
+    retryManager.incrementFailure(madeProgress);
+
+    runActivityWithFallback(
+        retryStatePersistenceActivity::persistRetryState,
+        new PersistInput(workflowInternalState.getJobId(), connectionId, retryManager),
+        new PersistOutput(false),
+        RetryStatePersistenceActivity.class.getName(),
+        "persistRetryState");
+  }
+
+  private void logActivityFailure(final String className, final String methodName) {
+    log.error(String.format(
+        "FAILED %s.%s for connection id: %s, job id: %d, attempt: %d",
+        className,
+        methodName,
+        connectionId,
+        workflowInternalState.getJobId(),
+        workflowInternalState.getAttemptNumber()));
+  }
+
+  private void recordActivityFailure(final String className, final String methodName) {
+    final var attrs = new MetricAttribute[] {
+      new MetricAttribute(MetricTags.ACTIVITY_NAME, className),
+      new MetricAttribute(MetricTags.ACTIVITY_METHOD, methodName),
+    };
+    final var inputCtx = ConnectionUpdaterInput.builder()
+        .connectionId(connectionId)
+        .jobId(workflowInternalState.getJobId())
+        .build();
+
+    logActivityFailure(className, methodName);
+    tryRecordCountMetric(
+        new RecordMetricInput(
+            inputCtx,
+            Optional.empty(),
+            OssMetricsRegistry.ACTIVITY_FAILURE,
+            attrs));
+  }
+
+  private void hydrateIdsFromPreviousRun(final ConnectionUpdaterInput input, final WorkflowInternalState state) {
+    // connection updater input attempt number starts at 1 instead of 0
+    // TODO: this check can be removed once that is fixed
+    if (input.getAttemptNumber() != null) {
+      state.setAttemptNumber(input.getAttemptNumber() - 1);
+    }
+
+    state.setJobId(input.getJobId());
+  }
+
+  /**
+   * When you want to run an activity with a fallback value instead of failing the run.
+   */
+  private <T, U> U runActivityWithFallback(final Function<T, U> activityMethod,
+                                           final T input,
+                                           final U defaultVal,
+                                           final String className,
+                                           final String methodName) {
+    var result = defaultVal;
+
+    try {
+      result = activityMethod.apply(input);
+    } catch (final Exception e) {
+      log.error(e.getMessage());
+      recordActivityFailure(className, methodName);
+    }
+
+    return result;
   }
 
 }

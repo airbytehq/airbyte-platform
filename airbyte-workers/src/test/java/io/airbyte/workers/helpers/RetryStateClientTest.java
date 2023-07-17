@@ -99,6 +99,24 @@ class RetryStateClientTest {
     assertEquals(0, manager.getSuccessivePartialFailures());
   }
 
+  @Test
+  void initializesFailureCountsFreshWhenJobIdNull() {
+    final var client = new RetryStateClient(
+        mJobRetryStatesApi,
+        Fixtures.backoff().build(),
+        Fixtures.successiveCompleteFailureLimit,
+        Fixtures.totalCompleteFailureLimit,
+        Fixtures.successivePartialFailureLimit,
+        Fixtures.totalPartialFailureLimit);
+
+    final var manager = client.hydrateRetryState(null);
+
+    assertEquals(0, manager.getTotalCompleteFailures());
+    assertEquals(0, manager.getTotalPartialFailures());
+    assertEquals(0, manager.getSuccessiveCompleteFailures());
+    assertEquals(0, manager.getSuccessivePartialFailures());
+  }
+
   static class Fixtures {
 
     static long jobId = ThreadLocalRandom.current().nextLong();

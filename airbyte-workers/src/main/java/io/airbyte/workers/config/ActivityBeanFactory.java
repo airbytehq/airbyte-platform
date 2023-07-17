@@ -18,6 +18,7 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
 import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
@@ -69,7 +70,8 @@ public class ActivityBeanFactory {
                                                   final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
                                                   final SubmitCheckConnectionActivity submitCheckConnectionActivity,
-                                                  final CheckRunProgressActivity checkRunProgressActivity) {
+                                                  final CheckRunProgressActivity checkRunProgressActivity,
+                                                  final RetryStatePersistenceActivity retryStatePersistenceActivity) {
     return List.of(generateInputActivity,
         jobCreationAndStatusUpdateActivity,
         configFetchActivity,
@@ -81,7 +83,8 @@ public class ActivityBeanFactory {
         routeToTaskQueueActivity,
         featureFlagFetchActivity,
         submitCheckConnectionActivity,
-        checkRunProgressActivity);
+        checkRunProgressActivity,
+        retryStatePersistenceActivity);
   }
 
   @Singleton

@@ -71,6 +71,8 @@ object CheckReplicationProgress : Temporary<Boolean>(key = "check-replication-pr
 
 object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
 
+object UseNewRetries : Temporary<Boolean>(key = "use-new-retries", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

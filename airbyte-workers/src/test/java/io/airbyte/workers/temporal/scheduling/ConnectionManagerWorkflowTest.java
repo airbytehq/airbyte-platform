@@ -15,6 +15,8 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput.ConnectionUpdaterInputBuilder;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
+import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener;
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent;
@@ -54,6 +56,11 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateOutput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput;
+import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistOutput;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
@@ -105,6 +112,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -150,6 +158,8 @@ class ConnectionManagerWorkflowTest {
       mock(FeatureFlagFetchActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final CheckRunProgressActivity mCheckRunProgressActivity =
       mock(CheckRunProgressActivity.class, Mockito.withSettings().withoutAnnotations());
+  private static final RetryStatePersistenceActivity mRetryStatePersistenceActivity =
+      mock(RetryStatePersistenceActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final String EVENT = "event = ";
   private static final String FAILED_CHECK_MESSAGE = "nope";
 
@@ -182,6 +192,7 @@ class ConnectionManagerWorkflowTest {
     Mockito.reset(mRouteToSyncTaskQueueActivity);
     Mockito.reset(mFeatureFlagFetchActivity);
     Mockito.reset(mCheckRunProgressActivity);
+    Mockito.reset(mRetryStatePersistenceActivity);
 
     // default is to wait "forever"
     when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
@@ -235,7 +246,12 @@ class ConnectionManagerWorkflowTest {
             CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey(), true)));
 
     when(mCheckRunProgressActivity.checkProgress(Mockito.any()))
-        .thenReturn(new CheckRunProgressActivity.Output(false));
+        .thenReturn(new CheckRunProgressActivity.Output(false)); // false == complete failure
+    final var manager = RetryManager.builder().totalCompleteFailureLimit(1).build(); // just run once
+    when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+        .thenReturn(new HydrateOutput(manager));
+    when(mRetryStatePersistenceActivity.persistRetryState(Mockito.any()))
+        .thenReturn(new PersistOutput(true));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))
@@ -312,7 +328,6 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
           .thenReturn(new ScheduleRetrieverOutput(SCHEDULE_WAIT));
-      when(mConfigFetchActivity.getMaxAttempt()).thenReturn(new GetMaxAttemptOutput(1));
 
       final UUID testId = UUID.randomUUID();
       final TestStateListener testStateListener = new TestStateListener();
@@ -357,7 +372,6 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
           .thenReturn(new ScheduleRetrieverOutput(SCHEDULE_WAIT));
-      when(mConfigFetchActivity.getMaxAttempt()).thenReturn(new GetMaxAttemptOutput(1));
 
       final UUID testId = UUID.randomUUID();
       final TestStateListener testStateListener = new TestStateListener();
@@ -992,6 +1006,7 @@ class ConnectionManagerWorkflowTest {
 
       workflow.submitManualSync();
       Thread.sleep(500); // any time after no-waiting manual run
+
       Mockito.verifyNoInteractions(mAutoDisableConnectionActivity);
     }
 
@@ -1445,7 +1460,6 @@ class ConnectionManagerWorkflowTest {
       mockSetup.run();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
           Duration.ZERO));
-      when(mConfigFetchActivity.getMaxAttempt()).thenReturn(new GetMaxAttemptOutput(1));
 
       final UUID testId = UUID.randomUUID();
       TestStateListener.reset();
@@ -1543,9 +1557,114 @@ class ConnectionManagerWorkflowTest {
       Assertions.assertThat(captor.getValue().getAttemptNo()).isEqualTo(attemptNumber);
     }
 
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("We hydrate, persist and use retry manager.")
+    @MethodSource("coreFailureTypesMatrix")
+    void hydratePersistRetryManagerFlow(final Class<? extends SyncWorkflow> failureCase) throws Exception {
+      final var connectionId = UUID.randomUUID();
+      final var jobId = 32198714L;
+      final var input = testInputBuilder()
+          .connectionId(connectionId)
+          .jobId(null)
+          .build();
+
+      final var retryLimit = 2;
+
+      final var manager1 = RetryManager.builder()
+          .totalPartialFailureLimit(retryLimit)
+          .build();
+      final var manager2 = RetryManager.builder()
+          .totalPartialFailureLimit(retryLimit)
+          .successivePartialFailures(1)
+          .totalPartialFailures(1)
+          .build();
+      final var manager3 = RetryManager.builder()
+          .totalPartialFailureLimit(retryLimit)
+          .build();
+
+      when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
+          .thenReturn(new JobCreationOutput(jobId));
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(manager1)) // run 1: pre scheduling
+          .thenReturn(new HydrateOutput(manager1)) // run 1: pre run
+          .thenReturn(new HydrateOutput(manager2)) // run 2: pre scheduling
+          .thenReturn(new HydrateOutput(manager2)) // run 2: pre run
+          .thenReturn(new HydrateOutput(manager3)); // run 3: pre run
+      when(mCheckRunProgressActivity.checkProgress(Mockito.any()))
+          .thenReturn(new CheckRunProgressActivity.Output(true)); // true to hit partial failure limit
+
+      setupFailureCase(failureCase, input);
+
+      final var hydrateCaptor = ArgumentCaptor.forClass(HydrateInput.class);
+      final var persistCaptor = ArgumentCaptor.forClass(PersistInput.class);
+      Mockito.verify(mRetryStatePersistenceActivity, Mockito.times(2 * retryLimit + 1)).hydrateRetryState(hydrateCaptor.capture());
+      Mockito.verify(mCheckRunProgressActivity, Mockito.times(retryLimit)).checkProgress(Mockito.any());
+      Mockito.verify(mRetryStatePersistenceActivity, Mockito.times(retryLimit)).persistRetryState(persistCaptor.capture());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(retryLimit)).createNewAttemptNumber(Mockito.any());
+
+      // run 1: hydrate pre scheduling
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).getJobId()).isEqualTo(null);
+      // run 1: hydrate pre run
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).getJobId()).isEqualTo(null);
+      // run 1: persist
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).getJobId()).isEqualTo(jobId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).getManager().getSuccessivePartialFailures()).isEqualTo(1);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).getManager().getTotalPartialFailures()).isEqualTo(1);
+
+      // run 2: hydrate pre scheduling
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).getJobId()).isEqualTo(jobId);
+      // run 2: hydrate pre run
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).getJobId()).isEqualTo(jobId);
+      // run 2: persist
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).getJobId()).isEqualTo(jobId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).getManager().getSuccessivePartialFailures()).isEqualTo(2);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).getManager().getTotalPartialFailures()).isEqualTo(2);
+      // run 3: hydrate pre scheduling
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).getConnectionId()).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).getJobId()).isEqualTo(null);
+    }
+
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("We use attempt-based retries when retry manager not present.")
+    @MethodSource("coreFailureTypesMatrix")
+    void usesAttemptBasedRetriesIfRetryManagerUnset(final Class<? extends SyncWorkflow> failureCase) throws Exception {
+      final var connectionId = UUID.randomUUID();
+      final var jobId = 32198714L;
+      final var input = testInputBuilder()
+          .connectionId(connectionId)
+          .jobId(null)
+          .build();
+
+      final var retryLimit = 1;
+
+      // attempt-based retry configuration
+      when(mConfigFetchActivity.getMaxAttempt()).thenReturn(new GetMaxAttemptOutput(retryLimit));
+
+      when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
+          .thenReturn(new JobCreationOutput(jobId));
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(null));
+      when(mCheckRunProgressActivity.checkProgress(Mockito.any()))
+          .thenReturn(new CheckRunProgressActivity.Output(true));
+
+      setupFailureCase(failureCase, input);
+
+      Mockito.verify(mRetryStatePersistenceActivity, Mockito.never()).persistRetryState(Mockito.any());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(retryLimit)).createNewAttemptNumber(Mockito.any());
+    }
+
     // Since we can't directly unit test the failure path, we enumerate the core failure cases as a
-    // proxy.
-    // This is deliberately incomplete as the permutations of failure cases is large.
+    // proxy. This is deliberately incomplete as the permutations of failure cases is large.
     public static Stream<Arguments> coreFailureTypesMatrix() {
       return Stream.of(
           Arguments.of(NormalizationFailureSyncWorkflow.class),
@@ -1553,6 +1672,179 @@ class ConnectionManagerWorkflowTest {
           Arguments.of(ReplicateFailureSyncWorkflow.class),
           Arguments.of(PersistFailureSyncWorkflow.class),
           Arguments.of(SyncWorkflowFailingOutputWorkflow.class));
+    }
+
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Uses scheduling resolution if no retry manager.")
+    @MethodSource("noBackoffSchedulingMatrix")
+    void useSchedulingIfNoRetryManager(final boolean fromFailure, final Duration timeToWait) throws Exception {
+      final var timeTilNextScheduledRun = Duration.ofHours(1);
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(new ScheduleRetrieverOutput(timeTilNextScheduledRun));
+
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(null));
+
+      final TestStateListener testStateListener = new TestStateListener();
+      final var testId = UUID.randomUUID();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+
+      final var input = testInputBuilder()
+          .fromFailure(fromFailure)
+          .workflowState(workflowState)
+          .build();
+
+      setupSuccessfulWorkflow(input);
+
+      testEnv.sleep(timeToWait.plus(Duration.ofSeconds(5)));
+
+      final Queue<ChangedStateEvent> events = testStateListener.events(testId);
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSizeGreaterThan(0);
+    }
+
+    public static Stream<Arguments> noBackoffSchedulingMatrix() {
+      return Stream.of(
+          Arguments.of(true, Duration.ZERO),
+          Arguments.of(false, Duration.ofHours(1)));
+    }
+
+    @Test
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Uses scheduling if not from failure and retry manager present.")
+    void useSchedulingIfNotFromFailure() throws Exception {
+      final var backoff = Duration.ofMinutes(1);
+      final var policy = BackoffPolicy.builder()
+          .minInterval(backoff)
+          .maxInterval(backoff)
+          .build();
+      final var manager = RetryManager.builder()
+          .successiveCompleteFailures(1)
+          .completeFailureBackoffPolicy(policy)
+          .build();
+
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(manager));
+
+      final var timeTilNextScheduledRun = Duration.ofHours(1);
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(new ScheduleRetrieverOutput(timeTilNextScheduledRun));
+
+      final TestStateListener testStateListener = new TestStateListener();
+      final var testId = UUID.randomUUID();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+
+      final var input = testInputBuilder()
+          .fromFailure(false)
+          .workflowState(workflowState)
+          .build();
+
+      setupSuccessfulWorkflow(input);
+
+      final Queue<ChangedStateEvent> events = testStateListener.events(testId);
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSize(0);
+
+      testEnv.sleep(timeTilNextScheduledRun.plus(Duration.ofSeconds(5)));
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSizeGreaterThan(0);
+    }
+
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Uses backoff policy if present and from failure.")
+    @ValueSource(longs = {1, 5, 20, 30, 12421, 21})
+    void usesBackoffPolicyIfPresent(final long minutes) throws Exception {
+      final var backoff = Duration.ofMinutes(minutes);
+      final var policy = BackoffPolicy.builder()
+          .minInterval(backoff)
+          .maxInterval(backoff)
+          .build();
+      final var manager = RetryManager.builder()
+          .successiveCompleteFailures(1)
+          .completeFailureBackoffPolicy(policy)
+          .build();
+
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(manager));
+
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(new ScheduleRetrieverOutput(Duration.ofDays(1)));
+
+      final TestStateListener testStateListener = new TestStateListener();
+      final var testId = UUID.randomUUID();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+
+      final var input = testInputBuilder()
+          .fromFailure(true)
+          .workflowState(workflowState)
+          .build();
+
+      setupSuccessfulWorkflow(input);
+
+      final Queue<ChangedStateEvent> events = testStateListener.events(testId);
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSize(0);
+
+      testEnv.sleep(backoff.plus(Duration.ofSeconds(5)));
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSizeGreaterThan(0);
+    }
+
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Fails job if backoff longer than time til next scheduled run.")
+    @MethodSource("backoffJobFailureMatrix")
+    void failsJobIfBackoffTooLong(final long backoffMinutes, final int jobFailureCount) throws Exception {
+      final var backoff = Duration.ofMinutes(backoffMinutes);
+      final var policy = BackoffPolicy.builder()
+          .minInterval(backoff)
+          .maxInterval(backoff)
+          .build();
+      final var manager = RetryManager.builder()
+          .successiveCompleteFailures(1)
+          .completeFailureBackoffPolicy(policy)
+          .build();
+
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(manager));
+
+      final var timeTilNextScheduledRun = Duration.ofMinutes(60);
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(new ScheduleRetrieverOutput(timeTilNextScheduledRun));
+
+      final var input = testInputBuilder().fromFailure(true).build();
+
+      setupSuccessfulWorkflow(input);
+      testEnv.sleep(Duration.ofMinutes(1));
+
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(jobFailureCount)).jobFailure(Mockito.any());
+    }
+
+    private static Stream<Arguments> backoffJobFailureMatrix() {
+      return Stream.of(
+          Arguments.of(1, 0),
+          Arguments.of(10, 0),
+          Arguments.of(55, 0),
+          Arguments.of(60, 1),
+          Arguments.of(123, 1),
+          Arguments.of(214, 1),
+          Arguments.of(7, 0));
     }
 
   }
@@ -1636,10 +1928,9 @@ class ConnectionManagerWorkflowTest {
 
     final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
-    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity,
-        mGenerateInputActivityImpl,
-        mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity,
-        mWorkflowConfigActivity, mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity);
+    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity, mGenerateInputActivityImpl,
+        mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
+        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity);
 
     client = testEnv.getWorkflowClient();
     testEnv.start();
@@ -1736,16 +2027,25 @@ class ConnectionManagerWorkflowTest {
 
     final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
-    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity,
-        mGenerateInputActivityImpl,
-        mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity,
-        mWorkflowConfigActivity, mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity);
+    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity, mGenerateInputActivityImpl,
+        mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
+        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity);
 
     client = testEnv.getWorkflowClient();
     workflow = client.newWorkflowStub(ConnectionManagerWorkflow.class,
         WorkflowOptions.newBuilder().setTaskQueue(TemporalJobType.CONNECTION_UPDATER.name()).build());
 
-    when(mConfigFetchActivity.getMaxAttempt()).thenReturn(new GetMaxAttemptOutput(1));
+  }
+
+  private void setupSuccessfulWorkflow(final ConnectionUpdaterInput input) throws Exception {
+    returnTrueForLastJobOrAttemptFailure();
+    final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
+    syncWorker.registerWorkflowImplementationTypes(EmptySyncWorkflow.class);
+    final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+    checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
+    testEnv.start();
+
+    startWorkflowAndWaitUntilReady(workflow, input);
   }
 
 }
