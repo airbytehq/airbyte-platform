@@ -1596,10 +1596,16 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new CheckRunProgressActivity.Output(true)); // true to hit partial failure limit
 
       setupFailureCase(failureCase, input);
+      // Wait a little extra for resiliency
+      Thread.sleep(500);
 
       final var hydrateCaptor = ArgumentCaptor.forClass(HydrateInput.class);
       final var persistCaptor = ArgumentCaptor.forClass(PersistInput.class);
-      Mockito.verify(mRetryStatePersistenceActivity, Mockito.times(2 * retryLimit + 1)).hydrateRetryState(hydrateCaptor.capture());
+      // If the test timeouts expire before we wrap around to the backoff/scheduling step it will run
+      // exactly twice per attempt.
+      // Otherwise, there's 1 extra hydration to resolve backoff.
+      Mockito.verify(mRetryStatePersistenceActivity, Mockito.atLeast(2 * retryLimit)).hydrateRetryState(hydrateCaptor.capture());
+      Mockito.verify(mRetryStatePersistenceActivity, Mockito.atMost(2 * retryLimit + 1)).hydrateRetryState(Mockito.any());
       Mockito.verify(mCheckRunProgressActivity, Mockito.times(retryLimit)).checkProgress(Mockito.any());
       Mockito.verify(mRetryStatePersistenceActivity, Mockito.times(retryLimit)).persistRetryState(persistCaptor.capture());
       Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(retryLimit)).createNewAttemptNumber(Mockito.any());
