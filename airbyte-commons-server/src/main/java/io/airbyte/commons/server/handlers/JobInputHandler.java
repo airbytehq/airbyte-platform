@@ -8,6 +8,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
@@ -23,6 +24,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
@@ -30,6 +32,9 @@ import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.StandardCheckConnectionInput;
+import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
@@ -56,9 +61,11 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
+import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -223,6 +230,71 @@ public class JobInputHandler {
     }
   }
 
+  /**
+   * Generate a check job input.
+   */
+  public Object getCheckJobInput(final CheckInput input) {
+    try {
+      final Long jobId = input.getJobId();
+      final Integer attemptNumber = input.getAttemptNumber();
+
+      final Job job = jobPersistence.getJob(jobId);
+      final JobConfig jobConfig = job.getConfig();
+      final JobSyncConfig jobSyncConfig = getJobSyncConfig(jobId, jobConfig);
+
+      final UUID connectionId = UUID.fromString(job.getScope());
+      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
+
+      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+      final StandardDestinationDefinition destinationDefinition =
+          configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(), destination.getDestinationId());
+
+      final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
+      final StandardSourceDefinition sourceDefinition =
+          configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
+
+      final JsonNode sourceConfiguration = getSourceConfiguration(source);
+      final JsonNode destinationConfiguration = getDestinationConfiguration(destination);
+
+      final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
+          jobId,
+          attemptNumber,
+          jobSyncConfig,
+          sourceVersion,
+          sourceConfiguration);
+
+      final IntegrationLauncherConfig destinationLauncherConfig =
+          getDestinationIntegrationLauncherConfig(
+              jobId,
+              attemptNumber,
+              jobSyncConfig,
+              destinationVersion,
+              destinationConfiguration,
+              Collections.emptyMap());
+
+      final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
+          .withActorType(ActorType.SOURCE)
+          .withActorId(source.getSourceId())
+          .withConnectionConfiguration(sourceConfiguration);
+
+      final StandardCheckConnectionInput destinationCheckConnectionInput = new StandardCheckConnectionInput()
+          .withActorType(ActorType.DESTINATION)
+          .withActorId(destination.getDestinationId())
+          .withConnectionConfiguration(destinationConfiguration);
+      return new SyncJobCheckConnectionInputs(
+          sourceLauncherConfig,
+          destinationLauncherConfig,
+          sourceCheckConnectionInput,
+          destinationCheckConnectionInput);
+    } catch (final Exception e) {
+      throw new RetryableException(e);
+    }
+  }
+
   private void saveAttemptSyncConfig(final long jobId, final int attemptNumber, final UUID connectionId, final AttemptSyncConfig attemptSyncConfig) {
 
     attemptHandler.saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
@@ -336,6 +408,22 @@ public class JobInputHandler {
         .withNormalizationIntegrationType(normalizationIntegrationType)
         .withAllowedHosts(configReplacer.getAllowedHosts(destinationVersion.getAllowedHosts(), destinationConfiguration))
         .withAdditionalEnvironmentVariables(additionalEnviornmentVariables);
+  }
+
+  private JsonNode getSourceConfiguration(final SourceConnection source) throws IOException {
+    return configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
+        source.getSourceDefinitionId(),
+        source.getSourceId(),
+        source.getWorkspaceId(),
+        source.getConfiguration()), source.getSourceDefinitionId());
+  }
+
+  private JsonNode getDestinationConfiguration(final DestinationConnection destination) throws IOException {
+    return configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
+        destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
+        destination.getWorkspaceId(),
+        destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
 
 }

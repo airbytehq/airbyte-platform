@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
@@ -22,13 +23,16 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
@@ -46,11 +50,13 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.models.JobInput;
+import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +64,14 @@ import org.junit.jupiter.api.Test;
  * Test the JobInputHandler.
  */
 class JobInputHandlerTest {
+
+  private static JobPersistence jobPersistence;
+  private static ConfigRepository configRepository;
+  private static ConfigInjector configInjector;
+  private static OAuthConfigSupplier oAuthConfigSupplier;
+  private static Job job;
+  private static FeatureFlagClient featureFlagClient;
+  private static ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
   private static final JsonNode SOURCE_CONFIG_WITH_OAUTH = Jsons.jsonNode(Map.of("source_key", "source_value", "oauth", "oauth_value"));
@@ -76,17 +90,10 @@ class JobInputHandlerTest {
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
-  private JobPersistence jobPersistence;
-  private ConfigRepository configRepository;
-  private ConfigInjector configInjector;
-  private OAuthConfigSupplier oAuthConfigSupplier;
-  private Job job;
-  private FeatureFlagClient featureFlagClient;
   private FeatureFlags featureFlags;
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
-  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
   void init() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -94,6 +101,9 @@ class JobInputHandlerTest {
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
+    oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     job = mock(Job.class);
     featureFlagClient = new TestClient(new HashMap<>());
@@ -286,6 +296,65 @@ class JobInputHandlerTest {
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
         .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID, true)));
+  }
+
+  @Test
+  void testGetCheckConnectionInputs() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final CheckInput syncInput = new CheckInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER);
+
+    final UUID sourceDefId = UUID.randomUUID();
+    final SourceConnection sourceConnection = new SourceConnection()
+        .withSourceId(SOURCE_ID)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(sourceDefId)
+        .withConfiguration(SOURCE_CONFIGURATION);
+    when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
+    when(configRepository.getStandardSourceDefinition(sourceDefId)).thenReturn(mock(StandardSourceDefinition.class));
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
+        .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
+
+    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+        .withWorkspaceId(UUID.randomUUID())
+        .withDestinationDockerImage("destinationDockerImage")
+        .withSourceDockerImage("sourceDockerImage")
+        .withConfiguredAirbyteCatalog(mock(ConfiguredAirbyteCatalog.class));
+
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(JobConfig.ConfigType.SYNC)
+        .withSync(jobSyncConfig);
+
+    when(job.getConfig()).thenReturn(jobConfig);
+    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
+
+    final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
+        .withJobId(String.valueOf(JOB_ID))
+        .withAttemptId((long) ATTEMPT_NUMBER)
+        .withDockerImage(jobSyncConfig.getSourceDockerImage());
+
+    final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
+        .withJobId(String.valueOf(JOB_ID))
+        .withAttemptId((long) ATTEMPT_NUMBER)
+        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
+
+    final StandardCheckConnectionInput expectedDestinationCheckInput = new StandardCheckConnectionInput()
+        .withActorId(DESTINATION_ID)
+        .withActorType(ActorType.DESTINATION)
+        .withConnectionConfiguration(DESTINATION_CONFIG_WITH_OAUTH);
+
+    final StandardCheckConnectionInput expectedSourceCheckInput = new StandardCheckConnectionInput()
+        .withActorId(SOURCE_ID)
+        .withActorType(ActorType.SOURCE)
+        .withConnectionConfiguration(SOURCE_CONFIG_WITH_OAUTH);
+
+    final SyncJobCheckConnectionInputs expectedCheckInputs = new SyncJobCheckConnectionInputs(
+        expectedSourceLauncherConfig,
+        expectedDestinationLauncherConfig,
+        expectedSourceCheckInput,
+        expectedDestinationCheckInput);
+
+    final Object checkInputs = jobInputHandler.getCheckJobInput(syncInput);
+    Assertions.assertEquals(expectedCheckInputs, checkInputs);
   }
 
 }

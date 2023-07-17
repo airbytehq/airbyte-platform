@@ -4,9 +4,8 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.config.StandardCheckConnectionInput;
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.models.JobInput;
+import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import lombok.AllArgsConstructor;
@@ -42,21 +41,6 @@ public interface GenerateInputActivity {
 
     private int attemptNumber;
     private long jobId;
-
-  }
-
-  /**
-   * GeneratedJobInput.
-   */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  class SyncJobCheckConnectionInputs {
-
-    private IntegrationLauncherConfig sourceLauncherConfig;
-    private IntegrationLauncherConfig destinationLauncherConfig;
-    private StandardCheckConnectionInput sourceCheckConnectionInput;
-    private StandardCheckConnectionInput destinationCheckConnectionInput;
 
   }
 

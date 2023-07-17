@@ -2679,6 +2679,28 @@ paths:
                 $ref: "#/components/schemas/SyncJobInputRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/get_check_input:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the check job input
+      operationId: getCheckInput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInput"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncJobInputRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
   /v1/health:
     get:
@@ -5153,6 +5175,16 @@ components:
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
     SyncInput:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+    CheckInput:
       type: object
       required:
         - jobId
