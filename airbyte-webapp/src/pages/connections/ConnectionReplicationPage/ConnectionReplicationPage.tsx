@@ -246,7 +246,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                         discardRefreshedSchema();
                       }}
                       successMessage={saved && !dirty && <FormattedMessage id="form.changesSaved" />}
-                      errorMessage={getErrorMessage(isValid, dirty, errors)}
+                      errorMessage={getErrorMessage(isValid, errors)}
                       enableControls={schemaHasBeenRefreshed || dirty}
                     />
                   </div>

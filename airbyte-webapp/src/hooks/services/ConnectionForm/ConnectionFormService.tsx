@@ -75,7 +75,6 @@ interface ConnectionFormHook {
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (
     formValid: boolean,
-    connectionDirty: boolean,
     errors?: FormikErrors<FormikConnectionFormValues>
   ) => string | JSX.Element | null;
   refreshSchema: () => Promise<void>;
@@ -106,18 +105,16 @@ const useConnectionForm = ({
   const formId = useUniqueFormId();
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
-    (formValid, connectionDirty, errors) => {
+    (formValid, errors) => {
       if (submitError) {
         return generateMessageFromError(submitError);
       }
 
       // There is a case when some fields could be dropped in the database. We need to validate the form without property dirty
-      const hasValidationError = !formValid && connectionDirty;
+      const hasValidationError = !formValid;
 
       if (hasValidationError) {
-        // No streams are selected, but make sure to ignore case when stream pk or cursor is missing
-        const hasNoStreamsSelectedError = errors?.syncCatalog?.streams && !Array.isArray(errors.syncCatalog.streams);
-
+        const hasNoStreamsSelectedError = errors?.syncCatalog?.streams === "connectionForm.streams.required";
         return formatMessage({
           id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
         });
