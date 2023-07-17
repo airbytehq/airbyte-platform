@@ -6,25 +6,28 @@ package io.airbyte.config.init;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.persistence.ActorDefinitionMigrator;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,137 +39,132 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class ApplyDefinitionsHelperTest {
 
-  private static final UUID SOURCE_DEF_ID1 = UUID.randomUUID();
-  private static final UUID DEST_DEF_ID2 = UUID.randomUUID();
-  private static final String CONNECT_NAME1 = "connector1";
-  private static final String CONNECT_NAME2 = "connector2";
-  private static final String DOCUMENTATION_URL = "https://wwww.example.com";
-  private static final String DOCKER_REPOSITORY = "airbyte/connector";
-  private static final String DOCKER_TAG = "0.1.0";
-  private static final String PROTOCOL_VERSION_1 = "1.0.0";
-  private static final String PROTOCOL_VERSION_2 = "2.0.0";
-  public static final ConnectorRegistrySourceDefinition REGISTRY_SOURCE_DEF1 = new ConnectorRegistrySourceDefinition()
-      .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
-  public static final StandardSourceDefinition SOURCE_DEF1 = new StandardSourceDefinition()
-      .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withName(CONNECT_NAME1);
-
-  public static final ConnectorRegistrySourceDefinition REGISTRY_SOURCE_DEF2 = new ConnectorRegistrySourceDefinition()
-      .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
-  public static final StandardSourceDefinition SOURCE_DEF2 = new StandardSourceDefinition()
-      .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withName(CONNECT_NAME2);
-
-  public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF1 = new ConnectorRegistryDestinationDefinition()
-      .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
-  public static final StandardDestinationDefinition DEST_DEF1 = new StandardDestinationDefinition()
-      .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withName(CONNECT_NAME1);
-  public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF2 = new ConnectorRegistryDestinationDefinition()
-      .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
-  public static final StandardDestinationDefinition DEST_DEF2 = new StandardDestinationDefinition()
-      .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withName(CONNECT_NAME2);
   private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
-  private ActorDefinitionMigrator actorDefinitionMigrator;
+
+  private static final String PROTOCOL_VERSION = "2.0.0";
+
+  protected static final UUID POSTGRES_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
+  protected static final ConnectorRegistrySourceDefinition SOURCE_POSTGRES = new ConnectorRegistrySourceDefinition()
+      .withSourceDefinitionId(POSTGRES_ID)
+      .withName("Postgres")
+      .withDockerRepository("airbyte/source-postgres")
+      .withDockerImageTag("0.3.11")
+      .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres")
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
+  protected static final ConnectorRegistrySourceDefinition SOURCE_POSTGRES_2 = new ConnectorRegistrySourceDefinition()
+      .withSourceDefinitionId(POSTGRES_ID)
+      .withName("Postgres - Updated")
+      .withDockerRepository("airbyte/source-postgres")
+      .withDockerImageTag("0.4.0")
+      .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres/new")
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
+  protected static final UUID S3_ID = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362");
+  protected static final ConnectorRegistryDestinationDefinition DESTINATION_S3 = new ConnectorRegistryDestinationDefinition()
+      .withName("S3")
+      .withDestinationDefinitionId(S3_ID)
+      .withDockerRepository("airbyte/destination-s3")
+      .withDockerImageTag("0.1.12")
+      .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3")
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
+  protected static final ConnectorRegistryDestinationDefinition DESTINATION_S3_2 = new ConnectorRegistryDestinationDefinition()
+      .withName("S3 - Updated")
+      .withDestinationDefinitionId(S3_ID)
+      .withDockerRepository("airbyte/destination-s3")
+      .withDockerImageTag("0.2.0")
+      .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3/new")
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
 
   @BeforeEach
-  void setup() throws IOException {
+  void setup() {
     configRepository = mock(ConfigRepository.class);
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
-    actorDefinitionMigrator = mock(ActorDefinitionMigrator.class);
 
-    applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, Optional.of(definitionsProvider), jobPersistence);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(Optional.of(definitionsProvider), jobPersistence, configRepository);
 
-    // default calls to empty.
-    when(configRepository.listStandardDestinationDefinitions(true)).thenReturn(Collections.emptyList());
-    when(configRepository.listStandardSourceDefinitions(true)).thenReturn(Collections.emptyList());
+    // Default calls to empty.
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(Collections.emptyList());
     when(definitionsProvider.getSourceDefinitions()).thenReturn(Collections.emptyList());
   }
 
-  @Test
-  void testUpdateAllAddRecord() throws JsonValidationException, IOException {
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(REGISTRY_SOURCE_DEF1));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(REGISTRY_DEST_DEF1));
-
-    applyDefinitionsHelper.apply(true);
-
-    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), true);
-    verify(definitionsProvider).getDestinationDefinitions();
-    verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(actorDefinitionMigrator);
-    verifyNoMoreInteractions(definitionsProvider);
+  private void mockSeedInitialDefinitions() throws IOException {
+    final Map<UUID, ActorDefinitionVersion> seededDefinitionsAndDefaultVersions = new HashMap<>();
+    seededDefinitionsAndDefaultVersions.put(POSTGRES_ID, ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES));
+    seededDefinitionsAndDefaultVersions.put(S3_ID, ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3));
+    when(configRepository.getActorDefinitionIdsToDefaultVersionsMap()).thenReturn(seededDefinitionsAndDefaultVersions);
   }
 
-  @Test
-  void testUpdateAllMutateRecord() throws JsonValidationException, IOException {
-    when(configRepository.listStandardSourceDefinitions(true)).thenReturn(List.of(SOURCE_DEF2));
-    when(configRepository.listStandardDestinationDefinitions(true)).thenReturn(List.of(DEST_DEF2));
-
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(REGISTRY_SOURCE_DEF1));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(REGISTRY_DEST_DEF1));
-
-    applyDefinitionsHelper.apply(true);
-
-    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), true);
-    verify(definitionsProvider).getDestinationDefinitions();
-    verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(actorDefinitionMigrator);
-    verifyNoMoreInteractions(definitionsProvider);
+  private void verifyConfigRepositoryGetInteractions() throws IOException {
+    verify(configRepository).getActorDefinitionIdsToDefaultVersionsMap();
+    verify(configRepository).getActorDefinitionIdsInUse();
   }
 
-  @Test
-  void testUpdateAllNoDeleteRecord() throws JsonValidationException, IOException {
-    when(configRepository.listStandardSourceDefinitions(true)).thenReturn(List.of(SOURCE_DEF1));
-    when(configRepository.listStandardDestinationDefinitions(true)).thenReturn(List.of(DEST_DEF1));
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void testNewConnectorIsWritten(final boolean updateAll) throws IOException, JsonValidationException {
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3));
 
-    applyDefinitionsHelper.apply(true);
+    applyDefinitionsHelper.apply(updateAll);
+    verifyConfigRepositoryGetInteractions();
 
-    verify(actorDefinitionMigrator).migrate(List.of(), List.of(), true);
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES));
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3));
 
-    verify(definitionsProvider).getDestinationDefinitions();
-    verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(actorDefinitionMigrator);
-    verifyNoMoreInteractions(definitionsProvider);
+    verifyNoMoreInteractions(configRepository);
   }
 
-  @Test
-  void testApplyOSS() throws JsonValidationException, IOException {
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(REGISTRY_SOURCE_DEF1));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(REGISTRY_DEST_DEF1));
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll) throws IOException, JsonValidationException {
+    mockSeedInitialDefinitions();
+    when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of());
 
-    applyDefinitionsHelper.apply();
+    // New definitions come in
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
 
-    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), false);
-    verify(definitionsProvider).getDestinationDefinitions();
-    verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(actorDefinitionMigrator);
-    verifyNoMoreInteractions(definitionsProvider);
+    applyDefinitionsHelper.apply(updateAll);
+    verifyConfigRepositoryGetInteractions();
+
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2));
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+
+    verifyNoMoreInteractions(configRepository);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void testUpdateBehaviorIfConnectorIsInUse(final boolean updateAll)
+      throws IOException, JsonValidationException {
+    mockSeedInitialDefinitions();
+    when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of(POSTGRES_ID, S3_ID));
+
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
+
+    applyDefinitionsHelper.apply(updateAll);
+    verifyConfigRepositoryGetInteractions();
+
+    if (updateAll) {
+      verify(configRepository).writeSourceDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+          ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2));
+      verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+          ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+          ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+    } else {
+      verify(configRepository).writeStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
+      verify(configRepository).writeStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
+    }
+    verifyNoMoreInteractions(configRepository);
   }
 
   @ParameterizedTest
@@ -174,23 +172,35 @@ class ApplyDefinitionsHelperTest {
   void testDefinitionsFiltering(final boolean updateAll) throws JsonValidationException, IOException {
     when(jobPersistence.getCurrentProtocolVersionRange())
         .thenReturn(Optional.of(new AirbyteProtocolVersionRange(new Version("2.0.0"), new Version("3.0.0"))));
+    final ConnectorRegistrySourceDefinition postgresWithOldProtocolVersion =
+        SOURCE_POSTGRES.withSpec(new ConnectorSpecification().withProtocolVersion("1.0.0"));
+    final ConnectorRegistryDestinationDefinition s3withOldProtocolVersion =
+        DESTINATION_S3.withSpec(new ConnectorSpecification().withProtocolVersion("1.0.0"));
 
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(REGISTRY_SOURCE_DEF1, REGISTRY_SOURCE_DEF2));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(REGISTRY_DEST_DEF1, REGISTRY_DEST_DEF2));
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(postgresWithOldProtocolVersion, SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(s3withOldProtocolVersion, DESTINATION_S3_2));
 
     applyDefinitionsHelper.apply(updateAll);
+    verifyConfigRepositoryGetInteractions();
 
-    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF2), List.of(REGISTRY_DEST_DEF1), updateAll);
+    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardSourceDefinition(postgresWithOldProtocolVersion),
+        ConnectorRegistryConverters.toActorDefinitionVersion(s3withOldProtocolVersion));
+    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(s3withOldProtocolVersion),
+        ConnectorRegistryConverters.toActorDefinitionVersion(postgresWithOldProtocolVersion));
 
-    verify(definitionsProvider).getDestinationDefinitions();
-    verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(actorDefinitionMigrator);
-    verifyNoMoreInteractions(definitionsProvider);
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2));
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+    verifyNoMoreInteractions(configRepository);
   }
 
   @Test
   void testMissingDefinitionsProvider() {
-    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(actorDefinitionMigrator, Optional.empty(), jobPersistence);
+    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(Optional.empty(), jobPersistence, configRepository);
     assertDoesNotThrow(() -> helper.apply());
   }
 

@@ -4,12 +4,14 @@
 
 package io.airbyte.config.helpers;
 
+import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import javax.annotation.Nullable;
 
 /**
@@ -71,7 +73,7 @@ public class ConnectorRegistryConverters {
         .withSpec(def.getSpec())
         .withAllowedHosts(def.getAllowedHosts())
         .withDocumentationUrl(def.getDocumentationUrl())
-        .withProtocolVersion(def.getProtocolVersion())
+        .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
         .withSuggestedStreams(def.getSuggestedStreams());
@@ -93,7 +95,7 @@ public class ConnectorRegistryConverters {
         .withSpec(def.getSpec())
         .withAllowedHosts(def.getAllowedHosts())
         .withDocumentationUrl(def.getDocumentationUrl())
-        .withProtocolVersion(def.getProtocolVersion())
+        .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
         .withNormalizationConfig(def.getNormalizationConfig())
@@ -120,6 +122,10 @@ public class ConnectorRegistryConverters {
       }
       default -> throw new IllegalArgumentException("Unknown source type: " + sourceType);
     }
+  }
+
+  private static String getProtocolVersion(final ConnectorSpecification spec) {
+    return AirbyteProtocolVersion.getWithDefault(spec != null ? spec.getProtocolVersion() : null).serialize();
   }
 
 }

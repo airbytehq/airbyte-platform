@@ -114,6 +114,7 @@ import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record2;
+import org.jooq.Record4;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
@@ -595,6 +596,29 @@ public class ConfigRepository {
         .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()));
   }
 
+  private static Stream<Record4<UUID, String, ActorType, String>> getActorDefinitionsInUse(final DSLContext ctx) {
+    return ctx
+        .selectDistinct(ACTOR_DEFINITION.ID, ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION.ACTOR_TYPE,
+            ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+        .from(ACTOR_DEFINITION)
+        .join(ACTOR).on(ACTOR.ACTOR_DEFINITION_ID.equal(ACTOR_DEFINITION.ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.equal(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
+        .fetch()
+        .stream();
+  }
+
+  /**
+   * Get actor definition IDs that are in use.
+   *
+   * @return list of IDs
+   * @throws IOException - you never know when you IO
+   */
+  public Set<UUID> getActorDefinitionIdsInUse() throws IOException {
+    return database.query(ctx -> getActorDefinitionsInUse(ctx)
+        .map(r -> r.get(ACTOR_DEFINITION.ID))
+        .collect(Collectors.toSet()));
+  }
+
   /**
    * Get actor definition ids to pair of actor type and protocol version.
    *
@@ -602,40 +626,31 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public Map<UUID, Map.Entry<io.airbyte.config.ActorType, Version>> getActorDefinitionToProtocolVersionMap() throws IOException {
-    return database.query(ConfigWriter::getActorDefinitionsInUseToProtocolVersion);
+    return database.query(ctx -> getActorDefinitionsInUse(ctx)
+        .collect(Collectors.toMap(r -> r.get(ACTOR_DEFINITION.ID),
+            r -> Map.entry(
+                r.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source ? io.airbyte.config.ActorType.SOURCE : io.airbyte.config.ActorType.DESTINATION,
+                AirbyteProtocolVersion.getWithDefault(r.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))),
+            // We may have duplicated entries from the data. We can pick any values in the merge function
+            (lhs, rhs) -> lhs)));
   }
 
   /**
-   * Get actor definition ids to pair of actor type and protocol version.
+   * Get a map of all actor definition ids and their default versions.
    *
-   * @return map of definition id to pair of actor type and protocol version.
+   * @return map of definition id to default version.
    * @throws IOException - you never know when you IO
    */
-  public Set<String> getConnectorRepositoriesInUse() throws IOException {
-    return database.query(ConfigWriter::getConnectorRepositoriesInUse);
-  }
-
-  /**
-   * Get connector definition current version info.
-   *
-   * @return A list of information about current connectors (both sources and destinations), excluding
-   *         custom connectors.
-   **/
-  public List<ActorDefinitionMigrator.ConnectorInfo> getCurrentConnectorInfo() throws IOException {
-    return database.query(ctx -> ctx.select(ACTOR_DEFINITION.ID,
-        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY,
-        ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG)
+  public Map<UUID, ActorDefinitionVersion> getActorDefinitionIdsToDefaultVersionsMap() throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR_DEFINITION.ID, ACTOR_DEFINITION_VERSION.asterisk())
         .from(ACTOR_DEFINITION)
-        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION.DEFAULT_VERSION_ID.eq(ACTOR_DEFINITION_VERSION.ID))
-        .where(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.isNull()
-            .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM.isFalse())))
-        .fetch())
+        .join(ACTOR_DEFINITION_VERSION)
+        .on(ACTOR_DEFINITION.DEFAULT_VERSION_ID.eq(ACTOR_DEFINITION_VERSION.ID))
+        .fetch()
         .stream()
-        .map(row -> new ActorDefinitionMigrator.ConnectorInfo(
-            row.getValue(ACTOR_DEFINITION.ID).toString(),
-            row.getValue(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY),
-            row.getValue(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG)))
-        .collect(Collectors.toList());
+        .collect(Collectors.toMap(
+            record -> record.get(ACTOR_DEFINITION.ID),
+            DbConverter::buildActorDefinitionVersion)));
   }
 
   /**
@@ -730,41 +745,7 @@ public class ConfigRepository {
                                                       final ActorDefinitionVersion actorDefinitionVersion,
                                                       final DSLContext ctx) {
     ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-
-    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
-    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
-    final Optional<ActorDefinitionVersion> existingADV =
-        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
-
-    if (existingADV.isPresent()) {
-      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
-      // rollback to a pre-existing version
-      setSourceDefinitionDefaultVersion(sourceDefinition, existingADV.get(), ctx);
-    } else {
-      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setSourceDefinitionDefaultVersion(sourceDefinition, insertedADV, ctx);
-    }
-  }
-
-  /**
-   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
-   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
-   * writeActorDefinitionVersion().
-   *
-   * @param sourceDefinition source definition
-   * @param actorDefinitionVersion actor definition version to set as default
-   */
-  private static void setSourceDefinitionDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                        final ActorDefinitionVersion actorDefinitionVersion,
-                                                        final DSLContext ctx) {
-    if (actorDefinitionVersion.getVersionId() == null) {
-      throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
-    }
-
-    ctx.update(ACTOR_DEFINITION)
-        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
-        .where(ACTOR_DEFINITION.ID.eq(sourceDefinition.getSourceDefinitionId()))
-        .execute();
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
   }
 
   /**
@@ -969,40 +950,37 @@ public class ConfigRepository {
                                                            final ActorDefinitionVersion actorDefinitionVersion,
                                                            final DSLContext ctx) {
     ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
+  }
 
-    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
-    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
+  /**
+   * Set the ActorDefinitionVersion for a given tag as the default version for the associated actor
+   * definition. Check docker image tag on the new ADV; if an ADV exists for that tag, set the
+   * existing ADV for the tag as the default. Otherwise, insert the new ADV and set it as the default.
+   *
+   * @param actorDefinitionVersion new actor definition version
+   * @throws IOException - you never know when you IO
+   */
+  private void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final Optional<ActorDefinitionVersion> existingADV =
         getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
 
     if (existingADV.isPresent()) {
-      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
-      // rollback to a pre-existing version
-      setDestinationDefinitionDefaultVersion(destinationDefinition, existingADV.get(), ctx);
+      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), ctx);
     } else {
       final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setDestinationDefinitionDefaultVersion(destinationDefinition, insertedADV, ctx);
+      setActorDefinitionVersionAsDefaultVersion(insertedADV, ctx);
     }
   }
 
-  /**
-   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
-   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
-   * writeActorDefinitionVersion().
-   *
-   * @param destinationDefinition destination definition
-   * @param actorDefinitionVersion actor definition version to set as default
-   */
-  private static void setDestinationDefinitionDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                             final ActorDefinitionVersion actorDefinitionVersion,
-                                                             final DSLContext ctx) {
+  private static void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     if (actorDefinitionVersion.getVersionId() == null) {
       throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
     }
 
     ctx.update(ACTOR_DEFINITION)
         .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
-        .where(ACTOR_DEFINITION.ID.eq(destinationDefinition.getDestinationDefinitionId()))
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionVersion.getActorDefinitionId()))
         .execute();
   }
 

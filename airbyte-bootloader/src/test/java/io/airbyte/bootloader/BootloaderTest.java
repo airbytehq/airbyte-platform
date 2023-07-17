@@ -21,7 +21,6 @@ import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.init.LocalDefinitionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
-import io.airbyte.config.persistence.ActorDefinitionMigrator;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
@@ -135,8 +134,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -191,8 +189,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
