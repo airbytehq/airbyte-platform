@@ -16,6 +16,7 @@ import io.airbyte.workers.internal.book_keeping.StreamStatsTracker.StreamStatsCo
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -245,7 +246,7 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
 
   @Override
   public long getTotalRecordsEmitted() {
-    return Optional.ofNullable(getTotalStats(false).getRecordsEmitted()).orElse(0L);
+    return Objects.requireNonNullElse(getTotalStats(false).getRecordsEmitted(), 0L);
   }
 
   @Override
@@ -256,7 +257,7 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
 
   @Override
   public long getTotalBytesEmitted() {
-    return Optional.ofNullable(getTotalStats(false).getBytesEmitted()).orElse(0L);
+    return Objects.requireNonNullElse(getTotalStats(false).getBytesEmitted(), 0L);
   }
 
   @Override
