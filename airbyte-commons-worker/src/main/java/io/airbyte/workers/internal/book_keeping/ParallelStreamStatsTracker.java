@@ -245,7 +245,7 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
 
   @Override
   public long getTotalRecordsEmitted() {
-    return getTotalStats(false).getRecordsEmitted();
+    return Optional.ofNullable(getTotalStats(false).getRecordsEmitted()).orElse(0L);
   }
 
   @Override
@@ -256,7 +256,7 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
 
   @Override
   public long getTotalBytesEmitted() {
-    return getTotalStats(false).getBytesEmitted();
+    return Optional.ofNullable(getTotalStats(false).getBytesEmitted()).orElse(0L);
   }
 
   @Override

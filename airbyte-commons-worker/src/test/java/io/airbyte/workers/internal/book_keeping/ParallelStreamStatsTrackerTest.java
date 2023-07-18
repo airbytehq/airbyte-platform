@@ -340,6 +340,20 @@ class ParallelStreamStatsTrackerTest {
   }
 
   @Test
+  void testGettersDontCrashWhenThereIsNoData() {
+    // Looking for null pointers so no exceptions means all good for most part.
+    statsTracker.getTotalStats(false);
+    statsTracker.getTotalStats(true);
+
+    assertEquals(0L, statsTracker.getTotalBytesEmitted());
+    assertEquals(0L, statsTracker.getTotalRecordsEmitted());
+    assertEquals(Optional.empty(), statsTracker.getTotalBytesCommitted());
+    assertEquals(Optional.empty(), statsTracker.getTotalRecordsCommitted());
+    assertEquals(0L, statsTracker.getTotalBytesEstimated());
+    assertEquals(0L, statsTracker.getTotalRecordsEstimated());
+  }
+
+  @Test
   void testStreamEstimates() {
     final var estimateStream1Message1 = createEstimate(STREAM1_NAME, 1L, 1L);
     final var estimateStream1Message2 = createEstimate(STREAM1_NAME, 10L, 2L);
