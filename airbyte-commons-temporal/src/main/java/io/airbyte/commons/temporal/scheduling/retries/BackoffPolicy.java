@@ -7,6 +7,7 @@ package io.airbyte.commons.temporal.scheduling.retries;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
 
 /**
@@ -14,6 +15,7 @@ import lombok.extern.jackson.Jacksonized;
  * clamped to a min/max interval.
  */
 @Builder
+@Getter
 @Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BackoffPolicy {

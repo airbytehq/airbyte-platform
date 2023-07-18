@@ -13,10 +13,19 @@ import io.airbyte.api.client.model.generated.RetryStateRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
+import io.airbyte.featureflag.CompleteFailureBackoffBase;
+import io.airbyte.featureflag.CompleteFailureBackoffMaxInterval;
+import io.airbyte.featureflag.CompleteFailureBackoffMinInterval;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.SuccessiveCompleteFailureLimit;
+import io.airbyte.featureflag.SuccessivePartialFailureLimit;
+import io.airbyte.featureflag.TotalCompleteFailureLimit;
+import io.airbyte.featureflag.TotalPartialFailureLimit;
+import io.airbyte.featureflag.Workspace;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,24 +36,33 @@ import java.util.UUID;
 public class RetryStateClient {
 
   final JobRetryStatesApi jobRetryStatesApi;
-  final BackoffPolicy completeFailureBackoffPolicy;
+  final FeatureFlagClient featureFlagClient;
   final Integer successiveCompleteFailureLimit;
   final Integer totalCompleteFailureLimit;
   final Integer successivePartialFailureLimit;
   final Integer totalPartialFailureLimit;
+  final Integer minInterval;
+  final Integer maxInterval;
+  final Integer backoffBase;
 
   public RetryStateClient(final JobRetryStatesApi jobRetryStatesApi,
-                          @Named("completeFailureBackoffPolicy") final BackoffPolicy completeFailureBackoffPolicy,
+                          final FeatureFlagClient featureFlagClient,
                           @Value("${airbyte.retries.complete—failures.max-successive}") final Integer successiveCompleteFailureLimit,
                           @Value("${airbyte.retries.complete—failures.max-total}") final Integer totalCompleteFailureLimit,
                           @Value("${airbyte.retries.partial—failures.max-successive}") final Integer successivePartialFailureLimit,
-                          @Value("${airbyte.retries.partial—failures.max-total}") final Integer totalPartialFailureLimit) {
+                          @Value("${airbyte.retries.partial—failures.max-total}") final Integer totalPartialFailureLimit,
+                          @Value("${airbyte.retries.complete—failures.backoff.min-interval-s}") final Integer minInterval,
+                          @Value("${airbyte.retries.complete—failures.backoff.max-interval-s}") final Integer maxInterval,
+                          @Value("${airbyte.retries.complete—failures.backoff.base}") final Integer backoffBase) {
     this.jobRetryStatesApi = jobRetryStatesApi;
-    this.completeFailureBackoffPolicy = completeFailureBackoffPolicy;
+    this.featureFlagClient = featureFlagClient;
     this.successiveCompleteFailureLimit = successiveCompleteFailureLimit;
     this.totalCompleteFailureLimit = totalCompleteFailureLimit;
     this.successivePartialFailureLimit = successivePartialFailureLimit;
     this.totalPartialFailureLimit = totalPartialFailureLimit;
+    this.minInterval = minInterval;
+    this.maxInterval = maxInterval;
+    this.backoffBase = backoffBase;
   }
 
   /**
@@ -57,13 +75,8 @@ public class RetryStateClient {
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    *         404's is problematic).
    */
-  public RetryManager hydrateRetryState(final Long jobId) throws RetryableException {
-    final var manager = RetryManager.builder()
-        .completeFailureBackoffPolicy(completeFailureBackoffPolicy)
-        .successiveCompleteFailureLimit(successiveCompleteFailureLimit)
-        .successivePartialFailureLimit(successivePartialFailureLimit)
-        .totalCompleteFailureLimit(totalCompleteFailureLimit)
-        .totalPartialFailureLimit(totalPartialFailureLimit);
+  public RetryManager hydrateRetryState(final Long jobId, final UUID workspaceId) throws RetryableException {
+    final var manager = initializeBuilder(workspaceId);
 
     final var state = Optional.ofNullable(jobId).flatMap(this::fetchRetryState);
 
@@ -76,6 +89,44 @@ public class RetryStateClient {
         .successivePartialFailures(s.getSuccessivePartialFailures()));
 
     return manager.build();
+  }
+
+  /**
+   * We initialize our values via FF if possible. These will be used for rollout, such that we can
+   * tweak values on the fly without requiring redeployment. Eventually we plan to finalize the
+   * default values and remove these FF'd values.
+   */
+  private RetryManager.RetryManagerBuilder initializeBuilder(final UUID workspaceId) {
+    final var ffSuccessiveCompleteFailureLimit = featureFlagClient.intVariation(SuccessiveCompleteFailureLimit.INSTANCE, new Workspace(workspaceId));
+    final var ffTotalCompleteFailureLimit = featureFlagClient.intVariation(TotalCompleteFailureLimit.INSTANCE, new Workspace(workspaceId));
+    final var ffSuccessivePartialFailureLimit = featureFlagClient.intVariation(SuccessivePartialFailureLimit.INSTANCE, new Workspace(workspaceId));
+    final var ffTotalPartialFailureLimit = featureFlagClient.intVariation(TotalPartialFailureLimit.INSTANCE, new Workspace(workspaceId));
+
+    return RetryManager.builder()
+        .completeFailureBackoffPolicy(buildBackOffPolicy(workspaceId))
+        .successiveCompleteFailureLimit(initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit))
+        .successivePartialFailureLimit(initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit))
+        .totalCompleteFailureLimit(initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit))
+        .totalPartialFailureLimit(initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit));
+  }
+
+  private BackoffPolicy buildBackOffPolicy(final UUID workspaceId) {
+    final var ffMin = featureFlagClient.intVariation(CompleteFailureBackoffMinInterval.INSTANCE, new Workspace(workspaceId));
+    final var ffMax = featureFlagClient.intVariation(CompleteFailureBackoffMaxInterval.INSTANCE, new Workspace(workspaceId));
+    final var ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase.INSTANCE, new Workspace(workspaceId));
+
+    return BackoffPolicy.builder()
+        .minInterval(Duration.ofSeconds(initializedOrElse(ffMin, minInterval)))
+        .maxInterval(Duration.ofSeconds(initializedOrElse(ffMax, maxInterval)))
+        .base(initializedOrElse(ffBase, backoffBase))
+        .build();
+  }
+
+  /**
+   * Utility method for falling back to injected values when FFs are not initialized properly.
+   */
+  private int initializedOrElse(final int a, final int b) {
+    return a == -1 ? b : a;
   }
 
   private Optional<RetryStateRead> fetchRetryState(final long jobId) throws RetryableException {

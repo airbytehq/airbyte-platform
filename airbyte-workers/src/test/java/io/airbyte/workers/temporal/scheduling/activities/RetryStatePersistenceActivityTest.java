@@ -56,13 +56,13 @@ class RetryStatePersistenceActivityTest {
   void hydrateDelegatesToRetryStatePersistence(final long jobId) {
     final var manager = RetryManager.builder().build();
     final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mFeatureFlagClient, mWorkspaceApi);
-    when(mRetryStateClient.hydrateRetryState(jobId)).thenReturn(manager);
+    when(mRetryStateClient.hydrateRetryState(eq(jobId), Mockito.any())).thenReturn(manager);
     when(mFeatureFlagClient.boolVariation(eq(UseNewRetries.INSTANCE), any())).thenReturn(true);
 
     final HydrateInput input = new HydrateInput(jobId, UUID.randomUUID());
     final var result = activity.hydrateRetryState(input);
 
-    verify(mRetryStateClient, times(1)).hydrateRetryState(jobId);
+    verify(mRetryStateClient, times(1)).hydrateRetryState(eq(jobId), Mockito.any());
 
     assertEquals(manager, result.getManager());
   }
@@ -72,13 +72,13 @@ class RetryStatePersistenceActivityTest {
   void returnsNullWhenFFOff(final long jobId) {
     final var manager = RetryManager.builder().build();
     final RetryStatePersistenceActivityImpl activity = new RetryStatePersistenceActivityImpl(mRetryStateClient, mFeatureFlagClient, mWorkspaceApi);
-    when(mRetryStateClient.hydrateRetryState(jobId)).thenReturn(manager);
+    when(mRetryStateClient.hydrateRetryState(eq(jobId), Mockito.any())).thenReturn(manager);
     when(mFeatureFlagClient.boolVariation(eq(UseNewRetries.INSTANCE), any())).thenReturn(false);
 
     final HydrateInput input = new HydrateInput(jobId, UUID.randomUUID());
     final var result = activity.hydrateRetryState(input);
 
-    verify(mRetryStateClient, times(0)).hydrateRetryState(jobId);
+    verify(mRetryStateClient, times(0)).hydrateRetryState(eq(jobId), Mockito.any());
 
     assertNull(result.getManager());
   }

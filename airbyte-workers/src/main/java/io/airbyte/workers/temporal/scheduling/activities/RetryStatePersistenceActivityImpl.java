@@ -50,7 +50,7 @@ public class RetryStatePersistenceActivityImpl implements RetryStatePersistenceA
       return new HydrateOutput(null);
     }
 
-    final var manager = client.hydrateRetryState(input.getJobId());
+    final var manager = client.hydrateRetryState(input.getJobId(), workspaceId);
 
     return new HydrateOutput(manager);
   }

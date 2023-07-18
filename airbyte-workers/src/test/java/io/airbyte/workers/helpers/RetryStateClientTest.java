@@ -11,9 +11,11 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.RetryStateRead;
-import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
-import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy.BackoffPolicyBuilder;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.micronaut.http.HttpStatus;
+import java.time.Duration;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,30 +27,41 @@ class RetryStateClientTest {
   @Mock
   private JobRetryStatesApi mJobRetryStatesApi;
 
+  @Mock
+  private FeatureFlagClient mFeatureFlagClient;
+
   @BeforeEach
   public void setup() {
     mJobRetryStatesApi = Mockito.mock(JobRetryStatesApi.class);
+    mFeatureFlagClient = Mockito.mock(TestClient.class);
+    when(mFeatureFlagClient.intVariation(Mockito.any(), Mockito.any())).thenReturn(-1);
   }
 
   @Test
-  void hydratesBackoffAndLimitsFromConstructor() throws Exception {
-    final var backoffPolicy = Fixtures.backoff().build();
+  void hydratesBackoffAndLimitsFromConstructor() {
 
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
-        backoffPolicy,
+        mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
         Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit);
+        Fixtures.totalPartialFailureLimit,
+        Fixtures.minInterval,
+        Fixtures.maxInterval,
+        Fixtures.base);
 
-    final var manager = client.hydrateRetryState(Fixtures.jobId);
+    final var manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId);
 
     assertEquals(Fixtures.successiveCompleteFailureLimit, manager.getSuccessiveCompleteFailureLimit());
     assertEquals(Fixtures.totalCompleteFailureLimit, manager.getTotalCompleteFailureLimit());
     assertEquals(Fixtures.successivePartialFailureLimit, manager.getSuccessivePartialFailureLimit());
     assertEquals(Fixtures.totalPartialFailureLimit, manager.getTotalPartialFailureLimit());
-    assertEquals(backoffPolicy, manager.getCompleteFailureBackoffPolicy());
+
+    final var backoffPolicy = manager.getCompleteFailureBackoffPolicy();
+    assertEquals(Duration.ofSeconds(Fixtures.minInterval), backoffPolicy.getMinInterval());
+    assertEquals(Duration.ofSeconds(Fixtures.maxInterval), backoffPolicy.getMaxInterval());
+    assertEquals(Fixtures.base, backoffPolicy.getBase());
   }
 
   @Test
@@ -64,13 +77,16 @@ class RetryStateClientTest {
 
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
-        Fixtures.backoff().build(),
+        mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
         Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit);
+        Fixtures.totalPartialFailureLimit,
+        Fixtures.minInterval,
+        Fixtures.maxInterval,
+        Fixtures.base);
 
-    final var manager = client.hydrateRetryState(Fixtures.jobId);
+    final var manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId);
 
     assertEquals(Fixtures.totalCompleteFailures, manager.getTotalCompleteFailures());
     assertEquals(Fixtures.totalPartialFailures, manager.getTotalPartialFailures());
@@ -85,13 +101,16 @@ class RetryStateClientTest {
 
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
-        Fixtures.backoff().build(),
+        mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
         Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit);
+        Fixtures.totalPartialFailureLimit,
+        Fixtures.minInterval,
+        Fixtures.maxInterval,
+        Fixtures.base);
 
-    final var manager = client.hydrateRetryState(Fixtures.jobId);
+    final var manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId);
 
     assertEquals(0, manager.getTotalCompleteFailures());
     assertEquals(0, manager.getTotalPartialFailures());
@@ -103,13 +122,16 @@ class RetryStateClientTest {
   void initializesFailureCountsFreshWhenJobIdNull() {
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
-        Fixtures.backoff().build(),
+        mFeatureFlagClient,
         Fixtures.successiveCompleteFailureLimit,
         Fixtures.totalCompleteFailureLimit,
         Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit);
+        Fixtures.totalPartialFailureLimit,
+        Fixtures.minInterval,
+        Fixtures.maxInterval,
+        Fixtures.base);
 
-    final var manager = client.hydrateRetryState(null);
+    final var manager = client.hydrateRetryState(null, Fixtures.workspaceId);
 
     assertEquals(0, manager.getTotalCompleteFailures());
     assertEquals(0, manager.getTotalPartialFailures());
@@ -120,6 +142,7 @@ class RetryStateClientTest {
   static class Fixtures {
 
     static long jobId = ThreadLocalRandom.current().nextLong();
+    static UUID workspaceId = UUID.randomUUID();
 
     static int successiveCompleteFailureLimit = ThreadLocalRandom.current().nextInt();
     static int totalCompleteFailureLimit = ThreadLocalRandom.current().nextInt();
@@ -131,9 +154,9 @@ class RetryStateClientTest {
     static int successiveCompleteFailures = ThreadLocalRandom.current().nextInt();
     static int successivePartialFailures = ThreadLocalRandom.current().nextInt();
 
-    static BackoffPolicyBuilder backoff() {
-      return BackoffPolicy.builder();
-    }
+    static int minInterval = 10;
+    static int maxInterval = 1000;
+    static int base = 2;
 
   }
 

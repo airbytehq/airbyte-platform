@@ -8,7 +8,6 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
-import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -35,7 +34,6 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -162,18 +160,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
     return new StateAggregatorFactory(featureFlags);
-  }
-
-  @Singleton
-  @Named("completeFailureBackoffPolicy")
-  public BackoffPolicy completeFailureBackoffPolicy(@Value("${airbyte.retries.complete—failures.backoff.min-interval-s}") final Integer min,
-                                                    @Value("${airbyte.retries.complete—failures.backoff.max-interval-s}") final Integer max,
-                                                    @Value("${airbyte.retries.complete—failures.backoff.base}") final Integer base) {
-    return BackoffPolicy.builder()
-        .minInterval(Duration.ofSeconds(min))
-        .maxInterval(Duration.ofSeconds(max))
-        .base(base)
-        .build();
   }
 
 }

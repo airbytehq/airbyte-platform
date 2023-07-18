@@ -116,7 +116,7 @@ airbyte:
   retries:
     complete—failures:
       max-successive: 5
-      max-total: 1000
+      max-total: 10
       backoff:
         min-interval-s: 10
         max-interval-s: 1800 # 30 minutes
