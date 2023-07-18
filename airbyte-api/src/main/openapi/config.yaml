@@ -2837,6 +2837,28 @@ paths:
                 $ref: "#/components/schemas/AttemptStats"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/attempt/get_for_job:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Retrieves an attempt with logs for a job and attempt number.
+      operationId: getAttemptForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).

@@ -16,20 +16,28 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.GlobalState;
+import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.models.Attempt;
+import io.airbyte.persistence.job.models.AttemptStatus;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +46,7 @@ import org.mockito.Mockito;
 
 class AttemptHandlerTest {
 
+  JobConverter jobConverter;
   JobPersistence jobPersistence;
   AttemptHandler handler;
 
@@ -50,7 +59,8 @@ class AttemptHandlerTest {
   @BeforeEach
   public void init() {
     jobPersistence = Mockito.mock(JobPersistence.class);
-    handler = new AttemptHandler(jobPersistence);
+    jobConverter = Mockito.mock(JobConverter.class);
+    handler = new AttemptHandler(jobPersistence, jobConverter);
   }
 
   @Test
@@ -136,6 +146,47 @@ class AttemptHandlerTest {
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
     assertEquals(JOB_ID, jobIdCapture.getValue());
     assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.getValue());
+  }
+
+  @Test
+  void getAttemptThrowsNotFound() throws Exception {
+    when(jobPersistence.getAttemptForJob(anyLong(), anyInt())).thenReturn(Optional.empty());
+
+    assertThrows(IdNotFoundKnownException.class, () -> handler.getAttemptForJob(1L, 2));
+  }
+
+  @Test
+  void getAttemptReturnsAttempt() throws Exception {
+    final var attempt = new Attempt(
+        2,
+        214L,
+        Path.of("/tmp/logs/all/the/way/down"),
+        null,
+        null,
+        AttemptStatus.SUCCEEDED,
+        null,
+        null,
+        Instant.now().getEpochSecond(),
+        Instant.now().getEpochSecond(),
+        Instant.now().getEpochSecond());
+
+    final var logs = new LogRead();
+    logs.addLogLinesItem("log line 1");
+    logs.addLogLinesItem("log line 2");
+    final var infoRead = new AttemptInfoRead();
+    infoRead.setAttempt(JobConverter.getAttemptRead(attempt));
+    infoRead.setLogs(logs);
+
+    when(jobPersistence.getAttemptForJob(anyLong(), anyInt())).thenReturn(Optional.of(attempt));
+    when(jobConverter.getAttemptInfoRead(attempt)).thenReturn(infoRead);
+
+    final AttemptInfoRead result = handler.getAttemptForJob(1L, 2);
+    assertEquals(attempt.getAttemptNumber(), result.getAttempt().getId());
+    assertEquals(attempt.getEndedAtInSecond().get(), result.getAttempt().getEndedAt());
+    assertEquals(attempt.getCreatedAtInSecond(), result.getAttempt().getCreatedAt());
+    assertEquals(attempt.getUpdatedAtInSecond(), result.getAttempt().getUpdatedAt());
+    assertEquals(io.airbyte.api.model.generated.AttemptStatus.SUCCEEDED, result.getAttempt().getStatus());
+    assertEquals(logs, result.getLogs());
   }
 
   @Test

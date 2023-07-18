@@ -14,6 +14,7 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -175,6 +176,11 @@ public interface JobPersistence {
    * Retrieves an attempt's temporal workflow id. Used to cancel the workflow.
    */
   Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
+
+  /**
+   * Retrieves an Attempt from a given jobId and attemptNumber.
+   */
+  Optional<Attempt> getAttemptForJob(long jobId, int attemptNumber) throws IOException;
 
   /**
    * When the output is a StandardSyncOutput, caller of this method should persist

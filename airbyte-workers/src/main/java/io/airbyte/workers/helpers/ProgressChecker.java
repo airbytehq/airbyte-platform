@@ -9,7 +9,6 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
 import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.metrics.lib.MetricClient;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.util.Optional;
@@ -24,12 +23,10 @@ public class ProgressChecker {
 
   private final AttemptApi attemptApi;
   private final ProgressCheckerPredicates predicate;
-  private final MetricClient metricClient;
 
-  public ProgressChecker(final AttemptApi attemptApi, final ProgressCheckerPredicates predicate, final MetricClient metricClient) {
+  public ProgressChecker(final AttemptApi attemptApi, final ProgressCheckerPredicates predicate) {
     this.attemptApi = attemptApi;
     this.predicate = predicate;
-    this.metricClient = metricClient;
   }
 
   /**

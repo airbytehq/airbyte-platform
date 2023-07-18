@@ -114,6 +114,22 @@ public class DefaultJobPersistence implements JobPersistence {
           .map(Names::singleQuote)
           .collect(Collectors.joining(",")));
 
+  private static final String ATTEMPT_FIELDS = """
+                                                 attempts.attempt_number AS attempt_number,
+                                                 attempts.attempt_sync_config AS attempt_sync_config,
+                                                 attempts.log_path AS log_path,
+                                                 attempts.output AS attempt_output,
+                                                 attempts.status AS attempt_status,
+                                                 attempts.processing_task_queue AS processing_task_queue,
+                                                 attempts.failure_summary AS attempt_failure_summary,
+                                                 attempts.created_at AS attempt_created_at,
+                                                 attempts.updated_at AS attempt_updated_at,
+                                                 attempts.ended_at AS attempt_ended_at
+                                               """;
+
+  private static final String ATTEMPT_SELECT =
+      "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?";
+
   private final ExceptionWrappingDatabase jobDatabase;
   private final Supplier<Instant> timeSupplier;
 
@@ -144,16 +160,7 @@ public class DefaultJobPersistence implements JobPersistence {
         + "jobs.started_at AS job_started_at,\n"
         + "jobs.created_at AS job_created_at,\n"
         + "jobs.updated_at AS job_updated_at,\n"
-        + "attempts.attempt_number AS attempt_number,\n"
-        + "attempts.attempt_sync_config AS attempt_sync_config,\n"
-        + "attempts.log_path AS log_path,\n"
-        + "attempts.output AS attempt_output,\n"
-        + "attempts.status AS attempt_status,\n"
-        + "attempts.processing_task_queue AS processing_task_queue,\n"
-        + "attempts.failure_summary AS attempt_failure_summary,\n"
-        + "attempts.created_at AS attempt_created_at,\n"
-        + "attempts.updated_at AS attempt_updated_at,\n"
-        + "attempts.ended_at AS attempt_ended_at\n"
+        + ATTEMPT_FIELDS
         + "FROM " + jobsSubquery + " LEFT OUTER JOIN attempts ON jobs.id = attempts.job_id ";
   }
 
@@ -338,6 +345,16 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     return Optional.of(result.get().get("temporal_workflow_id", String.class));
+  }
+
+  @Override
+  public Optional<Attempt> getAttemptForJob(final long jobId, final int attemptNumber) throws IOException {
+    final var result = jobDatabase.query(ctx -> ctx.fetch(
+        ATTEMPT_SELECT,
+        jobId,
+        attemptNumber)).stream().findFirst();
+
+    return result.map(DefaultJobPersistence::getAttemptFromRecord);
   }
 
   @Override

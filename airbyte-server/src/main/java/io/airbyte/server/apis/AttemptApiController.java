@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.AttemptApi;
+import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
@@ -37,14 +38,25 @@ public class AttemptApiController implements AttemptApi {
   }
 
   @Override
+  @Post(uri = "/get_for_job",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({READER})
+  @SecuredWorkspace
+  public AttemptInfoRead getAttemptForJob(final GetAttemptStatsRequestBody requestBody) {
+    return ApiHelper
+        .execute(() -> attemptHandler.getAttemptForJob(requestBody.getJobId(), requestBody.getAttemptNumber()));
+  }
+
+  @Override
   @Post(uri = "/get_combined_stats",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({READER})
   @SecuredWorkspace
-  public AttemptStats getAttemptCombinedStats(final GetAttemptStatsRequestBody getAttemptStatsRequestBody) {
+  public AttemptStats getAttemptCombinedStats(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
-        .execute(() -> attemptHandler.getAttemptCombinedStats(getAttemptStatsRequestBody.getJobId(), getAttemptStatsRequestBody.getAttemptNumber()));
+        .execute(() -> attemptHandler.getAttemptCombinedStats(requestBody.getJobId(), requestBody.getAttemptNumber()));
   }
 
   @Override

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AttemptStats;
-import io.airbyte.metrics.lib.MetricClient;
 import io.micronaut.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,21 +25,17 @@ class ProgressCheckerTest {
   private AttemptApi mAttemptApi;
 
   @Mock
-  private MetricClient mMetricClient;
-
-  @Mock
   private ProgressCheckerPredicates mPredicates;
 
   @BeforeEach
   public void setup() {
     mAttemptApi = Mockito.mock(AttemptApi.class);
     mPredicates = Mockito.mock(ProgressCheckerPredicates.class);
-    mMetricClient = Mockito.mock(MetricClient.class);
   }
 
   @Test
   void noRespReturnsFalse() throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates, mMetricClient);
+    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenReturn(null);
 
@@ -52,7 +47,7 @@ class ProgressCheckerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void respReturnsCheckedValue(final boolean madeProgress) throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates, mMetricClient);
+    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenReturn(new AttemptStats());
     when(mPredicates.test(Mockito.any()))
@@ -65,7 +60,7 @@ class ProgressCheckerTest {
 
   @Test
   void notFoundsAreTreatedAsNoProgress() throws Exception {
-    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates, mMetricClient);
+    final ProgressChecker activity = new ProgressChecker(mAttemptApi, mPredicates);
     when(mAttemptApi.getAttemptCombinedStats(Mockito.any()))
         .thenThrow(new ApiException(HttpStatus.NOT_FOUND.getCode(), "Not Found."));
 

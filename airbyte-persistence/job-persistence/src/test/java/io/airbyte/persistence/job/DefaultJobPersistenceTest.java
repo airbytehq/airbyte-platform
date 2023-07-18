@@ -1067,7 +1067,7 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should increment attempt id if creating multiple attemps")
+    @DisplayName("Should increment attempt id if creating multiple attempts")
     void testCreateAttemptAttemptId() throws IOException {
       final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
       final int attemptNumber1 = jobPersistence.createAttempt(jobId, LOG_PATH);
@@ -1118,6 +1118,57 @@ class DefaultJobPersistenceTest {
           Lists.newArrayList(createAttempt(0, jobId, AttemptStatus.SUCCEEDED, LOG_PATH)),
           NOW.getEpochSecond());
       assertEquals(expected, actual);
+    }
+
+  }
+
+  @Nested
+  @DisplayName("Get an attempt")
+  class GetAttempt {
+
+    @Test
+    @DisplayName("Should get an attempt by job id")
+    void testGetAttemptSimple() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final var num = jobPersistence.createAttempt(jobId, LOG_PATH);
+
+      final Attempt actual = jobPersistence.getAttemptForJob(jobId, 0).get();
+      final Attempt expected = createUnfinishedAttempt(num, jobId, AttemptStatus.RUNNING, LOG_PATH);
+
+      assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("Should get an attempt specified by attempt number")
+    void testGetAttemptMultiple() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+
+      for (int i = 0; i < 10; ++i) {
+        final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+        assertEquals(attemptNumber, i);
+
+        final Attempt running = jobPersistence.getAttemptForJob(jobId, attemptNumber).get();
+        final Attempt expectedRunning = createUnfinishedAttempt(attemptNumber, jobId, AttemptStatus.RUNNING, LOG_PATH);
+        assertEquals(expectedRunning, running);
+
+        jobPersistence.failAttempt(jobId, attemptNumber);
+
+        final Attempt failed = jobPersistence.getAttemptForJob(jobId, attemptNumber).get();
+        final Attempt expectedFailed = createAttempt(attemptNumber, jobId, AttemptStatus.FAILED, LOG_PATH);
+        assertEquals(expectedFailed, failed);
+      }
+
+      final int last = jobPersistence.createAttempt(jobId, LOG_PATH);
+
+      final Attempt running = jobPersistence.getAttemptForJob(jobId, last).get();
+      final Attempt expectedRunning = createUnfinishedAttempt(last, jobId, AttemptStatus.RUNNING, LOG_PATH);
+      assertEquals(expectedRunning, running);
+
+      jobPersistence.succeedAttempt(jobId, last);
+
+      final Attempt succeeded = jobPersistence.getAttemptForJob(jobId, last).get();
+      final Attempt expectedFailed = createAttempt(last, jobId, AttemptStatus.SUCCEEDED, LOG_PATH);
+      assertEquals(expectedFailed, succeeded);
     }
 
   }
