@@ -5,6 +5,7 @@ import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
+import { ConnectionStatusLoadingSpinner } from "components/connection/ConnectionStatusIndicator";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
@@ -67,8 +68,14 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
         const notificationId = `download-logs-${jobWithAttempts.job.id}`;
         registerNotification({
           type: "info",
-          text: <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />,
+          text: (
+            <FlexContainer alignItems="center">
+              <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />
+              <ConnectionStatusLoadingSpinner />
+            </FlexContainer>
+          ),
           id: notificationId,
+          timeout: false,
         });
         // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
         Promise.all([
