@@ -14,14 +14,6 @@ sourceSets {
             srcDir("src/acceptanceTests/resources")
         }
     }
-    automaticMigrationAcceptanceTest {
-        java {
-            srcDir("src/automaticMigrationAcceptanceTest/java")
-        }
-        resources {
-            srcDir("src/automaticMigrationAcceptanceTest/resources")
-        }
-    }
 }
 
 // Gradle links configurations with the name xImplementation or xRuntimeOnly etc.. to the source set named x. Therefore, any deps specified
@@ -29,12 +21,9 @@ sourceSets {
 configurations {
     acceptanceTestsImplementation.extendsFrom testImplementation
     acceptanceTestsRuntimeOnly.extendsFrom testRuntimeOnly
-
-    automaticMigrationAcceptanceTestImplementation.extendsFrom testImplementation
-    automaticMigrationAcceptanceTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
-configurations.all {
+configurations.configureEach {
     // Temporary hack to avoid dependency conflicts
     exclude group: 'io.micronaut.email'
 }
@@ -65,14 +54,6 @@ dependencies {
     acceptanceTestsImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     acceptanceTestsImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
 
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-api')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-commons')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-tests')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-test-utils')
-
-
-    automaticMigrationAcceptanceTestImplementation libs.platform.testcontainers
-
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core
@@ -85,24 +66,17 @@ def taskAcceptance = tasks.register("copyComposeFileForAcceptanceTests", Copy) {
     from "${rootDir}/docker-compose.yaml"
     into "${sourceSets.acceptanceTests.output.resourcesDir}"
 }
-def taskMigration = tasks.register("copyComposeFileForMigrationAcceptanceTests", Copy) {
-    from "${rootDir}/docker-compose.yaml"
-    into "${sourceSets.automaticMigrationAcceptanceTest.output.resourcesDir}"
+
+tasks.named("assemble") {
+    dependsOn(taskAcceptance)
 }
 
-// this fixes an non-explicit dependency issue
-tasks.named("pmdAutomaticMigrationAcceptanceTest") {
-    dependsOn(taskMigration)
+tasks.named("checkstyleAcceptanceTests") {
+    dependsOn(taskAcceptance)
 }
-
-assemble.dependsOn(taskAcceptance)
-assemble.dependsOn(taskMigration)
-
-checkstyleAcceptanceTests.dependsOn(taskAcceptance)
-pmdAcceptanceTests.dependsOn(taskAcceptance)
-
-checkstyleAutomaticMigrationAcceptanceTest.dependsOn(taskMigration)
-pmdAutomaticMigrationAcceptanceTest.dependsOn(taskAcceptance)
+tasks.named("pmdAcceptanceTests") {
+    dependsOn(taskAcceptance)
+}
 
 tasks.register("acceptanceTests", Test) {
     testClassesDirs += sourceSets.acceptanceTests.output.classesDirs
@@ -113,23 +87,11 @@ tasks.register("acceptanceTests", Test) {
         events "passed", "failed"
         exceptionFormat "full"
     }
-    mustRunAfter test
+    mustRunAfter tasks.named("test")
     // Ensure they re-run since these are integration tests.
     outputs.upToDateWhen { false }
 }
 
-tasks.register("automaticMigrationAcceptanceTest", Test) {
-    testClassesDirs += sourceSets.automaticMigrationAcceptanceTest.output.classesDirs
-    classpath += sourceSets.automaticMigrationAcceptanceTest.runtimeClasspath
-    useJUnitPlatform()
-    failFast = true
-    testLogging() {
-        events "passed", "failed"
-        exceptionFormat "full"
-    }
-    mustRunAfter test
-}
-
-tasks.withType(Copy) {
+tasks.withType(Copy).configureEach {
     duplicatesStrategy DuplicatesStrategy.INCLUDE
 }
