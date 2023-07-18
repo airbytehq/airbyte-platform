@@ -218,11 +218,17 @@ extraVolumeMounts: []
 ##
 extraVolumes: []
 
-##  podSweeper.timeToDeletePods.completed Time to remove pods on completed status (minutes).
-##  podSweeper.timeToDeletePods.error Time to remove pods on error status (minutes).
+##  Pod TTLs in minutes
+##  pod-sweeper will skip over pods with any status types with no TTL set (empty string)
+##  Pod Status docs: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
+##
+##  podSweeper.timeToDeletePods.running Time to remove pods on running status (minutes).
+##  podSweeper.timeToDeletePods.succeeded Time to remove pods on succeeded status (minutes).
+##  podSweeper.timeToDeletePods.unsuccessful Time to remove pods on neither running nor succeeded status (minutes).
 timeToDeletePods:
-  completed: 120
-  error: 1440
+  running: ""
+  succeeded: 120
+  unsuccessful: 1440
 
 replicaCount: 1
 

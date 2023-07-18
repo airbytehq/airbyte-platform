@@ -44,6 +44,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: RUNNING_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.running }}"
+        - name: SUCCEEDED_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.succeeded }}"
+        - name: UNSUCCESSFUL_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.unsuccessful }}"
         {{- if .Values.containerSecurityContext }}
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}
