@@ -1,20 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.button {
-  padding: variables.$spacing-sm variables.$spacing-md;
-  background-color: transparent;
-  border: variables.$border-thin solid colors.$grey-200;
-  border-radius: variables.$border-radius-xs;
-  display: flex;
-  align-items: center;
-}
-
-.arrow {
-  margin-left: auto;
-  font-size: 10px;
-}
-
 .sliceDescriptor {
   background-color: colors.$grey-50;
   border-radius: variables.$border-radius-md;

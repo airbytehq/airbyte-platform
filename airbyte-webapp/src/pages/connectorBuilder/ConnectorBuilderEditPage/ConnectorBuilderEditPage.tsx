@@ -149,30 +149,32 @@ const Panels = React.memo(
       () => (
         <ResizablePanels
           className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}
-          firstPanel={{
-            children: (
-              <>
-                {editorView === "yaml" ? (
-                  <YamlEditor toggleYamlEditor={switchToUI} />
-                ) : (
-                  <Builder hasMultipleStreams={values.streams.length > 1} toggleYamlEditor={switchToYaml} />
-                )}
-              </>
-            ),
-            className: styles.leftPanel,
-            minWidth: 550,
-          }}
-          secondPanel={{
-            children: <StreamTestingPanel />,
-            className: styles.rightPanel,
-            flex: 0.33,
-            minWidth: 60,
-            overlay: {
-              displayThreshold: 325,
-              header: formatMessage({ id: "connectorBuilder.testConnector" }),
-              rotation: "counter-clockwise",
+          panels={[
+            {
+              children: (
+                <>
+                  {editorView === "yaml" ? (
+                    <YamlEditor toggleYamlEditor={switchToUI} />
+                  ) : (
+                    <Builder hasMultipleStreams={values.streams.length > 1} toggleYamlEditor={switchToYaml} />
+                  )}
+                </>
+              ),
+              className: styles.leftPanel,
+              minWidth: 550,
             },
-          }}
+            {
+              children: <StreamTestingPanel />,
+              className: styles.rightPanel,
+              flex: 0.33,
+              minWidth: 60,
+              overlay: {
+                displayThreshold: 325,
+                header: formatMessage({ id: "connectorBuilder.testConnector" }),
+                rotation: "counter-clockwise",
+              },
+            },
+          ]}
         />
       ),
       [editorView, formatMessage, switchToUI, switchToYaml, values.streams.length]

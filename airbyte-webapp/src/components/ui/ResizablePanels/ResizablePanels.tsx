@@ -9,9 +9,8 @@ import styles from "./ResizablePanels.module.scss";
 interface ResizablePanelsProps {
   className?: string;
   orientation?: "vertical" | "horizontal";
-  firstPanel: PanelProps;
-  secondPanel: PanelProps;
-  hideSecondPanel?: boolean;
+  panels: PanelProps[];
+  onlyShowFirstPanel?: boolean;
 }
 
 interface PanelProps {
@@ -21,6 +20,7 @@ interface PanelProps {
   flex?: number;
   overlay?: Overlay;
   onStopResize?: (newFlex: number | undefined) => void;
+  splitter?: React.ReactNode;
 }
 
 interface Overlay {
@@ -68,24 +68,33 @@ const PanelContainer: React.FC<React.PropsWithChildren<PanelContainerProps>> = (
 export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
   className,
   orientation = "vertical",
-  firstPanel,
-  secondPanel,
-  hideSecondPanel = false,
+  panels,
+  onlyShowFirstPanel = false,
 }) => {
-  return (
-    <ReflexContainer className={className} orientation={orientation}>
-      <ReflexElement
-        className={classNames(styles.panelStyle, firstPanel.className, { [styles.fullWidth]: hideSecondPanel })}
-        propagateDimensions
-        minSize={firstPanel.minWidth}
-        flex={firstPanel.flex}
-        onStopResize={(args) => {
-          firstPanel.onStopResize?.(args.component.props.flex);
-        }}
-      >
-        <PanelContainer overlay={firstPanel.overlay}>{firstPanel.children}</PanelContainer>
-      </ReflexElement>
-      <ReflexSplitter className={classNames(styles.splitter, { [styles.hidden]: hideSecondPanel })}>
+  if (panels.length === 0) {
+    return null;
+  }
+
+  const panel = (panelProps: PanelProps, key: string | number, hidden = false, fullWidth = false) => (
+    <ReflexElement
+      key={key}
+      className={classNames(styles.panelStyle, panelProps.className, { [styles.fullWidth]: fullWidth })}
+      propagateDimensions
+      minSize={panelProps.minWidth}
+      flex={panelProps.flex}
+      onStopResize={(args) => {
+        panelProps.onStopResize?.(args.component.props.flex);
+      }}
+    >
+      {!hidden && <PanelContainer overlay={panelProps.overlay}>{panelProps.children}</PanelContainer>}
+    </ReflexElement>
+  );
+
+  const splitter = (key: string | number, splitter: React.ReactNode, hidden = false) => (
+    <ReflexSplitter key={key} className={classNames(styles.splitter, { [styles.hidden]: hidden })} propagate>
+      {splitter ? (
+        splitter
+      ) : (
         <div
           className={classNames({
             [styles.panelGrabberVertical]: orientation === "vertical",
@@ -99,20 +108,24 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
             })}
           />
         </div>
-      </ReflexSplitter>
-      <ReflexElement
-        className={classNames(styles.panelStyle, secondPanel.className, {
-          [styles.hidden]: hideSecondPanel,
-        })}
-        propagateDimensions
-        minSize={secondPanel.minWidth}
-        flex={secondPanel.flex}
-        onStopResize={(args) => {
-          secondPanel.onStopResize?.(args.component.props.flex);
-        }}
-      >
-        {!hideSecondPanel && <PanelContainer overlay={secondPanel.overlay}>{secondPanel.children}</PanelContainer>}
-      </ReflexElement>
+      )}
+    </ReflexSplitter>
+  );
+
+  const children = panels.slice(1).reduce(
+    (acc, panelProps, index) => {
+      return [
+        ...acc,
+        splitter(`splitter-${index}`, panelProps.splitter, onlyShowFirstPanel),
+        panel(panelProps, `panel-${index}`, onlyShowFirstPanel),
+      ];
+    },
+    [panel(panels[0], "panel-first", false, onlyShowFirstPanel)]
+  );
+
+  return (
+    <ReflexContainer className={className} orientation={orientation}>
+      {children}
     </ReflexContainer>
   );
 };

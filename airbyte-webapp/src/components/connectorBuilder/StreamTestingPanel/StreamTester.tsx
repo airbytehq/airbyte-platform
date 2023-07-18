@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import partition from "lodash/partition";
+import { useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocalStorage } from "react-use";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
+import { NumberBadge } from "components/ui/NumberBadge";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -17,6 +20,7 @@ import {
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
@@ -51,16 +55,13 @@ export const StreamTester: React.FC<{
     builderFormValues: { streams: builderFormStreams },
   } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
+  const auxiliaryRequests = streamReadData?.auxiliary_requests;
 
   const streamName = streams[testStreamIndex]?.name;
 
   const analyticsService = useAnalyticsService();
 
   const [logsFlex, setLogsFlex] = useState(0);
-  const handleLogsTitleClick = () => {
-    // expand to 50% if it is currently minimized, otherwise minimize it
-    setLogsFlex((prevFlex) => (prevFlex < 0.06 ? 0.5 : 0));
-  };
 
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
@@ -69,15 +70,21 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
-  const logContainsError = streamReadData?.logs.some((log) => log.level === "ERROR" || log.level === "FATAL");
+  const [errorLogs, nonErrorLogs] = useMemo(
+    () =>
+      streamReadData
+        ? partition(streamReadData.logs, (log) => log.level === "ERROR" || log.level === "FATAL")
+        : [[], []],
+    [streamReadData]
+  );
 
   useEffect(() => {
-    if (isError || logContainsError) {
-      setLogsFlex(1);
+    if (isError || errorLogs.length > 0) {
+      setLogsFlex(0.75);
     } else {
       setLogsFlex(0);
     }
-  }, [isError, logContainsError]);
+  }, [isError, errorLogs]);
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -183,31 +190,62 @@ export const StreamTester: React.FC<{
         <ResizablePanels
           className={styles.resizablePanelsContainer}
           orientation="horizontal"
-          firstPanel={{
-            children: (
-              <>
-                {streamReadData !== undefined && !isError && (
-                  <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
-                )}
-              </>
-            ),
-            minWidth: 80,
-          }}
-          secondPanel={{
-            className: styles.logsContainer,
-            children: (
-              <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} onTitleClick={handleLogsTitleClick} />
-            ),
-            minWidth: 30,
-            flex: logsFlex,
-            onStopResize: (newFlex) => {
-              if (newFlex) {
-                setLogsFlex(newFlex);
-              }
+          panels={[
+            {
+              children: (
+                <>
+                  {streamReadData !== undefined && !isError && (
+                    <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
+                  )}
+                </>
+              ),
+              minWidth: 40,
             },
-          }}
+            ...(streamReadData?.logs && streamReadData.logs.length > 0
+              ? [
+                  {
+                    children: <LogsDisplay logs={streamReadData.logs} error={errorMessage} />,
+                    minWidth: 0,
+                    flex: logsFlex,
+                    splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,
+                    className: styles.secondaryPanel,
+                  },
+                ]
+              : []),
+            ...(auxiliaryRequests && auxiliaryRequests.length > 0
+              ? [
+                  {
+                    children: <GlobalRequestsDisplay requests={auxiliaryRequests} />,
+                    minWidth: 0,
+                    flex: 0,
+                    splitter: (
+                      <Splitter
+                        label={formatMessage({ id: "connectorBuilder.auxiliaryRequests" })}
+                        num={auxiliaryRequests.length}
+                      />
+                    ),
+                    className: styles.secondaryPanel,
+                  },
+                ]
+              : []),
+          ]}
         />
       )}
     </div>
   );
 };
+
+const Splitter = ({ label, num, errorNum }: { label: string; num?: number; errorNum?: number }) => (
+  <FlexContainer alignItems="center" justifyContent="space-between" className={styles.splitterContainer}>
+    <Text size="sm" bold>
+      {label}
+    </Text>
+    <FlexContainer gap="sm">
+      {num !== undefined && num > 0 && <NumberBadge value={num} />}
+      {errorNum !== undefined && errorNum > 0 && <NumberBadge value={errorNum} color="red" />}
+    </FlexContainer>
+    <FlexContainer className={styles.splitterHandleWrapper} justifyContent="center">
+      <div className={styles.splitterHandle} />
+    </FlexContainer>
+  </FlexContainer>
+);

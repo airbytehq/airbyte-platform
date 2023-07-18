@@ -989,6 +989,7 @@
   "connectorBuilder.versionModal.title": "Load a configuration",
   "connectorBuilder.versionModal.warning": "By loading and editing a version, your draft in progress will be lost",
   "connectorBuilder.versionModal.draftLabel": "Draft in progress",
+  "connectorBuilder.auxiliaryRequests": "Other Requests",
   "connectorBuilder.autoImportSchema.tooltip": "Automatically sets the declared schema to the schema that is detected when clicking Test for this stream.<br></br>Disable this in order to manually edit the schema.",
   "connectorBuilder.autoImportSchema.disabledTooltip": "Please fix JSON syntax",
 
