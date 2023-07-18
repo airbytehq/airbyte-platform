@@ -1,3 +1,7 @@
 .dropdown {
   min-width: calc(50% - 100px);
 }
+
+.disabled {
+  cursor: not-allowed;
+}

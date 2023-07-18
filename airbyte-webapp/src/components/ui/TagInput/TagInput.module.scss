@@ -14,4 +14,9 @@
   borderRadiusDirectional: variables.$border-radius-xs variables.$border-radius-2xl variables.$border-radius-2xl
     variables.$border-radius-xs;
   valueBorder: 1px solid colors.$grey;
+  disabledOpacity: 0.5;
+}
+
+.disabled {
+  cursor: not-allowed;
 }

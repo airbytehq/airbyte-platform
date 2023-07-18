@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import clone from "lodash/clone";
 import React, { useCallback, useMemo } from "react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
@@ -73,11 +74,11 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
             onChange={onOptionChange}
             value={currentlySelectedCondition}
             name={formField.path}
-            isDisabled={disabled}
+            isDisabled={disabled || formField.readOnly}
             error={!error?.types && !!error?.message}
           />
         }
-        controlClassName={styles.dropdown}
+        controlClassName={classNames(styles.dropdown, { [styles.disabled]: disabled || formField.readOnly })}
       >
         {/* currentlySelectedCondition is only falsy if a malformed config is loaded which doesn't have a valid value for the const selection key. In this case, render the selection group as empty. */}
         {typeof currentlySelectedCondition !== "undefined" && (

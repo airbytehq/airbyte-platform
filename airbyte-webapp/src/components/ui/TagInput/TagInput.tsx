@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useMemo, useState } from "react";
 import {
@@ -14,7 +15,7 @@ import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
 
-const customStyles = (directional?: boolean): StylesConfig<Tag, true, GroupBase<Tag>> => ({
+const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<Tag, true, GroupBase<Tag>> => ({
   multiValue: (provided) => ({
     ...provided,
     maxWidth: "100%",
@@ -24,6 +25,7 @@ const customStyles = (directional?: boolean): StylesConfig<Tag, true, GroupBase<
     borderRadius: `${directional ? styles.borderRadiusDirectional : styles.borderRadius}`,
     paddingLeft: `${styles.paddingLeft}`,
     border: `${styles.valueBorder}`,
+    opacity: `${disabled ? styles.disabledOpacity : undefined}`,
   }),
   multiValueLabel: (provided) => ({
     ...provided,
@@ -218,7 +220,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   );
 
   return (
-    <div data-testid="tag-input" onBlur={onBlurControl}>
+    <div data-testid="tag-input" onBlur={onBlurControl} className={classNames({ [styles.disabled]: disabled })}>
       <CreatableSelect
         inputId={id}
         name={name}
@@ -235,7 +237,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         onKeyDown={handleKeyDown}
         value={tags}
         isDisabled={disabled}
-        styles={customStyles(directionalStyle)}
+        styles={customStyles(directionalStyle, disabled)}
       />
     </div>
   );

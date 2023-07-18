@@ -121,13 +121,13 @@ export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, dis
           items={itemsWithOverride}
           renderItemName={renderItemName}
           renderItemDescription={renderItemDescription}
-          disabled={disabled}
+          disabled={disabled || formField.readOnly}
           editModalSize="sm"
           renderItemEditorForm={(item) => (
             <VariableInputFieldForm
               formField={formField}
               path={`${path}[${editIndex ?? 0}]`}
-              disabled={disabled}
+              disabled={disabled || formField.readOnly}
               item={item}
               onDone={clearEditIndex}
               onCancel={onCancel}

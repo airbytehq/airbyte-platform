@@ -17,9 +17,17 @@
   flex-direction: row;
   align-items: center;
 
+  & label {
+    cursor: pointer;
+  }
+
   &.disabled {
-    cursor: auto;
     color: colors.$grey-300;
+    cursor: not-allowed;
+
+    & label {
+      cursor: not-allowed;
+    }
   }
 }
 

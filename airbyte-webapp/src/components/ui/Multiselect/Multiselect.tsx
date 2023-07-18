@@ -85,7 +85,7 @@ export const Multiselect = styled(ReactMultiselect)<MultiselectProps>`
       color: ${({ theme }) => theme.greyColor40};
     }
 
-    &:hover {
+    &:hover:not(.rw-state-readonly, .rw-state-disabled) {
       box-shadow: none;
       border-color: ${(props) => (props.error ? props.theme.dangerColor : props.theme.greyColor20)};
     }
@@ -114,17 +114,23 @@ export const Multiselect = styled(ReactMultiselect)<MultiselectProps>`
     }
   }
 
-  &.rw-state-focus {
+  &.rw-state-focus:not(.rw-state-disabled, .rw-state-readonly) {
     & .rw-widget-container {
       background: ${({ theme }) => theme.primaryColor12};
       border-color: ${({ theme }) => theme.primaryColor};
     }
   }
 
-  &.rw-state-disabled {
+  &.rw-state-disabled,
+  &.rw-state-readonly {
+    cursor: not-allowed;
+
     & .rw-widget-container {
       pointer-events: none;
       color: ${({ theme }) => theme.greyColor55};
+      border: none;
+      box-shadow: none;
+      background-color: ${({ theme }) => theme.greyColor0};
     }
   }
 `;

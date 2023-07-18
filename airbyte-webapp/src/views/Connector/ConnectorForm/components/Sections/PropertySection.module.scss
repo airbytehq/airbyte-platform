@@ -4,7 +4,6 @@
   label {
     // don't want bottom padding for switch label, since it is to the right of the switch
     padding-bottom: 0;
-    cursor: pointer;
   }
 }
 
@@ -15,4 +14,8 @@
 
 .formatText {
   color: colors.$grey;
+}
+
+.disabled {
+  cursor: not-allowed;
 }

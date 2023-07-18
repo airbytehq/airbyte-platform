@@ -1,5 +1,12 @@
 import React from "react";
-import { CSSObjectWithLabel, GroupBase, Props, SelectComponentsConfig, StylesConfig } from "react-select";
+import {
+  ContainerProps,
+  CSSObjectWithLabel,
+  GroupBase,
+  Props,
+  SelectComponentsConfig,
+  StylesConfig,
+} from "react-select";
 import { PortalStyleArgs } from "react-select/dist/declarations/src/components/Menu";
 import Select from "react-select/dist/declarations/src/Select";
 
@@ -60,6 +67,10 @@ function DropDownInner<T = unknown>(
     menuPortal: (base: CSSObjectWithLabel, menuPortalProps: PortalStyleArgs) => ({
       ...(props.styles?.menuPortal?.(base, menuPortalProps) ?? { ...base }),
       zIndex: 9999,
+    }),
+    container: (base: CSSObjectWithLabel, containerProps: ContainerProps) => ({
+      ...(props.styles?.container?.(base, containerProps) ?? { ...base }),
+      cursor: props.isDisabled ? "not-allowed" : undefined,
     }),
   };
   return (
