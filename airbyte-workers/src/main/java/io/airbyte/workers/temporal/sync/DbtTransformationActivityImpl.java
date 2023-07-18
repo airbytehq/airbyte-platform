@@ -171,6 +171,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
 
     return () -> new DbtLauncherWorker(
         connectionId,
+        null,
         destinationLauncherConfig,
         jobRunConfig,
         workerConfigs,

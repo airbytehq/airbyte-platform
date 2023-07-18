@@ -72,6 +72,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
 
     return () -> new ReplicationLauncherWorker(
         syncInput.getConnectionId(),
+        syncInput.getWorkspaceId(),
         finalConfig,
         sourceLauncherConfig,
         destinationLauncherConfig,

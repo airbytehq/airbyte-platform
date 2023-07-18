@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import kotlin.Pair;
@@ -98,6 +99,8 @@ public class DockerProcessFactory implements ProcessFactory {
                         final String jobType,
                         final String jobId,
                         final int attempt,
+                        final UUID connectionId,
+                        final UUID workspaceId,
                         final Path jobRoot,
                         final String imageName,
                         final boolean usesIsolatedPool,

@@ -185,6 +185,7 @@ public class JobInputHandler {
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attempt,
+          connectionId,
           config,
           sourceVersion,
           attemptSyncConfig.getSourceConfiguration());
@@ -192,6 +193,7 @@ public class JobInputHandler {
       final IntegrationLauncherConfig destinationLauncherConfig = getDestinationIntegrationLauncherConfig(
           jobId,
           attempt,
+          connectionId,
           config,
           destinationVersion,
           attemptSyncConfig.getDestinationConfiguration(),
@@ -218,7 +220,7 @@ public class JobInputHandler {
           .withResourceRequirements(config.getResourceRequirements())
           .withSourceResourceRequirements(config.getSourceResourceRequirements())
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
-          .withConnectionId(standardSync.getConnectionId())
+          .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
           .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
           .withIsReset(JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType));
@@ -263,6 +265,7 @@ public class JobInputHandler {
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attemptNumber,
+          connectionId,
           jobSyncConfig,
           sourceVersion,
           sourceConfiguration);
@@ -271,6 +274,7 @@ public class JobInputHandler {
           getDestinationIntegrationLauncherConfig(
               jobId,
               attemptNumber,
+              connectionId,
               jobSyncConfig,
               destinationVersion,
               destinationConfiguration,
@@ -361,6 +365,7 @@ public class JobInputHandler {
 
   private IntegrationLauncherConfig getSourceIntegrationLauncherConfig(final long jobId,
                                                                        final int attempt,
+                                                                       final UUID connectionId,
                                                                        final JobSyncConfig config,
                                                                        @Nullable final ActorDefinitionVersion sourceVersion,
                                                                        final JsonNode sourceConfiguration)
@@ -370,6 +375,8 @@ public class JobInputHandler {
     final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
         .withAttemptId((long) attempt)
+        .withConnectionId(connectionId)
+        .withWorkspaceId(config.getWorkspaceId())
         .withDockerImage(config.getSourceDockerImage())
         .withProtocolVersion(config.getSourceProtocolVersion())
         .withIsCustomConnector(config.getIsSourceCustomConnector());
@@ -383,6 +390,7 @@ public class JobInputHandler {
 
   private IntegrationLauncherConfig getDestinationIntegrationLauncherConfig(final long jobId,
                                                                             final int attempt,
+                                                                            final UUID connectionId,
                                                                             final JobSyncConfig config,
                                                                             final ActorDefinitionVersion destinationVersion,
                                                                             final JsonNode destinationConfiguration,
@@ -400,6 +408,8 @@ public class JobInputHandler {
     return new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
         .withAttemptId((long) attempt)
+        .withConnectionId(connectionId)
+        .withWorkspaceId(config.getWorkspaceId())
         .withDockerImage(config.getDestinationDockerImage())
         .withProtocolVersion(config.getDestinationProtocolVersion())
         .withIsCustomConnector(config.getIsDestinationCustomConnector())
