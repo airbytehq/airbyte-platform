@@ -47,13 +47,13 @@ public class RetryStateClient {
 
   public RetryStateClient(final JobRetryStatesApi jobRetryStatesApi,
                           final FeatureFlagClient featureFlagClient,
-                          @Value("${airbyte.retries.complete—failures.max-successive}") final Integer successiveCompleteFailureLimit,
-                          @Value("${airbyte.retries.complete—failures.max-total}") final Integer totalCompleteFailureLimit,
-                          @Value("${airbyte.retries.partial—failures.max-successive}") final Integer successivePartialFailureLimit,
-                          @Value("${airbyte.retries.partial—failures.max-total}") final Integer totalPartialFailureLimit,
-                          @Value("${airbyte.retries.complete—failures.backoff.min-interval-s}") final Integer minInterval,
-                          @Value("${airbyte.retries.complete—failures.backoff.max-interval-s}") final Integer maxInterval,
-                          @Value("${airbyte.retries.complete—failures.backoff.base}") final Integer backoffBase) {
+                          @Value("${airbyte.retries.complete-failures.max-successive}") final Integer successiveCompleteFailureLimit,
+                          @Value("${airbyte.retries.complete-failures.max-total}") final Integer totalCompleteFailureLimit,
+                          @Value("${airbyte.retries.partial-failures.max-successive}") final Integer successivePartialFailureLimit,
+                          @Value("${airbyte.retries.partial-failures.max-total}") final Integer totalPartialFailureLimit,
+                          @Value("${airbyte.retries.complete-failures.backoff.min-interval-s}") final Integer minInterval,
+                          @Value("${airbyte.retries.complete-failures.backoff.max-interval-s}") final Integer maxInterval,
+                          @Value("${airbyte.retries.complete-failures.backoff.base}") final Integer backoffBase) {
     this.jobRetryStatesApi = jobRetryStatesApi;
     this.featureFlagClient = featureFlagClient;
     this.successiveCompleteFailureLimit = successiveCompleteFailureLimit;

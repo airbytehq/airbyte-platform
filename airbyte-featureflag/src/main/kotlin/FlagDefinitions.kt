@@ -75,19 +75,19 @@ object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-pa
 
 object UseNewRetries : Temporary<Boolean>(key = "use-new-retries", default = false)
 
-object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete—failures.max-successive", default = -1)
+object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
-object TotalCompleteFailureLimit : Temporary<Int>(key = "complete—failures.max-total", default = -1)
+object TotalCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-total", default = -1)
 
-object SuccessivePartialFailureLimit : Temporary<Int>(key = "partial—failures.max-successive", default = -1)
+object SuccessivePartialFailureLimit : Temporary<Int>(key = "partial-failures.max-successive", default = -1)
 
-object TotalPartialFailureLimit : Temporary<Int>(key = "partial—failures.max-total", default = -1)
+object TotalPartialFailureLimit : Temporary<Int>(key = "partial-failures.max-total", default = -1)
 
-object CompleteFailureBackoffMinInterval : Temporary<Int>(key = "complete—failures.backoff.min-interval-s", default = -1)
+object CompleteFailureBackoffMinInterval : Temporary<Int>(key = "complete-failures.backoff.min-interval-s", default = -1)
 
-object CompleteFailureBackoffMaxInterval : Temporary<Int>(key = "complete—failures.backoff.max-interval-s", default = -1)
+object CompleteFailureBackoffMaxInterval : Temporary<Int>(key = "complete-failures.backoff.max-interval-s", default = -1)
 
-object CompleteFailureBackoffBase : Temporary<Int>(key = "complete—failures.backoff.base", default = -1)
+object CompleteFailureBackoffBase : Temporary<Int>(key = "complete-failures.backoff.base", default = -1)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
