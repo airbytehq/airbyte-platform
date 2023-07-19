@@ -8,10 +8,10 @@ import { Version } from "components/common/Version";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConfig } from "config";
+import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { RoutePaths } from "pages/routePaths";
-import { links } from "utils/links";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 

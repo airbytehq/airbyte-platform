@@ -1,9 +1,12 @@
 import groovy.json.JsonBuilder
 import groovy.yaml.YamlSlurper
 
+import java.util.zip.ZipFile
+
 plugins {
-    id 'application'
-    id 'airbyte-integration-test-java'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations {
@@ -25,7 +28,19 @@ dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
 
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+
+    implementation libs.spotbugs.annotations
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
+
     implementation platform(libs.micronaut.bom)
+    implementation libs.google.cloud.storage
     implementation libs.bundles.micronaut
     implementation libs.micronaut.cache.caffeine
     implementation libs.flyway.core
@@ -57,6 +72,7 @@ dependencies {
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
+    implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
@@ -84,9 +100,6 @@ dependencies {
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
 
-    integrationTestJavaAnnotationProcessor platform(libs.micronaut.bom)
-    integrationTestJavaAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
-
     testImplementation libs.bundles.micronaut.test
     testImplementation libs.temporal.testing
     testImplementation libs.json.path
@@ -99,37 +112,38 @@ dependencies {
     testImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
     testImplementation project(':airbyte-api')
 
-    integrationTestJavaImplementation project(':airbyte-workers')
-    integrationTestJavaImplementation libs.bundles.micronaut.test
+    integrationTestAnnotationProcessor platform(libs.micronaut.bom)
+    integrationTestAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
+    integrationTestImplementation libs.bundles.junit
+    integrationTestImplementation libs.junit.pioneer
+    integrationTestImplementation libs.bundles.micronaut.test
 
     airbyteProtocol(libs.airbyte.protocol) {
         transitive = false
     }
 }
 
-application {
-    applicationName = project.name
-    mainClass = 'io.airbyte.workers.Application'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
-}
-
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
-run {
-    // default for running on local machine.
-    env.each { entry ->
-        environment entry.getKey(), entry.getValue()
+airbyte {
+    application {
+        mainClass = 'io.airbyte.workers.Application'
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+        localEnvVars = env + [
+                "AIRBYTE_ROLE"          : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION"       : env.VERSION,
+                'MICRONAUT_ENVIRONMENTS': 'control-plane'
+        ] as Map<String, String>
     }
-
-    environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
-    environment 'AIRBYTE_VERSION', env.VERSION
-    environment 'MICRONAUT_ENVIRONMENTS', 'control-plane'
+    docker {
+        imageName = "worker"
+    }
 }
 
-task cloudStorageIntegrationTest(type: Test) {
+tasks.register("cloudStorageIntegrationTest", Test) {
     useJUnitPlatform {
-        includeTags cloudStorageTestTagName
+        includeTags "cloud-storage"
     }
     testLogging {
         events "passed", "skipped", "failed"
@@ -137,33 +151,23 @@ task cloudStorageIntegrationTest(type: Test) {
 }
 
 // Duplicated in :airbyte-container-orchestrator, eventually, this should be handled in :airbyte-protocol
-task generateWellKnownTypes() {
+def taskGenerateWellKnownTypes = tasks.register("generateWellKnownTypes") {
     doLast {
         def wellKnownTypesYamlPath = 'airbyte_protocol/well_known_types.yaml'
         configurations.airbyteProtocol.getFiles().each {
-            def zip = new java.util.zip.ZipFile(it)
+            def zip = new ZipFile(it)
             def entry = zip.getEntry(wellKnownTypesYamlPath)
 
             def wellKnownTypesYaml = zip.getInputStream(entry).text
             def parsedYaml = new YamlSlurper().parseText(wellKnownTypesYaml)
             def wellKnownTypesJson = new JsonBuilder(parsedYaml).toPrettyString()
-            def targetFile = project.file("build/docker/WellKnownTypes.json")
+            def targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
             targetFile.getParentFile().mkdirs()
             targetFile.text = wellKnownTypesJson
         }
     }
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
-    dependsOn generateWellKnownTypes
+tasks.named("dockerBuildImage") {
+    dependsOn taskGenerateWellKnownTypes
 }
-
-// Ideally, we would have buildDockerImage depend on generateWellKnownTypes
-// but some of our actions use copyGeneratedTar as the "set up the docker build context" task
-// so we'll just add it here.
-tasks.named("copyGeneratedTar") {
-    dependsOn generateWellKnownTypes
-}
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

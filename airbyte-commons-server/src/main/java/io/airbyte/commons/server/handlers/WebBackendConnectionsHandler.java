@@ -55,8 +55,10 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
@@ -97,6 +99,7 @@ public class WebBackendConnectionsHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
@@ -106,7 +109,8 @@ public class WebBackendConnectionsHandler {
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
-                                      final ConfigRepository configRepositoryDoNotUse) {
+                                      final ConfigRepository configRepositoryDoNotUse,
+                                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
@@ -116,6 +120,7 @@ public class WebBackendConnectionsHandler {
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -560,8 +565,13 @@ public class WebBackendConnectionsHandler {
             Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
         final StandardSourceDefinition sourceDefinition =
             configRepositoryDoNotUse.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
+        final SourceRead source = getSourceRead(originalConnectionRead.getSourceId());
+        final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
+            sourceDefinition,
+            source.getWorkspaceId(),
+            source.getSourceId());
         final CatalogDiff catalogDiff =
-            connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceDefinition),
+            connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
         breakingChange = containsBreakingChange(catalogDiff);
       }

@@ -4,22 +4,18 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
-import io.airbyte.config.ActorType;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
@@ -46,24 +42,12 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
-
-  record StandardSyncProtocolVersionFlag(UUID standardSyncId, boolean unsupportedProtocolVersion) {}
-
-  private static final AirbyteProtocolVersionRange protocolRange_0_0 = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.1.0"));
-  private static final AirbyteProtocolVersionRange protocolRange_0_1 = new AirbyteProtocolVersionRange(new Version("0.0.1"), new Version("1.0.0"));
-  private static final AirbyteProtocolVersionRange protocolRange_1_1 = new AirbyteProtocolVersionRange(new Version("1.0.0"), new Version("1.10.0"));
 
   private static final UUID workspaceId = UUID.randomUUID();
 
@@ -141,87 +125,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     assertThrows(ConfigNotFoundException.class, () -> standardSyncPersistence.getStandardSync(sync1.getConnectionId()));
     assertNotNull(standardSyncPersistence.getStandardSync(sync2.getConnectionId()));
-  }
-
-  @Test
-  void testClearUnsupportedProtocolVersionFlagFromSource() throws IOException, JsonValidationException, SQLException {
-    createBaseObjects();
-
-    final StandardSync sync1 = createStandardSync(source1, destination1);
-    final StandardSync sync2 = createStandardSync(source1, destination2);
-    final List<StandardSync> syncs = List.of(sync1, sync2);
-
-    setProtocolVersionFlagForSyncs(List.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), true),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), true)));
-
-    // Only sync1 should be flipped since sync2 has dest2 with protocol v1
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(sourceDef1.getSourceDefinitionId(), ActorType.SOURCE, protocolRange_0_0);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), false),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), true)), getProtocolVersionFlagForSyncs(syncs));
-
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(sourceDef1.getSourceDefinitionId(), ActorType.SOURCE, protocolRange_0_1);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), false),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), false)), getProtocolVersionFlagForSyncs(syncs));
-
-    // Making sure we updated the updated_at timestamp
-    final Optional<Pair<OffsetDateTime, OffsetDateTime>> datetimes = database.query(ctx -> ctx
-        .select(CONNECTION.CREATED_AT, CONNECTION.UPDATED_AT).from(CONNECTION).where(CONNECTION.ID.eq(sync2.getConnectionId()))
-        .stream().findFirst()
-        .map(r -> new ImmutablePair<>(r.get(CONNECTION.CREATED_AT), r.get(CONNECTION.UPDATED_AT))));
-    assertTrue(datetimes.isPresent());
-    assertNotEquals(datetimes.get().getLeft(), datetimes.get().getRight());
-  }
-
-  @Test
-  void testClearUnsupportedProtocolVersionFlagFromSourceMultiFlipAtOnce() throws IOException, JsonValidationException, SQLException {
-    createBaseObjects();
-
-    final StandardSync sync1 = createStandardSync(source1, destination1);
-    final StandardSync sync2 = createStandardSync(source1, destination2);
-    final List<StandardSync> syncs = List.of(sync1, sync2);
-
-    setProtocolVersionFlagForSyncs(List.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), true),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), true)));
-
-    // Making sure we flip all the connections if more than one is impacted
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(sourceDef1.getSourceDefinitionId(), ActorType.SOURCE, protocolRange_0_1);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), false),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), false)), getProtocolVersionFlagForSyncs(syncs));
-  }
-
-  @Test
-  void testClearUnsupportedProtocolVersionFlagFromDest() throws IOException, JsonValidationException, SQLException {
-    createBaseObjects();
-
-    final StandardSync sync1 = createStandardSync(source1, destination2);
-    final StandardSync sync2 = createStandardSync(source2, destination2);
-    final List<StandardSync> syncs = List.of(sync1, sync2);
-
-    setProtocolVersionFlagForSyncs(List.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), true),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), true)));
-
-    // destDef1 is not tied to anything, there should be no change
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(destDef1.getDestinationDefinitionId(), ActorType.DESTINATION, protocolRange_0_1);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), true),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), true)), getProtocolVersionFlagForSyncs(syncs));
-
-    // Only sync1 should be flipped since sync2 has source1 with protocol v0
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(destDef2.getDestinationDefinitionId(), ActorType.DESTINATION, protocolRange_1_1);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), true),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), false)), getProtocolVersionFlagForSyncs(syncs));
-
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(destDef2.getDestinationDefinitionId(), ActorType.DESTINATION, protocolRange_0_1);
-    assertEquals(Set.of(
-        new StandardSyncProtocolVersionFlag(sync1.getConnectionId(), false),
-        new StandardSyncProtocolVersionFlag(sync2.getConnectionId(), false)), getProtocolVersionFlagForSyncs(syncs));
   }
 
   @Test
@@ -391,39 +294,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(NonBreakingChangesPreference.PROPAGATE_FULLY.value(), AutoPropagationStatus.propagate_fully.getLiteral());
   }
 
-  private Set<StandardSyncProtocolVersionFlag> getProtocolVersionFlagForSyncs(final List<StandardSync> standardSync) throws SQLException {
-    return database.query(ctx -> ctx
-        .select(CONNECTION.ID, CONNECTION.UNSUPPORTED_PROTOCOL_VERSION)
-        .from(CONNECTION)
-        .where(CONNECTION.ID.in(standardSync.stream().map(StandardSync::getConnectionId).toList()))
-        .fetch())
-        .stream()
-        .map(r -> new StandardSyncProtocolVersionFlag(r.get(CONNECTION.ID), r.get(CONNECTION.UNSUPPORTED_PROTOCOL_VERSION)))
-        .collect(Collectors.toSet());
-  }
-
-  private void setProtocolVersionFlagForSyncs(final List<StandardSyncProtocolVersionFlag> updates) throws SQLException {
-    final List<UUID> setToTrue =
-        updates.stream().filter(s -> s.unsupportedProtocolVersion).map(StandardSyncProtocolVersionFlag::standardSyncId).toList();
-    final List<UUID> setToFalse =
-        updates.stream().filter(s -> !s.unsupportedProtocolVersion).map(StandardSyncProtocolVersionFlag::standardSyncId).toList();
-    database.query(ctx -> {
-      if (!setToTrue.isEmpty()) {
-        ctx.update(CONNECTION)
-            .set(CONNECTION.UNSUPPORTED_PROTOCOL_VERSION, true)
-            .where(CONNECTION.ID.in(setToTrue))
-            .execute();
-      }
-      if (!setToFalse.isEmpty()) {
-        ctx.update(CONNECTION)
-            .set(CONNECTION.UNSUPPORTED_PROTOCOL_VERSION, false)
-            .where(CONNECTION.ID.in(setToFalse))
-            .execute();
-      }
-      return null;
-    });
-  }
-
   private void createBaseObjects() throws IOException, JsonValidationException {
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
@@ -460,18 +330,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(sourceDefId)
         .withSourceType(SourceType.API)
         .withName("random-source-" + sourceDefId)
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
         .withIcon("icon-1")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardSourceDefinition(sourceDef);
+    final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefId)
+        .withDockerImageTag("tag-1")
+        .withDockerRepository("repository-1")
+        .withDocumentationUrl("documentation-url-1")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, sourceDefVersion);
     return sourceDef;
   }
 
@@ -481,18 +353,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(destDefId)
         .withName("random-destination-" + destDefId)
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
         .withIcon("icon-3")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardDestinationDefinition(destDef);
+    final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(destDefId)
+        .withDockerImageTag("tag-3")
+        .withDockerRepository("repository-3")
+        .withDocumentationUrl("documentation-url-3")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, destDefVersion);
     return destDef;
   }
 

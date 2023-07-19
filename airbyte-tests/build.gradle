@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id "io.airbyte.gradle.jvm.lib"
 }
 
 // The java plugin automatically compiles/runs tests in the test source set (./src/test directory). Since we want acceptance tests to run
@@ -14,14 +14,6 @@ sourceSets {
             srcDir("src/acceptanceTests/resources")
         }
     }
-    automaticMigrationAcceptanceTest {
-        java {
-            srcDir("src/automaticMigrationAcceptanceTest/java")
-        }
-        resources {
-            srcDir("src/automaticMigrationAcceptanceTest/resources")
-        }
-    }
 }
 
 // Gradle links configurations with the name xImplementation or xRuntimeOnly etc.. to the source set named x. Therefore, any deps specified
@@ -29,12 +21,9 @@ sourceSets {
 configurations {
     acceptanceTestsImplementation.extendsFrom testImplementation
     acceptanceTestsRuntimeOnly.extendsFrom testRuntimeOnly
-
-    automaticMigrationAcceptanceTestImplementation.extendsFrom testImplementation
-    automaticMigrationAcceptanceTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
-configurations.all {
+configurations.configureEach {
     // Temporary hack to avoid dependency conflicts
     exclude group: 'io.micronaut.email'
 }
@@ -65,35 +54,31 @@ dependencies {
     acceptanceTestsImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     acceptanceTestsImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
 
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-api')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-commons')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-tests')
-    automaticMigrationAcceptanceTestImplementation project(':airbyte-test-utils')
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
 
-
-    automaticMigrationAcceptanceTestImplementation libs.platform.testcontainers
+    testImplementation libs.junit.pioneer
 }
 
 // test should run using the current version of the docker compose configuration.
-task copyComposeFileForAcceptanceTests(type: Copy) {
+def taskAcceptance = tasks.register("copyComposeFileForAcceptanceTests", Copy) {
     from "${rootDir}/docker-compose.yaml"
     into "${sourceSets.acceptanceTests.output.resourcesDir}"
 }
-task copyComposeFileForMigrationAcceptanceTests(type: Copy) {
-    from "${rootDir}/docker-compose.yaml"
-    into "${sourceSets.automaticMigrationAcceptanceTest.output.resourcesDir}"
+
+tasks.named("assemble") {
+    dependsOn(taskAcceptance)
 }
 
-assemble.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
-assemble.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+tasks.named("checkstyleAcceptanceTests") {
+    dependsOn(taskAcceptance)
+}
+tasks.named("pmdAcceptanceTests") {
+    dependsOn(taskAcceptance)
+}
 
-checkstyleAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
-pmdAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
-
-checkstyleAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
-pmdAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
-
-task acceptanceTests(type: Test) {
+tasks.register("acceptanceTests", Test) {
     testClassesDirs += sourceSets.acceptanceTests.output.classesDirs
     classpath += sourceSets.acceptanceTests.runtimeClasspath
     useJUnitPlatform()
@@ -102,23 +87,11 @@ task acceptanceTests(type: Test) {
         events "passed", "failed"
         exceptionFormat "full"
     }
-    mustRunAfter test
+    mustRunAfter tasks.named("test")
     // Ensure they re-run since these are integration tests.
     outputs.upToDateWhen { false }
 }
 
-task automaticMigrationAcceptanceTest(type: Test) {
-    testClassesDirs += sourceSets.automaticMigrationAcceptanceTest.output.classesDirs
-    classpath += sourceSets.automaticMigrationAcceptanceTest.runtimeClasspath
-    useJUnitPlatform()
-    failFast = true
-    testLogging() {
-        events "passed", "failed"
-        exceptionFormat "full"
-    }
-    mustRunAfter test
-}
-
-tasks.withType(Copy) {
+tasks.withType(Copy).configureEach {
     duplicatesStrategy DuplicatesStrategy.INCLUDE
 }

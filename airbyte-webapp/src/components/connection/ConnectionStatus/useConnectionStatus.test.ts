@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react-hooks";
 import dayjs from "dayjs";
 
 import { mockConnection } from "test-utils";
+import { mockAttempt } from "test-utils/mock-data/mockAttempt";
 import { mockJob } from "test-utils/mock-data/mockJob";
 
 import { useListJobsForConnectionStatus } from "core/api";
@@ -9,6 +10,8 @@ import {
   ConnectionScheduleDataBasicSchedule,
   ConnectionScheduleDataCron,
   ConnectionStatus,
+  FailureOrigin,
+  FailureType,
   JobStatus,
   JobWithAttemptsRead,
   SchemaChange,
@@ -262,6 +265,7 @@ describe("useConnectionStatus", () => {
     ${"last sync was cancelled, but last successful sync is within 1x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTime}         | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within1xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
     ${"last sync was cancelled, but last successful sync is within 2x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within2xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
     ${"last sync was cancelled, but last successful sync is outside 2x frequency"}                  | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"last sync has a config_error"}                                                               | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobsWithConfigError(within1xFrequency)}        | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
   `(
     "$title:" +
       "\n\treturns $expectedConnectionStatus when" +
@@ -317,6 +321,27 @@ function buildJobs(latestSyncStatus: JobStatus, lastSuccessfulSync: number | und
       attempts: [], // attempts are not used
     });
   }
+
+  return jobs;
+}
+
+function buildJobsWithConfigError(lastSuccessfulSync: number | undefined) {
+  const jobs = buildJobs(JobStatus.failed, lastSuccessfulSync);
+
+  jobs[0].attempts = [
+    {
+      ...mockAttempt,
+      failureSummary: {
+        failures: [
+          {
+            failureOrigin: FailureOrigin.source,
+            failureType: FailureType.config_error,
+            timestamp: 0,
+          },
+        ],
+      },
+    },
+  ];
 
   return jobs;
 }

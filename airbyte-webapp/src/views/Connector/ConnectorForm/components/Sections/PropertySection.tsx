@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import uniq from "lodash/uniq";
 import React from "react";
 import { FieldError, UseFormGetFieldState, useController, useFormContext } from "react-hook-form";
@@ -104,7 +105,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
           />
         }
         value={field.value ?? property.default}
-        disabled={disabled}
+        disabled={disabled || property.readOnly}
       />
     );
   }
@@ -123,7 +124,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
 
   return (
     <PropertyLabel
-      className={styles.defaultLabel}
+      className={classNames(styles.defaultLabel, { [styles.disabled]: disabled || property.readOnly })}
       property={property}
       label={labelText}
       format={<FormatBlock property={property} fieldMeta={meta} value={value} />}

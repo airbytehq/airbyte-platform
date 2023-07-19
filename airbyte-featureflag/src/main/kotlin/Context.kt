@@ -4,7 +4,7 @@
 
 package io.airbyte.featureflag
 
-import java.util.*
+import java.util.UUID
 
 /**
  * Anonymous UUID to be used with anonymous contexts.

@@ -1,5 +1,7 @@
 plugins {
-    id 'application'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations.all {
@@ -11,10 +13,17 @@ configurations.all {
         force libs.flyway.core, libs.s3, libs.aws.java.sdk.s3
     }
 }
+
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
+    annotationProcessor libs.lombok
     annotationProcessor libs.bundles.micronaut.annotation.processor
     annotationProcessor libs.micronaut.jaxrs.processor
+
+    compileOnly libs.lombok
+
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
@@ -52,6 +61,7 @@ dependencies {
     implementation libs.sentry.java
     implementation libs.swagger.annotations
     implementation libs.javax.ws.rs.api
+    implementation libs.google.cloud.storage
 
     runtimeOnly libs.javax.databind
 
@@ -65,50 +75,63 @@ dependencies {
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
     testImplementation libs.mockito.inline
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+
+    testImplementation libs.junit.pioneer
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.
-task copySeed(type: Copy, dependsOn: [project(':airbyte-config:init').processResources]) {
+def copySeed = tasks.register("copySeed", Copy) {
     from "${project(':airbyte-config:init').buildDir}/resources/main/config"
     into "${buildDir}/config_init/resources/main/config"
+    dependsOn(project(':airbyte-config:init').processResources)
 }
 
 // need to make sure that the files are in the resource directory before copying.
 // tests require the seed to exist.
-test.dependsOn(project.tasks.copySeed)
-assemble.dependsOn(project.tasks.copySeed)
+test.dependsOn(copySeed)
+assemble.dependsOn(copySeed)
 
-application {
-    applicationName = project.name
-    mainClass = 'io.airbyte.server.Application'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
-}
 
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
-run {
-    // default for running on local machine.
-    environment "DATABASE_USER", env.DATABASE_USER
-    environment "DATABASE_PASSWORD", env.DATABASE_PASSWORD
+airbyte {
+    application {
+        mainClass = "io.airbyte.server.Application"
+        defaultJvmArgs = ["-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0"]
+        localEnvVars = env + [
+                "AIRBYTE_ROLE"                     : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION"                  : env.VERSION,
+                "DATABASE_USER"                    : env.DATABASE_USER,
+                "DATABASE_PASSWORD"                : env.DATABASE_PASSWORD,
+                "CONFIG_DATABASE_USER"             : env.CONFIG_DATABASE_USER ?: "",
+                "CONFIG_DATABASE_PASSWORD"         : env.CONFIG_DATABASE_PASSWORD ?: "",
+                // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
+                "DATABASE_URL"                     : "jdbc:postgresql://localhost:5433/${env.DATABASE_DB}",
+                "CONFIG_DATABASE_URL"              : "jdbc:postgresql://localhost:5433/${env.CONFIG_DATABASE_DB}",
+                "RUN_DATABASE_MIGRATION_ON_STARTUP": "true",
+                "WORKSPACE_ROOT"                   : env.WORKSPACE_ROOT,
+                "CONFIG_ROOT"                      : "/tmp/airbyte_config",
+                "TRACKING_STRATEGY"                : env.TRACKING_STRATEGY,
+                "TEMPORAL_HOST"                    : "localhost:7233",
+                "MICRONAUT_ENVIRONMENTS"           : "control-plane"
+        ] as Map<String, String>
+    }
 
-    environment "CONFIG_DATABASE_USER", env.CONFIG_DATABASE_USER
-    environment "CONFIG_DATABASE_PASSWORD", env.CONFIG_DATABASE_PASSWORD
+    docker {
+        imageName = "server"
+    }
 
-    // we map the docker pg db to port 5433 so it does not conflict with other pg instances.
-    environment "DATABASE_URL", "jdbc:postgresql://localhost:5433/${env.DATABASE_DB}"
-    environment "CONFIG_DATABASE_URL", "jdbc:postgresql://localhost:5433/${env.CONFIG_DATABASE_DB}"
-
-    environment "RUN_DATABASE_MIGRATION_ON_STARTUP", "true"
-
-    environment "WORKSPACE_ROOT", env.WORKSPACE_ROOT
-    environment "CONFIG_ROOT", "/tmp/airbyte_config"
-    environment "TRACKING_STRATEGY", env.TRACKING_STRATEGY
-    environment "AIRBYTE_VERSION", env.VERSION
-    environment "AIRBYTE_ROLE", System.getenv('AIRBYTE_ROLE')
-    environment "TEMPORAL_HOST", "localhost:7233"
-
-    environment 'MICRONAUT_ENVIRONMENTS', 'control-plane'
+    spotbugs {
+        excludes = ["  <Match>\n" +
+                            "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
+                            "    <!-- All args constructor used by builders trigger this error -->\n" +
+                            "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
+                            "  </Match>"]
+    }
 }
 
 test {
@@ -116,16 +139,3 @@ test {
     environment 'MICRONAUT_ENVIRONMENTS', 'test'
     environment 'SERVICE_NAME', project.name
 }
-
-// produce reproducible archives
-// (see https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives)
-tasks.withType(AbstractArchiveTask) {
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
-}
-
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
-}
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

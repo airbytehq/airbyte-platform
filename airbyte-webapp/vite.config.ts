@@ -39,7 +39,7 @@ export default defineConfig(() => {
           initialIsOpen: false,
           position: "br",
           // Align error popover button with the react-query dev tool button
-          badgeStyle: "transform: translate(-135px,-11px)",
+          badgeStyle: "transform: translate(-75px,-11px)",
         },
         eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx src` },
         stylelint: {
@@ -68,6 +68,7 @@ export default defineConfig(() => {
       },
     },
     css: {
+      devSourcemap: true,
       modules: {
         generateScopedName: "[name]__[local]__[contenthash:6]",
       },

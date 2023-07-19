@@ -2,9 +2,9 @@ import { lazy, Suspense } from "react";
 import ReactDOM from "react-dom";
 
 import "react-reflex/styles.css";
-import { isCloudApp } from "utils/app";
-import { loadDatadog } from "utils/datadog";
-import { loadOsano } from "utils/dataPrivacy";
+import { isCloudApp } from "core/utils/app";
+import { loadDatadog } from "core/utils/datadog";
+import { loadOsano } from "core/utils/dataPrivacy";
 
 import "./dayjs-setup";
 import "./scss/global.scss";

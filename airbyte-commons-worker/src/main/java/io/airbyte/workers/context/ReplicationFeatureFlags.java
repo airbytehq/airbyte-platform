@@ -7,6 +7,6 @@ package io.airbyte.workers.context;
 /**
  * Feature flags to consider during a Replication job.
  */
-public record ReplicationFeatureFlags(boolean shouldCommitStateAsap, boolean shouldCommitStatsAsap, boolean shouldHandleStreamStatus) {
+public record ReplicationFeatureFlags() {
 
 }

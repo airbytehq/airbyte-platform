@@ -1,10 +1,10 @@
 import { ActionType, createAction, createReducer } from "typesafe-actions";
 
-import { User } from "packages/cloud/lib/domain/users";
+import { UserRead } from "core/api/types/CloudApi";
 
 export const actions = {
   authInited: createAction("AUTH_INITED")<void>(),
-  loggedIn: createAction("LOGGED_IN")<{ user: User; emailVerified: boolean; providers: string[] }>(),
+  loggedIn: createAction("LOGGED_IN")<{ user: UserRead; emailVerified: boolean; providers: string[] }>(),
   emailVerified: createAction("EMAIL_VERIFIED")<boolean>(),
   loggedOut: createAction("LOGGED_OUT")<void>(),
   updateUserName: createAction("UPDATE_USER_NAME")<{ value: string }>(),
@@ -14,7 +14,7 @@ type Actions = ActionType<typeof actions>;
 
 export interface AuthServiceState {
   inited: boolean;
-  currentUser: User | null;
+  currentUser: UserRead | null;
   emailVerified: boolean;
   loading: boolean;
   loggedOut: boolean;

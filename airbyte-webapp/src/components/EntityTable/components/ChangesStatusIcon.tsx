@@ -7,7 +7,7 @@ import { FormattedMessage } from "react-intl";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { SchemaChange } from "core/request/AirbyteClient";
-import { convertSnakeToCamel } from "utils/strings";
+import { convertSnakeToCamel } from "core/utils/strings";
 
 import styles from "./ChangesStatusIcon.module.scss";
 

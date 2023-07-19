@@ -1,40 +1,18 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.tabList {
-  flex: 0 0 auto;
-  display: flex;
-  overflow-y: auto;
-  margin-bottom: variables.$spacing-sm;
+.active {
+  color: colors.$dark-blue !important;
 }
 
-.tab {
-  flex-grow: 1;
-  flex-shrink: 0;
-  background-color: transparent;
-  border: 0;
-  white-space: nowrap;
+.jsonText {
+  color: inherit;
 }
 
-.tabTitle {
-  border-bottom: variables.$border-thin solid colors.$grey-50;
-  color: colors.$grey-300;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 3px;
+.recordsContainer {
+  height: 100%;
 }
 
-.selected {
-  border-bottom-color: colors.$grey-300;
-  color: colors.$dark-blue;
-}
-
-.tabPanelContainer {
-  flex: 1;
-  min-height: 0;
-}
-
-.tabPanel {
-  max-height: 100%;
+.records {
   overflow-y: auto;
 }

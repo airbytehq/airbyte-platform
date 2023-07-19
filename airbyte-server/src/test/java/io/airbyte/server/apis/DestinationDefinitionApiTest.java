@@ -84,7 +84,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
 
   @Test
   void testGrantDestinationDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(destinationDefinitionsHandler.grantDestinationDefinitionToWorkspace(Mockito.any()))
+    Mockito.when(destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateDestinationDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definitions/grant_definition";
@@ -139,7 +139,7 @@ class DestinationDefinitionApiTest extends BaseControllerTest {
   @Test
   void testRevokeDestinationDefinitionFromWorkspace() throws IOException {
     Mockito.doNothing()
-        .when(destinationDefinitionsHandler).revokeDestinationDefinitionFromWorkspace(Mockito.any());
+        .when(destinationDefinitionsHandler).revokeDestinationDefinition(Mockito.any());
     final String path = "/api/v1/destination_definitions/revoke_definition";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new DestinationDefinitionIdWithWorkspaceId())),

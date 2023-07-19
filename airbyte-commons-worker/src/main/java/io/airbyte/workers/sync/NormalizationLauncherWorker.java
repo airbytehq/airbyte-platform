@@ -4,10 +4,14 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_NORMALIZATION_STEP;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
+
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -27,15 +31,18 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
   public NormalizationLauncherWorker(final UUID connectionId,
+                                     final UUID workspaceId,
                                      final IntegrationLauncherConfig destinationLauncherConfig,
                                      final JobRunConfig jobRunConfig,
                                      final WorkerConfigs workerConfigs,
                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
                                      final Supplier<ActivityExecutionContext> activityContext,
                                      final Integer serverPort,
-                                     final TemporalUtils temporalUtils) {
+                                     final TemporalUtils temporalUtils,
+                                     final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
+        workspaceId,
         NORMALIZATION,
         POD_NAME_PREFIX,
         jobRunConfig,
@@ -48,10 +55,16 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
         serverPort,
         temporalUtils,
         workerConfigs,
+        featureFlagClient,
         // Normalization process will happen only on a fixed set of connectors,
         // thus they are not going to be run under custom connectors. Setting this to false.
         false);
 
+  }
+
+  @Override
+  protected Map<String, String> generateCustomMetadataLabels() {
+    return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_NORMALIZATION_STEP);
   }
 
 }

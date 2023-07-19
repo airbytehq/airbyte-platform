@@ -1,6 +1,7 @@
-
 plugins {
-    id 'java-library'
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 dependencies {
@@ -14,26 +15,41 @@ dependencies {
     implementation project(':airbyte-persistence:job-persistence')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-json-validation')
-    implementation libs.lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
     implementation libs.micronaut.cache.caffeine
+    implementation libs.guava
 
     testImplementation project(':airbyte-test-utils')
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.9.1'
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
 }
 
-task copyScripts(type: Copy) {
-    dependsOn copyDocker
+airbyte {
+    spotless {
+        excludes = ["src/main/resources/seed/oss_registry.json"]
+    }
+    docker {
+        imageName = "init"
+    }
+}
 
+def copyScripts = tasks.register("copyScripts", Copy) {
     from('scripts')
-    into 'build/docker/bin/scripts'
+    into 'build/airbyte/docker/bin/scripts'
 }
 
-tasks.named("buildDockerImage") {
+tasks.named("dockerBuildImage") {
     dependsOn copyScripts
 }
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
 
 processResources {
     from("${project.rootDir}/airbyte-connector-builder-resources")
 }
+
+

@@ -7,12 +7,15 @@ package io.airbyte.workers.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 // We are overriding the default config with application-config-test.yaml for consistency of the
@@ -71,6 +74,26 @@ class WorkerConfigProviderMicronautTest {
     assertEquals("", specKubeConfig.getResourceRequirements().getCpuRequest());
     assertEquals("spec memory limit", specKubeConfig.getResourceRequirements().getMemoryLimit());
     assertEquals("", specKubeConfig.getResourceRequirements().getMemoryRequest());
+  }
+
+  @Test
+  void checkDatabaseSourceResourceRequirements() {
+    final ResourceRequirements resourceRequirements =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database"));
+
+    assertEquals("1", resourceRequirements.getCpuRequest());
+    // This is verifying that we are inheriting the value from default.
+    assertEquals("default cpu limit", resourceRequirements.getCpuLimit());
+  }
+
+  @Test
+  void checkSourceResourceRequirements() {
+    final ResourceRequirements resourceRequirements =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("any"));
+
+    assertEquals("0.5", resourceRequirements.getCpuRequest());
+    // This is verifying that we are inheriting the value from default.
+    assertEquals("default cpu limit", resourceRequirements.getCpuLimit());
   }
 
 }

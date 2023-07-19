@@ -4,12 +4,6 @@ import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
-import { naturalComparator } from "utils/objects";
-
-import { CDK_VERSION } from "./cdk";
-import { formatJson } from "./utils";
-import { FORM_PATTERN_ERROR } from "../../core/form/types";
-import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -46,7 +40,13 @@ import {
   HttpResponseFilter,
   DefaultPaginator,
   DeclarativeComponentSchemaMetadata,
-} from "../../core/request/ConnectorManifest";
+} from "core/api/types/ConnectorManifest";
+import { naturalComparator } from "core/utils/objects";
+
+import { CDK_VERSION } from "./cdk";
+import { formatJson } from "./utils";
+import { FORM_PATTERN_ERROR } from "../../core/form/types";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export type EditorView = "ui" | "yaml";
 
@@ -54,6 +54,7 @@ export interface BuilderFormInput {
   key: string;
   required: boolean;
   definition: AirbyteJSONSchema;
+  as_config_path?: boolean;
 }
 
 export type BuilderFormAuthenticator = (
@@ -95,7 +96,7 @@ export interface BuilderCursorPagination extends Omit<CursorPagination, "cursor_
 
 export interface BuilderPaginator {
   strategy: PageIncrement | OffsetIncrement | BuilderCursorPagination;
-  pageTokenOption: RequestOptionOrPathInject;
+  pageTokenOption?: RequestOptionOrPathInject;
   pageSizeOption?: RequestOption;
 }
 
@@ -152,6 +153,7 @@ export interface BuilderIncrementalSync
     step?: string;
     cursor_granularity?: string;
   };
+  filter_mode: "range" | "start" | "no_filter";
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -168,6 +170,10 @@ export type BuilderRequestBody =
   | {
       type: "form_list";
       values: Array<[string, string]>;
+    }
+  | {
+      type: "string_freeform";
+      value: string;
     };
 
 export interface BuilderStream {
@@ -397,10 +403,39 @@ export const authTypeToKeyToInferredInput = (
             airbyte_secret: true,
           },
         };
+        if ("refresh_token_updater" in authenticator && authenticator.refresh_token_updater) {
+          baseInputs.oauth_access_token = {
+            key: "oauth_access_token",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Access token",
+              airbyte_secret: true,
+              description:
+                "The current access token. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+          baseInputs.oauth_token_expiry_date = {
+            key: "oauth_token_expiry_date",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Token expiry date",
+              format: "date-time",
+              description:
+                "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+        }
       }
       return baseInputs;
   }
 };
+
+export const OAUTH_ACCESS_TOKEN_INPUT = "oauth_access_token";
+export const OAUTH_TOKEN_EXPIRY_DATE_INPUT = "oauth_token_expiry_date";
 
 export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
   return Object.fromEntries(
@@ -414,7 +449,11 @@ export function hasIncrementalSyncUserInput(
   streams: BuilderFormValues["streams"],
   key: "start_datetime" | "end_datetime"
 ) {
-  return streams.some((stream) => stream.incrementalSync?.[key].type === "user_input");
+  return streams.some(
+    (stream) =>
+      stream.incrementalSync?.[key].type === "user_input" &&
+      (key === "start_datetime" || stream.incrementalSync?.filter_mode === "range")
+  );
 }
 
 export function getInferredInputList(
@@ -427,6 +466,7 @@ export function getInferredInputList(
   const authKeys = Object.keys(authKeyToInferredInput);
   const inputs = authKeys.flatMap((authKey) => {
     if (
+      authKeyToInferredInput[authKey].as_config_path ||
       extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
       return [authKeyToInferredInput[authKey]];
@@ -466,7 +506,7 @@ export function isInterpolatedConfigKey(str: string | undefined): boolean {
   return interpolatedConfigValueRegex.test(noWhitespaceString);
 }
 
-function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
+export function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
   if (str === undefined) {
     return undefined;
   }
@@ -480,11 +520,18 @@ function extractInterpolatedConfigKey(str: string | undefined): string | undefin
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
 
-export const injectIntoValues = ["request_parameter", "header", "path", "body_data", "body_json"];
+export const injectIntoOptions = [
+  { label: "Query Parameter", value: "request_parameter", fieldLabel: "Parameter Name" },
+  { label: "Header", value: "header", fieldLabel: "Header Name" },
+  { label: "Path", value: "path" },
+  { label: "Body data (urlencoded form)", value: "body_data", fieldLabel: "Key Name" },
+  { label: "Body JSON payload", value: "body_json", fieldLabel: "Key Name" },
+];
+
 const nonPathRequestOptionSchema = yup
   .object()
   .shape({
-    inject_into: yup.mixed().oneOf(injectIntoValues.filter((val) => val !== "path")),
+    inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
     field_name: yup.string().required("form.empty.error"),
   })
   .notRequired()
@@ -493,6 +540,18 @@ const nonPathRequestOptionSchema = yup
 const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+
+const schemaIfNotDataFeed = (schema: yup.AnySchema) =>
+  yup.mixed().when("filter_mode", {
+    is: (val: string) => val !== "no_filter",
+    then: schema,
+  });
+
+const schemaIfRangeFilter = (schema: yup.AnySchema) =>
+  yup.mixed().when("filter_mode", {
+    is: (val: string) => val === "range",
+    then: schema,
+  });
 
 const jsonString = yup.string().test({
   test: (val: string | undefined) => {
@@ -524,6 +583,16 @@ export const builderFormValidationSchema = yup.object().shape({
         then: yup.string().required("form.empty.error"),
         otherwise: (schema) => schema.strip(),
       }),
+      refresh_token_updater: yup.mixed().when("type", {
+        is: OAUTH_AUTHENTICATOR,
+        then: yup
+          .object()
+          .shape({
+            refresh_token_name: yup.string(),
+          })
+          .default(undefined),
+        otherwise: (schema) => schema.strip(),
+      }),
       refresh_request_body: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
         then: keyValueListSchema,
@@ -550,11 +619,16 @@ export const builderFormValidationSchema = yup.object().shape({
               then: keyValueListSchema,
               otherwise: (schema) => schema.strip(),
             }),
-            value: yup.mixed().when("type", {
-              is: (val: string) => val === "json_freeform",
-              then: jsonString,
-              otherwise: (schema) => schema.strip(),
-            }),
+            value: yup
+              .mixed()
+              .when("type", {
+                is: (val: string) => val === "json_freeform",
+                then: jsonString,
+              })
+              .when("type", {
+                is: (val: string) => val === "string_freeform",
+                then: yup.string(),
+              }),
           }),
         }),
         schema: jsonString,
@@ -566,14 +640,19 @@ export const builderFormValidationSchema = yup.object().shape({
               then: nonPathRequestOptionSchema,
               otherwise: (schema) => schema.strip(),
             }),
-            pageTokenOption: yup.object().shape({
-              inject_into: yup.mixed().oneOf(injectIntoValues),
-              field_name: yup.mixed().when("inject_into", {
-                is: "path",
-                then: (schema) => schema.strip(),
-                otherwise: yup.string().required("form.empty.error"),
-              }),
-            }),
+            pageTokenOption: yup
+              .object()
+              .shape({
+                inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
+                field_name: yup.mixed().when("inject_into", {
+                  is: "path",
+                  then: (schema) => schema.strip(),
+                  otherwise: yup.string().required("form.empty.error"),
+                }),
+              })
+              .notRequired()
+              .default(undefined),
+
             strategy: yup
               .object({
                 page_size: yupNumberOrEmptyString,
@@ -717,13 +796,15 @@ export const builderFormValidationSchema = yup.object().shape({
           .object()
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
-            slicer: yup
-              .object()
-              .shape({
-                cursor_granularity: yup.string().required("form.empty.error"),
-                step: yup.string().required("form.empty.error"),
-              })
-              .default(undefined),
+            slicer: schemaIfNotDataFeed(
+              yup
+                .object()
+                .shape({
+                  cursor_granularity: yup.string().required("form.empty.error"),
+                  step: yup.string().required("form.empty.error"),
+                })
+                .default(undefined)
+            ),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
@@ -731,16 +812,18 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            end_datetime: yup.object().shape({
-              value: yup.mixed().when("type", {
-                is: (val: string) => val === "custom",
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
-              }),
-            }),
+            end_datetime: schemaIfRangeFilter(
+              yup.object().shape({
+                value: yup.mixed().when("type", {
+                  is: (val: string) => val === "custom",
+                  then: yup.string().required("form.empty.error"),
+                  otherwise: (schema) => schema.strip(),
+                }),
+              })
+            ),
             datetime_format: yup.string().required("form.empty.error"),
-            start_time_option: nonPathRequestOptionSchema,
-            end_time_option: nonPathRequestOptionSchema,
+            start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
+            end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
             stream_state_field_start: yup.string(),
             stream_state_field_end: yup.string(),
             lookback_window: yup.string(),
@@ -759,6 +842,10 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
         globalSettings.authenticator.grant_type === "client_credentials"
           ? undefined
           : globalSettings.authenticator.refresh_token,
+      refresh_token_updater:
+        globalSettings.authenticator.grant_type === "client_credentials"
+          ? undefined
+          : globalSettings.authenticator.refresh_token_updater,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
     };
   }
@@ -807,8 +894,10 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
     return { type: "NoPagination" };
   }
 
-  let pageTokenOption: DefaultPaginatorPageTokenOption;
-  if (paginator?.pageTokenOption.inject_into === "path") {
+  let pageTokenOption: DefaultPaginatorPageTokenOption | undefined;
+  if (!paginator.pageTokenOption) {
+    pageTokenOption = undefined;
+  } else if (paginator?.pageTokenOption.inject_into === "path") {
     pageTokenOption = { type: "RequestPath" };
   } else {
     pageTokenOption = {
@@ -830,28 +919,47 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, slicer, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, slicer, start_time_option, end_time_option, filter_mode, ...regularFields } =
+    formValues;
+  const startDatetime = {
+    type: "MinMaxDatetime" as const,
+    datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
+    datetime_format: start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  };
+  if (filter_mode === "range") {
+    return {
+      type: "DatetimeBasedCursor",
+      ...regularFields,
+      start_time_option,
+      end_time_option,
+      start_datetime: startDatetime,
+      end_datetime: {
+        type: "MinMaxDatetime",
+        datetime:
+          end_datetime.type === "custom"
+            ? end_datetime.value
+            : end_datetime.type === "now"
+            ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
+            : `{{ config['end_date'] }}`,
+        datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+      },
+      step: slicer?.step,
+      cursor_granularity: slicer?.cursor_granularity,
+    };
+  }
+  if (filter_mode === "start") {
+    return {
+      type: "DatetimeBasedCursor",
+      ...regularFields,
+      start_time_option,
+      start_datetime: startDatetime,
+    };
+  }
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
-    start_datetime: {
-      type: "MinMaxDatetime",
-      datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
-      datetime_format:
-        start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-    },
-    end_datetime: {
-      type: "MinMaxDatetime",
-      datetime:
-        end_datetime.type === "custom"
-          ? end_datetime.value
-          : end_datetime.type === "now"
-          ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
-          : `{{ config['end_date'] }}`,
-      datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-    },
-    step: slicer?.step,
-    cursor_granularity: slicer?.cursor_granularity,
+    is_data_feed: true,
+    start_datetime: startDatetime,
   };
 }
 
@@ -973,6 +1081,8 @@ function builderRequestBodyToStreamRequestBody(stream: BuilderStream) {
       request_body_data:
         stream.requestOptions.requestBody.type === "form_list"
           ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : stream.requestOptions.requestBody.type === "string_freeform"
+          ? stream.requestOptions.requestBody.value
           : undefined,
     };
   } catch {

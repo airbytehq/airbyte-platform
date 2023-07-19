@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo } from "react";
 import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
 
-import { isDevelopment } from "utils/isDevelopment";
+import { isDevelopment } from "core/utils/isDevelopment";
 
 export type ContextKind =
   | "user"
@@ -27,7 +27,7 @@ const experimentContext = createContext<ExperimentService | null>(null);
  */
 export interface ExperimentService {
   addContext: (kind: ContextKind, key: string) => void;
-  removeContext: (kind: ContextKind) => void;
+  removeContext: (kind: Exclude<ContextKind, "user">) => void;
   getExperiment<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K];
   getExperimentChanges$<K extends keyof Experiments>(key: K): Observable<Experiments[K]>;
 }
@@ -39,7 +39,7 @@ const debugContext = isDevelopment() ? (msg: string) => console.debug(`%c${msg}`
  * potentialy causing new flags to be fetched. The context will be removed when the component unmounts,
  * or when a falsy key is passed.
  */
-export const useExperimentContext = (kind: ContextKind, key: string | undefined) => {
+export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: string | undefined) => {
   const experimentService = useContext(experimentContext);
 
   useEffect(() => {
@@ -83,6 +83,8 @@ function useExperimentWithOverwrites<K extends keyof Experiments>(
 }
 
 // Allow overwriting values via the .experiments.dev file (and thus the REACT_APP_EXPERIMENT_OVERWRITES env variable) only during development
-export const useExperiment = process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
+const isCypress = window.hasOwnProperty("Cypress");
+export const useExperiment =
+  !isCypress && process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
 
 export const ExperimentProvider = experimentContext.Provider;

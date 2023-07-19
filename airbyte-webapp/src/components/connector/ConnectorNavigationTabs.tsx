@@ -9,8 +9,8 @@ import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 enum TabTypes {
-  OVERVIEW = "overview",
   SETTINGS = "settings",
+  CONNECTIONS = "connections",
 }
 
 export const ConnectorNavigationTabs: React.FC<{
@@ -25,19 +25,19 @@ export const ConnectorNavigationTabs: React.FC<{
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${connectorTypePath}/${id}`;
   const tabs = [
     {
-      id: TabTypes.OVERVIEW,
-      name: <FormattedMessage id="tables.overview" />,
+      id: TabTypes.SETTINGS,
+      name: <FormattedMessage id="connector.settings" />,
       to: basePath,
     },
     {
-      id: TabTypes.SETTINGS,
-      name: <FormattedMessage id="tables.settings" />,
-      to: `${basePath}/settings`,
+      id: TabTypes.CONNECTIONS,
+      name: <FormattedMessage id="connector.connections" />,
+      to: `${basePath}/connections`,
     },
   ];
 
   const currentTab = useMemo<TabTypes | "" | undefined>(
-    () => (params["*"] === "" ? TabTypes.OVERVIEW : params["*"]),
+    () => (params["*"] === "" ? TabTypes.SETTINGS : params["*"]),
     [params]
   );
 

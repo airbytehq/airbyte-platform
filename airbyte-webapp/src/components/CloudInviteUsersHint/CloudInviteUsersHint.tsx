@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 
-import { InviteUsersHintProps } from "packages/cloud/views/users/InviteUsersHint/types";
-import { isCloudApp } from "utils/app";
+import { isCloudApp } from "core/utils/app";
+import { InviteUsersHintProps } from "packages/cloud/views/users/InviteUsersHint";
 
 const LazyInviteUsersHint = lazy(() =>
   import("packages/cloud/views/users/InviteUsersHint").then(({ InviteUsersHint }) => ({ default: InviteUsersHint }))

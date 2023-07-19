@@ -11,16 +11,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.commons.temporal.scheduling.ConnectionNotificationWorkflow;
 import io.airbyte.commons.temporal.scheduling.NotificationWorkflow;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseNotificationWorkflow;
 import io.airbyte.notification.NotificationEvent;
-import io.airbyte.validation.json.JsonValidationException;
 import io.temporal.client.WorkflowClient;
 import java.io.IOException;
 import java.util.UUID;
@@ -32,54 +24,43 @@ import org.junit.jupiter.api.Test;
 class NotificationClientTest {
 
   private static final String WEBHOOK_URL = "url";
+  private static final String SOURCE_NAME = "SourceName";
+  private static final String CONNECTION_NAME = "ConnectionName";
 
   private final UUID connectionId = UUID.randomUUID();
 
-  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
 
-  private final NotificationClient notificationClient = spy(new NotificationClient(featureFlagClient, workflowClient));
+  private final NotificationClient notificationClient = spy(new NotificationClient(workflowClient));
 
   @Test
   void testCallNewNotifyWorkflow() {
-    when(featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId)))
-        .thenReturn(true);
     final NotificationWorkflow notificationWorkflow = mock(NotificationWorkflow.class);
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, "", false);
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, "", false);
 
-    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.onNonBreakingChange));
+    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.ON_NON_BREAKING_CHANGE));
   }
 
   @Test
   void testCallRightTemplate() throws IOException {
-    when(featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId)))
-        .thenReturn(true);
     final NotificationWorkflow notificationWorkflow = mock(NotificationWorkflow.class);
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
-    verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, false);
+    verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt",
+        CONNECTION_NAME,
+        SOURCE_NAME,
         WEBHOOK_URL);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, true);
-    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), WEBHOOK_URL);
-  }
-
-  @Test
-  void testCallOldNotifyWorkflow() throws JsonValidationException, ConfigNotFoundException, IOException, InterruptedException, ApiException {
-    when(featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId)))
-        .thenReturn(false);
-    final ConnectionNotificationWorkflow connectionNotificationWorkflow = mock(ConnectionNotificationWorkflow.class);
-    when(workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
-        .thenReturn(connectionNotificationWorkflow);
-
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
-
-    verify(connectionNotificationWorkflow).sendSchemaChangeNotification(connectionId, WEBHOOK_URL);
+    notificationClient.sendSchemaChangeNotification(connectionId, CONNECTION_NAME, SOURCE_NAME, WEBHOOK_URL, true);
+    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt",
+        CONNECTION_NAME,
+        SOURCE_NAME,
+        WEBHOOK_URL);
   }
 
 }

@@ -19,6 +19,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUI
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -39,12 +40,12 @@ import com.google.common.hash.Hashing;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -57,6 +58,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorWebhook;
+import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -71,12 +73,13 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -105,11 +108,13 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.InsertSetMoreStep;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record2;
+import org.jooq.Record4;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
@@ -155,7 +160,9 @@ public class ConfigRepository {
                                             List<UUID> destinationId,
                                             boolean includeDeleted,
                                             int pageSize,
-                                            int rowOffset) {}
+                                            int rowOffset) {
+
+  }
 
   /**
    * Query object for paginated querying of sources/destinations in multiple workspaces.
@@ -169,7 +176,25 @@ public class ConfigRepository {
                                         @Nonnull List<UUID> workspaceIds,
                                         boolean includeDeleted,
                                         int pageSize,
-                                        int rowOffset) {}
+                                        int rowOffset) {
+
+  }
+
+  /**
+   * Query object for paginated querying of resource in an organization.
+   *
+   * @param organizationId organization to fetch resources for
+   * @param includeDeleted include tombstoned resources
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record ResourcesByOrganizationQueryPaginated(
+                                                      @Nonnull UUID organizationId,
+                                                      boolean includeDeleted,
+                                                      int pageSize,
+                                                      int rowOffset) {
+
+  }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
@@ -216,6 +241,95 @@ public class ConfigRepository {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Get organization.
+   *
+   * @param organizationId id to use to find the organization
+   * @return organization, if present.
+   * @throws IOException - you never know when you IO
+   */
+  public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
+    final Result<Record> result;
+    result = database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(ORGANIZATION.ID.eq(organizationId))).fetch();
+
+    return result.stream().findFirst().map(DbConverter::buildOrganization);
+  }
+
+  /**
+   * Write an Organization to the database.
+   *
+   * @param organization - The configuration of the organization
+   * @throws IOException - you never know when you IO
+   */
+  public void writeOrganization(final Organization organization) throws IOException {
+    database.transaction(ctx -> {
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(ORGANIZATION)
+          .where(ORGANIZATION.ID.eq(organization.getOrganizationId())));
+
+      if (isExistingConfig) {
+        ctx.update(ORGANIZATION)
+            .set(ORGANIZATION.ID, organization.getOrganizationId())
+            .set(ORGANIZATION.NAME, organization.getName())
+            .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(ORGANIZATION.UPDATED_AT, timestamp)
+            .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
+            .execute();
+      } else {
+        ctx.insertInto(ORGANIZATION)
+            .set(ORGANIZATION.ID, organization.getOrganizationId())
+            .set(ORGANIZATION.NAME, organization.getName())
+            .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(WORKSPACE.CREATED_AT, timestamp)
+            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .execute();
+      }
+      return null;
+    });
+  }
+
+  /**
+   * List organizations.
+   *
+   * @return organizations
+   * @throws IOException - you never know when you IO
+   */
+  public List<Organization> listOrganizations() throws IOException {
+    return listOrganizationQuery(Optional.empty()).toList();
+  }
+
+  private Stream<Organization> listOrganizationQuery(final Optional<UUID> organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(organizationId.map(ORGANIZATION.ID::eq).orElse(noCondition()))
+        .fetch())
+        .stream()
+        .map(DbConverter::buildOrganization);
+  }
+
+  /**
+   * List organizations (paginated).
+   *
+   * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
+   * @return A List of organizations objectjs
+   * @throws IOException you never know when you IO
+   */
+  public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
+      throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(ORGANIZATION.ID.in(resourcesByOrganizationQueryPaginated.organizationId()))
+        .limit(resourcesByOrganizationQueryPaginated.pageSize())
+        .offset(resourcesByOrganizationQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildOrganization)
+        .toList();
   }
 
   /**
@@ -315,7 +429,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }.
-   *
+   * <p>
    * Write a StandardWorkspace to the database.
    *
    * @param workspace - The configuration of the workspace
@@ -479,9 +593,30 @@ public class ConfigRepository {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()))
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(def -> def.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(def.getProtocolVersion()).serialize()));
+        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()));
+  }
+
+  private static Stream<Record4<UUID, String, ActorType, String>> getActorDefinitionsInUse(final DSLContext ctx) {
+    return ctx
+        .selectDistinct(ACTOR_DEFINITION.ID, ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION.ACTOR_TYPE,
+            ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+        .from(ACTOR_DEFINITION)
+        .join(ACTOR).on(ACTOR.ACTOR_DEFINITION_ID.equal(ACTOR_DEFINITION.ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.equal(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
+        .fetch()
+        .stream();
+  }
+
+  /**
+   * Get actor definition IDs that are in use.
+   *
+   * @return list of IDs
+   * @throws IOException - you never know when you IO
+   */
+  public Set<UUID> getActorDefinitionIdsInUse() throws IOException {
+    return database.query(ctx -> getActorDefinitionsInUse(ctx)
+        .map(r -> r.get(ACTOR_DEFINITION.ID))
+        .collect(Collectors.toSet()));
   }
 
   /**
@@ -491,43 +626,31 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public Map<UUID, Map.Entry<io.airbyte.config.ActorType, Version>> getActorDefinitionToProtocolVersionMap() throws IOException {
-    return database.query(ConfigWriter::getActorDefinitionsInUseToProtocolVersion);
+    return database.query(ctx -> getActorDefinitionsInUse(ctx)
+        .collect(Collectors.toMap(r -> r.get(ACTOR_DEFINITION.ID),
+            r -> Map.entry(
+                r.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source ? io.airbyte.config.ActorType.SOURCE : io.airbyte.config.ActorType.DESTINATION,
+                AirbyteProtocolVersion.getWithDefault(r.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))),
+            // We may have duplicated entries from the data. We can pick any values in the merge function
+            (lhs, rhs) -> lhs)));
   }
 
   /**
-   * Get actor definition ids to pair of actor type and protocol version.
+   * Get a map of all actor definition ids and their default versions.
    *
-   * @return map of definition id to pair of actor type and protocol version.
+   * @return map of definition id to default version.
    * @throws IOException - you never know when you IO
    */
-  public Set<String> getConnectorRepositoriesInUse() throws IOException {
-    return database.query(ConfigWriter::getConnectorRepositoriesInUse);
-  }
-
-  /**
-   * Get connector definition info.
-   *
-   * @return A list of information about current connectors (both sources and destinations).
-   **/
-  public List<ActorDefinitionMigrator.ConnectorInfo> getCurrentConnectorInfo() throws IOException {
-    return database.query(ctx -> ctx.select(asterisk())
+  public Map<UUID, ActorDefinitionVersion> getActorDefinitionIdsToDefaultVersionsMap() throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR_DEFINITION.ID, ACTOR_DEFINITION_VERSION.asterisk())
         .from(ACTOR_DEFINITION)
-        .where(ACTOR_DEFINITION.RELEASE_STAGE.isNull()
-            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM.isFalse())))
-        .fetch())
+        .join(ACTOR_DEFINITION_VERSION)
+        .on(ACTOR_DEFINITION.DEFAULT_VERSION_ID.eq(ACTOR_DEFINITION_VERSION.ID))
+        .fetch()
         .stream()
-        .map(row -> {
-          final JsonNode jsonNode;
-          if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source) {
-            jsonNode = Jsons.jsonNode(DbConverter.buildStandardSourceDefinition(row, 10800L));
-          } else if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.destination) {
-            jsonNode = Jsons.jsonNode(DbConverter.buildStandardDestinationDefinition(row));
-          } else {
-            throw new RuntimeException("Unknown Actor Type " + row.get(ACTOR_DEFINITION.ACTOR_TYPE));
-          }
-          return new ActorDefinitionMigrator.ConnectorInfo(row.getValue(ACTOR_DEFINITION.ID).toString(), jsonNode);
-        })
-        .collect(Collectors.toList());
+        .collect(Collectors.toMap(
+            record -> record.get(ACTOR_DEFINITION.ID),
+            DbConverter::buildActorDefinitionVersion)));
   }
 
   /**
@@ -557,6 +680,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ActorType.source,
         record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()),
@@ -574,8 +698,10 @@ public class ConfigRepository {
   public List<Entry<StandardSourceDefinition, Boolean>> listGrantableSourceDefinitions(final UUID workspaceId,
                                                                                        final boolean includeTombstones)
       throws IOException {
+
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
         record -> actorDefinitionWithGrantStatus(record,
@@ -619,41 +745,7 @@ public class ConfigRepository {
                                                       final ActorDefinitionVersion actorDefinitionVersion,
                                                       final DSLContext ctx) {
     ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-
-    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
-    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
-    final Optional<ActorDefinitionVersion> existingADV =
-        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
-
-    if (existingADV.isPresent()) {
-      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
-      // rollback to a pre-existing version
-      setSourceDefinitionDefaultVersion(sourceDefinition, existingADV.get(), ctx);
-    } else {
-      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setSourceDefinitionDefaultVersion(sourceDefinition, insertedADV, ctx);
-    }
-  }
-
-  /**
-   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
-   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
-   * writeActorDefinitionVersion().
-   *
-   * @param sourceDefinition source definition
-   * @param actorDefinitionVersion actor definition version to set as default
-   */
-  private static void setSourceDefinitionDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                        final ActorDefinitionVersion actorDefinitionVersion,
-                                                        final DSLContext ctx) {
-    if (actorDefinitionVersion.getVersionId() == null) {
-      throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
-    }
-
-    ctx.update(ACTOR_DEFINITION)
-        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
-        .where(ACTOR_DEFINITION.ID.eq(sourceDefinition.getSourceDefinitionId()))
-        .execute();
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
   }
 
   /**
@@ -672,16 +764,18 @@ public class ConfigRepository {
    *
    * @param sourceDefinition source definition
    * @param defaultVersion default version
-   * @param workspaceId workspace id
+   * @param scopeId scope id
+   * @param scopeType enum which defines if the scopeId is a workspace or organization id
    * @throws IOException - you never know when you IO
    */
   public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
                                                            final ActorDefinitionVersion defaultVersion,
-                                                           final UUID workspaceId)
+                                                           final UUID scopeId,
+                                                           final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ctx);
+      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -689,10 +783,13 @@ public class ConfigRepository {
   private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
                                                 final ConnectorSpecification spec,
                                                 final DSLContext ctx) {
-    ctx.update(Tables.ACTOR_DEFINITION)
-        .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
-        .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
+    // We are updating the same version since connector builder projects have a different concept of
+    // versioning.
+    ctx.update(ACTOR_DEFINITION_VERSION)
+        .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
         .execute();
+
     writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
@@ -704,9 +801,7 @@ public class ConfigRepository {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(DbConverter::buildStandardDestinationDefinition)
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(def -> def.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(def.getProtocolVersion()).serialize()));
+        .map(DbConverter::buildStandardDestinationDefinition);
   }
 
   /**
@@ -793,6 +888,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ActorType.destination,
         DbConverter::buildStandardDestinationDefinition,
@@ -812,6 +908,7 @@ public class ConfigRepository {
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.destination,
         record -> actorDefinitionWithGrantStatus(record, DbConverter::buildStandardDestinationDefinition),
@@ -825,8 +922,7 @@ public class ConfigRepository {
    * @param destinationDefinition destination definition
    * @throws IOException - you never know when you IO
    */
-  public void writeStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
-      throws JsonValidationException, IOException {
+  public void writeStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition) throws IOException {
     database.transaction(ctx -> {
       ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
       return null;
@@ -854,40 +950,37 @@ public class ConfigRepository {
                                                            final ActorDefinitionVersion actorDefinitionVersion,
                                                            final DSLContext ctx) {
     ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
+  }
 
-    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
-    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
+  /**
+   * Set the ActorDefinitionVersion for a given tag as the default version for the associated actor
+   * definition. Check docker image tag on the new ADV; if an ADV exists for that tag, set the
+   * existing ADV for the tag as the default. Otherwise, insert the new ADV and set it as the default.
+   *
+   * @param actorDefinitionVersion new actor definition version
+   * @throws IOException - you never know when you IO
+   */
+  private void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final Optional<ActorDefinitionVersion> existingADV =
         getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
 
     if (existingADV.isPresent()) {
-      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
-      // rollback to a pre-existing version
-      setDestinationDefinitionDefaultVersion(destinationDefinition, existingADV.get(), ctx);
+      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), ctx);
     } else {
       final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setDestinationDefinitionDefaultVersion(destinationDefinition, insertedADV, ctx);
+      setActorDefinitionVersionAsDefaultVersion(insertedADV, ctx);
     }
   }
 
-  /**
-   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
-   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
-   * writeActorDefinitionVersion().
-   *
-   * @param destinationDefinition destination definition
-   * @param actorDefinitionVersion actor definition version to set as default
-   */
-  private static void setDestinationDefinitionDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                             final ActorDefinitionVersion actorDefinitionVersion,
-                                                             final DSLContext ctx) {
+  private static void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     if (actorDefinitionVersion.getVersionId() == null) {
       throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
     }
 
     ctx.update(ACTOR_DEFINITION)
         .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
-        .where(ACTOR_DEFINITION.ID.eq(destinationDefinition.getDestinationDefinitionId()))
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionVersion.getActorDefinitionId()))
         .execute();
   }
 
@@ -895,16 +988,18 @@ public class ConfigRepository {
    * Write custom destination definition and its default version.
    *
    * @param destinationDefinition destination definition
-   * @param workspaceId workspace id
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workpsace or organization
    * @throws IOException - you never know when you IO
    */
   public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                                 final ActorDefinitionVersion defaultVersion,
-                                                                final UUID workspaceId)
+                                                                final UUID scopeId,
+                                                                final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
-      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId, ctx);
+      writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -923,33 +1018,45 @@ public class ConfigRepository {
    * Write actor definition workspace grant.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param scopeId workspace or organization id
+   * @param scopeType ScopeType of either workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, workspaceId, ctx));
+  public void writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
+    database.query(ctx -> writeActorDefinitionWorkspaceGrant(actorDefinitionId, scopeId, ScopeType.valueOf(scopeType.value()), ctx));
   }
 
-  private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId, final DSLContext ctx) {
-    return ctx.insertInto(ACTOR_DEFINITION_WORKSPACE_GRANT)
+  private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final ScopeType scopeType, final DSLContext ctx) {
+    InsertSetMoreStep<ActorDefinitionWorkspaceGrantRecord> insertStep = ctx.insertInto(
+        ACTOR_DEFINITION_WORKSPACE_GRANT)
         .set(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
-        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, workspaceId)
-        .execute();
+        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE, scopeType)
+        .set(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID, scopeId);
+    // todo remove when we drop the workspace_id column
+    if (scopeType == ScopeType.workspace) {
+      insertStep = insertStep.set(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, scopeId);
+    }
+    return insertStep.execute();
+
   }
 
   /**
-   * Test if grant exists for actor definition and workspace.
+   * Test if grant exists for actor definition and scope.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
-   * @return true, if the workspace has access. otherwise, false.
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
+   * @return true, if the scope has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
-  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+  public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
             .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))));
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+            .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))));
     return count == 1;
   }
 
@@ -957,30 +1064,47 @@ public class ConfigRepository {
    * Delete workspace access to actor definition.
    *
    * @param actorDefinitionId actor definition id to remove
-   * @param workspaceId workspace to remove actor definition from
+   * @param scopeId workspace or organization id
+   * @param scopeType enum of workspace or organization
    * @throws IOException - you never know when you IO
    */
-  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+  public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID scopeId, final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
-        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId))
+        .and(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.value())))
         .execute());
   }
 
   /**
-   * Test if workspace is has access to a connector definition.
+   * Test if workspace id has access to a connector definition.
    *
    * @param actorDefinitionId actor definition id
-   * @param workspaceId workspace id
+   * @param workspaceId id of the workspace
    * @return true, if the workspace has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+    return scopeCanUseDefinition(actorDefinitionId, workspaceId, ScopeType.workspace.toString());
+  }
+
+  /**
+   * Test if workspace or organization id has access to a connector definition.
+   *
+   * @param actorDefinitionId actor definition id
+   * @param scopeId id of the workspace or organization
+   * @param scopeType enum of workspace or organization
+   * @return true, if the workspace or organization has access. otherwise, false.
+   * @throws IOException - you never know when you IO
+   */
+  public boolean scopeCanUseDefinition(final UUID actorDefinitionId, final UUID scopeId, final String scopeType) throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
-        workspaceId,
+        scopeId,
+        ScopeType.valueOf(scopeType),
         JoinType.LEFT_OUTER_JOIN,
         ACTOR_DEFINITION.ID.eq(actorDefinitionId),
-        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId)));
+        ACTOR_DEFINITION.PUBLIC.eq(true).or(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)));
     return records.isNotEmpty();
   }
 
@@ -995,6 +1119,7 @@ public class ConfigRepository {
   public boolean workspaceCanUseCustomDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
         workspaceId,
+        ScopeType.workspace,
         JoinType.JOIN,
         ACTOR_DEFINITION.ID.eq(actorDefinitionId),
         ACTOR_DEFINITION.CUSTOM.eq(true));
@@ -1015,14 +1140,16 @@ public class ConfigRepository {
         .toList();
   }
 
-  private <T> List<T> listActorDefinitionsJoinedWithGrants(final UUID workspaceId,
+  private <T> List<T> listActorDefinitionsJoinedWithGrants(final UUID scopeId,
+                                                           final ScopeType scopeType,
                                                            final JoinType joinType,
                                                            final ActorType actorType,
                                                            final Function<Record, T> recordToReturnType,
                                                            final Condition... conditions)
       throws IOException {
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
-        workspaceId,
+        scopeId,
+        scopeType,
         joinType,
         ArrayUtils.addAll(conditions,
             ACTOR_DEFINITION.ACTOR_TYPE.eq(actorType),
@@ -1036,18 +1163,37 @@ public class ConfigRepository {
   private <T> Entry<T, Boolean> actorDefinitionWithGrantStatus(final Record outerJoinRecord,
                                                                final Function<Record, T> recordToActorDefinition) {
     final T actorDefinition = recordToActorDefinition.apply(outerJoinRecord);
-    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID) != null;
+    final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID) != null;
     return Map.entry(actorDefinition, granted);
   }
 
-  private Result<Record> actorDefinitionsJoinedWithGrants(final UUID workspaceId,
+  private Optional<UUID> getOrganizationIdFromWorkspaceId(final UUID scopeId) throws IOException {
+    final Optional<Record1<UUID>> optionalRecord = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID).from(WORKSPACE)
+        .where(WORKSPACE.ID.eq(scopeId)).fetchOptional());
+    return optionalRecord.map(Record1::value1);
+  }
+
+  private Result<Record> actorDefinitionsJoinedWithGrants(final UUID scopeId,
+                                                          final ScopeType scopeType,
                                                           final JoinType joinType,
                                                           final Condition... conditions)
       throws IOException {
+    Condition scopeConditional = ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.valueOf(scopeType.toString())).and(
+        ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(scopeId));
+
+    // if scope type is workspace, get organization id as well and add that into OR conditional
+    if (scopeType == ScopeType.workspace) {
+      final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(scopeId);
+      if (organizationId.isPresent()) {
+        scopeConditional = scopeConditional.or(ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_TYPE.eq(ScopeType.organization).and(
+            ACTOR_DEFINITION_WORKSPACE_GRANT.SCOPE_ID.eq(organizationId.get())));
+      }
+    }
+
+    final Condition finalScopeConditional = scopeConditional;
     return database.query(ctx -> ctx.select(asterisk()).from(ACTOR_DEFINITION)
         .join(ACTOR_DEFINITION_WORKSPACE_GRANT, joinType)
-        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID),
-            ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
+        .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID).and(finalScopeConditional))
         .where(conditions)
         .fetch());
   }
@@ -1082,7 +1228,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
-   *
+   * <p>
    * Write a SourceConnection to the database. The configuration of the Source will be a partial
    * configuration (no secrets, just pointer to the secrets store).
    *
@@ -1213,7 +1359,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
-   *
+   * <p>
    * Write a DestinationConnection to the database. The configuration of the Destination will be a
    * partial configuration (no secrets, just pointer to the secrets store).
    *
@@ -1382,23 +1528,6 @@ public class ConfigRepository {
    */
   public void writeStandardSync(final StandardSync standardSync) throws IOException {
     standardSyncPersistence.writeStandardSync(standardSync);
-  }
-
-  /**
-   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
-   * if both connectors are now within support range.
-   *
-   * @param actorDefinitionId the actorDefinitionId to query
-   * @param actorType the ActorType of actorDefinitionId
-   * @param supportedRange the supported range of protocol versions
-   */
-  // We have conflicting imports here, ActorType is imported from jooq for most internal uses. Since
-  // this is a public method, we should be using the ActorType from airbyte-config.
-  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
-                                                  final io.airbyte.config.ActorType actorType,
-                                                  final AirbyteProtocolVersionRange supportedRange)
-      throws IOException {
-    standardSyncPersistence.clearUnsupportedProtocolVersionFlag(actorDefinitionId, actorType, supportedRange);
   }
 
   /**
@@ -2035,7 +2164,7 @@ public class ConfigRepository {
 
   /**
    * Pair of source and its associated definition.
-   *
+   * <p>
    * Data-carrier records to hold combined result of query for a Source or Destination and its
    * corresponding Definition. This enables the API layer to process combined information about a
    * Source/Destination/Definition pair without requiring two separate queries and in-memory join
@@ -2135,7 +2264,7 @@ public class ConfigRepository {
 
   /**
    * Store an Airbyte catalog in DB if it is not present already.
-   *
+   * <p>
    * Checks in the config DB if the catalog is present already, if so returns it identifier. It is not
    * present, it is inserted in DB with a new identifier and that identifier is returned.
    *
@@ -2274,7 +2403,7 @@ public class ConfigRepository {
 
   /**
    * Stores source catalog information.
-   *
+   * <p>
    * This function is called each time the schema of a source is fetched. This can occur because the
    * source is set up for the first time, because the configuration or version of the connector
    * changed or because the user explicitly requested a schema refresh. Schemas are stored separately
@@ -2354,30 +2483,6 @@ public class ConfigRepository {
         .where(ACTOR.WORKSPACE_ID.equal(workspaceId))
         .and(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
         .andNot(ACTOR.TOMBSTONE)).fetchOne().into(int.class);
-  }
-
-  /**
-   * The following methods are present to allow the JobCreationAndStatusUpdateActivity class to emit
-   * metrics without exposing the underlying database connection.
-   *
-   * @param srcId source id
-   * @param dstId destination id
-   * @return release stages of source and destination
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  public List<ReleaseStage> getSrcIdAndDestIdToReleaseStages(final UUID srcId, final UUID dstId) throws IOException {
-    return database.query(ctx -> MetricQueries.srcIdAndDestIdToReleaseStages(ctx, srcId, dstId));
-  }
-
-  /**
-   * Get release stages for job id.
-   *
-   * @param jobId job id
-   * @return release stages
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  public List<ReleaseStage> getJobIdToReleaseStages(final long jobId) throws IOException {
-    return database.query(ctx -> MetricQueries.jobIdToReleaseStages(ctx, jobId));
   }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {
@@ -2520,17 +2625,22 @@ public class ConfigRepository {
    * workspace has at least one Alpha or Beta connector, users of that workspace will be prompted to
    * sign up for the program. This check is performed on nearly every page load so the query needs to
    * be as efficient as possible.
+   * <p>
+   * This should only be used for efficiently determining eligibility for the Free Connector Program.
+   * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
+   * the ReleaseStages.
    *
    * @param workspaceId ID of the workspace to check connectors for
    * @return boolean indicating if an alpha or beta connector exists within the workspace
    */
   public boolean getWorkspaceHasAlphaOrBetaConnector(final UUID workspaceId) throws IOException {
-    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.alpha)
-        .or(ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.beta));
+    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
+        .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
 
     final Integer countResult = database.query(ctx -> ctx.selectCount()
         .from(ACTOR)
         .join(ACTOR_DEFINITION).on(ACTOR_DEFINITION.ID.eq(ACTOR.ACTOR_DEFINITION_ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.eq(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .and(ACTOR.TOMBSTONE.notEqual(true))
         .and(releaseStageAlphaOrBeta))
@@ -2544,18 +2654,23 @@ public class ConfigRepository {
    * Program. If a connection has at least one Alpha or Beta connector, it will be free to use as long
    * as the workspace is enrolled in the Free Connector Program. This check is used to allow free
    * connections to continue running even when a workspace runs out of credits.
+   * <p>
+   * This should only be used for efficiently determining eligibility for the Free Connector Program.
+   * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
+   * the ReleaseStages.
    *
    * @param connectionId ID of the connection to check connectors for
    * @return boolean indicating if an alpha or beta connector is used by the connection
    */
   public boolean getConnectionHasAlphaOrBetaConnector(final UUID connectionId) throws IOException {
-    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.alpha)
-        .or(ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.beta));
+    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
+        .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
 
     final Integer countResult = database.query(ctx -> ctx.selectCount()
         .from(CONNECTION)
         .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID).or(ACTOR.ID.eq(CONNECTION.DESTINATION_ID)))
         .join(ACTOR_DEFINITION).on(ACTOR_DEFINITION.ID.eq(ACTOR.ACTOR_DEFINITION_ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.eq(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .where(CONNECTION.ID.eq(connectionId))
         .and(releaseStageAlphaOrBeta))
         .fetchOneInto(Integer.class);
@@ -2770,7 +2885,7 @@ public class ConfigRepository {
   /**
    * Write name and draft of a builder project. The actor_definition is also updated to match the new
    * builder project name.
-   *
+   * <p>
    * Actor definition updated this way should always be private (i.e. public=false). As an additional
    * protection, we want to shield ourselves from users updating public actor definition and
    * therefore, the name of the actor definition won't be updated if the actor definition is not
@@ -2819,7 +2934,7 @@ public class ConfigRepository {
 
   /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   *
+   * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
    * diligent. This was done because we value more separation of concerns than consistency of the API
    * of this method. The problems are:
@@ -2830,17 +2945,17 @@ public class ConfigRepository {
    *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
    * </ul>
    * </pre>
-   *
+   * <p>
    * Since we decided not to validate this using the signature of the method, we will validate that
    * runtime and IllegalArgumentException if there is a mismatch.
-   *
+   * <p>
    * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
    * definition of the repository. Drawbacks: We will need a method
    * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
    * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
    * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
    * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   *
+   * <p>
    * Note that this is all in the context of data consistency i.e. that we want to do this in one
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *
@@ -2897,7 +3012,7 @@ public class ConfigRepository {
 
   /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   *
+   * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
    * diligent. This was done because we value more separation of concerns than consistency of the API
    * of this method. The problems are:
@@ -2908,16 +3023,16 @@ public class ConfigRepository {
    *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
    * </ul>
    * </pre>
-   *
+   * <p>
    * At that point, we can only hope the user won't cause data consistency issue using this method
-   *
+   * <p>
    * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
    * definition of the repository. Drawbacks: We will need a method
    * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
    * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
    * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
    * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   *
+   * <p>
    * Note that this is all in the context of data consistency i.e. that we want to do this in one
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *
@@ -3177,7 +3292,8 @@ public class ConfigRepository {
    */
   public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    final UUID versionId = UUID.randomUUID();
+    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
+    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
     ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
         .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
@@ -3247,7 +3363,9 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+        .map(DbConverter::buildActorDefinitionVersion)
+        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
+        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()));
   }
 
   /**
@@ -3260,13 +3378,63 @@ public class ConfigRepository {
    * @throws IOException - you never know when you io
    */
   public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
-    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
-        .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
-        .fetch()
+    return getActorDefinitionVersions(List.of(actorDefinitionVersionId))
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion)
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, actorDefinitionVersionId.toString()));
+  }
+
+  /**
+   * Get actor definition versions by ID.
+   *
+   * @param actorDefinitionVersionIds - actor definition version ids
+   * @return list of actor definition version
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionVersion> getActorDefinitionVersions(final List<UUID> actorDefinitionVersionIds) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionVersion)
+        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
+        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Writes a new actor definition breaking change to the database.
+   *
+   * @param breakingChange - ActorDefinitionBreakingChange entry to write
+   * @throws IOException - you never know when you io
+   */
+  public void writeActorDefinitionBreakingChange(final ActorDefinitionBreakingChange breakingChange) throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    database.query(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
+        .execute());
+  }
+
+  /**
+   * Get the list of breaking changes available affecting an actor definition.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @return list of breaking changes
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .where(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionBreakingChange)
+        .collect(Collectors.toList()));
   }
 
 }

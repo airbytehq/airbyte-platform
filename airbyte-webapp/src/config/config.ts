@@ -16,9 +16,7 @@ export const config: AirbyteWebappConfig = {
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
     authEmulatorHost: process.env.REACT_APP_FIREBASE_AUTH_EMULATOR_HOST,
   },
-  intercom: {
-    appId: process.env.REACT_APP_INTERCOM_APP_ID,
-  },
+  zendeskKey: process.env.REACT_APP_ZENDESK_KEY,
   launchDarkly: process.env.REACT_APP_LAUNCHDARKLY_KEY,
   datadog: {
     applicationId: process.env.REACT_APP_DATADOG_APPLICATION_ID,

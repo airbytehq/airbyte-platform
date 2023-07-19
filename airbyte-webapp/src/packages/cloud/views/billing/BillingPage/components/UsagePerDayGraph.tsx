@@ -16,7 +16,7 @@ import {
 
 import { Text } from "components/ui/Text";
 
-import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
+import { useFreeConnectorProgram } from "core/api/cloud";
 
 import { UsagePerTimeChunk } from "./calculateUsageDataObjects";
 import { FormattedCredits } from "./FormattedCredits";

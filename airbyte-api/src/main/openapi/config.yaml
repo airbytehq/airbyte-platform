@@ -70,6 +70,8 @@ tags:
     description: Interactions with attempt related resources.
   - name: state
     description: Interactions with state related resources.
+  - name: actor_definition_version
+    description: Interactions with actor definition version related resources.
 
 paths:
   /v1/workspaces/create:
@@ -438,7 +440,7 @@ paths:
     post:
       tags:
         - source_definition
-      summary: Creates a custom sourceDefinition for the given workspace
+      summary: Creates a custom sourceDefinition for the given workspace or organization
       operationId: createCustomSourceDefinition
       requestBody:
         content:
@@ -477,17 +479,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/source_definitions/grant_definition:
+  /v1/source_definitions/get_for_scope:
     post:
       tags:
         - source_definition
-      summary: grant a private, non-custom sourceDefinition to a given workspace
-      operationId: grantSourceDefinitionToWorkspace
+      summary: Get a sourceDefinition that is configured for the given workspace or organization
+      operationId: getSourceDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definitions/grant_definition:
+    post:
+      tags:
+        - source_definition
+      summary: grant a private, non-custom sourceDefinition to a given workspace or organization
+      operationId: grantSourceDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -504,13 +529,13 @@ paths:
     post:
       tags:
         - source_definition
-      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace
-      operationId: revokeSourceDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom sourceDefinition from a given workspace or organization
+      operationId: revokeSourceDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -519,6 +544,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_source:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a source.
+      operationId: getActorDefinitionVersionForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/source_definition_specifications/get:
     post:
       tags:
@@ -1215,17 +1261,40 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/destination_definitions/grant_definition:
+  /v1/destination_definitions/get_for_scope:
     post:
       tags:
         - destination_definition
-      summary: grant a private, non-custom destinationDefinition to a given workspace
-      operationId: grantDestinationDefinitionToWorkspace
+      summary: Get a destinationDefinition that is configured for the given scope
+      operationId: getDestinationDefinitionForScope
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definitions/grant_definition:
+    post:
+      tags:
+        - destination_definition
+      summary: grant a private, non-custom destinationDefinition to a given workspace or organization
+      operationId: grantDestinationDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "200":
@@ -1242,13 +1311,13 @@ paths:
     post:
       tags:
         - destination_definition
-      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace
-      operationId: revokeDestinationDefinitionFromWorkspace
+      summary: revoke a grant to a private, non-custom destinationDefinition from a given workspace or organization
+      operationId: revokeDestinationDefinition
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+              $ref: "#/components/schemas/ActorDefinitionIdWithScope"
         required: true
       responses:
         "204":
@@ -1257,6 +1326,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_destination:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a destination.
+      operationId: getActorDefinitionVersionForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_definition_specifications/get:
     post:
       tags:
@@ -1796,6 +1886,31 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/auto_disable:
+    post:
+      tags:
+        - connection
+        - internal
+      summary: >
+        Sets connection to inactive if it has met any of the auto-disable conditions (i.e. it hits the max number of consecutive job failures
+        or if it hits the max number of days with only failed jobs). Additionally, notifications will be sent if a connection is disabled or
+        warned if it has reached halfway to disable limits. This endpoint is only able to inactivate connections with more than one non-cancelled job.
+      operationId: autoDisableConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connections/reset/stream:
     post:
       tags:
@@ -2363,6 +2478,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/list_for_workspaces:
+    post:
+      tags:
+        - jobs
+      summary: Returns recent jobs for a connection. Jobs are returned in descending order by createdAt.
+      operationId: listJobsForWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobListForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/get:
     post:
       tags:
@@ -2519,6 +2657,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptNormalizationStatusReadList"
+  /v1/jobs/get_input:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the job input in order to be able to start a synchronization.
+      operationId: getJobInput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncInput"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncJobInputRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/get_check_input:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get the check job input
+      operationId: getCheckInput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInput"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncJobInputRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
   /v1/health:
     get:
@@ -2633,6 +2815,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/get_combined_stats:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For retrieving combined stats for a single attempt
+      operationId: getAttemptCombinedStats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptStats"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/attempt/get_for_job:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Retrieves an attempt with logs for a job and attempt number.
+      operationId: getAttemptForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -2645,6 +2871,25 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/StreamStatusListRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/latest_per_run_state:
+    post:
+      summary: Gets a list of the latest stream status for each stream and run state for a connection.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatusesByRunState
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
       responses:
         "200":
           description: Successfully queried stream statuses.
@@ -2696,6 +2941,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StreamStatusRead"
+  /v1/jobs/retry_states/create_or_update:
+    post:
+      summary: Creates or updates a retry state for a job.
+      tags:
+        - job_retry_states
+      operationId: createOrUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRetryStateRequestBody"
+      responses:
+        "204":
+          description: Successfully put retry state.
+  /v1/jobs/retry_states/get:
+    post:
+      summary: Gets a retry state.
+      tags:
+        - job_retry_states
+      operationId: get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved retry state for a job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetryStateRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -3274,14 +3553,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
+    ScopeId:
+      type: string
+      format: uuid
+    ScopeType:
+      type: string
+      enum:
+        - workspace
+        - organization
     CustomSourceDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - sourceDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
         sourceDefinition:
           $ref: "#/components/schemas/SourceDefinitionCreate"
     SourceDefinitionIdWithWorkspaceId:
@@ -3294,6 +3584,19 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ActorDefinitionIdWithScope:
+      type: object
+      required:
+        - actorDefinitionId
+        - scopeId
+        - scopeType
+      properties:
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
     ListDeclarativeManifestsRequestBody:
       type: object
       required:
@@ -3773,7 +4076,6 @@ components:
           description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
         normalizationConfig:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
-
     DestinationDefinitionReadList:
       type: object
       required:
@@ -3786,13 +4088,16 @@ components:
     CustomDestinationDefinitionCreate:
       type: object
       required:
-        - workspaceId
         - destinationDefinition
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         destinationDefinition:
           $ref: "#/components/schemas/DestinationDefinitionCreate"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
     DestinationDefinitionIdWithWorkspaceId:
       type: object
       required:
@@ -3999,7 +4304,17 @@ components:
           type: string
         destinationName:
           type: string
-    # SOURCE / DESTINATION RELEASE STAGE ENUM
+    # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionRead:
+      type: object
+      required:
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ReleaseStage:
       type: string
       enum:
@@ -4786,6 +5101,61 @@ components:
           $ref: "#/components/schemas/JobId"
         pagination:
           $ref: "#/components/schemas/Pagination"
+        status:
+          description: The Job status you want to filter by
+          $ref: "#/components/schemas/JobStatus"
+        created_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        created_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
+        updated_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        updated_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
+    JobListForWorkspacesRequestBody:
+      type: object
+      required:
+        - configTypes
+      properties:
+        configTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobConfigType"
+        configId:
+          type: string
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        status:
+          description: The Job status you want to filter by
+          $ref: "#/components/schemas/JobStatus"
+        created_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        created_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
+        updated_at_start:
+          description: The start datetime to filter by
+          type: string
+          format: date-time
+        updated_at_end:
+          description: The end datetime to filter by
+          type: string
+          format: date-time
     JobIdRequestBody:
       type: object
       required:
@@ -4826,6 +5196,28 @@ components:
           $ref: "#/components/schemas/JobStatus"
         resetConfig:
           $ref: "#/components/schemas/ResetConfig"
+    SyncInput:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+    CheckInput:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+    SyncJobInputRead:
+      description: This return a json blob aimed to be used as a JobInput. It is serialized by the JobInput java class and should be deserialized into it.
     ResetConfig:
       type: object
       description: contains information about how a reset was configured. only populated if the job was a reset.
@@ -5303,6 +5695,10 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionId:
+      description: A unique identifier for an actor definition.
+      type: string
+      format: uuid
     ActorDefinitionRequestBody:
       type: object
       additionalProperties: false
@@ -5311,8 +5707,7 @@ components:
         - actorType
       properties:
         actorDefinitionId:
-          type: string
-          format: uuid
+          $ref: "#/components/schemas/ActorDefinitionId"
         actorType:
           $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
@@ -5974,6 +6369,16 @@ components:
           $ref: "#/components/schemas/AttemptNumber"
         syncConfig:
           $ref: "#/components/schemas/AttemptSyncConfig"
+    GetAttemptStatsRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
     InternalOperationResult:
       type: object
       required:
@@ -6157,6 +6562,57 @@ components:
           $ref: "#/components/schemas/SlackNotificationConfiguration"
         notificationTrigger:
           $ref: "#/components/schemas/NotificationTrigger"
+    RetryStateRead:
+      type: object
+      required:
+        - id
+        - jobId
+        - connectionId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
+    JobRetryStateRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
     InvalidInputProperty:
       type: object
       required:

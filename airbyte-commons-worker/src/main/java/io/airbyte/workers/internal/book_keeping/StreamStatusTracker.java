@@ -167,7 +167,7 @@ public class StreamStatusTracker {
     currentStreamStatus.setStatusId(streamStatusRead.getId());
     currentStreamStatuses.put(streamStatusKey, currentStreamStatus);
 
-    LOGGER.info("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
+    LOGGER.debug("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
         streamDescriptor.getNamespace(), streamDescriptor.getName(), streamStatusRead.getId(), replicationContext);
   }
 
@@ -187,7 +187,7 @@ public class StreamStatusTracker {
       // update the status.
       existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
 
-      LOGGER.info("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
+      LOGGER.debug("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
           streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
     } else {
       throw new StreamStatusException("Invalid stream status transition to RUNNING.", AirbyteMessageOrigin.SOURCE, replicationContext,
@@ -214,10 +214,10 @@ public class StreamStatusTracker {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty(), airbyteMessageOrigin);
 
-          LOGGER.info("Stream status for stream {}:{} set to COMPLETE (id = {}, origin = {}, context = {}).", streamDescriptor.getNamespace(),
+          LOGGER.debug("Stream status for stream {}:{} set to COMPLETE (id = {}, origin = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), airbyteMessageOrigin, replicationContext);
         } else {
-          LOGGER.info("Stream status for stream {}:{} set to partially COMPLETE (id = {}, origin = {}, context = {}).",
+          LOGGER.debug("Stream status for stream {}:{} set to partially COMPLETE (id = {}, origin = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), airbyteMessageOrigin,
               replicationContext);
         }
@@ -247,12 +247,12 @@ public class StreamStatusTracker {
         if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE,
-              incompleteCause, airbyteMessageOrigin);
-          LOGGER.info("Stream status for stream {}:{} set to INCOMPLETE (id = {}, origin = {}, context = {}).",
+              Optional.of(StreamStatusIncompleteRunCause.FAILED), airbyteMessageOrigin);
+          LOGGER.debug("Stream status for stream {}:{} set to INCOMPLETE (id = {}, origin = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), airbyteMessageOrigin,
               replicationContext);
         } else {
-          LOGGER.info("Stream {}:{} is already in an INCOMPLETE state (id = {}, origin = {}, context = {}).", streamDescriptor.getNamespace(),
+          LOGGER.debug("Stream {}:{} is already in an INCOMPLETE state (id = {}, origin = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), airbyteMessageOrigin, replicationContext);
         }
 
@@ -374,7 +374,7 @@ public class StreamStatusTracker {
                                         final Optional streamStatusIncompleteRunCause) {
     try {
       for (final Map.Entry<StreamStatusKey, CurrentStreamStatus> e : currentStreamStatuses.entrySet()) {
-        LOGGER.info("Attempting to force stream {}:{} with current status {} to status {} (id = {}, context = {})...",
+        LOGGER.debug("Attempting to force stream {}:{} with current status {} to status {} (id = {}, context = {})...",
             e.getKey().streamNamespace(), e.getKey().streamName(), e.getValue().getCurrentStatus(), streamStatusRunState,
             e.getValue().getStatusId(), replicationContext);
 
@@ -386,24 +386,24 @@ public class StreamStatusTracker {
         if (matchesReplicationContext(e.getKey(), replicationContext) && !e.getValue().isTerminated()) {
           sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
               replicationContext, streamStatusRunState, streamStatusIncompleteRunCause, AirbyteMessageOrigin.INTERNAL);
-          LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
+          LOGGER.debug("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
               e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
         } else {
-          LOGGER.info("Stream {}:{} already has a terminal status.  Nothing to force (id = {}, context = {}).", e.getKey().streamNamespace(),
+          LOGGER.debug("Stream {}:{} already has a terminal status.  Nothing to force (id = {}, context = {}).", e.getKey().streamNamespace(),
               e.getKey().streamName(), e.getValue().getStatusId(), replicationContext);
         }
       }
 
-      LOGGER.info("The forcing of status to {} for all streams in connection {} is complete (context = {}).",
+      LOGGER.debug("The forcing of status to {} for all streams in connection {} is complete (context = {}).",
           streamStatusRunState, replicationContext.connectionId(), replicationContext);
 
       // Remove all streams from the tracking map associated with the connection ID after the force update
       final Set<StreamStatusKey> toBeRemoved =
           currentStreamStatuses.keySet().stream().filter(e -> matchesReplicationContext(e, replicationContext)).collect(Collectors.toSet());
       toBeRemoved.forEach(r -> {
-        LOGGER.info("Removing stream {} from the status tracking cache...", r);
+        LOGGER.debug("Removing stream {} from the status tracking cache...", r);
         currentStreamStatuses.remove(r);
-        LOGGER.info("stream {} removed from the status tracking cache.", r);
+        LOGGER.debug("stream {} removed from the status tracking cache.", r);
       });
     } catch (final Exception ex) {
       LOGGER.error("Unable to force streams for connection {} to status {} (context = {}).", replicationContext.connectionId(),

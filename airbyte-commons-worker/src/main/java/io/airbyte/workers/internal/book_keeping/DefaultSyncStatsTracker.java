@@ -13,6 +13,8 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.StreamSyncStats;
+import io.airbyte.config.SyncStats;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
@@ -21,6 +23,7 @@ import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.internal.book_keeping.StateMetricsTracker.StateMetricsTrackerNoStateMatchException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -206,6 +209,14 @@ public class DefaultSyncStatsTracker implements SyncStatsTracker {
           + "This only impacts metrics and does not indicate a problem with actual sync data.", e);
       unreliableStateTimingMetrics = true;
     }
+  }
+
+  public SyncStats getTotalStats(final boolean hasReplicationCompleted) {
+    return SyncStatsBuilder.getTotalStats(this, hasReplicationCompleted);
+  }
+
+  public List<StreamSyncStats> getStreamSyncStats(final boolean hasReplicationCompleted) {
+    return SyncStatsBuilder.getPerStreamStats(this, hasReplicationCompleted);
   }
 
   /**

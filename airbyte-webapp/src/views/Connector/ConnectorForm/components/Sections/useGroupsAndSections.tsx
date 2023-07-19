@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { FormBlock, GroupDetails } from "core/form/types";
-import { naturalComparator } from "utils/objects";
+import { naturalComparator } from "core/utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
 import { OrderComparator } from "../../utils";
@@ -164,7 +164,9 @@ function splitSections(
   return ({ blocks, title }) => {
     const sortedBlocks: FormBlock[] = blocks
       .sort(OrderComparator)
-      .filter((formField) => !formField.airbyte_hidden && !isHiddenAuthField(formField.path));
+      .filter(
+        (formField) => !formField.airbyte_hidden && (!isHiddenAuthField(formField.path) || formField.always_show)
+      );
 
     const sections: Section[] = [];
     let currentSection: Section | undefined = undefined;

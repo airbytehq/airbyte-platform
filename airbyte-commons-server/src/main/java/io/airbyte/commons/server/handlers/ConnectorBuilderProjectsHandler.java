@@ -25,6 +25,7 @@ import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
@@ -207,16 +208,10 @@ public class ConnectorBuilderProjectsHandler {
     final StandardSourceDefinition source = new StandardSourceDefinition()
         .withSourceDefinitionId(actorDefinitionId)
         .withName(name)
-        .withDockerImageTag(cdkVersionProvider.getCdkVersion())
-        .withDockerRepository("airbyte/source-declarative-manifest")
         .withSourceType(SourceType.CUSTOM)
-        .withSpec(connectorSpecification)
         .withTombstone(false)
-        .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withPublic(false)
-        .withCustom(true)
-        .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
+        .withCustom(true);
 
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
@@ -227,7 +222,7 @@ public class ConnectorBuilderProjectsHandler {
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId);
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();

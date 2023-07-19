@@ -7,7 +7,7 @@ package io.airbyte.connector_builder.command_runner;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
-import io.airbyte.connector_builder.ApmTraceConstants;
+import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.file_writer.AirbyteArgument;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriter;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -50,7 +50,7 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
    * returned by the CDK.
    */
   @Override
-  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
+  @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   public AirbyteRecordMessage runCommand(
                                          final String cdkCommand,
                                          final String configContents,
@@ -65,7 +65,7 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
    * Start the python process. NOTE: This method should be called within a try-with-resources
    * statement, to ensure that the files are cleaned up after the process is done.
    */
-  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
+  @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   AirbyteCdkProcess start(
                           final String cdkCommand,
                           final String configContents,

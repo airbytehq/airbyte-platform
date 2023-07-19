@@ -18,7 +18,7 @@ You can build the webapp using Gradle in the root of the repository:
 
 ## Developing the webapp
 
-For an instruction how to develop on the webapp, please refer to our [documentation](https://docs.airbyte.com/contributing-to-airbyte/developing-locally/#develop-on-airbyte-webapp).
+For an instruction how to develop on the webapp, please refer to our [documentation](https://docs.airbyte.com/contributing-to-airbyte/resources/developing-locally/#develop-on-airbyte-webapp).
 
 Please also check our [styleguide](./STYLEGUIDE.md) for details around code styling and best-practises.
 

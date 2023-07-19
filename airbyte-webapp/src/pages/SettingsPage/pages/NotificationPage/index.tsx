@@ -1,3 +1,1 @@
-import NotificationPage from "./NotificationPage";
-
-export default NotificationPage;
+export { NotificationPage } from "./NotificationPage";

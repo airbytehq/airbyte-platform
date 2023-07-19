@@ -836,6 +836,27 @@ paths:
                 $ref: "#/components/schemas/WorkspaceUserReadList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/permissions/list_workspaces_by_user_paginated:
+    post:
+      tags:
+        - web_backend
+      summary: List cloud workspaces a user has access to
+      operationId: webBackendListWorkspacesByUserPaginated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListResourcesForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 components:
   schemas:
     # Health
@@ -1110,6 +1131,29 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         credits:
           $ref: "#/components/schemas/Credits"
+    ListResourcesForWorkspacesRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        includeDeleted:
+          type: boolean
+          default: false
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        nameStartsWith:
+          type: string
+    Pagination:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+          default: 20
+        rowOffset:
+          type: integer
+          default: 0
     TimeWindowRequestBody:
       description: Input to filter workspaces with most recently running jobs within the given time window
       type: object
@@ -1313,6 +1357,9 @@ components:
           format: int64
         userPaymentAccountId:
           $ref: "#/components/schemas/UserPaymentAccountId"
+        enrolledInFreeConnectorProgram:
+          type: boolean
+          description: Whether the workspace is enrolled in the Free Connector Program
     CloudWorkspaceLightRead:
       type: object
       required:
@@ -1349,6 +1396,9 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
+        enrolledInFreeConnectorProgram:
+          description: Whether the workspace is enrolled in the Free Connector Program
+          type: boolean
         tombstone:
           description:
             If not set or false, the configuration is active. If true, then this

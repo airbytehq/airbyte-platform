@@ -37,6 +37,7 @@ import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
@@ -380,17 +381,11 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
     verify(configRepository, times(1)).writeCustomSourceDefinitionAndDefaultVersion(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withDockerImageTag(CDK_VERSION)
-        .withDockerRepository("airbyte/source-declarative-manifest")
         .withName(A_SOURCE_NAME)
-        .withProtocolVersion("0.2.0")
         .withSourceType(SourceType.CUSTOM)
-        .withSpec(adaptedConnectorSpecification)
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true)
-        .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(
+        .withCustom(true)), eq(
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
                 .withDockerRepository("airbyte/source-declarative-manifest")
@@ -399,7 +394,8 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withReleaseStage(ReleaseStage.CUSTOM)
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),
-        eq(workspaceId));
+        eq(workspaceId),
+        eq(ScopeType.WORKSPACE));
     verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 

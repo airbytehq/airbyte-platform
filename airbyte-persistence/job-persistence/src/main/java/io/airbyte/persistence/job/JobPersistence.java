@@ -14,6 +14,7 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -22,6 +23,7 @@ import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,6 +76,13 @@ public interface JobPersistence {
    * @throws IOException while interacting with the db
    */
   Map<JobAttemptPair, AttemptStats> getAttemptStats(List<Long> jobIds) throws IOException;
+
+  /**
+   * Retrieve only the combined stats for a single attempt.
+   *
+   * @return {@link AttemptStats}
+   */
+  SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
 
   List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
@@ -169,7 +178,12 @@ public interface JobPersistence {
   Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
 
   /**
-   * When the output is a StandardSyncOutput, caller of this method should persiste
+   * Retrieves an Attempt from a given jobId and attemptNumber.
+   */
+  Optional<Attempt> getAttemptForJob(long jobId, int attemptNumber) throws IOException;
+
+  /**
+   * When the output is a StandardSyncOutput, caller of this method should persist
    * StandardSyncOutput#state in the configs database by calling
    * ConfigRepository#updateConnectionState, which takes care of persisting the connection state.
    */
@@ -225,6 +239,46 @@ public interface JobPersistence {
    * @throws IOException - what you do when you IO
    */
   List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
+
+  /**
+   * List jobs of a connection with filters. Pageable.
+   *
+   * @param configTypes - type of config, e.g. sync
+   * @param configId - id of that config
+   * @return lists job in descending order by created_at
+   * @throws IOException - what you do when you IO
+   */
+  List<Job> listJobs(
+                     Set<JobConfig.ConfigType> configTypes,
+                     String configId,
+                     int limit,
+                     int offset,
+                     JobStatus status,
+                     OffsetDateTime createdAtStart,
+                     OffsetDateTime createdAtEnd,
+                     OffsetDateTime updatedAtStart,
+                     OffsetDateTime updatedAtEnd)
+      throws IOException;
+
+  /**
+   * List jobs of a connection. Pageable.
+   *
+   * @param configTypes - type of config, e.g. sync
+   * @param workspaceIds - ids of requested workspaces
+   * @return lists job in descending order by created_at
+   * @throws IOException - what you do when you IO
+   */
+  List<Job> listJobs(
+                     Set<JobConfig.ConfigType> configTypes,
+                     List<UUID> workspaceIds,
+                     int limit,
+                     int offset,
+                     JobStatus status,
+                     OffsetDateTime createdAtStart,
+                     OffsetDateTime createdAtEnd,
+                     OffsetDateTime updatedAtStart,
+                     OffsetDateTime updatedAtEnd)
+      throws IOException;
 
   /**
    * List jobs of a config type after a certain time.
@@ -350,16 +404,6 @@ public interface JobPersistence {
    * Purges job history while ensuring that the latest saved-state information is maintained.
    */
   void purgeJobHistory();
-
-  /**
-   * Check if the secret has been migrated to a new secret store from a plain text values.
-   */
-  boolean isSecretMigrated() throws IOException;
-
-  /**
-   * Set that the secret migration has been performed.
-   */
-  void setSecretMigrationDone() throws IOException;
 
   List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -35,7 +36,6 @@ import io.airbyte.protocol.models.AirbyteConnectionStatus;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.Config;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
@@ -43,6 +43,7 @@ import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -66,6 +67,7 @@ class DefaultCheckConnectionWorkerTest {
   private StandardCheckConnectionInput input;
   private IntegrationLauncher integrationLauncher;
   private ConnectorConfigUpdater connectorConfigUpdater;
+  private InputStream inputStream;
   private Process process;
   private AirbyteStreamFactory successStreamFactory;
   private AirbyteStreamFactory failureStreamFactory;
@@ -85,7 +87,7 @@ class DefaultCheckConnectionWorkerTest {
     process = mock(Process.class);
 
     when(integrationLauncher.check(jobRoot, WorkerConstants.SOURCE_CONFIG_JSON_FILENAME, Jsons.serialize(CREDS))).thenReturn(process);
-    final InputStream inputStream = mock(InputStream.class);
+    inputStream = mock(InputStream.class);
     when(process.getInputStream()).thenReturn(inputStream);
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
 
@@ -259,6 +261,15 @@ class DefaultCheckConnectionWorkerTest {
   @Test
   void testExceptionThrownInRun() throws WorkerException {
     doThrow(new RuntimeException()).when(integrationLauncher).check(jobRoot, WorkerConstants.SOURCE_CONFIG_JSON_FILENAME, Jsons.serialize(CREDS));
+
+    final DefaultCheckConnectionWorker worker = new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, failureStreamFactory);
+
+    assertThrows(WorkerException.class, () -> worker.run(input, jobRoot));
+  }
+
+  @Test
+  void testConnectorNetworkExceptionThrownInRun() throws IOException {
+    doThrow(new SocketException("Socket is closed")).when(inputStream).close();
 
     final DefaultCheckConnectionWorker worker = new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, failureStreamFactory);
 

@@ -1,6 +1,6 @@
 import { goToDestinationPage, openNewDestinationForm } from "pages/destinationPage";
 
-import { deleteEntity, openSettingForm, submitButtonClick, updateField } from "./common";
+import { deleteEntity, openConnectorPage, submitButtonClick, updateField } from "./common";
 import { fillLocalJsonForm, fillPostgresForm } from "./connector";
 
 export const createLocalJsonDestination = (name: string, destinationPath = "/local") => {
@@ -42,7 +42,7 @@ export const updateDestination = (name: string, field: string, value: string) =>
   cy.intercept("/api/v1/destinations/update").as("updateDestination");
 
   goToDestinationPage();
-  openSettingForm(name);
+  openConnectorPage(name);
   updateField(field, value);
   submitButtonClick();
 
@@ -53,7 +53,7 @@ export const updateDestination = (name: string, field: string, value: string) =>
 export const deleteDestination = (name: string) => {
   cy.intercept("/api/v1/destinations/delete").as("deleteDestination");
   goToDestinationPage();
-  openSettingForm(name);
+  openConnectorPage(name);
   deleteEntity();
   cy.wait("@deleteDestination");
 };

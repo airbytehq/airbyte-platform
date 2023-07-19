@@ -387,12 +387,14 @@ public class TemporalClient {
    */
   public TemporalResponse<ConnectorJobOutput> submitCheckConnection(final UUID jobId,
                                                                     final int attempt,
+                                                                    final UUID workspaceId,
                                                                     final String taskQueue,
                                                                     final JobCheckConnectionConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
+        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());
@@ -416,12 +418,14 @@ public class TemporalClient {
    */
   public TemporalResponse<ConnectorJobOutput> submitDiscoverSchema(final UUID jobId,
                                                                    final int attempt,
+                                                                   final UUID workspaceId,
                                                                    final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
+        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());
@@ -534,8 +538,12 @@ public class TemporalClient {
     connectionManagerUtils.deleteWorkflowIfItExist(client, connectionId);
   }
 
-  public void sendSchemaChangeNotification(final UUID connectionId, final String url, final boolean containsBreakingChange) {
-    notificationClient.sendSchemaChangeNotification(connectionId, url, containsBreakingChange);
+  public void sendSchemaChangeNotification(final UUID connectionId,
+                                           final String connectionName,
+                                           final String sourceName,
+                                           final String url,
+                                           final boolean containsBreakingChange) {
+    notificationClient.sendSchemaChangeNotification(connectionId, connectionName, sourceName, url, containsBreakingChange);
   }
 
   /**

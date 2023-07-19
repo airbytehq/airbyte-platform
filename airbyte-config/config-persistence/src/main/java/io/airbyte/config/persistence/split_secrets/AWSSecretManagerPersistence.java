@@ -68,24 +68,23 @@ public class AWSSecretManagerPersistence implements SecretPersistence {
   }
 
   /**
-   * Creates a new AWSSecretManagerPersistence using the provided explicitly passed credentials.
+   * Creates a new AWSSecretManagerPersistence using the provided explicitly passed credentials. If
+   * awsAccessKey is null or empty the DefaultAWSCredentialsProviderChain is used.
    *
    * @param awsAccessKey The AWS access key.
    * @param awsSecretAccessKey The AWS secret access key.
    */
   public AWSSecretManagerPersistence(final String awsAccessKey, final String awsSecretAccessKey) {
-    checkNotNull(awsAccessKey, "awsAccessKey cannot be null, to use a default region call AWSSecretManagerPersistence.AWSSecretManagerPersistence()");
-    checkNotNull(awsSecretAccessKey,
-        "awsSecretAccessKey cannot be null, to use a default region call AWSSecretManagerPersistence.AWSSecretManagerPersistence()");
-    checkArgument(!awsAccessKey.isEmpty(),
-        "awsAccessKey cannot be empty, to use a default region call AWSSecretManagerPersistence.AWSSecretManagerPersistence()");
-    checkArgument(!awsSecretAccessKey.isEmpty(),
-        "awsSecretAccessKey cannot be empty, to use a default region call AWSSecretManagerPersistence.AWSSecretManagerPersistence()");
-    BasicAWSCredentials credentials = new BasicAWSCredentials(awsAccessKey, awsSecretAccessKey);
-    this.client = AWSSecretsManagerClientBuilder
-        .standard()
-        .withCredentials(new AWSStaticCredentialsProvider(credentials))
-        .build();
+    final var builder = AWSSecretsManagerClientBuilder.standard();
+
+    // If credentials are part of this config, specify them. Otherwise,
+    // let the SDK's default credential provider take over.
+    if (awsAccessKey != null && !awsSecretAccessKey.equals("")) {
+      BasicAWSCredentials credentials = new BasicAWSCredentials(awsAccessKey, awsSecretAccessKey);
+      builder.withCredentials(new AWSStaticCredentialsProvider(credentials));
+    }
+
+    this.client = builder.build();
     this.cache = new SecretCache(this.client);
   }
 

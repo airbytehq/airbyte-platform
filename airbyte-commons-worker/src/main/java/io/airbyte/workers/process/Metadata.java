@@ -15,6 +15,7 @@ public final class Metadata {
    */
   static final String JOB_LABEL_KEY = "job_id";
   static final String ATTEMPT_LABEL_KEY = "attempt_id";
+  static final String WORKSPACE_LABEL_KEY = "workspace_id";
   static final String WORKER_POD_LABEL_KEY = "airbyte";
   static final String WORKER_POD_LABEL_VALUE = "job-pod";
   public static final String CONNECTION_ID_LABEL_KEY = "connection_id";
@@ -37,6 +38,8 @@ public final class Metadata {
   public static final String WRITE_STEP = "write";
   public static final String NORMALIZE_STEP = "normalize";
   public static final String CUSTOM_STEP = "custom";
-  public static final String ORCHESTRATOR_STEP = "orchestrator";
+  public static final String ORCHESTRATOR_NORMALIZATION_STEP = "orchestrator-normalization";
+  public static final String ORCHESTRATOR_DBT_NORMALIZATION_STEP = "orchestrator-dbt-normalization";
+  public static final String ORCHESTRATOR_REPLICATION_STEP = "orchestrator-replication";
 
 }

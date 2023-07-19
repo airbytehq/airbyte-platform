@@ -473,13 +473,6 @@ jobs:
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
-      - name: Automatic Migration Acceptance Test
-        uses: Wandalen/wretry.action@v1.0.36
-        with:
-          command: ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
-          attempt_limit: 3
-          attempt_delay: 5000 # in ms
-
       - uses: actions/setup-python@v4
         if: always()
         with:

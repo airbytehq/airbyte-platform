@@ -2,20 +2,12 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.slf4j.Logger
 
 import java.nio.file.Path
-import java.security.MessageDigest
 import java.nio.file.Paths
+import java.security.MessageDigest
 
 @CacheableTask
 abstract class AirbyteDockerTask extends DefaultTask {
@@ -178,7 +170,7 @@ class AirbyteDockerPlugin implements Plugin<Project> {
                 file -> !file.toString().contains(".venv")
             }
 
-            project.task(taskName, type: AirbyteDockerTask) {
+            project.tasks.register(taskName, AirbyteDockerTask) {
                 def dockerPath = Paths.get(project.projectDir.absolutePath, dockerFile)
                 def hash = MessageDigest.getInstance("MD5").digest(dockerPath.getBytes()).encodeHex().toString()
                 dockerfileName = dockerFile
@@ -187,14 +179,14 @@ class AirbyteDockerPlugin implements Plugin<Project> {
                 projectFiles = filteredProjectFiles
                 idFileOutput = project.file(Paths.get(project.rootProject.rootDir.absolutePath, '.dockerversions', hash).toString())
                 baseImageHashes = getBaseImageHashes(project.rootProject.imageToHash, dockerPath.toFile())
-                dependsOn project.assemble
+                dependsOn project.tasks.named("assemble")
 
                 outputs.upToDateWhen {
                     return isUpToDate(logger, idFileOutput, project, dockerFile, dockerPath)
                 }
             }
         } else {
-            project.task(taskName) {
+            project.tasks.register(taskName) {
                 logger.info "Skipping ${taskName} because ${dockerFile} does not exist."
             }
         }
@@ -225,6 +217,8 @@ class AirbyteDockerPlugin implements Plugin<Project> {
         createTask(project, 'airbyteDocker', 'Dockerfile')
         createTask(project, 'airbyteDockerTest', 'Dockerfile.test')
 
-        project.build.dependsOn project.airbyteDocker
+        project.tasks.named("build") {
+            dependsOn project.tasks.named("airbyteDocker")
+        }
     }
 }

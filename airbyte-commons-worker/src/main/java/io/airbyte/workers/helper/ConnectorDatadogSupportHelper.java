@@ -5,9 +5,9 @@
 package io.airbyte.workers.helper;
 
 import com.google.api.client.util.Preconditions;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.EnvConfigs;
-import io.airbyte.workers.WorkerConstants;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.micrometer.common.util.StringUtils;
 import java.util.List;
@@ -63,7 +63,7 @@ public class ConnectorDatadogSupportHelper {
       try {
         // custom connectors version number does not confirm to Airbyte version
         return Optional.of(ImmutablePair.of(imageNameAndVersion[0], new AirbyteVersion(imageNameAndVersion[1])));
-      } catch (Exception ex) {
+      } catch (final Exception ex) {
         // logged as info because we allow processing to continue
         LOGGER.info("error while extracting version from image: {}. Message: {}", imageName, ex.getMessage());
       }

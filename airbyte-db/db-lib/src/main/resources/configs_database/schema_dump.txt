@@ -20,6 +20,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "default_version_id" uuid,
   constraint "actor_pkey"
     primary key ("id")
 );
@@ -46,32 +47,30 @@ create table "public"."actor_catalog_fetch_event" (
 create table "public"."actor_definition" (
   "id" uuid not null,
   "name" varchar(256) not null,
-  "docker_repository" varchar(256) not null,
-  "docker_image_tag" varchar(256) not null,
-  "documentation_url" varchar(256),
   "icon" varchar(256),
   "actor_type" "public"."actor_type" not null,
   "source_type" "public"."source_type",
-  "spec" jsonb not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
-  "release_stage" "public"."release_stage",
-  "release_date" date,
   "resource_requirements" jsonb,
   "public" boolean not null default false,
   "custom" boolean not null default false,
-  "protocol_version" varchar(255),
-  "normalization_repository" varchar(255),
-  "normalization_tag" varchar(255),
-  "supports_dbt" boolean,
-  "normalization_integration_type" varchar(255),
-  "allowed_hosts" jsonb,
-  "suggested_streams" jsonb,
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
   constraint "actor_definition_pkey"
     primary key ("id")
+);
+create table "public"."actor_definition_breaking_change" (
+  "actor_definition_id" uuid not null,
+  "version" varchar(256) not null,
+  "migration_documentation_url" varchar(256) not null,
+  "upgrade_deadline" date not null,
+  "message" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "actor_definition_breaking_change_pkey"
+    primary key ("actor_definition_id", "version")
 );
 create table "public"."actor_definition_config_injection" (
   "json_to_inject" jsonb not null,
@@ -105,9 +104,11 @@ create table "public"."actor_definition_version" (
 );
 create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
-  "workspace_id" uuid not null,
-  constraint "actor_definition_workspace_gr_workspace_id_actor_definition_key"
-    unique ("workspace_id", "actor_definition_id")
+  "workspace_id" uuid,
+  "scope_id" uuid,
+  "scope_type" "public"."scope_type" not null default cast('workspace' as scope_type),
+  constraint "actor_definition_workspace_gr_actor_definition_id_scope_id__key"
+    unique ("actor_definition_id", "scope_id", "scope_type")
 );
 create table "public"."actor_oauth_parameter" (
   "id" uuid not null,
@@ -155,7 +156,6 @@ create table "public"."connection" (
   "geography" "public"."geography_type" not null default cast('AUTO' as geography_type),
   "non_breaking_change_preference" varchar(7) not null default cast('ignore' as varchar),
   "breaking_change" boolean not null default false,
-  "unsupported_protocol_version" boolean not null default false,
   "field_selection_data" jsonb,
   constraint "connection_pkey"
     primary key ("id")
@@ -213,6 +213,16 @@ create table "public"."operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "operator_webhook" jsonb,
   constraint "operation_pkey"
+    primary key ("id")
+);
+create table "public"."organization" (
+  "id" uuid not null,
+  "name" varchar(256) not null,
+  "user_id" uuid,
+  "email" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "organization_pkey"
     primary key ("id")
 );
 create table "public"."permission" (
@@ -294,6 +304,7 @@ create table "public"."workspace" (
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
   "notification_settings" jsonb,
+  "organization_id" uuid,
   constraint "workspace_pkey"
     primary key ("id")
 );
@@ -317,6 +328,10 @@ alter table "public"."actor"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
 alter table "public"."actor"
+  add constraint "actor_default_version_id_fkey"
+    foreign key ("default_version_id")
+    references "public"."actor_definition_version" ("id");
+alter table "public"."actor"
   add constraint "actor_workspace_id_fkey"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
@@ -332,6 +347,10 @@ alter table "public"."actor_definition"
   add constraint "actor_definition_default_version_id_fkey"
     foreign key ("default_version_id")
     references "public"."actor_definition_version" ("id");
+alter table "public"."actor_definition_breaking_change"
+  add constraint "actor_definition_breaking_change_actor_definition_id_fkey"
+    foreign key ("actor_definition_id")
+    references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_config_injection"
   add constraint "actor_definition_config_injection_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
@@ -344,10 +363,6 @@ alter table "public"."actor_definition_workspace_grant"
   add constraint "actor_definition_workspace_grant_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
-alter table "public"."actor_definition_workspace_grant"
-  add constraint "actor_definition_workspace_grant_workspace_id_fkey"
-    foreign key ("workspace_id")
-    references "public"."workspace" ("id");
 alter table "public"."connection"
   add constraint "connection_actor_catalog_id_fk"
     foreign key ("source_catalog_id")
@@ -396,6 +411,10 @@ alter table "public"."user"
   add constraint "user_default_workspace_id_fkey"
     foreign key ("default_workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."workspace"
+  add constraint "workspace_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
 alter table "public"."workspace_service_account"
   add constraint "workspace_service_account_workspace_id_fkey"
     foreign key ("workspace_id")

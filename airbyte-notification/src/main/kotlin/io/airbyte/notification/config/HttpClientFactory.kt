@@ -8,9 +8,9 @@ import okhttp3.OkHttpClient
 @Factory
 class HttpClientFactory {
 
-    @Singleton
-    @Named("webhookHttpClient")
-    fun okHttpClient(): OkHttpClient {
-        return OkHttpClient()
-    }
+  @Singleton
+  @Named("webhookHttpClient")
+  fun okHttpClient(): OkHttpClient {
+    return OkHttpClient()
+  }
 }

@@ -1,7 +1,7 @@
 import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import React from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -88,7 +88,14 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
-            <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
+            <BuilderField
+              type="array"
+              path={streamFieldPath("primaryKey")}
+              label="Primary Key"
+              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              directionalStyle={false}
+              optional
+            />
           </BuilderCard>
           <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
@@ -218,6 +225,7 @@ const StreamTab = ({
 );
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
@@ -230,6 +238,13 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
+  const formattedSchema = useMemo(() => {
+    try {
+      return schema ? formatJson(JSON.parse(schema)) : undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }, [schema]);
 
   return (
     <>
@@ -237,7 +252,9 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
         label="Automatically import detected schema"
         path={autoImportSchemaFieldPath}
         type="boolean"
-        tooltip="Automatically sets the declared schema to the schema that is detected when clicking Test for this stream.<br></br>Disable this in order to manually edit the schema."
+        tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
+        disabled={error && !streamRead.data?.inferred_schema}
+        disabledTooltip={formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })}
       />
       {showImportButton && (
         <Button
@@ -256,14 +273,17 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
           <FormattedMessage id="connectorBuilder.useSchemaButton" />
         </Button>
       )}
-      <div className={styles.editorContainer}>
-        {autoImportSchema ? (
-          <Pre>{schema}</Pre>
-        ) : (
+      {autoImportSchema ? (
+        <div className={styles.autoSchemaContainer}>
+          <Pre>{formattedSchema}</Pre>
+        </div>
+      ) : (
+        <div className={styles.editorContainer}>
           <CodeEditor
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
+            automaticLayout
             theme="airbyte-light"
             onChange={(val: string | undefined) => {
               setValue(path, val, {
@@ -273,8 +293,8 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
               });
             }}
           />
-        )}
-      </div>
+        </div>
+      )}
       {error && (
         <Text className={styles.errorMessage}>
           <FormattedMessage id={error.message} />

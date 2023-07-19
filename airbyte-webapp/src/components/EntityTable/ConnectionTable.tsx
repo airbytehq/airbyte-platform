@@ -9,7 +9,6 @@ import { Table } from "components/ui/Table";
 
 import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useExperiment } from "hooks/services/Experiment";
 import { useQuery } from "hooks/useQuery";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";
@@ -32,7 +31,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v2", false);
+  const streamCentricUIEnabled = false;
 
   const sortBy = query.sortBy || "entityName";
   const sortOrder = query.order || SortOrderEnum.ASC;
@@ -208,7 +207,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
       data={sortingData}
       onClickRow={onClickRow}
       testId="connectionsTable"
-      columnVisibility={{ "stream-status": streamCentricUIEnabled, name: !streamCentricUIEnabled }}
+      columnVisibility={{ "stream-status": streamCentricUIEnabled }}
       sortedByColumn={sortBy}
       className={styles.connectionsTable}
     />

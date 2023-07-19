@@ -14,4 +14,6 @@ export const defaultCloudFeatures = [
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.FreeConnectorProgram,
+  FeatureItem.EmailNotifications,
+  FeatureItem.ShowInviteUsersHint,
 ];

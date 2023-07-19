@@ -6,7 +6,7 @@ package io.airbyte.connector_builder.command_runner;
 
 import datadog.trace.api.Trace;
 import io.airbyte.commons.io.IOs;
-import io.airbyte.connector_builder.ApmTraceConstants;
+import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
 import io.airbyte.connector_builder.exceptions.CdkUnknownException;
@@ -37,7 +37,7 @@ public class ProcessOutputParser {
   private static final int timeOut = 30;
 
   @SuppressWarnings("PMD.AvoidCatchingNPE")
-  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
+  @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
   AirbyteRecordMessage parse(
                              final Process process,
                              final AirbyteStreamFactory streamFactory,

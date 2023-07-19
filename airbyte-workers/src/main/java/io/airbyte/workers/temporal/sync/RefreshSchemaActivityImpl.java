@@ -18,18 +18,22 @@ import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.features.EnvVariableFeatureFlags;
+import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RefreshSchemaPeriod;
 import io.airbyte.featureflag.ShouldRunRefreshSchema;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -43,12 +47,12 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   private final SourceApi sourceApi;
   private final WorkspaceApi workspaceApi;
-  private final EnvVariableFeatureFlags envVariableFeatureFlags;
+  private final FeatureFlags envVariableFeatureFlags;
   private final FeatureFlagClient featureFlagClient;
 
   public RefreshSchemaActivityImpl(final SourceApi sourceApi,
                                    final WorkspaceApi workspaceApi,
-                                   final EnvVariableFeatureFlags envVariableFeatureFlags,
+                                   final FeatureFlags envVariableFeatureFlags,
                                    final FeatureFlagClient featureFlagClient) {
     this.sourceApi = sourceApi;
     this.workspaceApi = workspaceApi;
@@ -73,7 +77,13 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
       return;
     }
-    if (!featureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Connection(connectionId))) {
+
+    final UUID sourceDefinitionId =
+        AirbyteApiClient.retryWithJitter(() -> sourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId)).getSourceDefinitionId(),
+            "Get the source definition id by source id");
+
+    final List<Context> featureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
+    if (!featureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(featureFlagContexts))) {
       return;
     }
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REFRESH_SCHEMA, 1);

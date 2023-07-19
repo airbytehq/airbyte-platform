@@ -4,8 +4,8 @@ import { useIntl } from "react-intl";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConfig } from "config";
+import { loadFathom } from "core/utils/fathom";
 import { useExperiment } from "hooks/services/Experiment";
-import { loadFathom } from "utils/fathom";
 
 import styles from "./Auth.module.scss";
 

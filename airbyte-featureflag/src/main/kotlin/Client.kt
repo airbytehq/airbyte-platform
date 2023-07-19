@@ -81,7 +81,9 @@ internal const val CONFIG_FF_PATH = "airbyte.feature-flag.path"
  */
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
-class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : FeatureFlagClient {
+class ConfigFileClient(
+  @Property(name = CONFIG_FF_PATH) config: Path?,
+) : FeatureFlagClient {
   /** [flags] holds the mappings of the flag-name to the flag properties */
   private var flags: Map<String, ConfigFileFlag> = mapOf()
 
@@ -196,7 +198,6 @@ open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
   }
 }
 
-
 /**
  * Data wrapper around OSS feature-flag configuration file.
  *
@@ -213,7 +214,6 @@ private data class ConfigFileFlags(val flags: List<ConfigFileFlag>)
  * Data wrapper around an individual flag read from the configuration file.
  */
 private data class ConfigFileFlag(val name: String, val serve: Any)
-
 
 /** The yaml mapper is used for reading the feature-flag configuration file. */
 private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()

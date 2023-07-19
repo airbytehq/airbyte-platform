@@ -8,12 +8,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { ReactComponent as BuilderIcon } from "./builder-icon.svg";
 import CreateConnectorModal from "./CreateConnectorModal";
@@ -33,10 +33,8 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
   const navigate = useNavigate();
   const workspaceId = useCurrentWorkspaceId();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
   const onChangeModalState = () => {
     setIsModalOpen(!isModalOpen);
-    setErrorMessage("");
   };
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
 
@@ -47,29 +45,19 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
   const { mutateAsync: createDestinationDefinition } = useCreateDestinationDefinition();
 
   const onSubmitSource = async (sourceDefinition: ICreateProps) => {
-    setErrorMessage("");
-    try {
-      const result = await createSourceDefinition(sourceDefinition);
+    const result = await createSourceDefinition(sourceDefinition);
 
-      navigate({
-        pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SelectSourceNew}/${result.sourceDefinitionId}`,
-      });
-    } catch (e) {
-      setErrorMessage(e.message || formatMessage({ id: "form.dockerError" }));
-    }
+    navigate({
+      pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SelectSourceNew}/${result.sourceDefinitionId}`,
+    });
   };
 
   const onSubmitDestination = async (destinationDefinition: ICreateProps) => {
-    setErrorMessage("");
-    try {
-      const result = await createDestinationDefinition(destinationDefinition);
+    const result = await createDestinationDefinition(destinationDefinition);
 
-      navigate({
-        pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}/${result.destinationDefinitionId}`,
-      });
-    } catch (e) {
-      setErrorMessage(e.message || formatMessage({ id: "form.dockerError" }));
-    }
+    navigate({
+      pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}/${result.destinationDefinitionId}`,
+    });
   };
 
   const onSubmit = (values: ICreateProps) =>
@@ -111,9 +99,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
         </DropdownMenu>
       )}
 
-      {isModalOpen && (
-        <CreateConnectorModal onClose={onChangeModalState} onSubmit={onSubmit} errorMessage={errorMessage} />
-      )}
+      {isModalOpen && <CreateConnectorModal onClose={onChangeModalState} onSubmit={onSubmit} />}
     </>
   );
 };

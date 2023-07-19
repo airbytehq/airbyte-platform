@@ -11,8 +11,8 @@ import { Modal, ModalBody } from "components/ui/Modal";
 import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
@@ -32,7 +32,12 @@ interface ConfigMenuProps {
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-  const { testInputJson, setTestInputJson, testInputJsonDirty } = useConnectorBuilderTestRead();
+  const {
+    testInputJson,
+    setTestInputJson,
+    testInputJsonDirty,
+    streamRead: { isFetching },
+  } = useConnectorBuilderTestRead();
   const { trackError } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
@@ -65,6 +70,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
               data-testid="test-inputs"
               onClick={() => setIsOpen(true)}
               disabled={
+                isFetching ||
                 !jsonManifest.spec ||
                 Object.keys(jsonManifest.spec.connection_specification?.properties || {}).length === 0
               }

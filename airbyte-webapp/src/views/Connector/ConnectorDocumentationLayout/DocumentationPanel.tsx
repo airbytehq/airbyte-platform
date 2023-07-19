@@ -16,10 +16,10 @@ import { Tabs } from "components/ui/Tabs";
 import { ButtonTab } from "components/ui/Tabs/ButtonTab";
 
 import { isSourceDefinition } from "core/domain/connector/source";
+import { isCloudApp } from "core/utils/app";
+import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { EMBEDDED_DOCS_PATH, useDocumentation } from "hooks/services/useDocumentation";
-import { isCloudApp } from "utils/app";
-import { links } from "utils/links";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./DocumentationPanel.module.scss";

@@ -5,7 +5,7 @@ import styled from "styled-components";
 import Label from "components/Label";
 import { LabeledSwitch } from "components/LabeledSwitch";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import FeedbackBlock from "../../../components/FeedbackBlock";
 

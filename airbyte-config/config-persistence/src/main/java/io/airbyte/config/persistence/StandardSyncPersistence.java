@@ -4,8 +4,6 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
@@ -17,10 +15,7 @@ import static org.jooq.impl.DSL.select;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.StandardSync;
@@ -29,8 +24,6 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
-import io.airbyte.db.instance.configs.jooq.generated.tables.Actor;
-import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinition;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -41,7 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Record;
@@ -323,29 +315,6 @@ public class StandardSyncPersistence {
     });
   }
 
-  /**
-   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
-   * if both connectors are now within support range.
-   *
-   * @param actorDefinitionId the actorDefinitionId to query
-   * @param actorType the ActorType of actorDefinitionId
-   * @param supportedRange the supported range of protocol versions
-   */
-  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
-                                                  final ActorType actorType,
-                                                  final AirbyteProtocolVersionRange supportedRange)
-      throws IOException {
-    final Stream<StandardSyncIdsWithProtocolVersions> candidateSyncs = database.query(ctx -> findDisabledSyncs(ctx, actorDefinitionId, actorType));
-    final List<UUID> standardSyncsToReEnable = candidateSyncs
-        .filter(sync -> supportedRange.isSupported(sync.sourceProtocolVersion()) && supportedRange.isSupported(sync.destinationProtocolVersion()))
-        .map(StandardSyncIdsWithProtocolVersions::standardSyncId)
-        .toList();
-    database.query(ctx -> {
-      clearProtocolVersionFlag(ctx, standardSyncsToReEnable);
-      return null;
-    });
-  }
-
   public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
     final StandardSync standardSync = getStandardSync(connectionId);
     return CatalogHelpers.extractStreamDescriptors(standardSync.getCatalog());
@@ -404,44 +373,6 @@ public class StandardSyncPersistence {
     }
 
     return ids;
-  }
-
-  private Stream<StandardSyncIdsWithProtocolVersions> findDisabledSyncs(final DSLContext ctx, final UUID actorDefId, final ActorType actorType) {
-    // Table aliasing to help have a readable join
-    final Actor source = ACTOR.as("source");
-    final Actor destination = ACTOR.as("destination");
-    final ActorDefinition sourceDef = ACTOR_DEFINITION.as("sourceDef");
-    final ActorDefinition destDef = ACTOR_DEFINITION.as("destDef");
-
-    // Retrieve all the connections currently disabled due to a bad protocol version
-    // where the actor definition is matching the one provided to this function
-    final Stream<StandardSyncIdsWithProtocolVersions> results = ctx
-        .select(CONNECTION.ID, sourceDef.ID, sourceDef.PROTOCOL_VERSION, destDef.ID, destDef.PROTOCOL_VERSION)
-        .from(CONNECTION)
-        .join(source).on(CONNECTION.SOURCE_ID.eq(source.ID))
-        .join(sourceDef).on(source.ACTOR_DEFINITION_ID.eq(sourceDef.ID))
-        .join(destination).on(CONNECTION.DESTINATION_ID.eq(destination.ID))
-        .join(destDef).on(destination.ACTOR_DEFINITION_ID.eq(destDef.ID))
-        .where(
-            CONNECTION.UNSUPPORTED_PROTOCOL_VERSION.eq(true).and(
-                (actorType == ActorType.DESTINATION ? destDef : sourceDef).ID.eq(actorDefId)))
-        .fetch()
-        .stream()
-        .map(r -> new StandardSyncIdsWithProtocolVersions(
-            r.get(CONNECTION.ID),
-            r.get(sourceDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(sourceDef.PROTOCOL_VERSION)),
-            r.get(destDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(destDef.PROTOCOL_VERSION))));
-    return results;
-  }
-
-  private void clearProtocolVersionFlag(final DSLContext ctx, final List<UUID> standardSyncIds) {
-    ctx.update(CONNECTION)
-        .set(CONNECTION.UNSUPPORTED_PROTOCOL_VERSION, false)
-        .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
-        .where(CONNECTION.ID.in(standardSyncIds))
-        .execute();
   }
 
 }

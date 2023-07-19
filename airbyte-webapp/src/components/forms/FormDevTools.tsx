@@ -1,7 +1,13 @@
-import React from "react";
+import React, { Suspense } from "react";
 
-import { isDevelopment } from "utils/isDevelopment";
+import { isDevelopment } from "core/utils/isDevelopment";
 
 const FormDevToolsInternal = React.lazy(() => import("./FormDevToolsInternal"));
 
-export const FormDevTools = isDevelopment() ? FormDevToolsInternal : () => null;
+export const FormDevTools = isDevelopment()
+  ? () => (
+      <Suspense fallback={null}>
+        <FormDevToolsInternal />
+      </Suspense>
+    )
+  : () => null;

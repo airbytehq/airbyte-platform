@@ -5,18 +5,17 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
-import {
-  AirbyteStreamWithStatusAndConfiguration,
-  FakeStreamConfigWithStatus,
-} from "components/connection/StreamStatus/getStreamsWithStatus";
-import { useGetStreamStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+
+import { ConnectionStatus } from "core/request/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
@@ -24,13 +23,13 @@ import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
 
-const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showRelativeTime: boolean }> = ({
-  config,
+const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
+  transitionedAt,
   showRelativeTime,
 }) => {
   const lastSyncDisplayText = useMemo(() => {
-    if (config?.lastSuccessfulSync) {
-      const lastSync = dayjs(config.lastSuccessfulSync * 1000);
+    if (transitionedAt) {
+      const lastSync = dayjs(transitionedAt);
 
       if (showRelativeTime) {
         return lastSync.fromNow();
@@ -38,7 +37,7 @@ const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showR
       return lastSync.format("MM.DD.YY HH:mm:ss");
     }
     return null;
-  }, [config?.lastSuccessfulSync, showRelativeTime]);
+  }, [transitionedAt, showRelativeTime]);
   if (lastSyncDisplayText) {
     return (
       <Text size="xs" color="grey300">
@@ -54,30 +53,32 @@ export const StreamsList = () => {
 
   const { filteredStreams } = useStreamsListContext();
 
-  const columnHelper = useMemo(() => createColumnHelper<AirbyteStreamWithStatusAndConfiguration>(), []);
-  const getStreamStatus = useGetStreamStatus();
+  const streamEntries = filteredStreams.map((stream) => {
+    return {
+      name: stream.streamName,
+      state: stream,
+    };
+  });
 
+  const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
   const columns = useMemo(
     () => [
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         id: "statusIcon",
         header: () => <FormattedMessage id="connection.stream.status.table.status" />,
         cell: (props) => (
-          <StreamStatusIndicator
-            status={getStreamStatus(props.cell.getValue())}
-            loading={props.cell.getValue()?.isSyncing || props.cell.getValue()?.isResetting}
-          />
+          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center">
+            <StreamStatusIndicator status={props.cell.getValue().status} loading={props.cell.getValue().isRunning} />
+            <FormattedMessage id={`connection.stream.status.${props.cell.getValue().status}`} />
+          </FlexContainer>
         ),
-        meta: {
-          thClassName: styles.statusHeader,
-          tdClassName: styles.statusCell,
-        },
+        meta: { thClassName: styles.statusHeader },
       }),
-      columnHelper.accessor("stream.name", {
+      columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <>{props.cell.getValue()}</>,
       }),
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         id: "lastSync",
         header: () => (
           <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
@@ -85,19 +86,23 @@ export const StreamsList = () => {
             <TimeIcon />
           </button>
         ),
-        cell: (props) => <LastSync config={props.cell.getValue()} showRelativeTime={showRelativeTime} />,
+        cell: (props) => (
+          <LastSync transitionedAt={props.cell.getValue()?.lastSuccessfulSyncAt} showRelativeTime={showRelativeTime} />
+        ),
       }),
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         header: () => null,
         id: "actions",
-        cell: (props) => <StreamActionsMenu stream={props.row.original.stream} />,
+        cell: (props) => <StreamActionsMenu streamState={props.cell.getValue()} />,
         meta: {
           thClassName: styles.actionsHeader,
         },
       }),
     ],
-    [columnHelper, getStreamStatus, setShowRelativeTime, showRelativeTime]
+    [columnHelper, setShowRelativeTime, showRelativeTime]
   );
+
+  const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
 
   return (
     <>
@@ -112,17 +117,33 @@ export const StreamsList = () => {
           </FlexContainer>
         }
       >
-        <FlexContainer direction="column" gap="sm" className={styles.body}>
+        <FlexContainer direction="column" gap="sm">
           <div className={styles.tableContainer} data-survey="streamcentric">
             <Table
               columns={columns}
-              data={filteredStreams}
+              data={streamEntries}
               variant="inBlock"
               className={styles.table}
-              getRowClassName={(data) =>
-                classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
-              }
+              getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
             />
+
+            {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
+            {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
+              <Box m="lg">
+                <Message
+                  text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
+                  actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
+                  type="info"
+                  onAction={() => {
+                    updateConnection({
+                      connectionId: connection.connectionId,
+                      status: ConnectionStatus.active,
+                    });
+                  }}
+                  actionBtnProps={connectionUpdating ? { disabled: true } : {}}
+                />
+              </Box>
+            )}
           </div>
         </FlexContainer>
       </Card>

@@ -1,10 +1,19 @@
-task copyScripts(type: Copy) {
-    dependsOn copyDocker
-
-    from('scripts')
-    into 'build/docker/bin/scripts'
+plugins {
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.docker"
 }
 
-tasks.named("buildDockerImage") {
-    dependsOn copyScripts
+airbyte {
+    docker {
+        imageName = "temporal"
+    }
+}
+
+def copyScripts = tasks.register("copyScripts", Copy) {
+    from('scripts')
+    into 'build/airbyte/docker/'
+}
+
+tasks.named("dockerBuildImage") {
+    dependsOn(copyScripts)
 }

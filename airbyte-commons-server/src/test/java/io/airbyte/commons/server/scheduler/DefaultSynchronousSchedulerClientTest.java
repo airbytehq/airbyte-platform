@@ -28,6 +28,7 @@ import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalResponse;
 import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
@@ -36,6 +37,7 @@ import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.persistence.ConfigInjector;
@@ -61,8 +63,9 @@ import org.junit.jupiter.api.Test;
 class DefaultSynchronousSchedulerClientTest {
 
   private static final Path LOG_PATH = Path.of("/tmp");
-  private static final String DOCKER_IMAGE = "foo/bar";
-  private static final String DOCKER_IMAGE_TAG = "baz/qux";
+  private static final String DOCKER_REPOSITORY = "airbyte/source-foo";
+  private static final String DOCKER_IMAGE_TAG = "1.2.3";
+  private static final String DOCKER_IMAGE = DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG;
   private static final Version PROTOCOL_VERSION = new Version("0.2.3");
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID ACTOR_ID = UUID.randomUUID();
@@ -76,14 +79,22 @@ class DefaultSynchronousSchedulerClientTest {
       .put("password", "abc")
       .build());
   private static final SourceConnection SOURCE_CONNECTION = new SourceConnection()
+      .withWorkspaceId(WORKSPACE_ID)
       .withSourceId(UUID1)
       .withSourceDefinitionId(UUID2)
       .withConfiguration(CONFIGURATION);
   private static final DestinationConnection DESTINATION_CONNECTION = new DestinationConnection()
+      .withWorkspaceId(WORKSPACE_ID)
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
       .withConfiguration(CONFIGURATION);
+  private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
+      .withDockerRepository(DOCKER_REPOSITORY)
+      .withDockerImageTag(DOCKER_IMAGE_TAG)
+      .withProtocolVersion(PROTOCOL_VERSION.serialize())
+      .withReleaseStage(ReleaseStage.BETA);
   private static final String SOURCE_DOCKER_IMAGE = "source-airbyte:1.2.3";
+  private static final ReleaseStage SOURCE_RELEASE_STAGE = ReleaseStage.BETA;
 
   private TemporalClient temporalClient;
   private JobTracker jobTracker;
@@ -134,7 +145,7 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(discoveredCatalogId);
       when(function.get()).thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
 
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
+      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
       final SynchronousResponse<UUID> response = schedulerClient
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
@@ -162,7 +173,7 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobOutput failedJobOutput = new ConnectorJobOutput().withFailureReason(failureReason);
       when(function.get()).thenReturn(new TemporalResponse<>(failedJobOutput, createMetadata(false)));
 
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
+      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
       final SynchronousResponse<UUID> response = schedulerClient
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
@@ -186,7 +197,7 @@ class DefaultSynchronousSchedulerClientTest {
       final Supplier<TemporalResponse<ConnectorJobOutput>> function = mock(Supplier.class);
       final Function<ConnectorJobOutput, UUID> mapperFunction = ConnectorJobOutput::getDiscoverCatalogId;
       when(function.get()).thenThrow(new RuntimeException());
-      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
+      final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE);
       assertThrows(
           RuntimeException.class,
           () -> schedulerClient.execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function,
@@ -214,10 +225,10 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, DOCKER_IMAGE, PROTOCOL_VERSION, false);
+          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
       assertEquals(mockOutput, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }
@@ -237,10 +248,10 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, DOCKER_IMAGE, PROTOCOL_VERSION, false);
+          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
       assertEquals(mockOutput, response.getOutput());
     }
 
@@ -256,10 +267,10 @@ class DefaultSynchronousSchedulerClientTest {
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
-      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
+      when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, DOCKER_IMAGE, PROTOCOL_VERSION, false);
+          schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false);
       assertEquals(mockOutput, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(DESTINATION_CONNECTION.getDestinationDefinitionId()));
     }
@@ -268,10 +279,11 @@ class DefaultSynchronousSchedulerClientTest {
     void testCreateDiscoverSchemaJob() throws IOException {
       final UUID expectedCatalogId = UUID.randomUUID();
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId);
-      when(temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class)))
-          .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
+      when(
+          temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class)))
+              .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
-          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, DOCKER_IMAGE, DOCKER_IMAGE_TAG, PROTOCOL_VERSION, false);
+          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
       assertEquals(expectedCatalogId, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }

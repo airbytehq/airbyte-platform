@@ -12,7 +12,6 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -91,7 +90,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
-@DisplayName("DefaultJobPersistance")
+@DisplayName("DefaultJobPersistence")
 class DefaultJobPersistenceTest {
 
   private static final Instant NOW = Instant.now();
@@ -626,7 +625,7 @@ class DefaultJobPersistenceTest {
       final String stream3 = "s3";
       final String namespace3 = null;
 
-      var streamStatsUpdate0 = List.of(
+      final var streamStatsUpdate0 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
@@ -635,17 +634,17 @@ class DefaultJobPersistenceTest {
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, null, null, 1000L, null, streamStatsUpdate0);
 
-      var streamStatsUpdate1 = List.of(
+      final var streamStatsUpdate1 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, streamStatsUpdate1);
 
-      var streamStatsUpdate2 = List.of(
+      final var streamStatsUpdate2 = List.of(
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
               .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, streamStatsUpdate2);
 
-      var streamStatsUpdate3 = List.of(
+      final var streamStatsUpdate3 = List.of(
           new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
               .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, streamStatsUpdate3);
@@ -677,6 +676,33 @@ class DefaultJobPersistenceTest {
     @DisplayName("Retrieving stats for a bad job attempt input should not cause an exception.")
     void testGetStatsForBadJobAttemptInput() throws IOException {
       assertNotNull(jobPersistence.getAttemptStats(-1, -1));
+    }
+
+    @Test
+    @DisplayName("Combined stats can be retrieved without per stream stats.")
+    void testGetAttemptCombinedStats() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+      final var estimatedRecords = 1234L;
+      final var estimatedBytes = 5678L;
+      final var recordsEmitted = 9012L;
+      final var bytesEmitted = 3456L;
+      final var recordsCommitted = 7890L;
+      final var bytesCommitted = 1234L;
+
+      final var streamStats = List.of(
+          new StreamSyncStats().withStreamName("name1").withStreamNamespace("ns")
+              .withStats(new SyncStats().withBytesEmitted(500L).withRecordsEmitted(500L).withEstimatedBytes(10000L).withEstimatedRecords(2000L)));
+      jobPersistence.writeStats(
+          jobId, attemptNumber, estimatedRecords, estimatedBytes, recordsEmitted, bytesEmitted, recordsCommitted, bytesCommitted, streamStats);
+
+      final SyncStats stats = jobPersistence.getAttemptCombinedStats(jobId, attemptNumber);
+      assertEquals(estimatedRecords, stats.getEstimatedRecords());
+      assertEquals(estimatedBytes, stats.getEstimatedBytes());
+      assertEquals(recordsEmitted, stats.getRecordsEmitted());
+      assertEquals(bytesEmitted, stats.getBytesEmitted());
+      assertEquals(recordsCommitted, stats.getRecordsCommitted());
+      assertEquals(bytesCommitted, stats.getBytesCommitted());
     }
 
   }
@@ -849,15 +875,6 @@ class DefaultJobPersistenceTest {
 
     final Supplier<Instant> timeSupplier = () -> startTime.plusSeconds(intArray[0]++);
     return timeSupplier;
-  }
-
-  @Test
-  void testSecretMigrationMetadata() throws IOException {
-    boolean isMigrated = jobPersistence.isSecretMigrated();
-    assertFalse(isMigrated);
-    jobPersistence.setSecretMigrationDone();
-    isMigrated = jobPersistence.isSecretMigrated();
-    assertTrue(isMigrated);
   }
 
   @Test
@@ -1050,7 +1067,7 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
-    @DisplayName("Should increment attempt id if creating multiple attemps")
+    @DisplayName("Should increment attempt id if creating multiple attempts")
     void testCreateAttemptAttemptId() throws IOException {
       final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
       final int attemptNumber1 = jobPersistence.createAttempt(jobId, LOG_PATH);
@@ -1101,6 +1118,57 @@ class DefaultJobPersistenceTest {
           Lists.newArrayList(createAttempt(0, jobId, AttemptStatus.SUCCEEDED, LOG_PATH)),
           NOW.getEpochSecond());
       assertEquals(expected, actual);
+    }
+
+  }
+
+  @Nested
+  @DisplayName("Get an attempt")
+  class GetAttempt {
+
+    @Test
+    @DisplayName("Should get an attempt by job id")
+    void testGetAttemptSimple() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final var num = jobPersistence.createAttempt(jobId, LOG_PATH);
+
+      final Attempt actual = jobPersistence.getAttemptForJob(jobId, 0).get();
+      final Attempt expected = createUnfinishedAttempt(num, jobId, AttemptStatus.RUNNING, LOG_PATH);
+
+      assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("Should get an attempt specified by attempt number")
+    void testGetAttemptMultiple() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+
+      for (int i = 0; i < 10; ++i) {
+        final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+        assertEquals(attemptNumber, i);
+
+        final Attempt running = jobPersistence.getAttemptForJob(jobId, attemptNumber).get();
+        final Attempt expectedRunning = createUnfinishedAttempt(attemptNumber, jobId, AttemptStatus.RUNNING, LOG_PATH);
+        assertEquals(expectedRunning, running);
+
+        jobPersistence.failAttempt(jobId, attemptNumber);
+
+        final Attempt failed = jobPersistence.getAttemptForJob(jobId, attemptNumber).get();
+        final Attempt expectedFailed = createAttempt(attemptNumber, jobId, AttemptStatus.FAILED, LOG_PATH);
+        assertEquals(expectedFailed, failed);
+      }
+
+      final int last = jobPersistence.createAttempt(jobId, LOG_PATH);
+
+      final Attempt running = jobPersistence.getAttemptForJob(jobId, last).get();
+      final Attempt expectedRunning = createUnfinishedAttempt(last, jobId, AttemptStatus.RUNNING, LOG_PATH);
+      assertEquals(expectedRunning, running);
+
+      jobPersistence.succeedAttempt(jobId, last);
+
+      final Attempt succeeded = jobPersistence.getAttemptForJob(jobId, last).get();
+      final Attempt expectedFailed = createAttempt(last, jobId, AttemptStatus.SUCCEEDED, LOG_PATH);
+      assertEquals(expectedFailed, succeeded);
     }
 
   }

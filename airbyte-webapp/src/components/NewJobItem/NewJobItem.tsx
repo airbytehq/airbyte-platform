@@ -3,9 +3,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
-import { useLocation, useNavigate } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
+import { ConnectionStatusLoadingSpinner } from "components/connection/ConnectionStatusIndicator";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
@@ -19,14 +19,14 @@ import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { useGetDebugInfoJobManual } from "core/api";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
+import { copyToClipboard } from "core/utils/clipboard";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useCurrentWorkspaceId, useGetWorkspace } from "services/workspaces/WorkspacesService";
-import { copyToClipboard } from "utils/clipboard";
-import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
 
 import { JobLogsModalContent } from "./JobLogsModalContent";
 import { JobStatusIcon } from "./JobStatusIcon";
@@ -50,11 +50,9 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const location = useLocation();
-  const navigate = useNavigate();
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
-  const { name: workspaceName } = useGetWorkspace(workspaceId);
+  const { name: workspaceName } = useCurrentWorkspace();
   const { trackError } = useAppMonitoringService();
   const { connection } = useConnectionEditService();
 
@@ -70,52 +68,57 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
         const notificationId = `download-logs-${jobWithAttempts.job.id}`;
         registerNotification({
           type: "info",
-          text: <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />,
+          text: (
+            <FlexContainer alignItems="center">
+              <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />
+              <ConnectionStatusLoadingSpinner />
+            </FlexContainer>
+          ),
           id: notificationId,
+          timeout: false,
         });
-        fetchJobLogs()
-          .then(({ data }) => {
-            if (!data) {
-              throw new Error("No logs returned from server");
-            }
-            const file = new Blob(
-              [
-                data.attempts
-                  .flatMap((info, index) => [
-                    `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
-                    ...info.logs.logLines,
-                    `\n\n\n`,
-                  ])
-                  .join("\n"),
-              ],
-              {
-                type: FILE_TYPE_DOWNLOAD,
+        // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
+        Promise.all([
+          fetchJobLogs()
+            .then(({ data }) => {
+              if (!data) {
+                throw new Error("No logs returned from server");
               }
-            );
-            downloadFile(file, fileizeString(`${workspaceName}-logs-${jobWithAttempts.job.id}.txt`));
-          })
-          .catch((e) => {
-            trackError(e, { workspaceId, jobId: jobWithAttempts.job.id });
-            registerNotification({
-              type: "error",
-              text: formatMessage(
+              const file = new Blob(
+                [
+                  data.attempts
+                    .flatMap((info, index) => [
+                      `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
+                      ...info.logs.logLines,
+                      `\n\n\n`,
+                    ])
+                    .join("\n"),
+                ],
                 {
-                  id: "jobHistory.logs.logDownloadFailed",
-                },
-                { jobId: jobWithAttempts.job.id }
-              ),
-              id: `download-logs-error-${jobWithAttempts.job.id}`,
-            });
-          })
-          .finally(() => {
-            unregisterNotificationById(notificationId);
-          });
+                  type: FILE_TYPE_DOWNLOAD,
+                }
+              );
+              downloadFile(file, fileizeString(`${workspaceName}-logs-${jobWithAttempts.job.id}.txt`));
+            })
+            .catch((e) => {
+              trackError(e, { workspaceId, jobId: jobWithAttempts.job.id });
+              registerNotification({
+                type: "error",
+                text: formatMessage(
+                  {
+                    id: "jobHistory.logs.logDownloadFailed",
+                  },
+                  { jobId: jobWithAttempts.job.id }
+                ),
+                id: `download-logs-error-${jobWithAttempts.job.id}`,
+              });
+            }),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]).finally(() => {
+          unregisterNotificationById(notificationId);
+        });
         break;
       case ContextMenuOptions.OpenLogsModal:
-        if (attemptLink.jobId) {
-          // Clear the hash to remove the highlighted job from the UI
-          navigate(location.pathname);
-        }
         openModal({
           size: "full",
           title: formatMessage(
@@ -130,7 +133,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
                 </div>
               }
             >
-              <JobLogsModalContent jobId={jobWithAttempts.job.id} job={jobWithAttempts} />
+              <JobLogsModalContent jobId={jobWithAttempts.job.id} />
             </Suspense>
           ),
         });
@@ -204,9 +207,20 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
       <DropdownMenu
         placement="bottom-end"
         options={[
-          { displayName: formatMessage({ id: "jobHistory.copyLinkToJob" }), value: ContextMenuOptions.CopyLinkToJob },
-          { displayName: formatMessage({ id: "jobHistory.viewLogs" }), value: ContextMenuOptions.OpenLogsModal },
-          { displayName: formatMessage({ id: "jobHistory.downloadLogs" }), value: ContextMenuOptions.DownloadLogs },
+          {
+            displayName: formatMessage({ id: "jobHistory.copyLinkToJob" }),
+            value: ContextMenuOptions.CopyLinkToJob,
+          },
+          {
+            displayName: formatMessage({ id: "jobHistory.viewLogs" }),
+            value: ContextMenuOptions.OpenLogsModal,
+            disabled: jobWithAttempts.attempts.length === 0,
+          },
+          {
+            displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
+            value: ContextMenuOptions.DownloadLogs,
+            disabled: jobWithAttempts.attempts.length === 0,
+          },
         ]}
         onChange={handleClick}
       >

@@ -3,13 +3,16 @@ import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
+import { PageContainer } from "components/PageContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useSourceList } from "hooks/services/useSourceHook";
+import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
@@ -24,6 +27,7 @@ export const SOURCE_ID_PARAM = "sourceId";
 
 export const SelectSource: React.FC = () => {
   const { sources } = useSourceList();
+  const { sourceDefinitionMap } = useSourceDefinitionList();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (!searchParams.get(SOURCE_TYPE_PARAM)) {
@@ -73,42 +77,59 @@ export const SelectSource: React.FC = () => {
     }
   };
 
+  const sortedSources = useMemo(() => {
+    return sources
+      .map((source) => ({
+        ...source,
+        sourceDefinitionName: sourceDefinitionMap.get(source.sourceDefinitionId)?.name ?? "",
+      }))
+      .sort((a, b) => a.sourceDefinitionName.localeCompare(b.sourceDefinitionName) || a.name.localeCompare(b.name));
+  }, [sources, sourceDefinitionMap]);
+
   return (
-    <>
-      {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
-        <Card withPadding>
-          <Heading as="h2">
-            <FormattedMessage id="connectionForm.defineSource" />
-          </Heading>
-          <Box mt="md">
-            <RadioButtonTiles
-              name="sourceType"
-              options={[
-                {
-                  value: EXISTING_SOURCE_TYPE,
-                  label: "connectionForm.sourceExisting",
-                  description: "connectionForm.sourceExistingDescription",
-                  disabled: sources.length === 0,
-                },
-                {
-                  value: NEW_SOURCE_TYPE,
-                  label: "onboarding.sourceSetUp",
-                  description: "onboarding.sourceSetUp.description",
-                },
-              ]}
-              selectedValue={selectedSourceType}
-              onSelectRadioButton={(id) => onSelectSourceType(id)}
-            />
+    <Box py="xl">
+      <FlexContainer direction="column">
+        {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
+          <Box px="md">
+            <PageContainer centered>
+              <Card withPadding>
+                <Heading as="h2">
+                  <FormattedMessage id="connectionForm.defineSource" />
+                </Heading>
+                <Box mt="md">
+                  <RadioButtonTiles
+                    name="sourceType"
+                    options={[
+                      {
+                        value: EXISTING_SOURCE_TYPE,
+                        label: "connectionForm.sourceExisting",
+                        description: "connectionForm.sourceExistingDescription",
+                        disabled: sources.length === 0,
+                      },
+                      {
+                        value: NEW_SOURCE_TYPE,
+                        label: "onboarding.sourceSetUp",
+                        description: "onboarding.sourceSetUp.description",
+                      },
+                    ]}
+                    selectedValue={selectedSourceType}
+                    onSelectRadioButton={(id) => onSelectSourceType(id)}
+                  />
+                </Box>
+              </Card>
+            </PageContainer>
           </Box>
-        </Card>
-      )}
-      <Box mt="xl">
+        )}
         {selectedSourceType === EXISTING_SOURCE_TYPE && (
-          <SelectExistingConnector connectors={sources} selectConnector={selectSource} />
+          <Box px="md">
+            <PageContainer centered>
+              <SelectExistingConnector connectors={sortedSources} selectConnector={selectSource} />
+            </PageContainer>
+          </Box>
         )}
         {selectedSourceType === NEW_SOURCE_TYPE && <CreateNewSource />}
         <CloudInviteUsersHint connectorType="source" />
-      </Box>
-    </>
+      </FlexContainer>
+    </Box>
   );
 };

@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { DbtCloudJob, isSameJob } from "core/api/cloud";
 import { DbtCloudJobInfo } from "core/api/types/CloudApi";
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import styles from "./DbtJobsForm.module.scss";
 import { JobsList } from "./JobsList";

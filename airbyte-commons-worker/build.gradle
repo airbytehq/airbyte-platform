@@ -1,5 +1,6 @@
 plugins {
-    id "java-library"
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations.all {
@@ -23,12 +24,22 @@ dependencies {
     implementation libs.apache.ant
     implementation libs.apache.commons.text
     implementation libs.bundles.datadog
+    implementation libs.commons.io
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    implementation libs.bundles.apache
+    implementation libs.bundles.log4j
+    implementation libs.aws.java.sdk.s3
+    implementation libs.google.cloud.storage
+    implementation libs.aws.java.sdk.s3
+    implementation libs.s3
 
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-featureflag')
@@ -53,11 +64,19 @@ dependencies {
     testImplementation libs.docker.java
     testImplementation libs.docker.java.transport.httpclient5
     testImplementation libs.reactor.test
+
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+    testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
 }
 
 test {
     maxHeapSize = '2g'
-}
 
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+    useJUnitPlatform {
+        excludeTags("cloud-storage")
+    }
+}

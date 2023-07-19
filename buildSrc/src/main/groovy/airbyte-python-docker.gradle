@@ -11,7 +11,7 @@ class AirbytePythonDockerPlugin implements Plugin<Project> {
 
     void apply(Project project) {
 
-        project.task('airbytePythonDockerApply', type: Exec) {
+        def taskAirbytePythonDockerApply = project.tasks.register('airbytePythonDockerApply', Exec) {
             /*
             Install the dependencies and run the tests from a docker container
              */
@@ -35,16 +35,26 @@ class AirbytePythonDockerPlugin implements Plugin<Project> {
             // HACK: This is a workaround for the local VM. The volume will be mounted into the container from the guest path, not the host.
             def String d
 
-            if ( System.getenv("LOCAL_VM") == "true") {
+            if (System.getenv("LOCAL_VM") == "true") {
                 d = "/srv/airbyte-platform-internal/oss/airbyte-connector-builder-server"
             } else {
                 d = project.projectDir.getAbsolutePath()
             }
 
-            commandLine "docker", "run", "-v", "${d}:/home", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home"
+            // TODO: Don't use CI env var here, use some Dagger specific line
+            // In Dagger, it's way easier to run these tests via the container API
+            // rather than worry about mounting from guest container into a new container
+            if ( System.getenv("CI") == "false") {
+                commandLine "docker", "run", "-v", "${d}:/home", "-v", "${d}/run_tests.sh:/home/run_tests.sh", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home" 
+            } else {
+                commandLine "echo", "Skipping Python tests via Gradle in CI, these will be run via Dagger in a separate pipeline"
+            }
         }
-
-        project.assemble.dependsOn project.airbytePythonDockerApply
-        project.test.dependsOn project.airbytePythonDockerApply
+        project.tasks.named("assemble") {
+            dependsOn taskAirbytePythonDockerApply
+        }
+        project.tasks.named("test") {
+            dependsOn taskAirbytePythonDockerApply
+        }
     }
 }

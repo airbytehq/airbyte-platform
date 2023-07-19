@@ -41,6 +41,7 @@ import io.airbyte.oauth.flows.StravaOAuthFlow;
 import io.airbyte.oauth.flows.SurveymonkeyOAuthFlow;
 import io.airbyte.oauth.flows.TikTokMarketingOAuthFlow;
 import io.airbyte.oauth.flows.TrelloOAuthFlow;
+import io.airbyte.oauth.flows.TypeformOAuthFlow;
 import io.airbyte.oauth.flows.XeroOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskChatOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskSunshineOAuthFlow;
@@ -110,6 +111,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-surveymonkey", new SurveymonkeyOAuthFlow(httpClient));
     builder.put("airbyte/source-tiktok-marketing", new TikTokMarketingOAuthFlow(httpClient));
     builder.put("airbyte/source-trello", new TrelloOAuthFlow());
+    builder.put("airbyte/source-typeform", new TypeformOAuthFlow(httpClient));
     builder.put("airbyte/source-youtube-analytics", new YouTubeAnalyticsOAuthFlow(httpClient));
     builder.put("airbyte/source-xero", new XeroOAuthFlow(httpClient));
     builder.put("airbyte/source-zendesk-chat", new ZendeskChatOAuthFlow(httpClient));

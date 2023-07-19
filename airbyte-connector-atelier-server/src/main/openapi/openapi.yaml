@@ -151,9 +151,30 @@ components:
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
+        auxiliary_requests:
+          type: array
+          items:
+            type: object
+            required:
+              - description
+              - request
+              - response
+              - title
+            properties:
+              description:
+                type: string
+              request:
+                $ref: "#/components/schemas/HttpRequest"
+              response:
+                $ref: "#/components/schemas/HttpResponse"
+              title:
+                type: string
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
+        inferred_datetime_formats:
+          type: object
+          description: Fields that match the given datetime format in every encountered record. The property names are the fields, the property values are the datetime formats.
         latest_config_update:
           type: object
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
@@ -180,6 +201,12 @@ components:
           minimum: 1
           maximum: 1000
           description: Number of records that will be returned to the client from the connector builder (max of 1000)
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
         # --- Potential addition for a later phase ---
         # numPages:
         #   type: integer
@@ -198,7 +225,7 @@ components:
           type: object
           description: The request parameters that were set on the HTTP request, if any
         body:
-          type: object
+          type: string
           description: The body of the HTTP request, if present
         headers:
           type: object
@@ -234,6 +261,12 @@ components:
           $ref: "#/components/schemas/ConnectorConfig"
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     StreamsListRead:
       type: object
       required:
@@ -267,6 +300,12 @@ components:
       properties:
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     ResolveManifest:
       type: object
       required:

@@ -1,5 +1,6 @@
-Your source schema has changed for connection ID: %s
+A schema change from %s was detected and affects the connection %s
 
 Visit your connection page here: %s
 
-Refresh your source schema in order to update this connection.
+If your connection is set to propagate schema changes, no further action is required. Otherwise, visit your connection replication settings to review these changes.
+

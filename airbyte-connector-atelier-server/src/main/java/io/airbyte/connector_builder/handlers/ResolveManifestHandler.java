@@ -4,6 +4,7 @@
 
 package io.airbyte.connector_builder.handlers;
 
+import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -38,7 +39,9 @@ public class ResolveManifestHandler {
                                          final ResolveManifestRequestBody resolveManifestRequestBody)
       throws AirbyteCdkInvalidInputException, ConnectorBuilderException {
     try {
-      LOGGER.debug("Handling resolve_manifest request.");
+      TracingHelper.addWorkspaceAndProjectIdsToTrace(resolveManifestRequestBody.getWorkspaceId(), resolveManifestRequestBody.getProjectId());
+      LOGGER.info("Handling resolve_manifest request for workspace '{}' with project ID = '{}'",
+          resolveManifestRequestBody.getWorkspaceId(), resolveManifestRequestBody.getProjectId());
       return this.requester.resolveManifest(resolveManifestRequestBody.getManifest());
     } catch (final IOException exc) {
       LOGGER.error("Error handling list_streams request.", exc);

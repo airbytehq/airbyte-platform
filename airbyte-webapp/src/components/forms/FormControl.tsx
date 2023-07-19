@@ -51,6 +51,7 @@ interface ControlBaseProps<T extends FormValues> {
   hasError?: boolean;
   controlId?: string;
   inline?: boolean;
+  optional?: boolean;
   disabled?: boolean;
   /**
    * A custom className that is applied to the form control container
@@ -101,6 +102,7 @@ export const FormControl = <T extends FormValues>({
   labelTooltip,
   description,
   inline = false,
+  optional = false,
   containerControlClassName,
   ...props
 }: ControlProps<T>) => {
@@ -148,7 +150,15 @@ export const FormControl = <T extends FormValues>({
 
   return (
     <div className={classNames(styles.control, { [styles["control--inline"]]: inline }, containerControlClassName)}>
-      {label && <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />}
+      {label && (
+        <FormLabel
+          description={description}
+          label={label}
+          labelTooltip={labelTooltip}
+          htmlFor={controlId}
+          optional={optional}
+        />
+      )}
       <div className={styles.control__field}>{renderControl()}</div>
       {error && <FormControlError error={error} />}
     </div>
@@ -161,14 +171,20 @@ interface FormLabelProps {
   labelTooltip?: ReactNode;
   htmlFor: string;
   inline?: boolean;
+  optional?: boolean;
 }
 
-export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor }) => {
+export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor, optional }) => {
   return (
     <label className={styles.control__label} htmlFor={htmlFor}>
       <Text size="lg">
         {label}
         {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
+        {optional && (
+          <Text className={styles.control__optional} as="span">
+            Optional
+          </Text>
+        )}
       </Text>
       {description && <Text className={styles.control__description}>{description}</Text>}
     </label>

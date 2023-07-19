@@ -8,13 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.model.generated.DestinationDefinitionReadList;
+import io.airbyte.api.model.generated.SourceDefinitionRead;
+import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.persistence.ConfigRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -25,17 +26,17 @@ import org.junit.jupiter.api.Test;
 
 class WebBackendCheckUpdatesHandlerTest {
 
-  ConfigRepository configRepository;
+  SourceDefinitionsHandler sourceDefinitionsHandler;
+  DestinationDefinitionsHandler destinationDefinitionsHandler;
   AirbyteRemoteOssCatalog remoteOssCatalog;
   WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
 
-  static final boolean INCLUDE_TOMBSTONE = false;
-
   @BeforeEach
   void beforeEach() {
-    configRepository = mock(ConfigRepository.class);
+    sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
+    destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
-    webBackendCheckUpdatesHandler = new WebBackendCheckUpdatesHandler(configRepository, remoteOssCatalog);
+    webBackendCheckUpdatesHandler = new WebBackendCheckUpdatesHandler(sourceDefinitionsHandler, destinationDefinitionsHandler, remoteOssCatalog);
   }
 
   @Test
@@ -110,7 +111,7 @@ class WebBackendCheckUpdatesHandlerTest {
   @Test
   void testCheckErrorNoCurrentDestinations() throws IOException, InterruptedException {
     setMocksForExceptionCases();
-    when(configRepository.listStandardDestinationDefinitions(INCLUDE_TOMBSTONE)).thenThrow(new IOException("unable to read current destinations"));
+    when(destinationDefinitionsHandler.listDestinationDefinitions()).thenThrow(new IOException("unable to read current destinations"));
 
     final WebBackendCheckUpdatesRead actual = webBackendCheckUpdatesHandler.checkUpdates();
 
@@ -120,7 +121,7 @@ class WebBackendCheckUpdatesHandlerTest {
   @Test
   void testCheckErrorNoCurrentSources() throws IOException, InterruptedException {
     setMocksForExceptionCases();
-    when(configRepository.listStandardSourceDefinitions(INCLUDE_TOMBSTONE)).thenThrow(new IOException("unable to read current sources"));
+    when(sourceDefinitionsHandler.listSourceDefinitions()).thenThrow(new IOException("unable to read current sources"));
 
     final WebBackendCheckUpdatesRead actual = webBackendCheckUpdatesHandler.checkUpdates();
 
@@ -146,13 +147,14 @@ class WebBackendCheckUpdatesHandlerTest {
                         final List<Entry<UUID, String>> currentDestinations,
                         final List<Entry<UUID, String>> latestDestinations)
       throws IOException, InterruptedException {
-    when(configRepository.listStandardSourceDefinitions(INCLUDE_TOMBSTONE))
-        .thenReturn(currentSources.stream().map(this::createSourceDef).toList());
+    when(sourceDefinitionsHandler.listSourceDefinitions())
+        .thenReturn(new SourceDefinitionReadList().sourceDefinitions(currentSources.stream().map(this::createSourceDef).toList()));
     when(remoteOssCatalog.getSourceDefinitions())
         .thenReturn(latestSources.stream().map(this::createRegistrySourceDef).toList());
 
-    when(configRepository.listStandardDestinationDefinitions(INCLUDE_TOMBSTONE))
-        .thenReturn(currentDestinations.stream().map(this::createDestinationDef).toList());
+    when(destinationDefinitionsHandler.listDestinationDefinitions())
+        .thenReturn(
+            new DestinationDefinitionReadList().destinationDefinitions(currentDestinations.stream().map(this::createDestinationDef).toList()));
     when(remoteOssCatalog.getDestinationDefinitions())
         .thenReturn(latestDestinations.stream().map(this::createRegistryDestinationDef).toList());
   }
@@ -163,10 +165,10 @@ class WebBackendCheckUpdatesHandlerTest {
         .withDockerImageTag(idImageTagEntry.getValue());
   }
 
-  private StandardDestinationDefinition createDestinationDef(final Entry<UUID, String> idImageTagEntry) {
-    return new StandardDestinationDefinition()
-        .withDestinationDefinitionId(idImageTagEntry.getKey())
-        .withDockerImageTag(idImageTagEntry.getValue());
+  private DestinationDefinitionRead createDestinationDef(final Entry<UUID, String> idImageTagEntry) {
+    return new DestinationDefinitionRead()
+        .destinationDefinitionId(idImageTagEntry.getKey())
+        .dockerImageTag(idImageTagEntry.getValue());
   }
 
   private ConnectorRegistrySourceDefinition createRegistrySourceDef(final Entry<UUID, String> idImageTagEntry) {
@@ -175,10 +177,10 @@ class WebBackendCheckUpdatesHandlerTest {
         .withDockerImageTag(idImageTagEntry.getValue());
   }
 
-  private StandardSourceDefinition createSourceDef(final Entry<UUID, String> idImageTagEntry) {
-    return new StandardSourceDefinition()
-        .withSourceDefinitionId(idImageTagEntry.getKey())
-        .withDockerImageTag(idImageTagEntry.getValue());
+  private SourceDefinitionRead createSourceDef(final Entry<UUID, String> idImageTagEntry) {
+    return new SourceDefinitionRead()
+        .sourceDefinitionId(idImageTagEntry.getKey())
+        .dockerImageTag(idImageTagEntry.getValue());
   }
 
 }

@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 
 import { LabelInfo } from "components/Label";
 
-import { links } from "utils/links";
+import { links } from "core/utils/links";
 
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 

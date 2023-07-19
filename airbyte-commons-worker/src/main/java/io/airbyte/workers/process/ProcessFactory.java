@@ -4,13 +4,14 @@
 
 package io.airbyte.workers.process;
 
+import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -52,6 +53,8 @@ public interface ProcessFactory {
                  final String jobType,
                  final String jobId,
                  final int attempt,
+                 final UUID connectionId,
+                 final UUID workspaceId,
                  final Path jobPath,
                  final String imageName,
                  final boolean usesIsolatedPool,

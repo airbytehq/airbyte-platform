@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
+import { useLocalStorage } from "react-use";
 
+import { Box } from "components/ui/Box";
+import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
+import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
+import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
 import {
   Connector,
   ConnectorDefinition,
@@ -14,11 +19,9 @@ import {
 } from "core/domain/connector";
 import { DestinationRead, ReleaseStage, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
-import { useExperiment } from "hooks/services/Experiment";
-import { isCloudApp } from "utils/app";
-import { ConnectorIds } from "utils/connectors";
-import { generateMessageFromError } from "utils/errorStatusMessage";
-import { links } from "utils/links";
+import { isCloudApp } from "core/utils/app";
+import { generateMessageFromError } from "core/utils/errorStatusMessage";
+import { links } from "core/utils/links";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -83,7 +86,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
-  const showAllowlistIpBanner = useExperiment("connector.allowlistIpBanner", false) && isCloudApp();
 
   const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
     useDocumentationPanelContext();
@@ -183,6 +185,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const job = jobInfo || LogsRequestError.extractJobInfo(errorStatusRequest);
 
   const connector = isEditMode ? props.connector : undefined;
+  const connectorId = connector ? getConnectorId(connector) : undefined;
 
   // Fill form with existing connector values otherwise set the default service name
   const formValues = useMemo(
@@ -233,29 +236,14 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       connectionTestSuccess={connectionTestSuccess}
       onSubmit={onHandleSubmit}
       formValues={formValues}
-      connectorId={isEditMode ? getConnectorId(props.connector) : undefined}
+      connectorId={connectorId}
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
           <>
-            {(selectedConnectorDefinitionId === ConnectorIds.Sources.Postgres ||
-              selectedConnectorDefinitionId === ConnectorIds.Destinations.Postgres) &&
-              showAllowlistIpBanner && (
-                <Message
-                  type="info"
-                  text={
-                    <FormattedMessage
-                      id="connectorForm.allowlistIp"
-                      values={{
-                        a: (node: React.ReactNode) => (
-                          <a href={links.cloudAllowlistIPsLink} target="_blank" rel="noreferrer">
-                            {node}
-                          </a>
-                        ),
-                      }}
-                    />
-                  }
-                />
-              )}
+            {isCloudApp() &&
+              selectedConnectorDefinition &&
+              "sourceDefinitionId" in selectedConnectorDefinition &&
+              selectedConnectorDefinition.sourceType === "database" && <AllowlistIpBanner connectorId={connectorId} />}
             <Controls
               isEditMode={Boolean(isEditMode)}
               isTestConnectionInProgress={isTestConnectionInProgress}
@@ -285,5 +273,42 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
         )
       }
     />
+  );
+};
+
+const AllowlistIpBanner = ({ connectorId }: { connectorId: string | undefined }) => {
+  const { formatMessage } = useIntl();
+  const [allowlistIpsOpen, setAllowlistIpsOpen] = useLocalStorage(
+    connectorId ? `allowlistIpsOpen_${connectorId}` : "allowlistIpsOpen",
+    true
+  );
+
+  return (
+    <Message
+      type="info"
+      text={
+        <FormattedMessage
+          id="connectorForm.allowlistIp.message"
+          values={{
+            a: (node: React.ReactNode) => (
+              <a href={links.cloudAllowlistIPsLink} target="_blank" rel="noreferrer">
+                {node}
+              </a>
+            ),
+          }}
+        />
+      }
+    >
+      <Box p="lg">
+        <Collapsible
+          className={styles.collapsibleIpAddresses}
+          label={formatMessage({ id: "connectorForm.allowlistIp.addressesLabel" })}
+          initiallyOpen={connectorId ? allowlistIpsOpen ?? true : true}
+          onClick={(newOpenState) => setAllowlistIpsOpen(newOpenState)}
+        >
+          <Pre>{useAirbyteCloudIps().join("\n")}</Pre>
+        </Collapsible>
+      </Box>
+    </Message>
   );
 };

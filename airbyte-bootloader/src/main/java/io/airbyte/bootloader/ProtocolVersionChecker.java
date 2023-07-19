@@ -8,6 +8,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -195,11 +196,11 @@ public class ProtocolVersionChecker {
   private Stream<String> formatActorDefinitionForLogging(final Set<UUID> remainingDestConflicts, final Set<UUID> remainingSourceConflicts) {
     return Stream.concat(
         remainingSourceConflicts.stream().map(defId -> {
-          final StandardSourceDefinition sourceDef;
           try {
-            sourceDef = configRepository.getStandardSourceDefinition(defId);
+            final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(defId);
+            final ActorDefinitionVersion sourceDefVersion = configRepository.getActorDefinitionVersion(sourceDef.getDefaultVersionId());
             return String.format("Source: %s: %s: protocol version: %s",
-                sourceDef.getSourceDefinitionId(), sourceDef.getName(), sourceDef.getProtocolVersion());
+                sourceDef.getSourceDefinitionId(), sourceDef.getName(), sourceDefVersion.getProtocolVersion());
           } catch (final Exception e) {
             log.info("Failed to getStandardSourceDefinition for {}", defId, e);
             return String.format("Source: %s: Failed to fetch details...", defId);
@@ -208,8 +209,9 @@ public class ProtocolVersionChecker {
         remainingDestConflicts.stream().map(defId -> {
           try {
             final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(defId);
+            final ActorDefinitionVersion destDefVersion = configRepository.getActorDefinitionVersion(destDef.getDefaultVersionId());
             return String.format("Destination: %s: %s: protocol version: %s",
-                destDef.getDestinationDefinitionId(), destDef.getName(), destDef.getProtocolVersion());
+                destDef.getDestinationDefinitionId(), destDef.getName(), destDefVersion.getProtocolVersion());
           } catch (final Exception e) {
             log.info("Failed to getStandardDestinationDefinition for {}", defId, e);
             return String.format("Source: %s: Failed to fetch details...", defId);

@@ -6,7 +6,7 @@ package io.airbyte.notification;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.Notification;
+import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.net.URI;
@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,25 +37,23 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "7";
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
 
+  private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
+  private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
+  private static final String SYNC_FAILURE_MESSAGE_ID = "19";
+  private static final String SYNC_FAILURE_TEMPLATE_PATH = "customerio/sync_failure_template.json";
+
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "https://api.customer.io/v1/send/email";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
+
+  private static final String CUSTOMERIO_TYPE = "customerio";
 
   private final HttpClient httpClient;
   private final String apiToken;
   private final String emailApiEndpoint;
 
-  public CustomerioNotificationClient(final Notification notification) {
-    super(notification);
-    this.apiToken = System.getenv("CUSTOMERIO_API_KEY");
-    this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
-    this.httpClient = HttpClient.newBuilder()
-        .version(HttpClient.Version.HTTP_2)
-        .build();
-  }
-
   public CustomerioNotificationClient() {
-    super();
-    this.apiToken = System.getenv("CUSTOMERIO_API_KEY");
+    final EnvConfigs configs = new EnvConfigs();
+    this.apiToken = configs.getCustomerIoKey();
     this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
     this.httpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
@@ -62,34 +61,42 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @VisibleForTesting
-  public CustomerioNotificationClient(final Notification notification,
-                                      final String apiToken,
+  public CustomerioNotificationClient(final String apiToken,
                                       final String emailApiEndpoint,
                                       final HttpClient httpClient) {
-    super(notification);
     this.apiToken = apiToken;
     this.emailApiEndpoint = emailApiEndpoint;
     this.httpClient = httpClient;
   }
 
   @Override
-  public boolean notifyJobFailure(final String sourceConnector,
+  public boolean notifyJobFailure(
+                                  final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
-    throw new NotImplementedException();
+    final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
+        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+    return notifyByEmail(requestBody);
   }
 
   @Override
-  public boolean notifyJobSuccess(final String sourceConnector,
+  public boolean notifyJobSuccess(
+                                  final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
-    throw new NotImplementedException();
+    final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
+        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+    return notifyByEmail(requestBody);
   }
 
   // Once the configs are editable through the UI, the reciever email should be stored in
@@ -139,7 +146,16 @@ public class CustomerioNotificationClient extends NotificationClient {
     throw new NotImplementedException();
   }
 
+  @Override
+  public String getNotificationClientType() {
+    return CUSTOMERIO_TYPE;
+  }
+
   private boolean notifyByEmail(final String requestBody) throws IOException, InterruptedException {
+    if (StringUtils.isEmpty(apiToken)) {
+      LOGGER.info("Customer.io API token is empty. Skipping email notification.");
+      return false;
+    }
     final HttpRequest request = HttpRequest.newBuilder()
         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
         .uri(URI.create(emailApiEndpoint))

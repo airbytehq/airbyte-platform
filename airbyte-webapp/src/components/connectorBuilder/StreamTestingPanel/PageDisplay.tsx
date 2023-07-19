@@ -1,34 +1,36 @@
-import { Tab } from "@headlessui/react";
-import classNames from "classnames";
-import React, { ReactNode, useMemo } from "react";
+import { faTable } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useLocalStorage } from "react-use";
 
+import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
-import { InfoTooltip } from "components/ui/Tooltip";
+import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
-import { StreamReadInferredSchema, StreamReadSlicesItemPagesItem } from "core/request/ConnectorBuilderClient";
+import {
+  StreamReadInferredSchema,
+  StreamReadSlicesItemPagesItem,
+  StreamReadSlicesItemPagesItemRecordsItem,
+} from "core/api/types/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
+import { RecordTable } from "./RecordTable";
 import { SchemaDiffView } from "./SchemaDiffView";
+import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { formatJson } from "../utils";
+import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {
   page: StreamReadSlicesItemPagesItem;
   inferredSchema?: StreamReadInferredSchema;
   className?: string;
-}
-
-interface TabData {
-  title: ReactNode;
-  key: string;
-  content: string;
 }
 
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
@@ -46,31 +48,12 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
 
   const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
 
-  const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
-  const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
-  const formattedResponse = useMemo(() => {
-    if (!page.response || !page.response.body) {
-      return "";
-    }
-    let parsedBody: unknown;
-    try {
-      // body is a string containing JSON most of the time, but not always.
-      // Attempt to parse and fall back to the raw string if unsuccessfull.
-      parsedBody = JSON.parse(page.response.body);
-    } catch {
-      parsedBody = page.response.body;
-    }
+  const formattedRequest = useMemo(() => formatForDisplay(page.request), [page.request]);
+  const formattedResponse = useMemo(() => formatForDisplay(page.response), [page.response]);
 
-    const unpackedBodyResponse = {
-      ...page.response,
-      body: parsedBody,
-    };
-    return formatJson(unpackedBodyResponse);
-  }, [page.response]);
-
-  let defaultTabIndex = 0;
   const tabs: TabData[] = [
     {
+      key: "records",
       title: (
         <>
           {`${formatMessage({ id: "connectorBuilder.recordsTab" })} (${page.records.length})`}
@@ -81,74 +64,104 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           )}
         </>
       ),
-      key: "records",
-      content: formattedRecords,
+      content: <RecordDisplay records={page.records} />,
     },
-  ];
-  if (page.request) {
-    tabs.push({
-      title: formatMessage({ id: "connectorBuilder.requestTab" }),
-      key: "request",
-      content: formattedRequest,
-    });
-  }
-  if (page.response) {
-    tabs.push({
-      title: formatMessage({ id: "connectorBuilder.responseTab" }),
-      key: "response",
-      content: formattedResponse,
-    });
-
-    if (page.response.status >= 400) {
-      defaultTabIndex = tabs.length - 1;
-    }
-  }
-
-  return (
-    <div className={classNames(className)}>
-      <Tab.Group defaultIndex={defaultTabIndex}>
-        <Tab.List className={styles.tabList}>
-          {tabs.map((tab) => (
-            <Tab className={styles.tab} key={tab.key}>
-              {({ selected }) => (
-                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} size="xs" align="center">
-                  {tab.title}
-                </Text>
-              )}
-            </Tab>
-          ))}
-          {inferredSchema && (
-            <Tab className={styles.tab} data-testid="tag-tab-detected-schema">
-              {({ selected }) => (
-                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
-                  <FlexContainer direction="row" justifyContent="center">
-                    {formatMessage({ id: "connectorBuilder.schemaTab" })}
-                    {editorView === "ui" && schemaDifferences && !autoImportSchema && (
-                      <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
-                    )}
-                  </FlexContainer>
-                </Text>
-              )}
-            </Tab>
-          )}
-        </Tab.List>
-        <Tab.Panels className={styles.tabPanelContainer}>
-          {tabs.map((tab) => (
-            <Tab.Panel className={styles.tabPanel} key={tab.key}>
-              <Pre>{tab.content}</Pre>
-            </Tab.Panel>
-          ))}
-          {inferredSchema && (
-            <Tab.Panel className={styles.tabPanel}>
+    ...(page.request
+      ? [
+          {
+            key: "request",
+            title: <FormattedMessage id="connectorBuilder.requestTab" />,
+            content: <Pre>{formattedRequest}</Pre>,
+          },
+        ]
+      : []),
+    ...(page.response
+      ? [
+          {
+            key: "response",
+            title: <FormattedMessage id="connectorBuilder.responseTab" />,
+            content: <Pre>{formattedResponse}</Pre>,
+          },
+        ]
+      : []),
+    ...(inferredSchema
+      ? [
+          {
+            key: "schema",
+            title: (
+              <FlexContainer direction="row" justifyContent="center">
+                <FormattedMessage id="connectorBuilder.schemaTab" />
+                {editorView === "ui" && schemaDifferences && !autoImportSchema && (
+                  <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
+                )}
+              </FlexContainer>
+            ),
+            content: (
               <SchemaDiffView
                 inferredSchema={inferredSchema}
                 incompatibleErrors={incompatibleSchemaErrors}
                 key={testStreamIndex}
               />
-            </Tab.Panel>
-          )}
-        </Tab.Panels>
-      </Tab.Group>
-    </div>
+            ),
+            "data-testid": "tag-tab-detected-schema",
+          },
+        ]
+      : []),
+  ];
+
+  // If the response is an error, default to the response tab
+  const defaultTabIndex = page.response && page.response.status >= 400 ? 2 : 0;
+
+  return <TabbedDisplay className={className} tabs={tabs} defaultTabIndex={defaultTabIndex} />;
+};
+
+const RecordDisplay = ({ records }: { records: StreamReadSlicesItemPagesItemRecordsItem[] }) => {
+  const [recordViewMode, setRecordViewMode] = useLocalStorage<"json" | "table">("connectorBuilderRecordView", "json");
+  const formattedRecords = useMemo(() => formatJson(records), [records]);
+
+  return (
+    <FlexContainer direction="column" className={styles.recordsContainer}>
+      {records.length > 0 && (
+        <FlexContainer justifyContent="flex-end" alignItems="center" gap="none">
+          <Tooltip
+            control={
+              <Button
+                variant="clear"
+                type="button"
+                className={recordViewMode === "table" ? styles.active : undefined}
+                onClick={() => {
+                  setRecordViewMode("table");
+                }}
+              >
+                <FontAwesomeIcon icon={faTable} />
+              </Button>
+            }
+          >
+            <FormattedMessage id="connectorBuilder.tableViewMode" />
+          </Tooltip>
+          <Tooltip
+            control={
+              <Button
+                variant="clear"
+                type="button"
+                className={recordViewMode === "json" ? styles.active : undefined}
+                onClick={() => {
+                  setRecordViewMode("json");
+                }}
+              >
+                <Text size="sm" bold className={styles.jsonText}>
+                  {"{ }"}
+                </Text>
+              </Button>
+            }
+          >
+            <FormattedMessage id="connectorBuilder.jsonViewMode" />
+          </Tooltip>
+        </FlexContainer>
+      )}
+      <div className={styles.records}>
+        {recordViewMode === "json" ? <Pre>{formattedRecords}</Pre> : <RecordTable records={records} />}
+      </div>
+    </FlexContainer>
   );
 };

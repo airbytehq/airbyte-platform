@@ -45,7 +45,7 @@ public class CustomerIoEmailConfigFetcherImpl implements CustomerIoEmailConfigFe
   @NotNull
   @Override
   public NotificationType notificationType() {
-    return NotificationType.customerio;
+    return NotificationType.CUSTOMERIO;
   }
 
 }

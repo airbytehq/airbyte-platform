@@ -1,9 +1,7 @@
 import { useIntl } from "react-intl";
 
-import { ControlLabels } from "components/LabeledControl";
-
-import { RequestOption } from "core/request/ConnectorManifest";
-import { links } from "utils/links";
+import { RequestOption } from "core/api/types/ConnectorManifest";
+import { links } from "core/utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
@@ -71,7 +69,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
             manifestPath="ListPartitionRouter.properties.cursor_field"
           />
           <ToggleGroupField<RequestOption>
-            label="Inject partition value into outgoing HTTP request"
+            label="Inject Partition Value into outgoing HTTP Request"
             tooltip="Optionally configures how the partition value will be sent in requests to the source API"
             fieldPath={buildPath("request_option")}
             initialValues={{
@@ -119,12 +117,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
   return (
     <BuilderCard
       docLink={links.connectorBuilderPartitioning}
-      label={
-        <ControlLabels
-          label="Partitioning"
-          infoTooltipContent="Configure how to partition a stream into subsets of records and iterate over the data. If multiple partition routers are defined, the cartesian product of the slices from all routers is formed."
-        />
-      }
+      label="Partitioning"
+      tooltip="Configure how to partition a stream into subsets of records and iterate over the data. If multiple partition routers are defined, the cartesian product of the slices from all routers is formed."
       toggleConfig={{
         path: streamFieldPath("partitionRouter"),
         defaultValue: [EMPTY_LIST_PARTITION_ROUTER],

@@ -1,30 +1,24 @@
-import { useMemo, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
-import { ConnectorGrid } from "components/source/SelectConnector/ConnectorGrid";
+import { PageContainer } from "components/PageContainer";
+import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { SearchInput } from "components/ui/SearchInput";
 
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useModalService } from "hooks/services/Modal";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./SelectSource";
 
 export const SOURCE_DEFINITION_PARAM = "sourceDefinitionId";
 
 export const CreateNewSource: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSourceDefinitionId = searchParams.get(SOURCE_DEFINITION_PARAM);
 
@@ -32,14 +26,10 @@ export const CreateNewSource: React.FC = () => {
   const { trackAction } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: createSource } = useCreateSource();
-  const { openModal, closeModal } = useModalService();
-  const { email } = useCurrentWorkspace();
-  const { formatMessage } = useIntl();
 
   const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
 
   const onSelectSourceDefinitionId = (sourceDefinitionId: string) => {
-    setSearchTerm("");
     searchParams.set(SOURCE_DEFINITION_PARAM, sourceDefinitionId);
     setSearchParams(searchParams);
   };
@@ -81,50 +71,30 @@ export const CreateNewSource: React.FC = () => {
     }
   };
 
-  const onOpenRequestConnectorModal = () =>
-    openModal({
-      title: formatMessage({ id: "connector.requestConnector" }),
-      content: () => (
-        <RequestConnectorModal
-          connectorType="source"
-          workspaceEmail={email}
-          searchedConnectorName={searchTerm}
-          onClose={closeModal}
-        />
-      ),
-    });
-
-  const filteredSourceDefinitions = useMemo(
-    () => sourceDefinitions.filter((item) => item.name.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase())),
-    [sourceDefinitions, searchTerm]
-  );
-
   if (selectedSourceDefinitionId) {
     return (
-      <>
-        <Box mb="md">
-          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-            <FormattedMessage id="connectorBuilder.backButtonLabel" />
-          </Button>
-        </Box>
-        <SourceForm
-          selectedSourceDefinitionId={selectedSourceDefinitionId}
-          sourceDefinitions={sourceDefinitions}
-          onSubmit={onCreateSource}
-        />
-      </>
+      <Box px="md">
+        <PageContainer centered>
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+          <SourceForm
+            selectedSourceDefinitionId={selectedSourceDefinitionId}
+            sourceDefinitions={sourceDefinitions}
+            onSubmit={onCreateSource}
+          />
+        </PageContainer>
+      </Box>
     );
   }
 
   return (
-    <FlexContainer gap="xl" direction="column">
-      <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-      <ConnectorGrid
-        connectorDefinitions={filteredSourceDefinitions}
-        onConnectorButtonClick={(sourceDefinition) => onSelectSourceDefinitionId(sourceDefinition.sourceDefinitionId)}
-        onOpenRequestConnectorModal={onOpenRequestConnectorModal}
-        showConnectorBuilderButton
-      />
-    </FlexContainer>
+    <SelectConnector
+      connectorDefinitions={sourceDefinitions}
+      connectorType="source"
+      onSelectConnectorDefinition={(sourceDefinitionId) => onSelectSourceDefinitionId(sourceDefinitionId)}
+    />
   );
 };

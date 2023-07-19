@@ -1,43 +1,32 @@
 import { render } from "@testing-library/react";
 import { Suspense } from "react";
+
 import { TestWrapper } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
 
-import { I18nProvider } from "core/i18n";
-import { CreditStatus, WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
+import {
+  CloudWorkspaceRead,
+  CloudWorkspaceReadCreditStatus as CreditStatus,
+  CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
+} from "core/api/types/CloudApi";
+import { I18nProvider } from "core/services/i18n";
 
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import cloudLocales from "../../../locales/en.json";
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
-  useCurrentWorkspace: () => ({
-    workspace: { workspaceId: "123" },
-  }),
-}));
+const defaultCloudWorkspace = { workspaceId: "123" };
 
-jest.mock("packages/cloud/services/workspaces/CloudWorkspacesService");
-const mockUseGetCloudWorkspace = useGetCloudWorkspace as unknown as jest.Mock<Partial<typeof useGetCloudWorkspace>>;
-
-const workspaceBannerWithFlagTrue = (
-  <TestWrapper>
-    <Suspense fallback="this should not render">
-      <I18nProvider messages={cloudLocales} locale="en">
-        <WorkspaceStatusBanner />
-      </I18nProvider>
-    </Suspense>
-  </TestWrapper>
-);
-
-const workspaceBannerWithFlagDefault = (
-  <TestWrapper>
-    <Suspense fallback="this should not render">
-      <I18nProvider messages={cloudLocales} locale="en">
-        <WorkspaceStatusBanner />
-      </I18nProvider>
-    </Suspense>
-  </TestWrapper>
-);
+const renderWorkspaceBanner = (cloudWorkspace: CloudWorkspaceRead) => {
+  return render(
+    <TestWrapper>
+      <Suspense fallback="this should not render">
+        <I18nProvider messages={cloudLocales} locale="en">
+          <WorkspaceStatusBanner cloudWorkspace={cloudWorkspace} />
+        </I18nProvider>
+      </Suspense>
+    </TestWrapper>
+  );
+};
 
 describe("WorkspaceCreditsBanner", () => {
   // create a date that is 1 day in the future
@@ -47,80 +36,75 @@ describe("WorkspaceCreditsBanner", () => {
     beforeAll(() => {
       mockExperiments({ "billing.newTrialPolicy": true });
     });
-    it("should render credits problem banner for credits problem pre-trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          workspaceTrialStatus: WorkspaceTrialStatus.PRE_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-        };
-      });
 
-      const { getByText } = render(workspaceBannerWithFlagTrue);
+    it("should render credits problem banner for credits problem pre-trial", () => {
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        workspaceTrialStatus: WorkspaceTrialStatus.pre_trial,
+        creditStatus: CreditStatus.negative_beyond_grace_period,
+      };
+
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You’re out of credits!/)).toBeTruthy();
     });
     it("should render credits problem banner for credits problem during trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          workspaceTrialStatus: WorkspaceTrialStatus.IN_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        workspaceTrialStatus: WorkspaceTrialStatus.in_trial,
+        creditStatus: CreditStatus.negative_beyond_grace_period,
+      };
 
-      const { getByText } = render(workspaceBannerWithFlagTrue);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You’re out of credits!/)).toBeTruthy();
     });
 
     it("should render credits problem banner for credits problem after trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          workspaceTrialStatus: WorkspaceTrialStatus.OUT_OF_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        workspaceTrialStatus: WorkspaceTrialStatus.out_of_trial,
+        creditStatus: CreditStatus.negative_beyond_grace_period,
+      };
 
-      const { getByText } = render(workspaceBannerWithFlagTrue);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You’re out of credits!/)).toBeTruthy();
     });
 
     it("should render pre-trial banner if user's trial has not started", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.PRE_TRIAL,
-          trialExpiryTimestamp: null,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.positive,
+        workspaceTrialStatus: WorkspaceTrialStatus.pre_trial,
+        trialExpiryTimestamp: undefined,
+      };
 
-      const { getByText } = render(workspaceBannerWithFlagTrue);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
+
       expect(getByText(/Your 14-day trial of Airbyte will start/)).toBeTruthy();
     });
 
     it("should render trial banner if user is in trial", () => {
       // create a date that is 1 day in the future
       const oneDayFromNow = Date.now() + 60_000 * 60 * 24;
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.positive,
+        workspaceTrialStatus: WorkspaceTrialStatus.in_trial,
+        trialExpiryTimestamp: oneDayFromNow,
+      };
 
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.IN_TRIAL,
-          trialExpiryTimestamp: oneDayFromNow,
-        };
-      });
-
-      const { getByText } = render(workspaceBannerWithFlagTrue);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You are using a trial of Airbyte/)).toBeTruthy();
       expect(getByText(/1 day/)).toBeTruthy();
     });
     it("should render an empty div if user is out of trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.OUT_OF_TRIAL,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.positive,
+        workspaceTrialStatus: WorkspaceTrialStatus.out_of_trial,
+      };
 
-      const { container } = render(workspaceBannerWithFlagTrue);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = renderWorkspaceBanner(cloudWorkspace);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 
@@ -129,50 +113,45 @@ describe("WorkspaceCreditsBanner", () => {
       mockExperiments({ "billing.newTrialPolicy": false });
     });
     it("should render credits problem banner for credits problem during trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-          trialExpiryTimestamp: oneDayFromNow,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.negative_beyond_grace_period,
+        trialExpiryTimestamp: oneDayFromNow,
+      };
 
-      const { getByText } = render(workspaceBannerWithFlagDefault);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You’re out of credits!/)).toBeTruthy();
     });
 
     it("should render credits problem banner for credits problem after trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-          trialExpiryTimestamp: null,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.negative_beyond_grace_period,
+        trialExpiryTimestamp: undefined,
+      };
 
-      const { getByText } = render(workspaceBannerWithFlagDefault);
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You’re out of credits!/)).toBeTruthy();
     });
 
     it("should render trial banner if user is in trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          creditStatus: CreditStatus.POSITIVE,
-          trialExpiryTimestamp: oneDayFromNow,
-        };
-      });
-
-      const { getByText } = render(workspaceBannerWithFlagDefault);
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        creditStatus: CreditStatus.positive,
+        trialExpiryTimestamp: oneDayFromNow,
+      };
+      const { getByText } = renderWorkspaceBanner(cloudWorkspace);
       expect(getByText(/You are using a trial of Airbyte/)).toBeTruthy();
       expect(getByText(/1 day/)).toBeTruthy();
     });
     it("should render an empty div if user is out of trial", () => {
-      mockUseGetCloudWorkspace.mockImplementationOnce(() => {
-        return {
-          trialExpiryTimestamp: null,
-        };
-      });
+      const cloudWorkspace = {
+        ...defaultCloudWorkspace,
+        trialExpiryTimestamp: undefined,
+      };
 
-      const { container } = render(workspaceBannerWithFlagDefault);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = renderWorkspaceBanner(cloudWorkspace);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 });

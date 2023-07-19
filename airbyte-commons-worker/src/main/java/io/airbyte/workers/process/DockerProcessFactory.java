@@ -8,6 +8,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import io.airbyte.commons.constants.WorkerConstants;
+import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.map.MoreMaps;
@@ -15,12 +17,10 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import kotlin.Pair;
@@ -98,6 +99,8 @@ public class DockerProcessFactory implements ProcessFactory {
                         final String jobType,
                         final String jobId,
                         final int attempt,
+                        final UUID connectionId,
+                        final UUID workspaceId,
                         final Path jobRoot,
                         final String imageName,
                         final boolean usesIsolatedPool,
@@ -109,7 +112,7 @@ public class DockerProcessFactory implements ProcessFactory {
                         final Map<String, String> labels,
                         final Map<String, String> jobMetadata,
                         final Map<Integer, Integer> internalToExternalPorts,
-                        Map<String, String> additionalEnvironmentVariables,
+                        final Map<String, String> additionalEnvironmentVariables,
                         final String... args)
       throws WorkerException {
     try {
@@ -230,22 +233,22 @@ public class DockerProcessFactory implements ProcessFactory {
     // never let this be a cause of failure in production
     try {
       // See if the DEBUG_CONTAINER_IMAGE environment variable is set with a debugging port
-      Map<String, String> debuggingConnectors = extractConnectorDebuggingInfo(debugContainer);
-      String shortName = DockerImageNameHelper.extractShortImageName(containerName);
-      Optional<String> port = debuggingConnectors.keySet().stream()
+      final Map<String, String> debuggingConnectors = extractConnectorDebuggingInfo(debugContainer);
+      final String shortName = DockerImageNameHelper.extractShortImageName(containerName);
+      final Optional<String> port = debuggingConnectors.keySet().stream()
           .filter(shortName::startsWith)
           .map(debuggingConnectors::get)
           .findFirst();
-      Optional<String> javaOpts = Optional.ofNullable(javaToolOpts);
+      final Optional<String> javaOpts = Optional.ofNullable(javaToolOpts);
       if (port.isPresent() && javaOpts.isPresent()) {
         // A valid connector and port name has been identified, pass along java tool options for debugging
-        String javaToolOptions = "JAVA_TOOL_OPTIONS=" + String.join(":", javaOpts.get(), port.get());
-        String portOption = "-p" + port.get() + ":" + port.get();
+        final String javaToolOptions = "JAVA_TOOL_OPTIONS=" + String.join(":", javaOpts.get(), port.get());
+        final String portOption = "-p" + port.get() + ":" + port.get();
         return List.of("-e", javaToolOptions, portOption);
       } else {
         return Collections.emptyList();
       }
-    } catch (Exception e) {
+    } catch (final Exception e) {
       LOGGER.error("Encountered Unexpected error trying to add debugging options", e);
       return Collections.emptyList();
     }
@@ -277,7 +280,7 @@ public class DockerProcessFactory implements ProcessFactory {
    *         optional
    */
   private static Optional<Pair<String, String>> extractDebuggingConnectorPortPair(final String potentialConnector) {
-    String[] parts = potentialConnector.split(":");
+    final String[] parts = potentialConnector.split(":");
     if (parts.length == 2) { // NOPMD
       return Optional.of(new Pair<>(parts[0], parts[1]));
     } else {

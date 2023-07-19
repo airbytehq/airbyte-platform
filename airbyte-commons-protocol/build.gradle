@@ -1,3 +1,8 @@
+plugins {
+    id "io.airbyte.gradle.jvm"
+    id "io.airbyte.gradle.publish"
+}
+
 dependencies {
     annotationProcessor libs.bundles.micronaut.annotation.processor
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
@@ -8,6 +13,15 @@ dependencies {
     implementation project(':airbyte-commons')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-json-validation')
-}
+    implementation libs.guava
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+    implementation libs.bundles.jackson
+
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+
+    testImplementation libs.junit.pioneer
+}

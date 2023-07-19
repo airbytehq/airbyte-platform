@@ -9,12 +9,9 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 
+import { useCreateCloudWorkspace, useListCloudWorkspaces } from "core/api/cloud";
+import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  useCreateCloudWorkspace,
-  useListCloudWorkspaces,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { trackError } from "utils/datadog";
 
 interface CreateWorkspaceFormValues {
   name: string;
@@ -29,7 +26,7 @@ export const WorkspacesCreateControl: React.FC = () => {
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
-  const workspaces = useListCloudWorkspaces();
+  const { workspaces } = useListCloudWorkspaces();
   const isFirstWorkspace = workspaces.length === 0;
 
   const onSubmit = async ({ name }: CreateWorkspaceFormValues) => {

@@ -4,6 +4,8 @@ import * as yup from "yup";
 
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
+import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
+import { useCurrentWorkspace } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
@@ -31,8 +33,6 @@ import {
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ValuesProps } from "hooks/services/useConnectionHook";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "utils/cron";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
 import { frequencyConfig } from "./frequencyConfig";

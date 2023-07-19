@@ -85,7 +85,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   private final AttemptApi attemptApi;
   private final StateAggregatorFactory stateAggregatorFactory;
 
-  private final SyncStatsTracker syncStatsTracker;
+  private SyncStatsTracker syncStatsTracker;
   private SaveStatsRequestBody statsToPersist;
   private boolean isReceivingStats;
 
@@ -137,6 +137,14 @@ public class SyncPersistenceImpl implements SyncPersistence {
     this.jobId = jobId;
     this.attemptNumber = attemptNumber;
     this.configuredAirbyteCatalog = configuredAirbyteCatalog;
+  }
+
+  /**
+   * Override SyncStatsTracker implementation. This is temporary for testing, should be deleted as
+   * soon as we migrated.
+   */
+  public void setSyncStatsTracker(final SyncStatsTracker syncStatsTracker) {
+    this.syncStatsTracker = syncStatsTracker;
   }
 
   @Override

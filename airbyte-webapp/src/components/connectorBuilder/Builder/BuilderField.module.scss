@@ -5,3 +5,27 @@
   margin-top: variables.$spacing-sm;
   color: colors.$red;
 }
+
+.draghandle {
+  overflow: hidden;
+}
+
+.draghandle::before,
+.draghandle::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 1px;
+  background-color: colors.$grey-400;
+}
+
+.draghandle::before {
+  transform: translate(3px, 0) rotate(-45deg);
+}
+
+.draghandle::after {
+  transform: translate(7px, 0) rotate(-45deg);
+}

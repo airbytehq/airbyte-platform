@@ -1,0 +1,9 @@
+plugins {
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
+}
+
+dependencies {
+    implementation project(':airbyte-commons')
+    implementation project(':airbyte-config:config-models')
+}

@@ -87,16 +87,22 @@ class DefaultSyncJobFactoryTest {
     final String dstDockerImage = dstDockerRepo + ":" + dstDockerTag;
     final Version dstProtocolVersion = new Version("0.3.2");
     final StandardSourceDefinition standardSourceDefinition =
-        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId)
-            .withProtocolVersion(srcProtocolVersion.serialize());
+        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId);
     final StandardDestinationDefinition standardDestinationDefinition =
-        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId)
-            .withProtocolVersion(dstProtocolVersion.serialize());
+        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId);
 
+    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
+        .withDockerRepository(srcDockerRepo)
+        .withDockerImageTag(srcDockerTag)
+        .withProtocolVersion(srcProtocolVersion.serialize());
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId))
-        .thenReturn(new ActorDefinitionVersion().withDockerRepository(srcDockerRepo).withDockerImageTag(srcDockerTag));
+        .thenReturn(sourceVersion);
+    final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
+        .withDockerRepository(dstDockerRepo)
+        .withDockerImageTag(dstDockerTag)
+        .withProtocolVersion(dstProtocolVersion.serialize());
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId))
-        .thenReturn(new ActorDefinitionVersion().withDockerRepository(dstDockerRepo).withDockerImageTag(dstDockerTag));
+        .thenReturn(destinationVersion);
 
     when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
     when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
@@ -106,7 +112,7 @@ class DefaultSyncJobFactoryTest {
     when(
         jobCreator.createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcProtocolVersion, dstDockerImage,
             dstProtocolVersion, operations,
-            persistedWebhookConfigs, standardSourceDefinition, standardDestinationDefinition, workspaceId))
+            persistedWebhookConfigs, standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId))
                 .thenReturn(Optional.of(jobId));
     when(configRepository.getStandardSourceDefinition(sourceDefinitionId))
         .thenReturn(standardSourceDefinition);
@@ -134,7 +140,7 @@ class DefaultSyncJobFactoryTest {
     verify(jobCreator)
         .createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcProtocolVersion, dstDockerImage, dstProtocolVersion,
             operations, persistedWebhookConfigs,
-            standardSourceDefinition, standardDestinationDefinition, workspaceId);
+            standardSourceDefinition, standardDestinationDefinition, sourceVersion, destinationVersion, workspaceId);
 
     assertEquals(configAfterInjection, sourceConnection.getConfiguration());
     verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId);

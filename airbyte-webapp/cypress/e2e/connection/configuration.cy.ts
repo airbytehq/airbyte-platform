@@ -12,6 +12,8 @@ import {
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
   createNewConnectionViaApi,
+  startManualSync,
+  startManualReset,
 } from "@cy/commands/connection";
 import { runDbQuery } from "@cy/commands/db/db";
 import { createUsersTableQuery, dropUsersTableQuery } from "@cy/commands/db/queries";
@@ -87,6 +89,48 @@ describe("Connection Configuration", () => {
     runDbQuery(dropUsersTableQuery);
   });
 
+  describe.only("Status", () => {
+    beforeEach(() => {
+      createNewConnectionViaApi(postgresSource, postgresDestination).as("connection");
+    });
+
+    after(() => {
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        requestDeleteConnection({ connectionId: connection.connectionId });
+      });
+    });
+
+    it("should initialize as pending", () => {
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+        cy.get("[data-testid='connection-status-text']").contains("Pending").should("exist");
+      });
+    });
+
+    it("should allow starting a sync", () => {
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+
+        // sync & verify the button enters and exits its disabled state as the status updates
+        startManualSync();
+        cy.get("[data-testid='manual-sync-button']").should("be.disabled");
+        cy.get("[data-testid='connection-status-text']").contains("On time").should("exist");
+        cy.get("[data-testid='manual-sync-button']").should("not.be.disabled");
+      });
+    });
+
+    it("should allow resetting a sync", () => {
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+
+        // reset & verify the button enters and exits its disabled state as the status updates
+        startManualReset();
+        cy.get("[data-testid='manual-reset-button']").should("be.disabled");
+        cy.get("[data-testid='connection-status-text']").contains("Pending").should("exist");
+        cy.get("[data-testid='manual-reset-button']").should("not.be.disabled");
+      });
+    });
+  });
   describe("Replication settings", () => {
     beforeEach(() => {
       interceptGetConnectionRequest();
@@ -401,16 +445,16 @@ describe("Connection Configuration", () => {
         cy.get("td").contains(connection.name).should("not.exist");
       });
     });
-    describe("Syncs tab", () => {
+    describe("Job History tab", () => {
       it("can visit the connection", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           cy.get("div").contains("This connection has been deleted").should("exist");
         });
       });
       it("cannot toggle enabled/disabled state or trigger a sync", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           getSyncEnabledSwitch().should("be.disabled");
           cy.contains("Reset your data").should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
@@ -491,7 +535,7 @@ describe("Connection Configuration", () => {
       //   cannot change normalization method
     });
   });
-  describe.only("Disabled connection", () => {
+  describe("Disabled connection", () => {
     beforeEach(() => {
       createNewConnectionViaApi(postgresSource, postgresDestination)
         .then((connection) => {
@@ -504,7 +548,7 @@ describe("Connection Configuration", () => {
     it("should not be allowed to trigger a reset or a sync", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
-        cy.contains(/Sync now/).should("be.disabled");
+        cy.contains(/Sync \d+ enabled streams?/).should("be.disabled");
         cy.contains("Reset your data").should("be.disabled");
       });
     });

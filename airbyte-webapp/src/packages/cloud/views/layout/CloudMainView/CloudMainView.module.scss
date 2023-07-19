@@ -17,6 +17,7 @@ $sidebar-workspace-font-weight: 400;
     height: 100%;
     display: flex;
     flex-direction: column;
+    padding-top: variables.$spacing-xl;
 
     // prevents this div from overflowing when its children grow too large, as this overrides the default min-width:auto behavior of flexbox
     min-width: 0;

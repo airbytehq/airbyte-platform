@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.JobDebugRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobRead;
@@ -128,10 +129,19 @@ public class JobHistoryHandler {
     final List<Job> jobs;
 
     if (request.getIncludingJobId() != null) {
-      jobs = jobPersistence.listJobsIncludingId(configTypes, configId, request.getIncludingJobId(), pageSize);
+      jobs = jobPersistence.listJobsIncludingId(
+          configTypes,
+          configId,
+          request.getIncludingJobId(),
+          pageSize);
     } else {
       jobs = jobPersistence.listJobs(configTypes, configId, pageSize,
-          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0);
+          (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0,
+          request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+          request.getCreatedAtStart(),
+          request.getCreatedAtEnd(),
+          request.getUpdatedAtStart(),
+          request.getUpdatedAtEnd());
     }
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
@@ -151,6 +161,51 @@ public class JobHistoryHandler {
 
     final Long totalJobCount = jobPersistence.getJobCount(configTypes, configId);
     return new JobReadList().jobs(jobReads).totalJobCount(totalJobCount);
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody request) throws IOException {
+    Preconditions.checkNotNull(request.getConfigTypes(), "configType cannot be null.");
+    Preconditions.checkState(!request.getConfigTypes().isEmpty(), "Must include at least one configType.");
+
+    final Set<ConfigType> configTypes = request.getConfigTypes()
+        .stream()
+        .map(type -> Enums.convertTo(type, JobConfig.ConfigType.class))
+        .collect(Collectors.toSet());
+
+    final int pageSize = (request.getPagination() != null && request.getPagination().getPageSize() != null) ? request.getPagination().getPageSize()
+        : DEFAULT_PAGE_SIZE;
+
+    final int offset =
+        (request.getPagination() != null && request.getPagination().getRowOffset() != null) ? request.getPagination().getRowOffset() : 0;
+
+    final List<Job> jobs = jobPersistence.listJobs(
+        configTypes,
+        request.getWorkspaceIds(),
+        pageSize,
+        offset,
+        request.getStatus() == null ? null : JobStatus.valueOf(request.getStatus().toString().toUpperCase()),
+        request.getCreatedAtStart(),
+        request.getCreatedAtEnd(),
+        request.getUpdatedAtStart(),
+        request.getUpdatedAtEnd());
+
+    final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
+    final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();
+    final Map<JobAttemptPair, JobPersistence.AttemptStats> stats = jobPersistence.getAttemptStats(jobIds);
+    for (final JobWithAttemptsRead jwar : jobReads) {
+      for (final AttemptRead a : jwar.getAttempts()) {
+        final var stat = stats.get(new JobAttemptPair(jwar.getJob().getId(), a.getId().intValue()));
+        if (stat == null) {
+          log.warn("Missing stats for job {} attempt {}", jwar.getJob().getId(), a.getId().intValue());
+          continue;
+        }
+
+        hydrateWithStats(a, stat);
+      }
+    }
+
+    return new JobReadList().jobs(jobReads).totalJobCount((long) jobs.size());
   }
 
   /**

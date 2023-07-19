@@ -11,6 +11,7 @@ import {
 import { OperationsSection } from "components/connection/ConnectionForm/OperationsSection";
 import LoadingSchema from "components/LoadingSchema";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
@@ -23,7 +24,6 @@ import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateConnection } from "hooks/services/useConnectionHook";
 import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/services/useSourceHook";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./CreateConnectionForm.module.scss";
 import { CreateConnectionNameField } from "./CreateConnectionNameField";
@@ -97,11 +97,11 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
     <Suspense fallback={<LoadingSchema />}>
       <div className={styles.connectionFormContainer}>
         <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onFormSubmit}>
-          {({ isSubmitting, isValid, dirty, errors }) => (
+          {({ isSubmitting, isValid, dirty, errors, validateForm }) => (
             <Form>
               <CreateConnectionNameField />
               {canEditDataGeographies && <DataResidency />}
-              <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} />
+              <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} validateForm={validateForm} />
               <OperationsSection
                 onStartEditTransformation={() => setEditingTransformation(true)}
                 onEndEditTransformation={() => setEditingTransformation(false)}
@@ -109,7 +109,7 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
               <CreateControls
                 isSubmitting={isSubmitting}
                 isValid={isValid && !editingTransformation}
-                errorMessage={getErrorMessage(isValid, dirty, errors)}
+                errorMessage={getErrorMessage(isValid, errors)}
               />
             </Form>
           )}

@@ -41,7 +41,7 @@ airbyte-connector-builder-server:
 
 Start up your local Airbyte instance:
 ```bash
-VERSION=dev docker-compose up   
+VERSION=dev docker-compose up
 ```
 
 ## OpenAPI generation

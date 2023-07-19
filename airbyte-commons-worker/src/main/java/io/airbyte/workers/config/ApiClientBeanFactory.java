@@ -12,6 +12,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
+import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
@@ -112,6 +113,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public StateApi stateApi(final ApiClient apiClient) {
     return new StateApi(apiClient);
+  }
+
+  @Singleton
+  public JobRetryStatesApi jobRetryStatesApi(final ApiClient apiClient) {
+    return new JobRetryStatesApi(apiClient);
   }
 
   @Singleton

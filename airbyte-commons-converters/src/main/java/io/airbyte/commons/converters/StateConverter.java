@@ -206,6 +206,7 @@ public class StateConverter {
         && connectionState.getStateType() == ConnectionStateType.GLOBAL
         && connectionState.getGlobalState() != null) {
       return Optional.of(new AirbyteStateMessage()
+          .withType(AirbyteStateType.GLOBAL)
           .withGlobal(new AirbyteGlobalState()
               .withSharedState(connectionState.getGlobalState().getSharedState())
               .withStreamStates(connectionState.getGlobalState().getStreamStates()
@@ -288,7 +289,7 @@ public class StateConverter {
       return Optional.ofNullable(connectionState.getStreamState()
           .stream()
           .map(StateConverter::streamStateStructToInternal)
-          .map(s -> new AirbyteStateMessage().withStream(s))
+          .map(s -> new AirbyteStateMessage().withType(AirbyteStateType.STREAM).withStream(s))
           .toList());
     } else {
       return Optional.empty();

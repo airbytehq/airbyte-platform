@@ -158,7 +158,7 @@ public class WorkspacesHandler {
   private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
     NotificationSettings notificationSettings = new NotificationSettings()
         .sendOnSuccess(new NotificationItem().notificationType(List.of()))
-        .sendOnFailure(new NotificationItem().notificationType(List.of()))
+        .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnConnectionUpdate(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnConnectionUpdateActionRequired(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnSyncDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))

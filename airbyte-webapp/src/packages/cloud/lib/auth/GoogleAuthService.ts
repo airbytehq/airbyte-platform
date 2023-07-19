@@ -23,8 +23,12 @@ import {
   reload,
 } from "firebase/auth";
 
-import { FieldError } from "packages/cloud/lib/errors/FieldError";
-import { EmailLinkErrorCodes, ErrorCodes } from "packages/cloud/services/auth/types";
+import {
+  EmailLinkErrorCodes,
+  ResetPasswordConfirmErrorCodes,
+  LoginFormErrorCodes,
+  SignUpFormErrorCodes,
+} from "packages/cloud/services/auth/types";
 
 export class GoogleAuthService {
   constructor(private firebaseAuthProvider: () => Auth) {}
@@ -49,14 +53,14 @@ export class GoogleAuthService {
     return signInWithEmailAndPassword(this.auth, email, password).catch((err) => {
       switch (err.code) {
         case AuthErrorCodes.INVALID_EMAIL:
-          throw new FieldError("email", ErrorCodes.Invalid);
+          throw new Error(LoginFormErrorCodes.EMAIL_INVALID);
         case AuthErrorCodes.USER_CANCELLED:
         case AuthErrorCodes.USER_DISABLED:
-          throw new FieldError("email", "disabled");
+          throw new Error(LoginFormErrorCodes.EMAIL_DISABLED);
         case AuthErrorCodes.USER_DELETED:
-          throw new FieldError("email", "notfound");
+          throw new Error(LoginFormErrorCodes.EMAIL_NOT_FOUND);
         case AuthErrorCodes.INVALID_PASSWORD:
-          throw new FieldError("password", ErrorCodes.Invalid);
+          throw new Error(LoginFormErrorCodes.PASSWORD_INVALID);
       }
 
       throw err;
@@ -64,21 +68,20 @@ export class GoogleAuthService {
   }
 
   async signUp(email: string, password: string): Promise<UserCredential> {
-    if (password.length < 12) {
-      throw new FieldError("password", "signup.password.minLength");
-    }
-    return createUserWithEmailAndPassword(this.auth, email, password).catch((err) => {
+    try {
+      return await createUserWithEmailAndPassword(this.auth, email, password);
+    } catch (err) {
       switch (err.code) {
         case AuthErrorCodes.EMAIL_EXISTS:
-          throw new FieldError("email", ErrorCodes.Duplicate);
+          throw new Error(SignUpFormErrorCodes.EMAIL_DUPLICATE);
         case AuthErrorCodes.INVALID_EMAIL:
-          throw new FieldError("email", ErrorCodes.Invalid);
+          throw new Error(SignUpFormErrorCodes.EMAIL_INVALID);
         case AuthErrorCodes.WEAK_PASSWORD:
-          throw new FieldError("password", ErrorCodes.Validation);
+          throw new Error(SignUpFormErrorCodes.PASSWORD_WEAK);
       }
 
       throw err;
-    });
+    }
   }
 
   async updateProfile(displayName: string): Promise<void> {
@@ -108,7 +111,20 @@ export class GoogleAuthService {
   }
 
   async finishResetPassword(code: string, newPassword: string): Promise<void> {
-    return confirmPasswordReset(this.auth, code, newPassword);
+    try {
+      return await confirmPasswordReset(this.auth, code, newPassword);
+    } catch (e) {
+      switch (e?.code) {
+        case AuthErrorCodes.EXPIRED_OOB_CODE:
+          throw new Error(ResetPasswordConfirmErrorCodes.LINK_EXPIRED);
+        case AuthErrorCodes.INVALID_OOB_CODE:
+          throw new Error(ResetPasswordConfirmErrorCodes.LINK_INVALID);
+        case AuthErrorCodes.WEAK_PASSWORD:
+          throw new Error(ResetPasswordConfirmErrorCodes.PASSWORD_WEAK);
+      }
+
+      throw e;
+    }
   }
 
   async sendEmailVerifiedLink(): Promise<void> {
@@ -138,7 +154,8 @@ export class GoogleAuthService {
     } catch (e) {
       switch (e?.code) {
         case AuthErrorCodes.INVALID_EMAIL:
-          throw new FieldError("email", EmailLinkErrorCodes.EMAIL_MISMATCH);
+          // The invitation link was sent to a different email
+          throw new Error(EmailLinkErrorCodes.EMAIL_MISMATCH);
         case AuthErrorCodes.INVALID_OOB_CODE:
           // The link was already used
           throw new Error(EmailLinkErrorCodes.LINK_INVALID);

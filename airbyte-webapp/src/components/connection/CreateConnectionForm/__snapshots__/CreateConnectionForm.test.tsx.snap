@@ -78,6 +78,7 @@ exports[`CreateConnectionForm should render 1`] = `
                   data-testid="input-container"
                 >
                   <input
+                    aria-invalid="false"
                     class="<removed-for-snapshot-test>"
                     data-testid="connectionName"
                     name="name"
@@ -1715,6 +1716,9 @@ exports[`CreateConnectionForm should render 1`] = `
         </div>
       </form>
     </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    />
   </div>
 </body>
 `;
@@ -1744,6 +1748,9 @@ exports[`CreateConnectionForm should render when loading 1`] = `
 This should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of tables.
       </div>
     </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    />
   </div>
 </body>
 `;
@@ -1820,6 +1827,9 @@ exports[`CreateConnectionForm should render with an error 1`] = `
         </div>
       </div>
     </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    />
   </div>
 </body>
 `;

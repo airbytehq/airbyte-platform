@@ -11,7 +11,6 @@ import io.airbyte.api.client.model.generated.NotificationItem;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import jakarta.inject.Singleton;
 import java.util.UUID;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,11 +26,23 @@ public class WorkspaceNotificationConfigFetcher {
     this.workspaceApi = workspaceApi;
   }
 
-  @Value
   class NotificationItemWithCustomerIoConfig {
+
+    NotificationItemWithCustomerIoConfig(NotificationItem notificationItem, CustomerIoEmailConfig customerIoEmailConfig) {
+      this.notificationItem = notificationItem;
+      this.customerIoEmailConfig = customerIoEmailConfig;
+    }
 
     NotificationItem notificationItem;
     CustomerIoEmailConfig customerIoEmailConfig;
+
+    NotificationItem getNotificationItem() {
+      return notificationItem;
+    }
+
+    CustomerIoEmailConfig getCustomerIoEmailConfig() {
+      return customerIoEmailConfig;
+    }
 
   }
 
@@ -54,11 +65,11 @@ public class WorkspaceNotificationConfigFetcher {
     NotificationItem item;
 
     switch (notificationEvent) {
-      case onBreakingChange -> {
+      case ON_BREAKING_CHANGE -> {
         item = workspaceRead.getNotificationSettings().getSendOnConnectionUpdateActionRequired();
         break;
       }
-      case onNonBreakingChange -> {
+      case ON_NON_BREAKING_CHANGE -> {
         item = workspaceRead.getNotificationSettings().getSendOnConnectionUpdate();
         break;
       }

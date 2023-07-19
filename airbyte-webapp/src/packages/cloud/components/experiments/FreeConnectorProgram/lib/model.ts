@@ -1,6 +1,11 @@
-import { DestinationDefinitionRead, SourceDefinitionRead, WebBackendConnectionRead } from "core/request/AirbyteClient";
+import {
+  DestinationDefinitionRead,
+  ReleaseStage,
+  SourceDefinitionRead,
+  WebBackendConnectionRead,
+} from "core/api/types/AirbyteClient";
 
-export const freeReleaseStages = ["alpha", "beta"];
+export const freeReleaseStages: ReleaseStage[] = ["alpha", "beta"];
 
 export const isConnectionEligibleForFCP = (
   connection: WebBackendConnectionRead,

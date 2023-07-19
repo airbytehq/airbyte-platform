@@ -5,18 +5,18 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import LoadingPage from "components/LoadingPage";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
-import AccountPage from "./pages/AccountPage";
-import ConfigurationsPage from "./pages/ConfigurationsPage";
+import { AccountPage } from "./pages/AccountPage";
+import { ConfigurationsPage } from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
-import MetricsPage from "./pages/MetricsPage";
-import NotificationPage from "./pages/NotificationPage";
-import styles from "./SettingsPage.module.scss";
+import { MetricsPage } from "./pages/MetricsPage";
+import { NotificationPage } from "./pages/NotificationPage";
 
 export interface PageConfig {
   menuConfig: CategoryItem[];
@@ -96,10 +96,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
         />
       }
     >
-      <div className={styles.content}>
+      <FlexContainer direction="row" gap="2xl">
         <SideMenu data={menuItems} onSelect={onSelectMenuItem} activeItem={pathname} />
-
-        <div className={styles.mainView}>
+        <FlexItem grow>
           <Suspense fallback={<LoadingPage />}>
             <Routes>
               {menuItems
@@ -115,8 +114,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
               <Route path="*" element={<Navigate to={firstRoute} replace />} />
             </Routes>
           </Suspense>
-        </div>
-      </div>
+        </FlexItem>
+      </FlexContainer>
     </MainPageWithScroll>
   );
 };

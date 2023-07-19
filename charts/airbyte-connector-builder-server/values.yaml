@@ -1,6 +1,7 @@
 global:
   serviceAccountName: placeholderServiceAccount
   deploymentMode: oss
+  deploymentStrategyType: RollingUpdate
   configMapName: ""
   secretName: ""
   credVolumeOverride: ""

@@ -1,5 +1,6 @@
 plugins {
-    id 'application'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
 }
 
 configurations {
@@ -32,14 +33,20 @@ dependencies {
     testImplementation libs.bundles.micronaut.test
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers.postgresql
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+
+    testImplementation libs.junit.pioneer
 }
 
-application {
-    applicationName = "airbyte-metrics-reporter"
-    mainClass = 'io.airbyte.metrics.reporter.Application'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
-}
-
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
+airbyte {
+    application {
+        name = "airbyte-metrics-reporter"
+        mainClass = 'io.airbyte.metrics.reporter.Application'
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+    }
+    docker {
+        imageName = "metrics-reporter"
+    }
 }

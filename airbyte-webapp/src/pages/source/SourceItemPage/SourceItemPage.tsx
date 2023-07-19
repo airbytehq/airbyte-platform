@@ -10,6 +10,7 @@ import { StepsTypes } from "components/ConnectorBlocks";
 import LoadingPage from "components/LoadingPage";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
+import { useSourceDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -24,6 +25,7 @@ export const SourceItemPage: React.FC = () => {
   const params = useParams<{ workspaceId: string; "*": StepsTypes | "" | undefined }>();
   const source = useGetSourceFromParams();
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
+  const actorDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
   const { formatMessage } = useIntl();
 
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
@@ -43,7 +45,11 @@ export const SourceItemPage: React.FC = () => {
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
         <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
-          <ConnectorTitleBlock connector={source} connectorDefinition={sourceDefinition} />
+          <ConnectorTitleBlock
+            connector={source}
+            connectorDefinition={sourceDefinition}
+            actorDefinitionVersion={actorDefinitionVersion}
+          />
           <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
         </NextPageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>

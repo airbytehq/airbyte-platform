@@ -10,7 +10,7 @@ import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-ut
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
-import { FormError } from "utils/errorStatusMessage";
+import { FormError } from "core/utils/errorStatusMessage";
 
 import {
   ConnectionFormServiceProvider,
@@ -34,7 +34,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 
@@ -83,7 +83,7 @@ describe("ConnectionFormService", () => {
   });
 
   describe("Error Message Generation", () => {
-    it("should show a validation error if the form is invalid and dirty", async () => {
+    it("should return an error message if the form is invalid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: Wrapper,
         initialProps: {
@@ -93,12 +93,12 @@ describe("ConnectionFormService", () => {
         },
       });
 
-      expect(result.current.getErrorMessage(false, true)).toBe(
+      expect(result.current.getErrorMessage(false)).toBe(
         "The form is invalid. Please make sure that all fields are correct."
       );
     });
 
-    it("should not show a validation error if the form is valid and dirty", async () => {
+    it("should not return an error message if the form is valid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: Wrapper,
         initialProps: {
@@ -108,10 +108,10 @@ describe("ConnectionFormService", () => {
         },
       });
 
-      expect(result.current.getErrorMessage(true, true)).toBe(null);
+      expect(result.current.getErrorMessage(true)).toBe(null);
     });
 
-    it("should not show a validation error if the form is invalid and not dirty", async () => {
+    it("should return an error message if the form is invalid and not dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: Wrapper,
         initialProps: {
@@ -121,10 +121,12 @@ describe("ConnectionFormService", () => {
         },
       });
 
-      expect(result.current.getErrorMessage(false, false)).toBe(null);
+      expect(result.current.getErrorMessage(false)).toBe(
+        "The form is invalid. Please make sure that all fields are correct."
+      );
     });
 
-    it("should show a message when given a submit error", () => {
+    it("should return an error message when given a submit error", () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: Wrapper,
         initialProps: {
@@ -139,13 +141,32 @@ describe("ConnectionFormService", () => {
         result.current.setSubmitError(new FormError(errMsg));
       });
 
-      expect(result.current.getErrorMessage(false, false)).toBe(errMsg);
-      expect(result.current.getErrorMessage(false, true)).toBe(errMsg);
-      expect(result.current.getErrorMessage(true, false)).toBe(errMsg);
-      expect(result.current.getErrorMessage(true, true)).toBe(errMsg);
+      expect(result.current.getErrorMessage(false)).toBe(errMsg);
+      expect(result.current.getErrorMessage(false)).toBe(errMsg);
+      expect(result.current.getErrorMessage(true)).toBe(errMsg);
+      expect(result.current.getErrorMessage(true)).toBe(errMsg);
     });
 
-    it("should show a streams error if the form is invalid and not dirty", async () => {
+    it("should return an error message if the streams field is invalid", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: Wrapper,
+        initialProps: {
+          connection: mockConnection,
+          mode: "create",
+          refreshSchema,
+        },
+      });
+
+      const errors = {
+        syncCatalog: {
+          streams: "connectionForm.streams.required",
+        },
+      };
+
+      expect(result.current.getErrorMessage(false, errors)).toBe("Select at least 1 stream to sync.");
+    });
+
+    it("should not return an error message if the form is valid", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: Wrapper,
         initialProps: {
@@ -161,26 +182,7 @@ describe("ConnectionFormService", () => {
         },
       };
 
-      expect(result.current.getErrorMessage(false, true, errors)).toBe("Select at least 1 stream to sync.");
-    });
-
-    it("should not show a streams error if the form is valid", async () => {
-      const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
-      });
-
-      const errors = {
-        syncCatalog: {
-          streams: "There's an error",
-        },
-      };
-
-      expect(result.current.getErrorMessage(true, true, errors)).toBe(null);
+      expect(result.current.getErrorMessage(true, errors)).toBe(null);
     });
   });
 });

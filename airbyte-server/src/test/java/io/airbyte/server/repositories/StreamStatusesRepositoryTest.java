@@ -247,13 +247,13 @@ class StreamStatusesRepositoryTest {
     final var s1 = Fixtures.status().build();
     final var s2 = Fixtures.statusFrom(s1).attemptNumber(1).build();
     final var s3 = Fixtures.statusFrom(s2).attemptNumber(2).build();
-    final var s4 = Fixtures.status().streamName(Fixtures.testName2).build();
+    final var s4 = Fixtures.status().streamName(Fixtures.name2).build();
     final var s5 = Fixtures.statusFrom(s4).attemptNumber(1).build();
     final var s6 = Fixtures.status().workspaceId(Fixtures.workspaceId2).build();
     final var s7 = Fixtures.status().workspaceId(Fixtures.workspaceId3).build();
     final var s8 = Fixtures.status().jobId(Fixtures.jobId2).build();
     final var s9 = Fixtures.statusFrom(s8).attemptNumber(1).build();
-    final var s10 = Fixtures.statusFrom(s8).streamName(Fixtures.testName3).build();
+    final var s10 = Fixtures.statusFrom(s8).streamName(Fixtures.name3).build();
     final var s11 = Fixtures.status().connectionId(Fixtures.connectionId2).build();
     final var s12 = Fixtures.status().connectionId(Fixtures.connectionId3).build();
     final var s13 = Fixtures.status().streamNamespace("").build();
@@ -268,34 +268,34 @@ class StreamStatusesRepositoryTest {
     final var f3 = Fixtures.filters().workspaceId(Fixtures.workspaceId3).build();
     final var f4 = Fixtures.filters().connectionId(Fixtures.connectionId1).build();
     final var f5 = Fixtures.filters().connectionId(Fixtures.connectionId2).build();
-    final var f6 = Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.testNamespace).build();
+    final var f6 = Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.namespace).build();
     final var f7 =
-        Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName1).build();
+        Fixtures.filters().connectionId(Fixtures.connectionId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).build();
     final var f8 = Fixtures.filters().jobId(Fixtures.jobId1).build();
     final var f9 = Fixtures.filters().jobId(Fixtures.jobId2).build();
     final var f10 = Fixtures.filters().jobId(Fixtures.jobId3).build();
-    final var f11 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName1).build();
-    final var f12 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName2).build();
+    final var f11 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).build();
+    final var f12 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name2).build();
     final var f13 =
-        Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName1).attemptNumber(2).build();
+        Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.namespace).streamName(Fixtures.name1).attemptNumber(2).build();
     final var f14 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.sync).build();
     final var f15 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.reset).build();
 
-    Assertions.assertEquals(repo.findAllFiltered(f1).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15));
-    Assertions.assertEquals(repo.findAllFiltered(f2).getContent(), List.of(s6));
-    Assertions.assertEquals(repo.findAllFiltered(f3).getContent(), List.of(s7));
-    Assertions.assertEquals(repo.findAllFiltered(f4).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15));
-    Assertions.assertEquals(repo.findAllFiltered(f5).getContent(), List.of(s11));
-    Assertions.assertEquals(repo.findAllFiltered(f6).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15));
-    Assertions.assertEquals(repo.findAllFiltered(f7).getContent(), List.of(s1, s2, s3, s8, s9, s14, s15));
-    Assertions.assertEquals(repo.findAllFiltered(f8).getContent(), List.of(s1, s2, s3, s4, s5, s11, s12, s13, s14));
-    Assertions.assertEquals(repo.findAllFiltered(f9).getContent(), List.of(s8, s9, s10, s15));
-    Assertions.assertEquals(repo.findAllFiltered(f10).getContent(), List.of());
-    Assertions.assertEquals(repo.findAllFiltered(f11).getContent(), List.of(s1, s2, s3, s11, s12, s14));
-    Assertions.assertEquals(repo.findAllFiltered(f12).getContent(), List.of(s4, s5));
-    Assertions.assertEquals(repo.findAllFiltered(f13).getContent(), List.of(s3));
-    Assertions.assertEquals(repo.findAllFiltered(f14).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13));
-    Assertions.assertEquals(repo.findAllFiltered(f15).getContent(), List.of(s14, s15));
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), repo.findAllFiltered(f1).getContent());
+    assertContainsSameElements(List.of(s6), repo.findAllFiltered(f2).getContent());
+    assertContainsSameElements(List.of(s7), repo.findAllFiltered(f3).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15), repo.findAllFiltered(f4).getContent());
+    assertContainsSameElements(List.of(s11), repo.findAllFiltered(f5).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15), repo.findAllFiltered(f6).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s8, s9, s14, s15), repo.findAllFiltered(f7).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s11, s12, s13, s14), repo.findAllFiltered(f8).getContent());
+    assertContainsSameElements(List.of(s8, s9, s10, s15), repo.findAllFiltered(f9).getContent());
+    assertContainsSameElements(List.of(), repo.findAllFiltered(f10).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s11, s12, s14), repo.findAllFiltered(f11).getContent());
+    assertContainsSameElements(List.of(s4, s5), repo.findAllFiltered(f12).getContent());
+    assertContainsSameElements(List.of(s3), repo.findAllFiltered(f13).getContent());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13), repo.findAllFiltered(f14).getContent());
+    assertContainsSameElements(List.of(s14, s15), repo.findAllFiltered(f15).getContent());
   }
 
   @Test
@@ -330,27 +330,71 @@ class StreamStatusesRepositoryTest {
     final var f9 = Fixtures.filters().pagination(new Pagination(3, 3)).build();
     final var f10 = Fixtures.filters().pagination(new Pagination(4, 3)).build();
 
-    Assertions.assertEquals(repo.findAllFiltered(f1).getContent(), List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10));
-    Assertions.assertEquals(repo.findAllFiltered(f2).getContent(), List.of());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), repo.findAllFiltered(f1).getContent());
+    assertContainsSameElements(List.of(), repo.findAllFiltered(f2).getContent());
 
-    Assertions.assertEquals(repo.findAllFiltered(f3).getContent(), List.of(s1, s2, s3, s4, s5));
-    Assertions.assertEquals(repo.findAllFiltered(f4).getContent(), List.of(s6, s7, s8, s9, s10));
-    Assertions.assertEquals(repo.findAllFiltered(f5).getContent(), List.of());
+    assertContainsSameElements(List.of(s1, s2, s3, s4, s5), repo.findAllFiltered(f3).getContent());
+    assertContainsSameElements(List.of(s6, s7, s8, s9, s10), repo.findAllFiltered(f4).getContent());
+    assertContainsSameElements(List.of(), repo.findAllFiltered(f5).getContent());
 
-    Assertions.assertEquals(repo.findAllFiltered(f6).getContent(), List.of(s1, s2, s3));
-    Assertions.assertEquals(repo.findAllFiltered(f7).getContent(), List.of(s4, s5, s6));
-    Assertions.assertEquals(repo.findAllFiltered(f8).getContent(), List.of(s7, s8, s9));
-    Assertions.assertEquals(repo.findAllFiltered(f9).getContent(), List.of(s10));
-    Assertions.assertEquals(repo.findAllFiltered(f10).getContent(), List.of());
+    assertContainsSameElements(List.of(s1, s2, s3), repo.findAllFiltered(f6).getContent());
+    assertContainsSameElements(List.of(s4, s5, s6), repo.findAllFiltered(f7).getContent());
+    assertContainsSameElements(List.of(s7, s8, s9), repo.findAllFiltered(f8).getContent());
+    assertContainsSameElements(List.of(s10), repo.findAllFiltered(f9).getContent());
+    assertContainsSameElements(List.of(), repo.findAllFiltered(f10).getContent());
+  }
+
+  @Test
+  void testFindAllPerRunStateByConnectionId() {
+    final var p1 = Fixtures.pending().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var p2 = Fixtures.pending().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var p3 = Fixtures.pending().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).build();
+    final var p4 = Fixtures.pending().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+
+    final var r1 = Fixtures.running().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var r2 = Fixtures.running().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
+    final var r3 = Fixtures.running().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var r4 = Fixtures.running().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+
+    final var c1 = Fixtures.complete().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var c2 = Fixtures.complete().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).build();
+    final var c3 = Fixtures.complete().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId2).streamName(Fixtures.name2).build();
+    final var c4 = Fixtures.complete().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId2).build();
+
+    final var if1 = Fixtures.failed().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId2).build();
+    final var if2 = Fixtures.failed().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId2).build();
+    final var if3 = Fixtures.failed().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).streamNamespace("test2_").build();
+    final var if4 = Fixtures.failed().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).build();
+
+    final var ic1 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var ic2 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var ic3 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(3)).connectionId(Fixtures.connectionId1).streamName(Fixtures.name2).build();
+    final var ic4 = Fixtures.canceled().transitionedAt(Fixtures.timestamp(4)).connectionId(Fixtures.connectionId1).build();
+
+    final var reset1 = Fixtures.reset().transitionedAt(Fixtures.timestamp(1)).connectionId(Fixtures.connectionId1).build();
+    final var reset2 = Fixtures.reset().transitionedAt(Fixtures.timestamp(2)).connectionId(Fixtures.connectionId1).build();
+
+    repo.saveAll(List.of(p1, p2, p3, p4, r1, r2, r3, r4, c1, c2, c3, c4, if1, if2, if3, if4, ic1, ic2, ic3, ic4, reset1, reset2));
+
+    final var results1 = repo.findAllPerRunStateByConnectionId(Fixtures.connectionId1);
+    final var results2 = repo.findAllPerRunStateByConnectionId(Fixtures.connectionId2);
+
+    assertContainsSameElements(List.of(p2, p3, r2, c1, if3, if4, ic3, ic4, reset2), results1);
+    assertContainsSameElements(List.of(p4, r3, r4, c3, c4, if2), results2);
+  }
+
+  // Aliasing to cut down on the verbosity significantly
+  private static <T> void assertContainsSameElements(final List<T> expected, final List<T> actual) {
+    org.assertj.core.api.Assertions.assertThat(expected).containsExactlyInAnyOrderElementsOf(actual);
   }
 
   private static class Fixtures {
 
-    static String testNamespace = "test_";
+    static String namespace = "test_";
 
-    static String testName1 = "table_1";
-    static String testName2 = "table_2";
-    static String testName3 = "table_3";
+    static String name1 = "table_1";
+    static String name2 = "table_2";
+    static String name3 = "table_3";
 
     static UUID workspaceId1 = UUID.randomUUID();
     static UUID workspaceId2 = UUID.randomUUID();
@@ -372,14 +416,20 @@ class StreamStatusesRepositoryTest {
           ZoneId.systemDefault());
     }
 
+    static OffsetDateTime timestamp(final long ms) {
+      return OffsetDateTime.ofInstant(
+          Instant.ofEpochMilli(ms).truncatedTo(ChronoUnit.MICROS),
+          ZoneId.systemDefault());
+    }
+
     static StreamStatusBuilder status() {
       return StreamStatus.builder()
           .workspaceId(workspaceId1)
           .connectionId(connectionId1)
           .jobId(jobId1)
           .attemptNumber(0)
-          .streamNamespace(testNamespace)
-          .streamName(testName1)
+          .streamNamespace(namespace)
+          .streamName(name1)
           .jobType(JobStreamStatusJobType.sync)
           .runState(JobStreamStatusRunState.pending)
           .transitionedAt(now());
@@ -400,6 +450,39 @@ class StreamStatusesRepositoryTest {
           .createdAt(s.getCreatedAt())
           .updatedAt(s.getUpdatedAt())
           .transitionedAt(s.getTransitionedAt());
+    }
+
+    static StreamStatusBuilder pending() {
+      return status()
+          .runState(JobStreamStatusRunState.pending);
+    }
+
+    static StreamStatusBuilder running() {
+      return status()
+          .runState(JobStreamStatusRunState.running);
+    }
+
+    static StreamStatusBuilder complete() {
+      return status()
+          .runState(JobStreamStatusRunState.complete);
+    }
+
+    static StreamStatusBuilder failed() {
+      return status()
+          .runState(JobStreamStatusRunState.incomplete)
+          .incompleteRunCause(JobStreamStatusIncompleteRunCause.failed);
+    }
+
+    static StreamStatusBuilder canceled() {
+      return status()
+          .runState(JobStreamStatusRunState.incomplete)
+          .incompleteRunCause(JobStreamStatusIncompleteRunCause.canceled);
+    }
+
+    static StreamStatusBuilder reset() {
+      return status()
+          .jobType(JobStreamStatusJobType.reset)
+          .runState(JobStreamStatusRunState.complete);
     }
 
     static FilterParamsBuilder filters() {

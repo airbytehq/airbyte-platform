@@ -60,6 +60,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(5000);
 
+  cy.get("a[data-testid='connections-step']").click();
   openCreateConnection();
 
   cy.get("div").contains(sourceName).click();
@@ -75,6 +76,11 @@ export const createTestConnection = (sourceName: string, destinationName: string
 
 export const startManualSync = () => {
   cy.get("[data-testid='manual-sync-button']").click();
+};
+
+export const startManualReset = () => {
+  cy.get("[data-testid='manual-reset-button']").click();
+  cy.get("[data-id='reset']").click();
 };
 
 export const createPokeApiSourceViaApi = () => {

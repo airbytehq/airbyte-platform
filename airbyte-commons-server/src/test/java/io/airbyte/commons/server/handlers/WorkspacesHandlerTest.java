@@ -176,7 +176,8 @@ class WorkspacesHandlerTest {
   private io.airbyte.api.model.generated.NotificationSettings generateDefaultApiNotificationSettings() {
     return new io.airbyte.api.model.generated.NotificationSettings()
         .sendOnSuccess(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
-        .sendOnFailure(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnFailure(new io.airbyte.api.model.generated.NotificationItem()
+            .notificationType(List.of(io.airbyte.api.model.generated.NotificationType.CUSTOMERIO)))
         .sendOnConnectionUpdate(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
             io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
         .sendOnConnectionUpdateActionRequired(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(

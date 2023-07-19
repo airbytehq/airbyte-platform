@@ -16,8 +16,10 @@ import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.micronaut.context.annotation.Factory;
@@ -61,6 +63,22 @@ public class ApplicationBeanFactory {
                                final TrackingClient trackingClient,
                                final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
+  }
+
+  @SuppressWarnings("MissingJavadocMethod")
+  @Singleton
+  public JobNotifier jobNotifier(
+                                 final ConfigRepository configRepository,
+                                 final TrackingClient trackingClient,
+                                 final WebUrlHelper webUrlHelper,
+                                 final WorkspaceHelper workspaceHelper,
+                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new JobNotifier(
+        webUrlHelper,
+        configRepository,
+        workspaceHelper,
+        trackingClient,
+        actorDefinitionVersionHelper);
   }
 
   @Singleton

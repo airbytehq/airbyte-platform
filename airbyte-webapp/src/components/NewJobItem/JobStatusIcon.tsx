@@ -2,7 +2,7 @@ import { JobWithAttempts } from "components/JobItem/types";
 import { didJobSucceed, getJobStatus } from "components/JobItem/utils";
 import { StatusIcon } from "components/ui/StatusIcon";
 
-import { AttemptInfoRead, JobStatus } from "core/request/AirbyteClient";
+import { AttemptInfoRead, JobStatus, AttemptStatus } from "core/request/AirbyteClient";
 
 import { isPartialSuccess } from "./isPartialSuccess";
 
@@ -34,5 +34,12 @@ interface AttemptStatusIconProps {
 }
 
 export const AttemptStatusIcon: React.FC<AttemptStatusIconProps> = ({ attempt }) => {
-  return attempt.attempt.status === JobStatus.failed ? <StatusIcon status="error" /> : <StatusIcon status="success" />;
+  if (attempt.attempt.status === AttemptStatus.failed) {
+    return <StatusIcon status="error" />;
+  } else if (attempt.attempt.status === AttemptStatus.running) {
+    return <StatusIcon status="loading" />;
+  } else if (attempt.attempt.status === AttemptStatus.succeeded) {
+    return <StatusIcon status="success" />;
+  }
+  return null;
 };

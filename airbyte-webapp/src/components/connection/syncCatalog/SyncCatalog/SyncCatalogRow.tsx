@@ -13,10 +13,10 @@ import {
   NamespaceDefinitionType,
   SyncMode,
 } from "core/request/AirbyteClient";
+import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
-import { naturalComparatorBy } from "utils/objects";
 
 import {
   updatePrimaryKey,

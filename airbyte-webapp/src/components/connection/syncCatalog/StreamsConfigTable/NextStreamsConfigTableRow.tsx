@@ -75,8 +75,11 @@ export const NextStreamsConfigTableRow: React.FC<NextStreamsConfigTableRowProps>
   }, [primaryKey?.length]);
 
   const cursorFieldString = useMemo(() => {
-    if (cursorType === "sourceDefined" && defaultCursorField?.length) {
-      return pathDisplayName(defaultCursorField);
+    if (cursorType === "sourceDefined") {
+      if (defaultCursorField?.length) {
+        return pathDisplayName(defaultCursorField);
+      }
+      return <FormattedMessage id="connection.catalogTree.sourceDefined" />;
     } else if (cursorType === "required" && cursorField?.length) {
       return pathDisplayName(cursorField);
     }
@@ -148,7 +151,7 @@ export const NextStreamsConfigTableRow: React.FC<NextStreamsConfigTableRowProps>
       window.clearTimeout(highlightTimeout);
       window.clearTimeout(openTimeout);
     };
-  }, [stream, rowRef, redirectionAction, doesStreamExist]);
+  }, [rowRef, redirectionAction, doesStreamExist]);
 
   return (
     <Row

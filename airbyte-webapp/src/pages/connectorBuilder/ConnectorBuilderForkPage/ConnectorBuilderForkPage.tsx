@@ -10,12 +10,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { BuilderProject, useListBuilderProjects, useListBuilderProjectVersions } from "core/api";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
-import {
-  BuilderProject,
-  useListProjects,
-  useListVersions,
-} from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import styles from "./ConnectorBuilderForkPage.module.scss";
 import { AirbyteTitle } from "../components/AirbyteTitle";
@@ -25,7 +21,7 @@ import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 const ConnectorBuilderForkPageInner: React.FC = () => {
   const { formatMessage } = useIntl();
-  const projects = useListProjects();
+  const projects = useListBuilderProjects();
   const { createAndNavigate, isLoading: isCreating } = useCreateAndNavigate();
   const navigate = useNavigate();
 
@@ -36,7 +32,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
   }, [navigate, projects.length]);
 
   const [selectedProject, setSelectedProject] = useState<BuilderProject>(projects[0]);
-  const { data: versions, isLoading: isLoadingVersions } = useListVersions(selectedProject);
+  const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(selectedProject);
   const [selectedVersion, setSelectedVersion] = useState<"draft" | number>("draft");
 
   useEffect(() => {

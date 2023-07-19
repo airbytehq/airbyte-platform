@@ -1,6 +1,6 @@
 import dayjs, { ConfigType, ManipulateType } from "dayjs";
 
-import { ConsumptionRead, ConsumptionTimeWindow } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionRead, ConsumptionTimeWindow } from "core/api/types/CloudApi";
 
 export type UsagePerTimeChunk = Array<{
   timeChunkLabel: string;

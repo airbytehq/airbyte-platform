@@ -3,24 +3,6 @@ import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
 
 import {
-  authTypeToKeyToInferredInput,
-  BuilderFormAuthenticator,
-  BuilderFormValues,
-  BuilderIncrementalSync,
-  BuilderPaginator,
-  BuilderStream,
-  BuilderTransformation,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_BUILDER_STREAM_VALUES,
-  hasIncrementalSyncUserInput,
-  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
-  incrementalSyncInferredInputs,
-  isInterpolatedConfigKey,
-  RequestOptionOrPathInject,
-} from "./types";
-import { formatJson } from "./utils";
-import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
-import {
   ConnectorManifest,
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
@@ -44,7 +26,30 @@ import {
   DefaultPaginator,
   CursorPagination,
   DeclarativeComponentSchemaMetadata,
-} from "../../core/request/ConnectorManifest";
+} from "core/api/types/ConnectorManifest";
+import { removeEmptyProperties } from "core/utils/form";
+
+import {
+  authTypeToKeyToInferredInput,
+  BuilderFormAuthenticator,
+  BuilderFormValues,
+  BuilderIncrementalSync,
+  BuilderPaginator,
+  BuilderStream,
+  BuilderTransformation,
+  DEFAULT_BUILDER_FORM_VALUES,
+  DEFAULT_BUILDER_STREAM_VALUES,
+  extractInterpolatedConfigKey,
+  hasIncrementalSyncUserInput,
+  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  incrementalSyncInferredInputs,
+  isInterpolatedConfigKey,
+  OAUTH_ACCESS_TOKEN_INPUT,
+  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
+  RequestOptionOrPathInject,
+} from "./types";
+import { formatJson } from "./utils";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
@@ -62,14 +67,14 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     builderFormValues.inferredInputOverrides = inferredInputOverrides;
     builderFormValues.inputOrder = inputOrder;
 
-    return builderFormValues;
+    return removeEmptyProperties(builderFormValues);
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
   assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
   builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
 
-  const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [JSON.stringify(stream), index]));
+  const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [formatJson(stream, true), index]));
   builderFormValues.streams = streams.map((stream, index) =>
     manifestStreamToBuilder(
       stream,
@@ -91,7 +96,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.global.authenticator = auth;
   builderFormValues.inputOrder = inputOrder;
 
-  return builderFormValues;
+  return removeEmptyProperties(builderFormValues);
 };
 
 const RELEVANT_AUTHENTICATOR_KEYS = [
@@ -111,8 +116,8 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "scopes",
   "token_expiry_date",
   "token_expiry_date_format",
-  "inject_into",
   "refresh_token_updater",
+  "inject_into",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -171,7 +176,7 @@ const manifestStreamToBuilder = (
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
-      requestBody: requesterToRequestBody(stream.name, requester),
+      requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
     paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
@@ -191,15 +196,12 @@ const manifestStreamToBuilder = (
   };
 };
 
-function requesterToRequestBody(
-  streamName: string | undefined,
-  requester: HttpRequester
-): BuilderStream["requestOptions"]["requestBody"] {
+function requesterToRequestBody(requester: HttpRequester): BuilderStream["requestOptions"]["requestBody"] {
   if (requester.request_body_data && typeof requester.request_body_data === "object") {
     return { type: "form_list", values: Object.entries(requester.request_body_data) };
   }
   if (requester.request_body_data && typeof requester.request_body_data === "string") {
-    throw new ManifestCompatibilityError(streamName, "request_body_data is a string, but should be an object");
+    return { type: "string_freeform", value: requester.request_body_data };
   }
   if (!requester.request_body_json) {
     return { type: "json_list", values: [] };
@@ -266,7 +268,7 @@ function manifestPartitionRouterToBuilder(
     }
     const parentStreamConfig = manifestSubstreamPartitionRouter.parent_stream_configs[0];
 
-    const matchingStreamIndex = serializedStreamToIndex[JSON.stringify(parentStreamConfig.stream)];
+    const matchingStreamIndex = serializedStreamToIndex[formatJson(parentStreamConfig.stream, true)];
     if (matchingStreamIndex === undefined) {
       throw new ManifestCompatibilityError(
         streamName,
@@ -327,17 +329,9 @@ function manifestErrorHandlerToBuilder(
       backoff_strategy: backoffStrategy,
     };
   });
-
-  return handlers as DefaultErrorHandler[];
 }
 
 function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): BuilderStream["primaryKey"] {
-  if (!isEqual(manifestStream.primary_key, manifestStream.primary_key)) {
-    throw new ManifestCompatibilityError(
-      manifestStream.name,
-      "primary_key is not consistent across stream and retriever levels"
-    );
-  }
   if (manifestStream.primary_key === undefined) {
     return [];
   } else if (Array.isArray(manifestStream.primary_key)) {
@@ -426,6 +420,7 @@ function manifestIncrementalSyncToBuilder(
     start_datetime: manifestStartDateTime,
     step,
     cursor_granularity,
+    is_data_feed,
     type,
     $parameters,
     ...regularFields
@@ -467,6 +462,7 @@ function manifestIncrementalSyncToBuilder(
     end_datetime,
     start_datetime,
     slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,
+    filter_mode: is_data_feed ? "no_filter" : manifestEndDateTime ? "range" : "start",
   };
 }
 
@@ -526,19 +522,15 @@ function manifestPaginatorToBuilder(
     return undefined;
   }
 
-  if (manifestPaginator.page_token_option === undefined) {
-    throw new ManifestCompatibilityError(streamName, "paginator does not define a page_token_option");
-  }
-
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
 
-  if (manifestPaginator.page_token_option.type === "RequestPath") {
+  if (manifestPaginator.page_token_option?.type === "RequestPath") {
     pageTokenOption = { inject_into: "path" };
-  } else {
+  } else if (manifestPaginator.page_token_option?.type === "RequestOption") {
     pageTokenOption = {
       inject_into: manifestPaginator.page_token_option.inject_into,
       field_name: manifestPaginator.page_token_option.field_name,
@@ -604,6 +596,31 @@ function manifestAuthenticatorToBuilder(
       );
     }
 
+    const refreshTokenUpdater = manifestAuthenticator.refresh_token_updater;
+    if (refreshTokenUpdater) {
+      if (!isEqual(refreshTokenUpdater?.access_token_config_path, [OAUTH_ACCESS_TOKEN_INPUT])) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          `OAuthAuthenticator access token config path needs to be [${OAUTH_ACCESS_TOKEN_INPUT}]`
+        );
+      }
+      if (!isEqual(refreshTokenUpdater?.token_expiry_date_config_path, [OAUTH_TOKEN_EXPIRY_DATE_INPUT])) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          `OAuthAuthenticator token expiry date config path needs to be [${OAUTH_TOKEN_EXPIRY_DATE_INPUT}]`
+        );
+      }
+      if (
+        !isEqual(refreshTokenUpdater?.refresh_token_config_path, [
+          extractInterpolatedConfigKey(manifestAuthenticator.refresh_token),
+        ])
+      ) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "OAuthAuthenticator refresh_token_config_path needs to match the config value used for refresh_token"
+        );
+      }
+    }
     if (
       manifestAuthenticator.grant_type &&
       manifestAuthenticator.grant_type !== "refresh_token" &&
@@ -623,10 +640,14 @@ function manifestAuthenticatorToBuilder(
 
   // verify that all auth keys which require a user input have a {{config[]}} value
 
-  const userInputAuthKeys = Object.keys(authTypeToKeyToInferredInput(builderAuthenticator));
+  const inferredInputs = authTypeToKeyToInferredInput(builderAuthenticator);
+  const userInputAuthKeys = Object.keys(inferredInputs);
 
   for (const userInputAuthKey of userInputAuthKeys) {
-    if (!isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))) {
+    if (
+      !inferredInputs[userInputAuthKey].as_config_path &&
+      !isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))
+    ) {
       throw new ManifestCompatibilityError(
         undefined,
         `Authenticator's ${userInputAuthKey} value must be of the form {{ config['key'] }}`

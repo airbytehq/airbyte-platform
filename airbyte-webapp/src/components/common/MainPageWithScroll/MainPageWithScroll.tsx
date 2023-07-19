@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import React from "react";
 
-import { isCloudApp } from "utils/app";
+import { isCloudApp } from "core/utils/app";
 
 import styles from "./MainPageWithScroll.module.scss";
 

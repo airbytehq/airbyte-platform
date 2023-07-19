@@ -1,32 +1,20 @@
-import React, { useMemo } from "react";
+import React from "react";
 
 import { HeadTitle } from "components/common/HeadTitle";
+import { NotificationSettingsForm } from "components/NotificationSettingsForm";
+import { PageContainer } from "components/PageContainer";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
+import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
 
-import { WebHookForm } from "./components/WebHookForm";
-
-const NotificationPage: React.FC = () => {
+export const NotificationPage: React.FC = () => {
+  const updateNotificationSettings = useUpdateNotificationSettings();
   useTrackPage(PageTrackingCodes.SETTINGS_NOTIFICATION);
 
-  const workspace = useCurrentWorkspace();
-  const firstNotification = workspace.notifications?.[0];
-  const initialValues = useMemo(
-    () => ({
-      webhook: firstNotification?.slackConfiguration?.webhook,
-      sendOnSuccess: firstNotification?.sendOnSuccess,
-      sendOnFailure: firstNotification?.sendOnFailure,
-    }),
-    [firstNotification]
-  );
-
   return (
-    <>
+    <PageContainer>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.notifications" }]} />
-      <WebHookForm webhook={initialValues} />
-    </>
+      <NotificationSettingsForm updateNotificationSettings={updateNotificationSettings} />
+    </PageContainer>
   );
 };
-
-export default NotificationPage;

@@ -1,67 +1,49 @@
-import classNames from "classnames";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useExperiment } from "hooks/services/Experiment";
-import {
-  InviteUsersModalServiceProvider,
-  useInviteUsersModalService,
-} from "packages/cloud/services/users/InviteUsersModalService";
-import { CloudSettingsRoutes } from "packages/cloud/views/settings/routePaths";
-import { RoutePaths } from "pages/routePaths";
+import { FeatureItem, useFeature } from "core/services/features";
+import { useModalService } from "hooks/services/Modal";
 
 import styles from "./InviteUsersHint.module.scss";
-import { InviteUsersHintProps } from "./types";
+import { InviteUsersModal } from "../InviteUsersModal";
 
-const ACCESS_MANAGEMENT_PATH = `../${RoutePaths.Settings}/${CloudSettingsRoutes.AccessManagement}`;
+export interface InviteUsersHintProps {
+  connectorType: "source" | "destination";
+}
 
-const InviteUsersHintContent: React.VFC<InviteUsersHintProps> = ({ connectorType }) => {
+export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType }) => {
   const { formatMessage } = useIntl();
-  const { toggleInviteUsersModalOpen } = useInviteUsersModalService();
-  const linkToUsersPage = useExperiment("connector.inviteUsersHint.linkToUsersPage", false);
+  const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
+  const { openModal } = useModalService();
 
-  const inviteUsersCta = linkToUsersPage ? (
-    <a href={ACCESS_MANAGEMENT_PATH} target="_blank" rel="noreferrer" data-testid="inviteUsersHint-cta">
-      <FormattedMessage id="inviteUsersHint.cta" />
-    </a>
-  ) : (
-    <Button
-      className={styles.ctaButton}
-      variant="secondary"
-      data-testid="inviteUsersHint-cta"
-      onClick={() => {
-        toggleInviteUsersModalOpen();
-      }}
-    >
-      <FormattedMessage id="inviteUsersHint.cta" />
-    </Button>
-  );
+  if (!inviteUsersHintVisible) {
+    return null;
+  }
+
+  const onOpenInviteUsersModal = () =>
+    openModal({
+      title: formatMessage({ id: "modals.addUser.title" }),
+      content: () => <InviteUsersModal invitedFrom={connectorType} />,
+      size: "md",
+    });
 
   return (
-    <Text
-      size="sm"
-      className={classNames(styles.container, linkToUsersPage && styles.withLink)}
-      data-testid="inviteUsersHint"
-    >
-      <FormattedMessage
-        id="inviteUsersHint.message"
-        values={{
-          connector: formatMessage({ id: `connector.${connectorType}` }).toLowerCase(),
-        }}
-      />{" "}
-      {inviteUsersCta}
-    </Text>
+    <FlexContainer alignItems="center" justifyContent="center" className={styles.container}>
+      <Text size="sm" data-testid="inviteUsersHint">
+        <FormattedMessage
+          id="inviteUsersHint.message"
+          values={{
+            connector: formatMessage({ id: `connector.${connectorType}` }).toLowerCase(),
+          }}
+        />
+      </Text>
+      <Button variant="secondary" data-testid="inviteUsersHint-cta" onClick={onOpenInviteUsersModal}>
+        <FormattedMessage id="inviteUsersHint.cta" />
+      </Button>
+    </FlexContainer>
   );
-};
-
-export const InviteUsersHint: React.VFC<InviteUsersHintProps> = (props) => {
-  const isVisible = useExperiment("connector.inviteUsersHint.visible", false);
-
-  return isVisible ? (
-    <InviteUsersModalServiceProvider invitedFrom={props.connectorType}>
-      <InviteUsersHintContent {...props} />
-    </InviteUsersModalServiceProvider>
-  ) : null;
 };

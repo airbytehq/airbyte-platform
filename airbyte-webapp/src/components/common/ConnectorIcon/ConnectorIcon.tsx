@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import React from "react";
 
-import { getIcon } from "utils/imageUtils";
+import { getIcon } from "area/connector/utils";
 
 import styles from "./ConnectorIcon.module.scss";
 

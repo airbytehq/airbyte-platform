@@ -1,13 +1,10 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 // @Suppress can be removed when KTIJ-19369 has been fixed, or when we upgrade to gradle 8.1
 @Suppress("DSL_SCOPE_VIOLATION")
 plugins {
-  `java-library`
-  `maven-publish`
-  alias(libs.plugins.kotlin.jvm)
-  alias(libs.plugins.kotlin.kapt)
+  id("io.airbyte.gradle.jvm.lib")
+  id("io.airbyte.gradle.publish")
+  kotlin("jvm")
+  kotlin("kapt")
 }
 
 dependencies {
@@ -29,28 +26,4 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.junit)
-}
-
-tasks.withType<KotlinCompile> {
-  compilerOptions {
-    jvmTarget.set(JvmTarget.JVM_17)
-  }
-}
-
-tasks.test {
-  useJUnitPlatform()
-}
-
-publishing {
-  repositories {
-    publications {
-      create<MavenPublication>("${project.name}") {
-        groupId = "${project.group}"
-        artifactId = "${project.name}"
-        version = "${rootProject.version}"
-        repositories.add(rootProject.repositories.getByName("cloudrepo"))
-        from(components["java"])
-      }
-    }
-  }
 }

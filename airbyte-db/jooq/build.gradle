@@ -1,5 +1,6 @@
 plugins {
-    id 'java-library'
+    id "io.airbyte.gradle.jvm.lib"
+    id "io.airbyte.gradle.publish"
     alias(libs.plugins.nu.studer.jooq)
 }
 
@@ -86,14 +87,12 @@ sourceSets {
     }
 }
 
-tasks.named('generateConfigsDatabaseJooq').configure {
+tasks.named('generateConfigsDatabaseJooq') {
     allInputsDeclared = true
     outputs.cacheIf { true }
 }
 
-tasks.named('generateJobsDatabaseJooq').configure {
+tasks.named('generateJobsDatabaseJooq') {
     allInputsDeclared = true
     outputs.cacheIf { true }
 }
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

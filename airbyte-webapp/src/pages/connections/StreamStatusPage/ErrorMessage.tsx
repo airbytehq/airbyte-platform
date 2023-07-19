@@ -1,28 +1,27 @@
-import classNames from "classnames";
 import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { AirbyteStreamWithStatusAndConfiguration } from "components/connection/StreamStatus/getStreamsWithStatus";
-import { StreamStatusType, useGetStreamStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import { JobStatus, JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { FailureOrigin, FailureType, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ConnectionRoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ErrorMessage.module.scss";
-import { useStreamsListContext } from "./StreamsListContext";
 
 const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   const latestAttempt = job?.attempts?.slice(-1)[0];
   if (latestAttempt?.failureSummary?.failures?.[0]?.failureType !== "manual_cancellation") {
     return {
       errorMessage: latestAttempt?.failureSummary?.failures?.[0]?.externalMessage,
+      failureOrigin: latestAttempt?.failureSummary?.failures?.[0]?.failureOrigin,
+      failureType: latestAttempt?.failureSummary?.failures?.[0]?.failureType,
       attemptId: latestAttempt?.id,
       jobId: job?.job?.id,
     };
@@ -35,6 +34,7 @@ export const ErrorMessage: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
 
+  const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
   const { lastCompletedSyncJob } = useConnectionSyncContext();
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
@@ -45,14 +45,30 @@ export const ErrorMessage: React.FC = () => {
     buttonMessage: string;
     variant: "error" | "warning";
   } | null>(() => {
-    const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
+    const { jobId, attemptId, errorMessage, failureType, failureOrigin } =
+      getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
     // If we have an error message and no breaking schema changes, show the error message
     if (errorMessage && !hasBreakingSchemaChange) {
+      const isConfigError = failureType === FailureType.config_error;
+      const isSourceError = failureOrigin === FailureOrigin.source;
+      const isDestinationError = failureOrigin === FailureOrigin.destination;
+
+      if (isConfigError && (isSourceError || isDestinationError)) {
+        const targetRoute = isSourceError ? RoutePaths.Source : RoutePaths.Destination;
+        const targetRouteId = isSourceError ? connection.sourceId : connection.destinationId;
+        return {
+          errorMessage,
+          errorAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
+          buttonMessage: formatMessage({ id: "connection.stream.status.gotoSettings" }),
+          variant: "warning",
+        };
+      }
+
       return {
         errorMessage,
         errorAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
         buttonMessage: formatMessage({ id: "connection.stream.status.seeLogs" }),
-        variant: "error",
+        variant: "warning",
       };
     }
 
@@ -70,7 +86,16 @@ export const ErrorMessage: React.FC = () => {
     }
 
     return null;
-  }, [formatMessage, hasBreakingSchemaChange, hasSchemaChanges, lastCompletedSyncJob, navigate]);
+  }, [
+    formatMessage,
+    hasBreakingSchemaChange,
+    hasSchemaChanges,
+    lastCompletedSyncJob,
+    navigate,
+    connection.sourceId,
+    connection.destinationId,
+    workspaceId,
+  ]);
 
   if (calloutDetails) {
     return (
@@ -89,42 +114,4 @@ export const ErrorMessage: React.FC = () => {
   }
 
   return null;
-};
-
-export const StreamErrorMessage: React.FC<{ stream: AirbyteStreamWithStatusAndConfiguration }> = ({ stream }) => {
-  const navigate = useNavigate();
-  const { formatMessage } = useIntl();
-
-  const { jobs } = useStreamsListContext();
-
-  const activeJob = jobs[0]?.job;
-  const streamJob = jobs.find((job) => job.job?.id && stream.config?.jobId && job.job.id === stream.config.jobId);
-  const streamStatus = useGetStreamStatus()(stream.config);
-  const jobErrorMessage = getErrorMessageFromJob(streamJob)?.errorMessage;
-
-  const errorMessage =
-    jobErrorMessage ??
-    formatMessage(
-      { id: "connection.stream.status.genericError" },
-      { syncType: formatMessage({ id: `sources.${streamJob?.job?.configType ?? "sync"}` }).toLowerCase() }
-    );
-
-  if (activeJob?.status === JobStatus.running || streamStatus === StreamStatusType.UpToDate) {
-    return null;
-  }
-
-  const message = (
-    <Message
-      text={errorMessage}
-      actionBtnText={formatMessage({ id: "connection.stream.status.seeLogs" })}
-      type="error"
-      onAction={() =>
-        navigate(`../${ConnectionRoutePaths.JobHistory}#${stream.config?.jobId}::${stream.config?.attemptId}`)
-      }
-      className={classNames(styles.error)}
-      hideIcon
-    />
-  );
-
-  return <Box ml="2xl">{message}</Box>;
 };

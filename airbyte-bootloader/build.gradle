@@ -1,5 +1,7 @@
 plugins {
-    id 'application'
+    id "io.airbyte.gradle.jvm.app"
+    id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations.all {
@@ -16,6 +18,9 @@ dependencies {
     implementation libs.bundles.micronaut
     implementation libs.flyway.core
     implementation libs.jooq
+    implementation libs.guava
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     implementation project(':airbyte-commons')
     implementation project(':airbyte-config:init')
@@ -30,41 +35,34 @@ dependencies {
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
 
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+
     testImplementation libs.bundles.micronaut.test
     testImplementation libs.bundles.junit
     testImplementation libs.junit.jupiter.system.stubs
     testImplementation libs.platform.testcontainers.postgresql
-}
-
-application {
-    applicationName = project.name
-    mainClass = 'io.airbyte.bootloader.Application'
-    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+    testRuntimeOnly libs.junit.jupiter.engine
+    testImplementation libs.bundles.junit
+    testImplementation libs.assertj.core
+    testImplementation libs.junit.pioneer
 }
 
 Properties env = new Properties()
 rootProject.file('.env.dev').withInputStream { env.load(it) }
 
-run {
-    // default for running on local machine.
-    env.each { entry ->
-        environment entry.getKey(), entry.getValue()
+airbyte {
+    application {
+        mainClass = 'io.airbyte.bootloader.Application'
+        defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+        localEnvVars = env + [
+                "AIRBYTE_ROLE"   : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION": env.VERSION,
+                "DATABASE_URL"   : 'jdbc:postgresql://localhost:5432/airbyte'
+        ] as Map<String, String>
     }
 
-    environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
-    environment 'AIRBYTE_VERSION', env.VERSION
-    environment 'DATABASE_URL', 'jdbc:postgresql://localhost:5432/airbyte'
+    docker {
+        imageName = "bootloader"
+    }
 }
-
-// produce reproducible archives
-// (see https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives)
-tasks.withType(AbstractArchiveTask) {
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
-}
-
-tasks.named("buildDockerImage") {
-    dependsOn copyGeneratedTar
-}
-
-Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

@@ -18,6 +18,7 @@ interface CollapsibleProps {
   hideWhenEmpty?: boolean;
   "data-testid"?: string;
   initiallyOpen?: boolean;
+  onClick?: (newOpenState: boolean) => void;
 }
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
@@ -29,6 +30,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   children,
   "data-testid": dataTestId,
   initiallyOpen = false,
+  onClick,
 }) => {
   const childrenCount = React.Children.count(children);
 
@@ -44,6 +46,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
           <Disclosure.Button
             data-testid={dataTestId}
             className={classNames(styles.button, { [styles.buttonSection]: type === "section" })}
+            onClick={() => onClick?.(!open)}
           >
             <FlexContainer
               alignItems="center"

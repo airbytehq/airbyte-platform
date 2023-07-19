@@ -72,6 +72,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
 
     return () -> new ReplicationLauncherWorker(
         syncInput.getConnectionId(),
+        syncInput.getWorkspaceId(),
         finalConfig,
         sourceLauncherConfig,
         destinationLauncherConfig,
@@ -80,7 +81,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         activityContext,
         serverPort,
         temporalUtils,
-        workerConfigs);
+        workerConfigs,
+        featureFlagClient);
   }
 
   /**

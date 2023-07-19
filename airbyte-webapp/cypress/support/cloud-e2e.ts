@@ -14,7 +14,7 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import "./cloud-commands";
+import "commands/cloud";
 
 // keep the command log readable
 beforeEach(() => {

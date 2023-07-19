@@ -4,6 +4,7 @@
 
 package io.airbyte.connector_builder.handlers;
 
+import io.airbyte.connector_builder.TracingHelper;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -38,7 +39,9 @@ public class StreamHandler {
                                final StreamReadRequestBody streamReadRequestBody)
       throws AirbyteCdkInvalidInputException, ConnectorBuilderException {
     try {
-      LOGGER.debug("Handling test_read request.");
+      TracingHelper.addWorkspaceAndProjectIdsToTrace(streamReadRequestBody.getWorkspaceId(), streamReadRequestBody.getProjectId());
+      LOGGER.info("Handling test_read request for workspace '{}' with project ID = '{}'",
+          streamReadRequestBody.getWorkspaceId(), streamReadRequestBody.getProjectId());
       return this.requester.readStream(
           streamReadRequestBody.getManifest(),
           streamReadRequestBody.getConfig(),

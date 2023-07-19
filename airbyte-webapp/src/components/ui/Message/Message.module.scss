@@ -8,15 +8,17 @@ $message-icon-container-size: 32px;
 
 @mixin type($name, $color, $background) {
   &.#{$name} {
+    --message-color: #{$color};
+
     background-color: $background;
-    border-color: $color;
+    border-color: var(--message-color);
 
     .iconContainer {
-      background-color: $color;
+      background-color: var(--message-color);
     }
 
     .messageIcon {
-      color: $color;
+      color: var(--message-color);
     }
   }
 }

@@ -85,7 +85,7 @@ class SourceDefinitionApiTest extends BaseControllerTest {
 
   @Test
   void testGrantSourceDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(Mockito.any()))
+    Mockito.when(sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(Mockito.any()))
         .thenReturn(new PrivateSourceDefinitionRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definitions/grant_definition";
@@ -138,9 +138,8 @@ class SourceDefinitionApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testRevokeSourceDefinitionFromWorkspace() throws IOException {
-    Mockito.doNothing()
-        .when(sourceDefinitionsHandler).revokeSourceDefinitionFromWorkspace(Mockito.any());
+  void testRevokeSourceDefinition() throws IOException {
+    Mockito.doNothing().when(sourceDefinitionsHandler).revokeSourceDefinition(Mockito.any());
 
     final String path = "/api/v1/source_definitions/revoke_definition";
     testEndpointStatus(

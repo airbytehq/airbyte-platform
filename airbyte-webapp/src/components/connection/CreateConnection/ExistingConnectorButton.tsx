@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
@@ -20,29 +19,15 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
   connector,
   onClick,
 }: ExistingConnectorButtonProps<T>) => {
-  const { connections } = useConnectionList();
+  const { connectionsByConnectorId } = useConnectionList();
   const testId = `select-existing-${isSource(connector) ? "source" : "destination"}-${connector.name}`;
 
-  const connectionCount = useMemo(
-    () =>
-      connections.filter((connection) =>
-        isSource(connector)
-          ? connection.source.sourceId === connector.sourceId
-          : connection.destination.destinationId === connector.destinationId
-      ).length,
-    [connector, connections]
-  );
+  const connectorId = isSource(connector) ? connector.sourceId : connector.destinationId;
 
-  const onClickConnector = () => {
-    if (isSource(connector)) {
-      onClick(connector.sourceId);
-    } else {
-      onClick(connector.destinationId);
-    }
-  };
+  const connectionCount = connectionsByConnectorId.get(connectorId)?.length ?? 0;
 
   return (
-    <button onClick={onClickConnector} className={styles.existingConnectorButton} data-testid={testId}>
+    <button onClick={() => onClick(connectorId)} className={styles.existingConnectorButton} data-testid={testId}>
       <Text size="lg">{connector.name}</Text>
       {isSource(connector) ? (
         <ConnectorDefinitionBranding sourceDefinitionId={connector.sourceDefinitionId} />

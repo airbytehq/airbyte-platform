@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { CheckBox } from "components/ui/CheckBox";
@@ -18,7 +19,8 @@ import { BuilderStream, useBuilderWatch, BuilderFormValues } from "../types";
 
 interface BuilderCardProps {
   className?: string;
-  label?: React.ReactNode;
+  label?: string;
+  tooltip?: string;
   toggleConfig?: {
     path: FieldPath<BuilderFormValues>;
     defaultValue: unknown;
@@ -39,6 +41,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   copyConfig,
   docLink,
   label,
+  tooltip,
 }) => {
   const { formatMessage } = useIntl();
 
@@ -49,7 +52,12 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
           <FlexItem grow>
             <FlexContainer>
               {toggleConfig && <CardToggle path={toggleConfig.path} defaultValue={toggleConfig.defaultValue} />}
-              <span>{label}</span>
+              <ControlLabels
+                className={classNames({ [styles.toggleLabel]: toggleConfig })}
+                label={label}
+                infoTooltipContent={tooltip}
+                htmlFor={toggleConfig ? String(toggleConfig.path) : undefined}
+              />
             </FlexContainer>
           </FlexItem>
           {docLink && (
@@ -90,6 +98,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderFormValues>
 
   return (
     <CheckBox
+      id={path}
       data-testid="toggle"
       checked={value !== undefined}
       onChange={(event) => {

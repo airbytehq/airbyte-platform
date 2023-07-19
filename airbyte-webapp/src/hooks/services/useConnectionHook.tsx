@@ -1,7 +1,9 @@
-import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useInvalidateWorkspaceStateQuery, useSuspenseQuery } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
@@ -9,7 +11,6 @@ import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
@@ -31,7 +32,6 @@ import {
   WebBackendConnectionReadList,
   WebBackendConnectionUpdate,
 } from "../../core/request/AirbyteClient";
-import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
@@ -292,11 +292,37 @@ export const getConnectionListQueryKey = (connectorIds?: string[]) => {
   return connectionsKeys.lists(connectorIds);
 };
 
-export const useConnectionListQuery = (workspaceId: string, sourceId?: string[], destinationId?: string[]) => {
+export const useConnectionListQuery = (
+  workspaceId: string,
+  sourceId?: string[],
+  destinationId?: string[]
+): (() => Promise<ConnectionListTransformed>) => {
   const service = useWebConnectionService();
 
-  return () => service.list({ workspaceId, sourceId, destinationId });
+  return async () => {
+    const { connections } = await service.list({ workspaceId, sourceId, destinationId });
+    const connectionsByConnectorId = new Map<string, WebBackendConnectionListItem[]>();
+    connections.forEach((connection) => {
+      connectionsByConnectorId.set(connection.source.sourceId, [
+        ...(connectionsByConnectorId.get(connection.source.sourceId) || []),
+        connection,
+      ]);
+      connectionsByConnectorId.set(connection.destination.destinationId, [
+        ...(connectionsByConnectorId.get(connection.destination.destinationId) || []),
+        connection,
+      ]);
+    });
+    return {
+      connections,
+      connectionsByConnectorId,
+    };
+  };
 };
+
+interface ConnectionListTransformed {
+  connections: WebBackendConnectionListItem[];
+  connectionsByConnectorId: Map<string, WebBackendConnectionListItem[]>;
+}
 
 const useConnectionList = (payload: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}) => {
   const workspace = useCurrentWorkspace();
@@ -308,9 +334,10 @@ const useConnectionList = (payload: Pick<WebBackendConnectionListRequestBody, "d
   const queryKey = getConnectionListQueryKey(connectorIds);
   const queryFn = useConnectionListQuery(workspace.workspaceId, payload.sourceId, payload.destinationId);
 
-  return useSuspenseQuery(queryKey, queryFn, {
+  return useQuery(queryKey, queryFn, {
     refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
-  });
+    suspense: true,
+  }).data as ConnectionListTransformed;
 };
 
 const useGetConnectionState = (connectionId: string) => {

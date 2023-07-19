@@ -37,6 +37,7 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -113,6 +114,22 @@ public class DefaultJobPersistence implements JobPersistence {
           .map(Names::singleQuote)
           .collect(Collectors.joining(",")));
 
+  private static final String ATTEMPT_FIELDS = """
+                                                 attempts.attempt_number AS attempt_number,
+                                                 attempts.attempt_sync_config AS attempt_sync_config,
+                                                 attempts.log_path AS log_path,
+                                                 attempts.output AS attempt_output,
+                                                 attempts.status AS attempt_status,
+                                                 attempts.processing_task_queue AS processing_task_queue,
+                                                 attempts.failure_summary AS attempt_failure_summary,
+                                                 attempts.created_at AS attempt_created_at,
+                                                 attempts.updated_at AS attempt_updated_at,
+                                                 attempts.ended_at AS attempt_ended_at
+                                               """;
+
+  private static final String ATTEMPT_SELECT =
+      "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?";
+
   private final ExceptionWrappingDatabase jobDatabase;
   private final Supplier<Instant> timeSupplier;
 
@@ -143,16 +160,7 @@ public class DefaultJobPersistence implements JobPersistence {
         + "jobs.started_at AS job_started_at,\n"
         + "jobs.created_at AS job_created_at,\n"
         + "jobs.updated_at AS job_updated_at,\n"
-        + "attempts.attempt_number AS attempt_number,\n"
-        + "attempts.attempt_sync_config AS attempt_sync_config,\n"
-        + "attempts.log_path AS log_path,\n"
-        + "attempts.output AS attempt_output,\n"
-        + "attempts.status AS attempt_status,\n"
-        + "attempts.processing_task_queue AS processing_task_queue,\n"
-        + "attempts.failure_summary AS attempt_failure_summary,\n"
-        + "attempts.created_at AS attempt_created_at,\n"
-        + "attempts.updated_at AS attempt_updated_at,\n"
-        + "attempts.ended_at AS attempt_ended_at\n"
+        + ATTEMPT_FIELDS
         + "FROM " + jobsSubquery + " LEFT OUTER JOIN attempts ON jobs.id = attempts.job_id ";
   }
 
@@ -337,6 +345,16 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     return Optional.of(result.get().get("temporal_workflow_id", String.class));
+  }
+
+  @Override
+  public Optional<Attempt> getAttemptForJob(final long jobId, final int attemptNumber) throws IOException {
+    final var result = jobDatabase.query(ctx -> ctx.fetch(
+        ATTEMPT_SELECT,
+        jobId,
+        attemptNumber)).stream().findFirst();
+
+    return result.map(DefaultJobPersistence::getAttemptFromRecord);
   }
 
   @Override
@@ -568,6 +586,17 @@ public class DefaultJobPersistence implements JobPersistence {
     });
   }
 
+  @Override
+  public SyncStats getAttemptCombinedStats(final long jobId, final int attemptNumber) throws IOException {
+    return jobDatabase
+        .query(ctx -> {
+          final Long attemptId = getAttemptId(jobId, attemptNumber, ctx);
+          return ctx.select(DSL.asterisk()).from(SYNC_STATS).where(SYNC_STATS.ATTEMPT_ID.eq(attemptId))
+              .orderBy(SYNC_STATS.UPDATED_AT.desc())
+              .fetchOne(getSyncStatsRecordMapper());
+        });
+  }
+
   private static Map<JobAttemptPair, AttemptStats> hydrateSyncStats(final String jobIdsStr, final DSLContext ctx) {
     final var attemptStats = new HashMap<JobAttemptPair, AttemptStats>();
     final var syncResults = ctx.fetch(
@@ -731,6 +760,72 @@ public class DefaultJobPersistence implements JobPersistence {
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes,
+                            final String configId,
+                            final int limit,
+                            final int offset,
+                            final JobStatus status,
+                            final OffsetDateTime createdAtStart,
+                            final OffsetDateTime createdAtEnd,
+                            final OffsetDateTime updatedAtStart,
+                            final OffsetDateTime updatedAtEnd)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .and(JOBS.SCOPE.eq(configId))
+          .and(status == null ? DSL.noCondition()
+              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtEnd))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      LOGGER.info("subquery: {}", jobsSubquery);
+      LOGGER.info("full query: {}", jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME);
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+    });
+  }
+
+  @Override
+  public List<Job> listJobs(final Set<ConfigType> configTypes,
+                            final List<UUID> workspaceIds,
+                            final int limit,
+                            final int offset,
+                            final JobStatus status,
+                            final OffsetDateTime createdAtStart,
+                            final OffsetDateTime createdAtEnd,
+                            final OffsetDateTime updatedAtStart,
+                            final OffsetDateTime updatedAtEnd)
+      throws IOException {
+    return jobDatabase.query(ctx -> {
+      final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
+          .join(Tables.CONNECTION)
+          .on(Tables.CONNECTION.ID.eq(JOBS.SCOPE.cast(UUID.class)))
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
+          .and(status == null ? DSL.noCondition()
+              : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status))))
+          .and(createdAtStart == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtStart))
+          .and(createdAtEnd == null ? DSL.noCondition() : JOBS.CREATED_AT.ge(createdAtEnd))
+          .and(updatedAtStart == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtStart))
+          .and(updatedAtEnd == null ? DSL.noCondition() : JOBS.UPDATED_AT.ge(updatedAtEnd))
+          .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
+          .limit(limit)
+          .offset(offset)
+          .getSQL(ParamType.INLINED) + ") AS jobs";
+
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_CREATED_AT_DESC));
     });
   }
 
@@ -1076,18 +1171,6 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static long getEpoch(final Record record, final String fieldName) {
     return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
-  }
-
-  private static final String SECRET_MIGRATION_STATUS = "secretMigration";
-
-  @Override
-  public boolean isSecretMigrated() throws IOException {
-    return getMetadata(SECRET_MIGRATION_STATUS).count() == 1;
-  }
-
-  @Override
-  public void setSecretMigrationDone() throws IOException {
-    setMetadata(SECRET_MIGRATION_STATUS, "true");
   }
 
   @Override

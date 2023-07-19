@@ -28,6 +28,7 @@ public interface AutoDisableConnectionActivity {
 
     private UUID connectionId;
 
+    @Deprecated(forRemoval = true)
     private Instant currTimestamp;
 
   }

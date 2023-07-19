@@ -44,9 +44,9 @@ interface SourceDefinitionBrandingProps {
 }
 
 const SourceDefinitionBranding: React.FC<SourceDefinitionBrandingProps> = ({ sourceDefinitionId }) => {
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const { sourceDefinitionMap } = useSourceDefinitionList();
 
-  const sourceDefinition = sourceDefinitions.find((d) => d.sourceDefinitionId === sourceDefinitionId);
+  const sourceDefinition = sourceDefinitionMap.get(sourceDefinitionId);
 
   return sourceDefinition ? (
     <>
@@ -62,10 +62,9 @@ interface DestinationDefinitionBrandingProps {
 }
 
 const DestinationDefinitionBranding: React.FC<DestinationDefinitionBrandingProps> = ({ destinationDefinitionId }) => {
-  const { destinationDefinitions } = useDestinationDefinitionList();
-  const destinationDefinition = destinationDefinitions.find(
-    (d) => d.destinationDefinitionId === destinationDefinitionId
-  );
+  const { destinationDefinitionMap } = useDestinationDefinitionList();
+
+  const destinationDefinition = destinationDefinitionMap.get(destinationDefinitionId);
 
   return destinationDefinition ? (
     <>

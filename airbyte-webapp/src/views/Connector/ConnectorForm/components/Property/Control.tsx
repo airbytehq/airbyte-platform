@@ -9,7 +9,7 @@ import { TagInput } from "components/ui/TagInput/TagInput";
 import { TextArea } from "components/ui/TextArea";
 
 import { FormBaseItem } from "core/form/types";
-import { isDefined } from "utils/common";
+import { isDefined } from "core/utils/common";
 
 import SecretConfirmationControl from "./SecretConfirmationControl";
 
@@ -45,7 +45,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
           field.onChange(tagLabels);
         }}
         error={!!error}
-        disabled={disabled}
+        disabled={disabled || property.readOnly}
         onBlur={() => field.onBlur()}
       />
     );
@@ -63,6 +63,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         onChange={(dataItems) => field.onChange(dataItems)}
         value={field.value}
         disabled={disabled}
+        readOnly={property.readOnly}
       />
     );
   }
@@ -76,6 +77,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         onChange={field.onChange}
         value={field.value}
         disabled={disabled}
+        readOnly={property.readOnly}
         onBlur={() => field.onBlur()}
       />
     );
@@ -91,7 +93,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         }))}
         onChange={(selectedItem) => selectedItem && field.onChange(selectedItem.value)}
         value={field.value}
-        isDisabled={disabled}
+        isDisabled={disabled || property.readOnly}
         error={error}
       />
     );
@@ -106,6 +108,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         disabled={disabled}
         error={error}
         onUpload={(val) => field.onChange(val)}
+        readOnly={property.readOnly}
       />
     );
   } else if (property.isSecret) {
@@ -115,7 +118,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         name={name}
         multiline={Boolean(property.multiline)}
         showButtons={isFormInEditMode}
-        disabled={disabled}
+        disabled={disabled || property.readOnly}
         error={error}
         onChange={onChange}
       />
@@ -132,6 +135,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       type={inputType}
       value={field.value ?? ""}
       disabled={disabled}
+      readOnly={property.readOnly}
       error={error}
     />
   );

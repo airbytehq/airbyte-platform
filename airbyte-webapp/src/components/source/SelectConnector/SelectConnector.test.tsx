@@ -12,7 +12,7 @@ jest.mock("./useTrackSelectConnector", () => ({
   useTrackSelectConnector: () => mockTrackSelectConnector,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 
@@ -22,7 +22,6 @@ describe(`${SelectConnector.name}`, () => {
       <SelectConnector
         connectorType="source"
         connectorDefinitions={[mockSourceDefinition]}
-        headingKey="mockHeading"
         onSelectConnectorDefinition={jest.fn()}
       />
     );

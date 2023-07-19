@@ -27,22 +27,24 @@ export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unkn
 
   return (
     <ResizablePanels
-      hideSecondPanel={!showDocumentationPanel}
-      firstPanel={{
-        children,
-        className: styles.leftPanel,
-        minWidth: 500,
-      }}
-      secondPanel={{
-        children: documentationPanel,
-        className: styles.rightPanel,
-        minWidth: 60,
-        overlay: {
-          displayThreshold: 350,
-          header: formatMessage({ id: "connector.setupGuide" }),
-          rotation: "counter-clockwise",
+      onlyShowFirstPanel={!showDocumentationPanel}
+      panels={[
+        {
+          children,
+          className: styles.leftPanel,
+          minWidth: 500,
         },
-      }}
+        {
+          children: documentationPanel,
+          className: styles.rightPanel,
+          minWidth: 60,
+          overlay: {
+            displayThreshold: 350,
+            header: formatMessage({ id: "connector.setupGuide" }),
+            rotation: "counter-clockwise",
+          },
+        },
+      ]}
     />
   );
 };

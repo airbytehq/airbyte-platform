@@ -10,16 +10,20 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.JobsApi;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
+import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
+import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
+import io.airbyte.commons.server.handlers.JobInputHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -37,10 +41,14 @@ public class JobsApiController implements JobsApi {
 
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
+  private final JobInputHandler jobInputHandler;
 
-  public JobsApiController(final JobHistoryHandler jobHistoryHandler, final SchedulerHandler schedulerHandler) {
+  public JobsApiController(final JobHistoryHandler jobHistoryHandler,
+                           final SchedulerHandler schedulerHandler,
+                           final JobInputHandler jobInputHandler) {
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
+    this.jobInputHandler = jobInputHandler;
   }
 
   @Post("/cancel")
@@ -58,6 +66,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
+  }
+
+  @Post("/get_check_input")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public Object getCheckInput(final CheckInput checkInput) {
+    return ApiHelper.execute(() -> jobInputHandler.getCheckJobInput(checkInput));
   }
 
   @Post("/get_debug_info")
@@ -87,6 +104,15 @@ public class JobsApiController implements JobsApi {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody));
   }
 
+  @Post("/get_input")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public Object getJobInput(final SyncInput syncInput) {
+    return ApiHelper.execute(() -> jobInputHandler.getJobInput(syncInput));
+  }
+
   @Post("/get_light")
   @Secured({READER})
   @SecuredWorkspace
@@ -111,6 +137,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobReadList listJobsFor(final JobListRequestBody jobListRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsFor(jobListRequestBody));
+  }
+
+  @Post("/list_for_workspaces")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody requestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.listJobsForWorkspaces(requestBody));
   }
 
 }

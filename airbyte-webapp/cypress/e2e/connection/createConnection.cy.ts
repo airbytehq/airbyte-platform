@@ -5,8 +5,8 @@ import {
 } from "@cy/commands/connection";
 import { fillLocalJsonForm } from "@cy/commands/connector";
 import { fillPokeAPIForm } from "@cy/commands/connector";
-import { goToDestinationPage, openDestinationOverview } from "@cy/pages/destinationPage";
-import { openSourceOverview } from "@cy/pages/sourcePage";
+import { goToDestinationPage, openDestinationConnectionsPage } from "@cy/pages/destinationPage";
+import { openSourceConnectionsPage } from "@cy/pages/sourcePage";
 import { goToSourcePage } from "@cy/pages/sourcePage";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
@@ -101,7 +101,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     describe("From source page", () => {
       it("can use existing destination", () => {
         goToSourcePage();
-        openSourceOverview(source.name);
+        openSourceConnectionsPage(source.name);
         cy.get("button").contains("Create a connection").click();
         cy.get("button").contains(destination.name).click();
         newConnectionPage.isAtConnectionConfigurationStep();
@@ -114,7 +114,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
           cy.intercept("/api/v1/destinations/create").as("createDestination");
 
           goToSourcePage();
-          openSourceOverview(source.name);
+          openSourceConnectionsPage(source.name);
           cy.get("button").contains("add destination").click();
           cy.get("button").contains("add a new destination").click();
           cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
@@ -145,7 +145,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     describe("From destination page", () => {
       it("can use existing source", () => {
         goToDestinationPage();
-        openDestinationOverview(destination.name);
+        openDestinationConnectionsPage(destination.name);
         cy.get("button").contains("Create a connection").click();
         cy.get("button").contains(source.name).click();
         newConnectionPage.isAtConnectionConfigurationStep();
@@ -156,7 +156,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
           cy.intercept("/api/v1/sources/create").as("createSource");
 
           goToDestinationPage();
-          openDestinationOverview(destination.name);
+          openDestinationConnectionsPage(destination.name);
           cy.get("button").contains("add source").click();
           cy.get("button").contains("add a new source").click();
           cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);

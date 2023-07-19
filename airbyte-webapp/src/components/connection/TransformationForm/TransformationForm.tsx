@@ -13,9 +13,9 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { useOperationsCheck } from "core/api";
 import { OperationCreate, OperationRead } from "core/request/AirbyteClient";
+import { links } from "core/utils/links";
+import { equal } from "core/utils/objects";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { links } from "utils/links";
-import { equal } from "utils/objects";
 
 import styles from "./TransformationForm.module.scss";
 import { validationSchema } from "./utils";

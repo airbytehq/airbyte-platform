@@ -59,4 +59,10 @@
       text-align: right;
     }
   }
+
+  &__optional {
+    color: colors.$grey-300;
+    font-style: oblique;
+    padding-left: variables.$spacing-sm;
+  }
 }

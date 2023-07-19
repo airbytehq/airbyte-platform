@@ -4,10 +4,10 @@ import { FormattedMessage } from "react-intl";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDbtIntegration, useAvailableDbtJobs } from "core/api/cloud";
 import { WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./DbtCloudTransformationsCard/DbtCloudTransformationsCard.module.scss";
 import { DbtJobsForm } from "./DbtCloudTransformationsCard/DbtJobsForm";

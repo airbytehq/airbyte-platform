@@ -3,8 +3,8 @@ import React from "react";
 
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 
+import { getIcon } from "area/connector/utils";
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { getIcon } from "utils/imageUtils";
 
 import styles from "./ConnectorCard.module.scss";
 

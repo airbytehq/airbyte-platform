@@ -1,0 +1,10 @@
+@use "scss/variables";
+
+.pageContainer {
+  width: variables.$page-width;
+  max-width: 100%;
+
+  &--centered {
+    margin-inline: auto;
+  }
+}

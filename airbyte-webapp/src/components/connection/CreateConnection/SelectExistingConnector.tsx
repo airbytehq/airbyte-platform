@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { Card } from "components/ui/Card";
 
 import { isSource } from "core/domain/connector/source";
@@ -17,12 +15,10 @@ export const SelectExistingConnector = <T extends SourceRead | DestinationRead>(
   connectors,
   selectConnector,
 }: SelectExistingConnectorProps<T>) => {
-  const sortedConnectors = useMemo(() => [...connectors].sort((a, b) => a.name.localeCompare(b.name)), [connectors]);
-
   return (
     <Card>
       <ul className={styles.existingConnectors}>
-        {sortedConnectors.map((connector) => {
+        {connectors.map((connector) => {
           const key = isSource(connector) ? connector.sourceId : connector.destinationId;
 
           return (

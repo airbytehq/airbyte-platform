@@ -66,12 +66,12 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
             if (selectedOption.value === field.value) {
               return;
             }
+            unregister(path, { keepValue: true, keepDefaultValue: true });
             // clear all values for this oneOf and set selected option and default values
             setValue(path, {
               type: selectedOption.value,
               ...selectedOption.default,
             });
-            unregister(path, { keepValue: true });
 
             onSelect?.(selectedOption.value);
           }}

@@ -1,6 +1,6 @@
 update_settings(suppress_unused_image_warnings=["worker"])
 
-DEBUG = os.environ.get("DEBUG", "false")
+DEBUG = os.environ.get("DEBUG", "true")
 IMAGE_TAG = os.environ.get("IMAGE_TAG", "dev")
 
 watch_file('.')

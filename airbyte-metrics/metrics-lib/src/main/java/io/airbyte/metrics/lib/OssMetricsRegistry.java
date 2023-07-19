@@ -51,10 +51,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "activity_normalization_summary_check",
       "increments when we start a normalization summary check activity"),
-  ACTIVITY_PERSIST_STATE(
-      MetricEmittingApps.WORKER,
-      "activity_persist_state",
-      "increments when we start a persist state activtiy"),
   ACTIVITY_REFRESH_SCHEMA(
       MetricEmittingApps.WORKER,
       "activity_refresh_schema",
@@ -79,6 +75,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "activity_webhook_operation",
       "increments when we start a webhook operation activity"),
+  ACTIVITY_FAILURE(
+      MetricEmittingApps.WORKER,
+      "activity_failure",
+      "Generic metric for incrementing when an activity fails. Add activity name to attributes."),
 
   ATTEMPTS_CREATED(
       MetricEmittingApps.WORKER,
@@ -214,6 +214,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   REPLICATION_WORKER_CREATED(MetricEmittingApps.WORKER,
       "replication_worker_created",
       "number of replication worker created"),
+  REPLICATION_MADE_PROGRESS(MetricEmittingApps.WORKER,
+      "replication_made_progress",
+      "Count of replication runs that made progress. To be faceted by attributes."),
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
@@ -247,11 +250,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
       "number of failed attempts to commit stats from the orchestrator/workers"),
-  @Deprecated
-  // To be deleted along with PersistStateActivity
-  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
-      "state_commit_attempt_from_persist_state",
-      "number of attempts to commit states from the PersistState activity"),
   STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_attempt_successful",
       "number of successful attempts to commit stats from the orchestrator/workers"),
@@ -262,10 +260,20 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_close_successful",
       "number of final to connection exiting with the a successful final stats flush"),
+  STATE_ERROR_COLLISION_FROM_SOURCE(MetricEmittingApps.WORKER,
+      "state_error_collision_from_source",
+      "number of state collision from source"),
+  STATE_ERROR_UNKNOWN_FROM_DESTINATION(MetricEmittingApps.WORKER,
+      "state_error_unknown_from_destination",
+      "number of unknown states from destination"),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "
           + "was unable to match destination state message to source state message"),
+  // TEMPORARY, delete after the migration.
+  STATS_TRACKER_IMPLEMENTATION(MetricEmittingApps.WORKER,
+      "stats_tracker_implementation",
+      "count the number of syncs by implementation of stats tracker"),
   STREAM_STATS_WRITE_NUM_QUERIES(MetricEmittingApps.WORKER,
       "stream_stats_write_num_queries",
       "number of separate queries to update the stream stats table"),
@@ -302,7 +310,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "whenever a message is read from the source"),
   WORKFLOWS_HEALED(MetricEmittingApps.CRON,
       "workflows_healed",
-      "number of workflow the self healing cron healed");
+      "number of workflow the self healing cron healed"),
+  NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
+      "notifications_sent",
+      "number of notifications sent");
 
   private final MetricEmittingApp application;
   private final String metricName;

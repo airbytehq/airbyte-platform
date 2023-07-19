@@ -68,3 +68,11 @@ properties:
     description: The id of the workspace associated with the sync
     type: string
     format: uuid
+  sourceDefinitionVersionId:
+    description: The id of the source definition version used for the sync
+    type: string
+    format: uuid
+  destinationDefinitionVersionId:
+    description: The id of the destination definition version used for the sync
+    type: string
+    format: uuid

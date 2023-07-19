@@ -4,7 +4,7 @@ import { useExperiment } from "hooks/services/Experiment";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { cancelJob, getJobDebugInfo, listJobsFor } from "../generated/AirbyteClient";
-import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -20,8 +20,9 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
   ];
 
   const result = useQuery(queryKey, () => listJobsFor(listParams, requestOptions), {
-    // 2.5 second refresh
-    refetchInterval: 2500,
+    refetchInterval: (data) => {
+      return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+    },
     keepPreviousData,
     suspense: true,
   });

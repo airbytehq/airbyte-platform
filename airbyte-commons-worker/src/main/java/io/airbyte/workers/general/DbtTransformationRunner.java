@@ -117,6 +117,8 @@ public class DbtTransformationRunner implements AutoCloseable {
               CUSTOM_STEP,
               jobId,
               attempt,
+              null, // TODO: Provide connectionId
+              null, // TODO: Provide workspaceId
               jobRoot,
               dbtConfig.getDockerImage(),
               false,

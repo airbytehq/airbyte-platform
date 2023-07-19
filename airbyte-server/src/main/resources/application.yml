@@ -7,7 +7,7 @@ micronaut:
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}  # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     scheduler:
       type: fixed
       n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
@@ -99,6 +99,11 @@ airbyte:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
+  server:
+    connection:
+      disable:
+        max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
+        max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:100}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:

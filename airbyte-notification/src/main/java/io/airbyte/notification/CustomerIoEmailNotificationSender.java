@@ -134,7 +134,7 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
   @NotNull
   @Override
   public NotificationType notificationType() {
-    return NotificationType.customerio;
+    return NotificationType.CUSTOMERIO;
   }
 
   private String renderTemplate(final String templateFile, final String... data) {

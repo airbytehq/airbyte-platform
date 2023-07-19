@@ -7,8 +7,6 @@ package io.airbyte.notification;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-import io.airbyte.config.Notification;
-import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.StandardWorkspace;
 import java.io.IOException;
 import java.net.URI;
@@ -46,8 +44,7 @@ class CustomerioNotificationClientTest {
   // this test does _not_ check the body of the request.
   @Test
   void notifyConnectionDisabled() throws IOException, InterruptedException {
-    final CustomerioNotificationClient customerioNotificationClient = new CustomerioNotificationClient(new Notification()
-        .withNotificationType(NotificationType.CUSTOMERIO), API_KEY, URI_BASE, mHttpClient);
+    final CustomerioNotificationClient customerioNotificationClient = new CustomerioNotificationClient(API_KEY, URI_BASE, mHttpClient);
 
     final HttpRequest expectedRequest = HttpRequest.newBuilder()
         .POST(HttpRequest.BodyPublishers.ofString(""))

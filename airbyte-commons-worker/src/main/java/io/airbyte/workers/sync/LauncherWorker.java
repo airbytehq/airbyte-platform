@@ -4,25 +4,28 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_LIMIT;
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_REQUEST;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
-import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_STEP;
-import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import com.google.common.base.Stopwatch;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.featureflag.ConcurrentSocatResources;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -33,6 +36,7 @@ import io.airbyte.workers.process.KubeProcessFactory;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.micronaut.core.util.StringUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -46,6 +50,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coordinates configuring and managing the state of an async process. This is tied to the (job_id,
@@ -55,17 +61,20 @@ import lombok.extern.slf4j.Slf4j;
  * @param <OUTPUT> either {@link Void} or a json-serializable output class for the worker
  */
 @Slf4j
-public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(LauncherWorker.class);
 
   private static final Duration MAX_DELETION_TIMEOUT = Duration.ofSeconds(45);
 
   /**
    * Pod label used to unique identify the pod launched by this worker.
    */
-  private static final String PROCESS_ID_LABEL_KEY = "process_id";
+  static final String PROCESS_ID_LABEL_KEY = "process_id";
 
-  private final UUID connectionId;
-  private final UUID processId;
+  final UUID connectionId;
+  final UUID workspaceId;
+  final UUID processId;
   private final String application;
   private final String podNamePrefix;
   private final JobRunConfig jobRunConfig;
@@ -81,8 +90,10 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private final boolean isCustomConnector;
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private AsyncOrchestratorPodProcess process;
+  private final FeatureFlagClient featureFlagClient;
 
   public LauncherWorker(final UUID connectionId,
+                        final UUID workspaceId,
                         final String application,
                         final String podNamePrefix,
                         final JobRunConfig jobRunConfig,
@@ -94,9 +105,11 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
                         final Integer serverPort,
                         final TemporalUtils temporalUtils,
                         final WorkerConfigs workerConfigs,
+                        final FeatureFlagClient featureFlagClient,
                         final boolean isCustomConnector) {
 
     this.connectionId = connectionId;
+    this.workspaceId = workspaceId;
     this.application = application;
     this.podNamePrefix = podNamePrefix;
     this.jobRunConfig = jobRunConfig;
@@ -108,6 +121,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
     this.serverPort = serverPort;
     this.temporalUtils = temporalUtils;
     this.workerConfigs = workerConfigs;
+    this.featureFlagClient = featureFlagClient;
     this.isCustomConnector = isCustomConnector;
 
     // Generate a random UUID to unique identify the pod process
@@ -132,6 +146,15 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         // Merge in the env from the ContainerOrchestratorConfig
         containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
 
+        // Allow for the override of the socat pod CPU resources as part of the concurrent source read
+        // experimentation
+        final String socatResources = featureFlagClient.stringVariation(ConcurrentSocatResources.INSTANCE, new Connection(connectionId));
+        if (StringUtils.isNotEmpty(socatResources)) {
+          LOGGER.info("Overriding Socat CPU limit and request to {}.", socatResources);
+          envMap.put(SOCAT_KUBE_CPU_LIMIT, socatResources);
+          envMap.put(SOCAT_KUBE_CPU_REQUEST, socatResources);
+        }
+
         final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
         fileMap.putAll(Map.of(
             OrchestratorConstants.INIT_FILE_APPLICATION, application,
@@ -150,6 +173,8 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         final var allLabels = KubeProcessFactory.getLabels(
             jobRunConfig.getJobId(),
             Math.toIntExact(jobRunConfig.getAttemptId()),
+            connectionId,
+            workspaceId,
             generateMetadataLabels());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";
@@ -252,12 +277,14 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private Map<String, String> generateMetadataLabels() {
     final Map<String, String> metadataLabels = new HashMap<>();
     metadataLabels.put(PROCESS_ID_LABEL_KEY, processId.toString());
-    metadataLabels.put(SYNC_STEP_KEY, ORCHESTRATOR_STEP);
+    metadataLabels.putAll(generateCustomMetadataLabels());
     if (connectionId != null) {
       metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
     }
     return metadataLabels;
   }
+
+  protected abstract Map<String, String> generateCustomMetadataLabels();
 
   /**
    * It is imperative that we do not run multiple replications, normalizations, syncs, etc. at the
@@ -302,7 +329,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private List<Pod> getNonTerminalPodsWithLabels() {
     return containerOrchestratorConfig.kubernetesClient().pods()
         .inNamespace(containerOrchestratorConfig.namespace())
-        .withLabels(Map.of(PROCESS_ID_LABEL_KEY, processId.toString()))
+        .withLabels(Map.of(CONNECTION_ID_LABEL_KEY, connectionId.toString()))
         .list()
         .getItems()
         .stream()

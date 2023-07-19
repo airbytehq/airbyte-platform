@@ -4,11 +4,15 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
+
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -31,6 +35,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 
   public ReplicationLauncherWorker(final UUID connectionId,
+                                   final UUID workspaceId,
                                    final ContainerOrchestratorConfig containerOrchestratorConfig,
                                    final IntegrationLauncherConfig sourceLauncherConfig,
                                    final IntegrationLauncherConfig destinationLauncherConfig,
@@ -39,9 +44,11 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
                                    final Supplier<ActivityExecutionContext> activityContext,
                                    final Integer serverPort,
                                    final TemporalUtils temporalUtils,
-                                   final WorkerConfigs workerConfigs) {
+                                   final WorkerConfigs workerConfigs,
+                                   final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
+        workspaceId,
         REPLICATION,
         POD_NAME_PREFIX,
         jobRunConfig,
@@ -55,7 +62,13 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
         serverPort,
         temporalUtils,
         workerConfigs,
+        featureFlagClient,
         sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());
+  }
+
+  @Override
+  protected Map<String, String> generateCustomMetadataLabels() {
+    return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_REPLICATION_STEP);
   }
 
 }

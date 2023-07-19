@@ -2,8 +2,8 @@ import { useIntl } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 
+import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
-import { links } from "utils/links";
 
 import styles from "./UpcomingFeaturesPage.module.scss";
 import { useCurrentUser } from "../services/auth/AuthService";

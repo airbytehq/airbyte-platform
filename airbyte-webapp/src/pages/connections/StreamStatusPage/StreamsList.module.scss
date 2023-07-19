@@ -17,10 +17,6 @@
   padding: 0;
 }
 
-.body {
-  padding: variables.$spacing-md 0;
-}
-
 .search {
   flex-basis: 400px;
 }
@@ -32,11 +28,7 @@
   }
 
   .statusHeader {
-    width: 65px;
-  }
-
-  .statusCell {
-    text-align: center;
+    width: 0; // makes the column width dynamic, matching the widest content in this column
   }
 
   .actionsHeader {
