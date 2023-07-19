@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
@@ -292,6 +294,17 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(NonBreakingChangesPreference.DISABLE.value(), AutoPropagationStatus.disable.getLiteral());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS.value(), AutoPropagationStatus.propagate_columns.getLiteral());
     assertEquals(NonBreakingChangesPreference.PROPAGATE_FULLY.value(), AutoPropagationStatus.propagate_fully.getLiteral());
+  }
+
+  @Test
+  void testListConnectionsByActorDefinitionIdAndType() throws IOException, JsonValidationException {
+    createBaseObjects();
+    final var expectedSync = createStandardSync(source1, destination1);
+    List<StandardSync> actualSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+        destination1.getDestinationDefinitionId(),
+        ActorType.DESTINATION.value(), false);
+    assertThat(actualSyncs.size()).isEqualTo(1);
+    assertThat(actualSyncs.get(0)).isEqualTo(expectedSync);
   }
 
   private void createBaseObjects() throws IOException, JsonValidationException {
