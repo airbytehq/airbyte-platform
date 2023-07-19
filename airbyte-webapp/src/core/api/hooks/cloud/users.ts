@@ -9,7 +9,7 @@ import { webBackendListUsersByWorkspace } from "core/api/generated/CloudApi";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import {
-  createUser,
+  webBackendCreateUser,
   getUserByAuthId,
   getUserByEmail,
   updateUser,
@@ -36,7 +36,7 @@ export const useGetUserService = () => {
     [requestOptions]
   );
 
-  const create = useCallback((user: UserCreate) => createUser(user, requestOptions), [requestOptions]);
+  const create = useCallback((user: UserCreate) => webBackendCreateUser(user, requestOptions), [requestOptions]);
 
   const revokeUserSession = useCallback(() => webBackendRevokeUserSession(requestOptions), [requestOptions]);
 
