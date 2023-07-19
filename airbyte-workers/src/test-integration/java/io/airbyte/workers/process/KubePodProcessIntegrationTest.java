@@ -19,6 +19,7 @@ import com.google.common.collect.Maps;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
@@ -106,7 +107,8 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), "default", "airbyte-admin", fabricClient, heartbeatUrl, getHost());
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), "default", "airbyte-admin", fabricClient,
+        heartbeatUrl, getHost());
   }
 
   @RetryingTest(3)
@@ -352,7 +354,8 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), "default", "airbyte-admin", fabricClient, heartbeatUrl, getHost());
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), "default", "airbyte-admin", fabricClient,
+        heartbeatUrl, getHost());
 
     // start an infinite process
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();

@@ -21,6 +21,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.featureflag.ConcurrentSocatResources;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -187,6 +188,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
         ApmTraceUtils.addTagsToTrace(connectionId, jobRunConfig.getJobId(), jobRoot);
 
+        final String schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler.INSTANCE, new Connection(connectionId));
+
         // Use the configuration to create the process.
         process = new AsyncOrchestratorPodProcess(
             kubePodInfo,
@@ -200,7 +203,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
             envMap,
             workerConfigs.getWorkerKubeAnnotations(),
             serverPort,
-            containerOrchestratorConfig.serviceAccount());
+            containerOrchestratorConfig.serviceAccount(),
+            schedulerName.isBlank() ? null : schedulerName);
 
         // Define what to do on cancellation.
         cancellationCallback.set(() -> {

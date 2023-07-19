@@ -72,6 +72,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private final Map<String, String> annotations;
   private final Integer serverPort;
   private final String serviceAccount;
+  private final String schedulerName;
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
@@ -85,7 +86,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final Map<String, String> environmentVariables,
                                      final Map<String, String> annotations,
                                      final Integer serverPort,
-                                     final String serviceAccount) {
+                                     final String serviceAccount,
+                                     final String schedulerName) {
     this.kubePodInfo = kubePodInfo;
     this.documentStoreClient = documentStoreClient;
     this.kubernetesClient = kubernetesClient;
@@ -99,6 +101,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.annotations = annotations;
     this.serverPort = serverPort;
     this.serviceAccount = serviceAccount;
+    this.schedulerName = schedulerName;
   }
 
   /**
@@ -457,6 +460,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withAnnotations(annotations)
         .endMetadata()
         .withNewSpec()
+        .withSchedulerName(schedulerName)
         .withServiceAccount(serviceAccount)
         .withAutomountServiceAccountToken(true)
         .withRestartPolicy("Never")

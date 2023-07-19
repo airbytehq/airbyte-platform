@@ -10,6 +10,9 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
@@ -32,8 +35,10 @@ public class KubeProcessFactory implements ProcessFactory {
   public static final int KUBE_NAME_LEN_LIMIT = 63;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(KubeProcessFactory.class);
+  private static final UUID UUID_EMPTY = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   private final WorkerConfigsProvider workerConfigsProvider;
+  private final FeatureFlagClient featureFlagClient;
   private final String namespace;
   private final String serviceAccount;
   private final KubernetesClient fabricClient;
@@ -44,12 +49,14 @@ public class KubeProcessFactory implements ProcessFactory {
    * Sets up a process factory with the default processRunnerHost.
    */
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
+                            final FeatureFlagClient featureFlagClient,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl) {
     this(
         workerConfigsProvider,
+        featureFlagClient,
         namespace,
         serviceAccount,
         fabricClient,
@@ -69,12 +76,14 @@ public class KubeProcessFactory implements ProcessFactory {
    */
   @VisibleForTesting
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
+                            final FeatureFlagClient featureFlagClient,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl,
                             final String processRunnerHost) {
     this.workerConfigsProvider = workerConfigsProvider;
+    this.featureFlagClient = featureFlagClient;
     this.namespace = namespace;
     this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
@@ -126,12 +135,18 @@ public class KubeProcessFactory implements ProcessFactory {
           isCustomConnector ? workerConfigs.getWorkerIsolatedKubeNodeSelectors().orElse(workerConfigs.getworkerKubeNodeSelectors())
               : workerConfigs.getworkerKubeNodeSelectors();
 
+      final String schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler.INSTANCE,
+          // Pod may not have a connectionId, yet feature flag client requires a context.
+          // If we do not have one, use empty uuid.
+          new Connection(connectionId != null ? connectionId : UUID_EMPTY));
+
       return new KubePodProcess(
           processRunnerHost,
           fabricClient,
           podName,
           namespace,
           serviceAccount,
+          schedulerName.isBlank() ? null : schedulerName,
           imageName,
           workerConfigs.getJobImagePullPolicy(),
           workerConfigs.getSidecarImagePullPolicy(),

@@ -13,6 +13,7 @@ import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
@@ -72,6 +73,7 @@ class ContainerOrchestratorFactory {
   @Requires(env = Environment.KUBERNETES)
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
+                                    final FeatureFlagClient featureFlagClient,
                                     final EnvConfigs configs,
                                     @Value("${micronaut.server.port}") final int serverPort,
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
@@ -85,6 +87,7 @@ class ContainerOrchestratorFactory {
 
     return new KubeProcessFactory(
         workerConfigsProvider,
+        featureFlagClient,
         configs.getJobKubeNamespace(),
         serviceAccount,
         new DefaultKubernetesClient(),

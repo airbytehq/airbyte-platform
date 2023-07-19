@@ -405,6 +405,7 @@ public class KubePodProcess implements KubePod {
                         final String podName,
                         final String namespace,
                         final String serviceAccount,
+                        final String schedulerName,
                         final String image,
                         final String imagePullPolicy,
                         final String sidecarImagePullPolicy,
@@ -563,6 +564,7 @@ public class KubePodProcess implements KubePod {
           .withAnnotations(annotations)
           .endMetadata()
           .withNewSpec()
+          .withSchedulerName(schedulerName)
           .withServiceAccount(serviceAccount)
           .withAutomountServiceAccountToken(true);
 
