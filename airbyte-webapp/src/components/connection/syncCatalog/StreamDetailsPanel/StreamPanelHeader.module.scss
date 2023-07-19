@@ -2,14 +2,7 @@
 @use "scss/variables";
 
 .container {
-  border-radius: variables.$spacing-md;
-  margin: variables.$spacing-md variables.$spacing-lg;
-  background-color: colors.$grey-50;
-
-  & > :not(.rightActions) {
-    padding-top: variables.$spacing-lg;
-    padding-bottom: variables.$spacing-lg;
-  }
+  border-bottom: variables.$border-thin solid colors.$grey-100;
 }
 
 .leftActions,
@@ -47,4 +40,8 @@
   svg {
     color: colors.$dark-blue;
   }
+}
+
+.syncModeProperty {
+  flex-basis: variables.$width-sync-mode-dropdown;
 }

@@ -71,7 +71,13 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
         />
       )}
       {showTooltip && !isNestedField && (
-        <Tooltip control={<Switch size="xs" disabled checked={isFieldSelected} readOnly />}>
+        <Tooltip
+          control={
+            <FlexContainer alignItems="center">
+              <Switch size="xs" disabled checked={isFieldSelected} readOnly />
+            </FlexContainer>
+          }
+        >
           {renderDisabledReasonMessage()}
         </Tooltip>
       )}

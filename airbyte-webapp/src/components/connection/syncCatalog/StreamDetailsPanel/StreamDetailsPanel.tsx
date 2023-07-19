@@ -1,9 +1,10 @@
 import { Dialog } from "@headlessui/react";
 import React from "react";
 
+import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Overlay } from "components/ui/Overlay";
 
-import { AirbyteStream } from "core/request/AirbyteClient";
+import { AirbyteStream, DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 
 import styles from "./StreamDetailsPanel.module.scss";
 import { StreamPanelHeader } from "./StreamPanelHeader";
@@ -16,17 +17,26 @@ interface StreamDetailsPanelProps extends StreamFieldsTableProps {
   stream?: AirbyteStream;
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   toggleAllFieldsSelected: () => void;
+  onSelectSyncMode: (data: DropDownOptionDataItem) => void;
+  availableSyncModes: Array<{
+    value: {
+      syncMode: SyncMode;
+      destinationSyncMode: DestinationSyncMode;
+    };
+  }>;
 }
 
 export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
   stream,
   config,
   disabled,
+  availableSyncModes,
   handleFieldToggle,
   onPkSelect,
   onCursorSelect,
   onClose,
   onSelectedChange,
+  onSelectSyncMode,
   shouldDefinePk,
   shouldDefineCursor,
   isCursorDefinitionSupported,
@@ -44,6 +54,8 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
           disabled={disabled}
           onClose={onClose}
           onSelectedChange={onSelectedChange}
+          onSelectSyncMode={onSelectSyncMode}
+          availableSyncModes={availableSyncModes}
         />
         <div className={styles.tableContainer}>
           <StreamFieldsTable

@@ -237,12 +237,14 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
           onCursorSelect={onCursorSelect}
           onPkSelect={onPkSelect}
           onSelectedChange={onSelectStream}
+          onSelectSyncMode={onSelectSyncMode}
           handleFieldToggle={onToggleFieldSelected}
           shouldDefinePk={shouldDefinePk}
           shouldDefineCursor={shouldDefineCursor}
           isCursorDefinitionSupported={cursorRequired}
           isPKDefinitionSupported={pkRequired}
           stream={stream}
+          availableSyncModes={availableSyncModes}
           toggleAllFieldsSelected={onToggleAllFieldsSelected}
         />
       )}
