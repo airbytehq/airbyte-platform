@@ -1,16 +1,27 @@
-FROM python:3.9-slim as base
+ARG BASE_IMAGE=airbyte/airbyte-base-java-python-image:1.0
+FROM ${BASE_IMAGE} AS connector-builder-server
 
-RUN apt-get upgrade \
-    && pip install --upgrade pip
+# Set up CDK requirements
+ARG CDK_VERSION=0.44.4
+ENV CDK_PYTHON=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python
+ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.9/site-packages/airbyte_cdk/connector_builder/main.py
+# Set up CDK
+ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
+COPY requirements.txt requirements.txt
+RUN ${PIP} install -r requirements.txt
 
-WORKDIR /home/connector-builder-server
-COPY . ./
+ARG VERSION=0.50.8
 
-RUN pip install --no-cache-dir -r requirements.txt
+ENV APPLICATION airbyte-connector-builder-server
+ENV VERSION ${VERSION}
 
-ENTRYPOINT ["uvicorn", "connector_builder.entrypoint:app", "--host", "0.0.0.0", "--port", "80"]
+WORKDIR /app
 
-EXPOSE 5005
+# This is automatically unzipped by Docker
+ADD airbyte-app.tar /app
+
+# wait for upstream dependencies to become available before starting server
+ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
 
 LABEL io.airbyte.version=0.50.8
 LABEL io.airbyte.name=airbyte/connector-builder-server

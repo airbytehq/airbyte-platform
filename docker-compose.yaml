@@ -239,7 +239,7 @@ services:
       bootloader:
         condition: service_completed_successfully
   airbyte-connector-builder-server:
-    image: airbyte/connector-atelier-server:${VERSION}
+    image: airbyte/connector-builder-server:${VERSION}
     logging: *default-logging
     container_name: airbyte-connector-builder-server
     restart: unless-stopped

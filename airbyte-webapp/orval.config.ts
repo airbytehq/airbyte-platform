@@ -101,7 +101,7 @@ export default defineConfig({
   //   ["/speakeasy_callback_url"]
   // ),
   connectorBuilder: createApi(
-    "../airbyte-connector-atelier-server/src/main/openapi/openapi.yaml",
+    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",
     "connectorBuilderApiCall"
   ),

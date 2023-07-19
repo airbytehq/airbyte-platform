@@ -24,7 +24,7 @@ replicaCount: 1
 ##  image.pullPolicy the pull policy to use for the airbyte server image
 ##  image.tag The airbyte server image tag. Defaults to the chart's AppVersion
 image:
-  repository: airbyte/connector-atelier-server
+  repository: airbyte/connector-builder-server
   pullPolicy: IfNotPresent
 
 ##  podAnnotations [object] Add extra annotations to the server pod

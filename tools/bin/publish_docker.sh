@@ -7,7 +7,6 @@ projectDir=(
   "config/init"
   "container-orchestrator"
   "cron"
-  "connector-atelier-server"
   "connector-builder-server"
   "db/db-lib"
   "metrics/reporter"

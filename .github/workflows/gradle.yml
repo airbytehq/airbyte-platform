@@ -77,7 +77,7 @@ jobs:
             frontend:
               - 'airbyte-api/src/main/openapi/config.yaml'
               - 'oss/airbyte-api/src/main/openapi/cloud-config.yaml'
-              - 'airbyte-connector-builder-server/CDK_VERSION'
+              - 'airbyte-connector-builder-resources/CDK_VERSION'
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
 

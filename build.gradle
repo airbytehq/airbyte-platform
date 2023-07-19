@@ -72,8 +72,8 @@ allprojects {
 }
 
 subprojects { sp ->
-    // airbyte-webapp and airbyte-connector-builder-server have not been converted to the gradle plugins
-    if (sp.name != "airbyte-webapp" && sp.name != "airbyte-connector-builder-server") {
+    // airbyte-webapp has not been converted to the gradle plugins
+    if (sp.name != "airbyte-webapp") {
         return
     }
 

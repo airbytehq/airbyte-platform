@@ -13,7 +13,8 @@ info:
 externalDocs:
   description: Find out more about Connector Builder
   url: "https://docs.airbyte.com/connector-development/config-based/connector-builder-ui"
-
+servers:
+  - url: "http://localhost:80/"
 paths:
   /v1/stream/read:
     post:
@@ -57,18 +58,6 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/manifest_template:
-    get:
-      summary: Return a connector manifest template to use as the default value for the yaml editor
-      operationId: getManifestTemplate
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: string
-                description: Connector manifest template string
   /v1/manifest/resolve:
     post:
       summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
@@ -90,26 +79,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/health:
+    get:
+      tags:
+        - health
+      summary: Health Check
+      operationId: getHealthCheck
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheckRead"
+      # This route is unsecured for external monitoring.
+      security: []
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
-    LogMessage:
-      type: object
-      required:
-        - message
-        - level
-      properties:
-        message:
-          type: string
-        level:
-          type: string
-          enum:
-            - FATAL
-            - ERROR
-            - WARN
-            - INFO
-            - DEBUG
-            - TRACE
     StreamRead:
       type: object
       required:
@@ -121,7 +113,7 @@ components:
           type: array
           description: The LOG AirbyteMessages that were emitted during the read of this slice
           items:
-            $ref: "#/components/schemas/LogMessage"
+            type: object
             # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteLogMessage"
         slices:
           type: array
@@ -152,12 +144,6 @@ components:
               slice_descriptor:
                 type: object
                 description: "An object describing the current slice. This can be omitted if a stream slicer is not configured."
-                properties:
-                  startDatetime:
-                    type: string
-                    format: date-time
-                  listItem:
-                    type: string
               state:
                 type: object
                 description: The STATE AirbyteMessage emitted at the end of this slice. This can be omitted if a stream slicer is not configured.
@@ -165,9 +151,33 @@ components:
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
+        auxiliary_requests:
+          type: array
+          items:
+            type: object
+            required:
+              - description
+              - request
+              - response
+              - title
+            properties:
+              description:
+                type: string
+              request:
+                $ref: "#/components/schemas/HttpRequest"
+              response:
+                $ref: "#/components/schemas/HttpResponse"
+              title:
+                type: string
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
+        inferred_datetime_formats:
+          type: object
+          description: Fields that match the given datetime format in every encountered record. The property names are the fields, the property values are the datetime formats.
+        latest_config_update:
+          type: object
+          description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
     StreamReadRequestBody:
       type: object
       required:
@@ -176,15 +186,12 @@ components:
         - config
       properties:
         manifest:
-          type: object
-          description: The config-based connector manifest contents
-          # $ref: "#/components/schemas/ConnectorManifest"
+          $ref: "#/components/schemas/ConnectorManifest"
         stream:
           type: string
           description: Name of the stream to read
         config:
-          type: object
-          description: The config blob containing the user inputs for testing
+          $ref: "#/components/schemas/ConnectorConfig"
         state:
           type: object
           description: The AirbyteStateMessage object to use as the starting state for this read
@@ -194,6 +201,12 @@ components:
           minimum: 1
           maximum: 1000
           description: Number of records that will be returned to the client from the connector builder (max of 1000)
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
         # --- Potential addition for a later phase ---
         # numPages:
         #   type: integer
@@ -212,7 +225,7 @@ components:
           type: object
           description: The request parameters that were set on the HTTP request, if any
         body:
-          type: object
+          type: string
           description: The body of the HTTP request, if present
         headers:
           type: object
@@ -241,16 +254,19 @@ components:
     StreamsListRequestBody:
       type: object
       required:
-        - manifest
         - config
+        - manifest
       properties:
-        manifest:
-          type: object
-          description: The config-based connector manifest contents
-          # $ref: "#/components/schemas/ConnectorManifest"
         config:
-          type: object
-          description: The config blob containing the user inputs for testing
+          $ref: "#/components/schemas/ConnectorConfig"
+        manifest:
+          $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     StreamsListRead:
       type: object
       required:
@@ -283,8 +299,13 @@ components:
         - manifest
       properties:
         manifest:
-          type: object
-          description: The config-based connector manifest contents
+          $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     ResolveManifest:
       type: object
       required:
@@ -293,6 +314,23 @@ components:
         manifest:
           type: object
           description: The config-based connector manifest contents with $refs and $parameters resolved
+    HealthCheckRead:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: Boolean value indicating whether the server is available or not
+        cdk_version:
+          type: string
+          description: The version of the CDK used by the server
+    ConnectorConfig:
+      type: object
+      description: The config blob containing the user inputs for testing
+    ConnectorManifest:
+      type: object
+      description: The config-based connector manifest contents
 
     # The following exception structs were copied from airbyte-api/src/main/openapi/config.yaml
     InvalidInputProperty:
@@ -351,3 +389,5 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+security:
+  - {}

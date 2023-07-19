@@ -1461,7 +1461,7 @@ connector-builder-server:
   ##  connector-builder-server.image.pullPolicy the pull policy to use for the airbyte connector-builder-server image
   ##  connector-builder-server.image.tag The airbyte connector-builder-server image tag. Defaults to the chart's AppVersion
   image:
-    repository: airbyte/connector-atelier-server
+    repository: airbyte/connector-builder-server
     pullPolicy: IfNotPresent
 
   ## Configure extra options for the server containers' liveness and readiness probes
