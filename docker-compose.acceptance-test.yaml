@@ -11,3 +11,6 @@ services:
   airbyte-temporal:
     ports:
       - 7233:7233
+configs:
+  flags:
+    file: ./tools/bin/acceptance-test-flags.yml

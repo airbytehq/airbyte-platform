@@ -514,7 +514,7 @@ class BasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testCreateConnection() throws ApiException {
+  void testCreateConnection() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -855,7 +855,7 @@ class BasicAcceptanceTests {
     testHarness.deleteConnection(connectionId);
     testHarness.removeConnection(connectionId); // NOTE: make sure we don't try to delete it again in test teardown.
 
-    ConnectionStatus connectionStatus = testHarness.getConnection(connectionId);
+    ConnectionStatus connectionStatus = testHarness.getConnection(connectionId).getStatus();
     assertEquals(ConnectionStatus.DEPRECATED, connectionStatus);
 
     // test that repeated deletion call for same connection is successful
@@ -875,7 +875,7 @@ class BasicAcceptanceTests {
       // we should still be able to delete the connection when the temporal workflow is in this state
       testHarness.deleteConnection(anotherConnectionId);
 
-      connectionStatus = testHarness.getConnection(anotherConnectionId);
+      connectionStatus = testHarness.getConnection(anotherConnectionId).getStatus();
       assertEquals(ConnectionStatus.DEPRECATED, connectionStatus);
     }
   }

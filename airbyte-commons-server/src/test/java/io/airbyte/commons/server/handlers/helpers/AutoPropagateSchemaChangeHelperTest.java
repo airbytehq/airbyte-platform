@@ -6,19 +6,30 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.featureflag.AutoPropagateNewStreams;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class AutoPropagateSchemaChangeHelperTest {
@@ -37,6 +48,14 @@ class AutoPropagateSchemaChangeHelperTest {
                                              "schema": "old"
                                            }
                                            """;
+
+  private FeatureFlagClient featureFlagClient;
+
+  @BeforeEach
+  void beforeEach() {
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(false);
+  }
 
   @Test
   void extractStreamAndConfigPerStreamDescriptorTest() {
@@ -87,14 +106,15 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
   }
 
   @Test
-  void applyAdd() {
+  void applyAddNoFlag() {
     final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
     final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
@@ -106,13 +126,124 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(oldSchema);
+    Assertions.assertThat(result.getStreams().get(0).getConfig().getSelected()).isTrue();
     Assertions.assertThat(result.getStreams().get(1).getStream().getName()).isEqualTo(NAME2);
     Assertions.assertThat(result.getStreams().get(1).getStream().getJsonSchema()).isEqualTo(newSchema);
+  }
+
+  @Test
+  void applyAdd() {
+    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME2))
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
+
+    Assertions.assertThat(result.getStreams()).hasSize(2);
+    final var stream0 = result.getStreams().get(0);
+    final var stream1 = result.getStreams().get(1);
+    Assertions.assertThat(stream0.getStream().getName()).isEqualTo(NAME1);
+    Assertions.assertThat(stream0.getStream().getJsonSchema()).isEqualTo(oldSchema);
+    Assertions.assertThat(stream0.getConfig().getSelected()).isTrue();
+    Assertions.assertThat(stream1.getStream().getName()).isEqualTo(NAME2);
+    Assertions.assertThat(stream1.getStream().getJsonSchema()).isEqualTo(newSchema);
+    Assertions.assertThat(stream1.getConfig().getSelected()).isTrue();
+    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.FULL_REFRESH);
+    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.OVERWRITE);
+  }
+
+  @Test
+  void applyAddWithSourceDefinedCursor() {
+    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+    newAirbyteCatalog.getStreams().get(0).getStream().sourceDefinedCursor(true).sourceDefinedPrimaryKey(List.of(List.of("test")));
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME2))
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
+
+    Assertions.assertThat(result.getStreams()).hasSize(2);
+    final var stream0 = result.getStreams().get(0);
+    final var stream1 = result.getStreams().get(1);
+    Assertions.assertThat(stream0.getStream().getName()).isEqualTo(NAME1);
+    Assertions.assertThat(stream0.getStream().getJsonSchema()).isEqualTo(oldSchema);
+    Assertions.assertThat(stream0.getConfig().getSelected()).isTrue();
+    Assertions.assertThat(stream1.getStream().getName()).isEqualTo(NAME2);
+    Assertions.assertThat(stream1.getStream().getJsonSchema()).isEqualTo(newSchema);
+    Assertions.assertThat(stream1.getConfig().getSelected()).isTrue();
+    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.INCREMENTAL);
+    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.APPEND_DEDUP);
+  }
+
+  @Test
+  void applyAddWithSourceDefinedCursorNoPrimaryKey() {
+    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+    newAirbyteCatalog.getStreams().get(0).getStream().sourceDefinedCursor(true);
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME2))
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
+
+    Assertions.assertThat(result.getStreams()).hasSize(2);
+    final var stream1 = result.getStreams().get(1);
+    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.FULL_REFRESH);
+    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.OVERWRITE);
+  }
+
+  @Test
+  void applyAddWithSourceDefinedCursorNoPrimaryKeyNoFullRefresh() {
+    when(featureFlagClient.boolVariation(eq(AutoPropagateNewStreams.INSTANCE), any())).thenReturn(true);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+    newAirbyteCatalog.getStreams().get(0).getStream().sourceDefinedCursor(true).supportedSyncModes(List.of(SyncMode.INCREMENTAL));
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME2))
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
+
+    Assertions.assertThat(result.getStreams()).hasSize(2);
+    final var stream1 = result.getStreams().get(1);
+    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.INCREMENTAL);
+    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.APPEND);
   }
 
   @Test
@@ -127,7 +258,8 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
+            UUID.randomUUID());
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
@@ -145,7 +277,8 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS, featureFlagClient,
+            UUID.randomUUID());
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -164,7 +297,8 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS, featureFlagClient,
+            UUID.randomUUID());
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -175,7 +309,8 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
 
     final AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
-        .stream(new AirbyteStream().name(name).jsonSchema(schema));
+        .stream(new AirbyteStream().name(name).jsonSchema(schema).supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL)))
+        .config(new AirbyteStreamConfiguration().selected(true));
 
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1));
 

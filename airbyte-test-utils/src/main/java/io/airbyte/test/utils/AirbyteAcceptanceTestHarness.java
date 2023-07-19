@@ -65,6 +65,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionUpdate;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
@@ -458,10 +459,14 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public AirbyteCatalog discoverSourceSchema(final UUID sourceId) throws ApiException {
+    return discoverSourceSchemaWithId(sourceId).getCatalog();
+  }
+
+  public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) throws ApiException {
     return AirbyteApiClient.retryWithJitter(
         () -> {
-          final var result = apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId)).getCatalog();
-          if (result == null) {
+          final var result = apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId));
+          if (result.getCatalog() == null) {
             throw new RuntimeException("no catalog returned, retrying...");
           }
           return result;
@@ -580,8 +585,12 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void assertNormalizedDestinationContains(final List<JsonNode> sourceRecords) throws Exception {
+    assertNormalizedDestinationContains(sourceRecords, STREAM_NAME);
+  }
+
+  public void assertNormalizedDestinationContains(final List<JsonNode> sourceRecords, final String streamName) throws Exception {
     final Database destination = getDestinationDatabase();
-    final String finalDestinationTable = String.format("%spublic.%s%s", OUTPUT_NAMESPACE_PREFIX, OUTPUT_STREAM_PREFIX, STREAM_NAME.replace(".", "_"));
+    final String finalDestinationTable = String.format("%spublic.%s%s", OUTPUT_NAMESPACE_PREFIX, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
     final List<JsonNode> destinationRecords = retrieveRecordsFromDatabase(destination, finalDestinationTable);
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
@@ -638,6 +647,7 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
+  @Deprecated() // prefer to include the catalog id below
   public ConnectionRead createConnection(final String name,
                                          final UUID sourceId,
                                          final UUID destinationId,
@@ -645,8 +655,34 @@ public class AirbyteAcceptanceTestHarness {
                                          final AirbyteCatalog catalog,
                                          final ConnectionScheduleType scheduleType,
                                          final ConnectionScheduleData scheduleData)
-      throws ApiException {
+      throws Exception {
     return createConnectionWithGeography(name, sourceId, destinationId, operationIds, catalog, scheduleType, scheduleData, Geography.AUTO);
+  }
+
+  public ConnectionRead createConnection(String name,
+                                         UUID sourceId,
+                                         UUID destinationId,
+                                         List<UUID> operationIds,
+                                         AirbyteCatalog catalog,
+                                         UUID catalogId,
+                                         ConnectionScheduleType scheduleType,
+                                         ConnectionScheduleData scheduleData)
+      throws Exception {
+    return createConnectionFromRequest(
+        new ConnectionCreate()
+            .status(ConnectionStatus.ACTIVE)
+            .sourceId(sourceId)
+            .destinationId(destinationId)
+            .syncCatalog(catalog)
+            .sourceCatalogId(catalogId)
+            .scheduleType(scheduleType)
+            .scheduleData(scheduleData)
+            .operationIds(operationIds)
+            .name(name)
+            .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
+            .namespaceFormat(OUTPUT_NAMESPACE)
+            .prefix(OUTPUT_STREAM_PREFIX)
+            .geography(Geography.AUTO));
   }
 
   public ConnectionRead createConnectionWithGeography(final String name,
@@ -657,8 +693,8 @@ public class AirbyteAcceptanceTestHarness {
                                                       final ConnectionScheduleType scheduleType,
                                                       final ConnectionScheduleData scheduleData,
                                                       final Geography geography)
-      throws ApiException {
-    final ConnectionRead connection = AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().createConnection(
+      throws Exception {
+    return createConnectionFromRequest(
         new ConnectionCreate()
             .status(ConnectionStatus.ACTIVE)
             .sourceId(sourceId)
@@ -671,15 +707,19 @@ public class AirbyteAcceptanceTestHarness {
             .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
             .namespaceFormat(OUTPUT_NAMESPACE)
             .prefix(OUTPUT_STREAM_PREFIX)
-            .geography(geography)),
+            .geography(geography));
+  }
+
+  private ConnectionRead createConnectionFromRequest(final ConnectionCreate request) throws Exception {
+    final ConnectionRead connection = AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getConnectionApi().createConnection(request),
         "create connection", 10, 60, 3);
     connectionIds.add(connection.getConnectionId());
     return connection;
   }
 
-  public ConnectionStatus getConnection(final UUID connectionId) {
-    return AirbyteApiClient.retryWithJitter(
-        () -> apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getStatus(), "get connection",
+  public ConnectionRead getConnection(final UUID connectionId) throws Exception {
+    return AirbyteApiClient.retryWithJitterThrows(
+        () -> apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)), "get connection",
         10, 60, 3);
   }
 

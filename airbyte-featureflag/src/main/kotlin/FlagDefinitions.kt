@@ -37,6 +37,8 @@ object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy"
 
 object AutoPropagateSchema : Temporary<Boolean>(key = "autopropagation.enabled", default = false)
 
+object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-streams.enabled", default = false)
+
 object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
 
 object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)

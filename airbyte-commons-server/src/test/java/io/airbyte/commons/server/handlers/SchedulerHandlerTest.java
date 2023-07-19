@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -1621,7 +1622,8 @@ class SchedulerHandlerTest {
 
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
         CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
-    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
+    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM))
+        .config(new AirbyteStreamConfiguration().selected(true)));
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())

@@ -466,7 +466,7 @@ class CdcAcceptanceTests {
         .toList());
   }
 
-  private UUID createCdcConnection() throws ApiException {
+  private UUID createCdcConnection() throws Exception {
     final SourceRead sourceRead = createCdcSource();
     final UUID sourceId = sourceRead.getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
