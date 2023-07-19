@@ -78,7 +78,10 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
   const panel = (panelProps: PanelProps, key: string | number, hidden = false, fullWidth = false) => (
     <ReflexElement
       key={key}
-      className={classNames(styles.panelStyle, panelProps.className, { [styles.fullWidth]: fullWidth })}
+      className={classNames(styles.panelStyle, panelProps.className, {
+        [styles.fullWidth]: fullWidth,
+        [styles.hidden]: hidden,
+      })}
       propagateDimensions
       minSize={panelProps.minWidth}
       flex={panelProps.flex}
