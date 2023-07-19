@@ -16,6 +16,7 @@ import { Text } from "components/ui/Text";
 
 import styles from "./BuilderCard.module.scss";
 import { BuilderStream, useBuilderWatch, BuilderFormValues } from "../types";
+import { useCopyValueIncludingArrays } from "../utils";
 
 interface BuilderCardProps {
   className?: string;
@@ -84,7 +85,7 @@ interface ToggledChildrenProps {
 }
 
 const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> = ({ children, path }) => {
-  const value = useBuilderWatch(path, { exact: true });
+  const value = useBuilderWatch(path);
 
   if (value !== undefined) {
     return <>{children}</>;
@@ -94,7 +95,7 @@ const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> =
 
 const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderFormValues>; defaultValue: unknown }) => {
   const { setValue, clearErrors } = useFormContext();
-  const value = useBuilderWatch(path, { exact: true });
+  const value = useBuilderWatch(path);
 
   return (
     <CheckBox
@@ -116,7 +117,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderFormValues>
 const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
-  const { getValues, setValue } = useFormContext();
+  const copyValueIncludingArrays = useCopyValueIncludingArrays();
   const streams = useBuilderWatch("streams");
   const currentRelevantConfig = useWatch({
     name: `streams.${copyConfig?.currentStreamIndex}.${copyConfig?.path}`,
@@ -151,9 +152,10 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyToOpen(false);
           }}
           onApply={(selectedStreamIndices) => {
-            const sectionToCopy = getValues(`streams.${copyConfig.currentStreamIndex}.${copyConfig.path}`);
-            selectedStreamIndices.forEach((index) => {
-              setValue(`streams[${index}].${copyConfig.path}`, sectionToCopy, { shouldValidate: true });
+            selectedStreamIndices.forEach((selectedStreamIndex) => {
+              copyValueIncludingArrays(copyConfig.currentStreamIndex, selectedStreamIndex, copyConfig.path, {
+                shouldValidate: true,
+              });
             });
             setCopyToOpen(false);
           }}
@@ -167,11 +169,9 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
             setCopyFromOpen(false);
           }}
           onSelect={(selectedStreamIndex) => {
-            setValue(
-              `streams.${copyConfig.currentStreamIndex}.${copyConfig.path}`,
-              getValues(`streams.${selectedStreamIndex}.${copyConfig.path}`),
-              { shouldValidate: true }
-            );
+            copyValueIncludingArrays(selectedStreamIndex, copyConfig.currentStreamIndex, copyConfig.path, {
+              shouldValidate: true,
+            });
             setCopyFromOpen(false);
           }}
           currentStreamIndex={copyConfig.currentStreamIndex}
