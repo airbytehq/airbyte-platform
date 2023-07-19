@@ -77,7 +77,7 @@ class ContainerOrchestratorFactory {
                                     @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
     final var localIp = InetAddress.getLocalHost().getHostAddress();
-    final var kubeHeartbeatUrl = localIp + ":" + serverPort;
+    final String kubeHeartbeatUrl = localIp.contains(":") ? "[" + localIp + "]:" + serverPort : localIp + ":" + serverPort;
 
     // this needs to have two ports for the source and two ports for the destination (all four must be
     // exposed)

@@ -39,7 +39,7 @@ public class KubeProcessFactory implements ProcessFactory {
   private final KubernetesClient fabricClient;
   private final String kubeHeartbeatUrl;
   private final String processRunnerHost;
-
+  
   /**
    * Sets up a process factory with the default processRunnerHost.
    */
@@ -48,6 +48,7 @@ public class KubeProcessFactory implements ProcessFactory {
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl) {
+    // Need to process the IP Address before passing it down IPv6 needs brackets.
     this(
         workerConfigsProvider,
         namespace,
@@ -79,7 +80,7 @@ public class KubeProcessFactory implements ProcessFactory {
     this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
-    this.processRunnerHost = processRunnerHost;
+    this.processRunnerHost = processRunnerHost.contains(":") ? "[" + processRunnerHost + "]" : processRunnerHost; // IPv6 needs brackets.
   }
 
   @Override
