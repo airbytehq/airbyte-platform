@@ -201,6 +201,12 @@ components:
           minimum: 1
           maximum: 1000
           description: Number of records that will be returned to the client from the connector builder (max of 1000)
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
         # --- Potential addition for a later phase ---
         # numPages:
         #   type: integer
@@ -255,6 +261,12 @@ components:
           $ref: "#/components/schemas/ConnectorConfig"
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     StreamsListRead:
       type: object
       required:
@@ -288,6 +300,12 @@ components:
       properties:
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
     ResolveManifest:
       type: object
       required:
