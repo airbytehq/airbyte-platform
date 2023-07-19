@@ -7,6 +7,7 @@ plugins {
 }
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
+def airbyteApiSpecFile = "$projectDir/src/main/openapi/api.yaml"
 
 def genApiServer = tasks.register("generateApiServer", GenerateTask) {
     def serverOutputDir = "$buildDir/generated/api/server"
@@ -121,7 +122,42 @@ def genApiDocs = tasks.register("generateApiDocs", GenerateTask) {
     ]
 }
 
-compileJava.dependsOn genApiDocs, genApiClient, genApiServer
+def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTask) {
+    def serverOutputDir = "$buildDir/generated/airbyte_api/server"
+
+    inputs.file airbyteApiSpecFile
+    outputs.dir serverOutputDir
+
+    generatorName = "jaxrs-spec"
+    inputSpec = airbyteApiSpecFile
+    outputDir = serverOutputDir
+
+    apiPackage = "io.airbyte.airbyte-api.generated"
+    invokerPackage = "io.airbyte.airbyte-api.invoker.generated"
+    modelPackage = "io.airbyte.airbyte-api.model.generated"
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            dateLibrary                   : "java8",
+            generatePom                   : "false",
+            interfaceOnly                 : "true",
+            returnResponse                : "true",
+            useBeanValidation             : "true",
+            performBeanValidation         : "true",
+            additionalModelTypeAnnotations: "@io.micronaut.core.annotation.Introspected",
+            additionalEnumTypeAnnotations : "@io.micronaut.core.annotation.Introspected"
+    ]
+
+    schemaMappings = [
+            'SourceConfiguration'          : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthInputConfiguration'      : 'com.fasterxml.jackson.databind.JsonNode',
+            'OAuthCredentialsConfiguration': 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationConfiguration'     : 'com.fasterxml.jackson.databind.JsonNode',
+    ]
+}
+
+compileJava.dependsOn genApiDocs, genApiClient, genApiServer, genAirbyteApiServer
 
 dependencies {
     implementation libs.guava
@@ -138,12 +174,17 @@ dependencies {
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core
     testImplementation libs.junit.pioneer
+
+    implementation platform(libs.micronaut.bom)
+    implementation libs.bundles.micronaut
+    implementation 'io.swagger.core.v3:swagger-annotations'
+    implementation 'io.projectreactor:reactor-core'
 }
 
 sourceSets {
     main {
         java {
-            srcDirs "$buildDir/generated/api/server/src/gen/java", "$buildDir/generated/api/client/src/main/java", "$projectDir/src/main/java"
+            srcDirs "$buildDir/generated/api/server/src/gen/java", "$buildDir/generated/airbyte_api/server/src/gen/java", "$buildDir/generated/api/client/src/main/java", "$projectDir/src/main/java"
         }
         resources {
             srcDir "$projectDir/src/main/openapi/"

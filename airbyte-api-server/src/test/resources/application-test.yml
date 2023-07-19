@@ -1,0 +1,49 @@
+airbyte:
+  flyway:
+    configs:
+      initialization-timeout-ms: 60000
+      minimum-migration-version: "0.40.23.002"
+    jobs:
+      initialization-timeout-ms: 60000
+      minimum-migration-version: "0.40.23.002"
+  workspace:
+    root: /tmp
+  shutdown:
+    delay_ms: 0
+
+datasources:
+  config:
+    url: jdbc:h2:mem:default
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+  jobs:
+    url: jdbc:h2:mem:default
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+
+flyway:
+  enabled: true
+  datasources:
+    config:
+      enabled: false
+      locations:
+        - "classpath:io/airbyte/db/instance/configs/migrations"
+    jobs:
+      enabled: false
+      locations:
+        - "classpath:io/airbyte/db/instance/jobs/migrations"
+
+jooq:
+  datasources:
+    config:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+    jobs:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+
+logger:
+  levels:
+    io.micronaut.context.condition: DEBUG

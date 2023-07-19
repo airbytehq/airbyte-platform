@@ -51,5 +51,3 @@ tasks.named("dockerBuildImage") {
 processResources {
     from("${project.rootDir}/airbyte-connector-builder-resources")
 }
-
-
