@@ -1,5 +1,4 @@
 import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
-
 import { getTestId, getTestIds } from "utils/selectors";
 
 import { SYNC_MODE_STRINGS } from "./types";

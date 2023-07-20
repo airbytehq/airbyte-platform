@@ -216,6 +216,7 @@ public class AirbyteAcceptanceTestHarness {
   private List<UUID> sourceDefinitionIds;
   private DataSource sourceDataSource;
   private DataSource destinationDataSource;
+  private String postgresPassword;
 
   public PostgreSQLContainer getSourcePsql() {
     return sourcePsql;
@@ -316,8 +317,9 @@ public class AirbyteAcceptanceTestHarness {
 
     if (isGke) {
       // Prepare the database data sources.
-      sourceDataSource = GKEPostgresConfig.getSourceDataSource();
-      destinationDataSource = GKEPostgresConfig.getDestinationDataSource();
+      LOGGER.info("postgresPassword: {}", postgresPassword);
+      sourceDataSource = GKEPostgresConfig.getSourceDataSource(postgresPassword);
+      destinationDataSource = GKEPostgresConfig.getDestinationDataSource(postgresPassword);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
     } else {
@@ -424,6 +426,9 @@ public class AirbyteAcceptanceTestHarness {
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
+    postgresPassword = System.getenv("POSTGRES_PASSWORD") != null
+        ? System.getenv("POSTGRES_PASSWORD")
+        : "admin123";
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -877,8 +882,9 @@ public class AirbyteAcceptanceTestHarness {
                               final boolean isLegacy,
                               final Type connectorType) {
     try {
-      final Map<Object, Object> dbConfig = (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword, withSchema)
-          : localConfig(psql, hiddenPassword, withSchema, isLegacy);
+      final Map<Object, Object> dbConfig =
+          (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword ? null : postgresPassword, withSchema)
+              : localConfig(psql, hiddenPassword, withSchema, isLegacy);
       final var config = Jsons.jsonNode(dbConfig);
       LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
       return config;

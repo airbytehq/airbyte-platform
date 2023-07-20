@@ -2,7 +2,6 @@ import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 import { submitButtonClick } from "commands/common";
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
-
 import { getTestId } from "utils/selectors";
 
 const resetModalSaveButton = "[data-testid='resetModal-save']";

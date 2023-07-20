@@ -37,13 +37,12 @@ class GKEPostgresConfig {
   private static final String DESTINATION_HOST = "acceptance-test-postgres-destination-svc.acceptance-tests.svc.cluster.local";
   private static final Integer PORT = 5432;
   private static final String USERNAME = "postgresadmin";
-  private static final String PASSWORD = "admin123";
   private static final String DB = "postgresdb";
 
-  static Map<Object, Object> dbConfig(final Type connectorType, final boolean hiddenPassword, final boolean withSchema) {
+  static Map<Object, Object> dbConfig(final Type connectorType, final String password, final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
     dbConfig.put(JdbcUtils.HOST_KEY, connectorType == Type.SOURCE ? SOURCE_HOST : DESTINATION_HOST);
-    dbConfig.put(JdbcUtils.PASSWORD_KEY, hiddenPassword ? "**********" : PASSWORD);
+    dbConfig.put(JdbcUtils.PASSWORD_KEY, password == null ? "**********" : password);
 
     dbConfig.put(JdbcUtils.PORT_KEY, PORT);
     dbConfig.put(JdbcUtils.DATABASE_KEY, DB);
@@ -57,19 +56,19 @@ class GKEPostgresConfig {
     return dbConfig;
   }
 
-  static DataSource getDestinationDataSource() {
+  static DataSource getDestinationDataSource(final String password) {
     // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
     // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
     // overrides that to MAX_INTEGER unless we explicitly specify it.
-    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+    return DataSourceFactory.create(USERNAME, password, DatabaseDriver.POSTGRESQL.getDriverClassName(),
         "jdbc:postgresql://localhost:4000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "60"));
   }
 
-  static DataSource getSourceDataSource() {
+  static DataSource getSourceDataSource(final String password) {
     // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
     // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
     // overrides that to MAX_INTEGER unless we explicitly specify it.
-    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+    return DataSourceFactory.create(USERNAME, password, DatabaseDriver.POSTGRESQL.getDriverClassName(),
         "jdbc:postgresql://localhost:2000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "60"));
   }
 

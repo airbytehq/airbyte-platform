@@ -22,12 +22,12 @@ import {
   getDropUsersTableQuery,
 } from "commands/db/queries";
 import { RouteHandler } from "cypress/types/net-stubbing";
+import { modifySyncCatalogStream } from "utils/connection";
 
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
-import { modifySyncCatalogStream } from "utils/connection";
 
 const dropTables = () => {
   runDbQuery(
