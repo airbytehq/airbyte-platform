@@ -77,6 +77,9 @@ airbyte {
 
 // Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
 def generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
+    inputs.files(configurations.airbyteProtocol) // declaring inputs
+    def targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
+    outputs.file(targetFile) // declaring outputs
     doLast {
         def wellKnownTypesYamlPath = 'airbyte_protocol/well_known_types.yaml'
         configurations.airbyteProtocol.getFiles().each {
@@ -86,7 +89,6 @@ def generateWellKnownTypes = tasks.register("generateWellKnownTypes") {
             def wellKnownTypesYaml = zip.getInputStream(entry).text
             def parsedYaml = new YamlSlurper().parseText(wellKnownTypesYaml)
             def wellKnownTypesJson = new JsonBuilder(parsedYaml).toPrettyString()
-            def targetFile = project.file("build/airbyte/docker/WellKnownTypes.json")
             targetFile.getParentFile().mkdirs()
             targetFile.text = wellKnownTypesJson
         }
