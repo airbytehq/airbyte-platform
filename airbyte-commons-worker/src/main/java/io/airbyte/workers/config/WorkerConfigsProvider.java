@@ -213,9 +213,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   /**
    * Build the ordered lookup list for resource requirements.
    * <p>
-   * List is as follows [(variant, exact type), (variant, fallback type), (variant, default)]. For a
-   * non default variant, we append [(default, exact type), (default, fallback type), (default,
-   * default)] to that list.
+   * List is as follows [(variant, type-subType), (variant, type), (variant, default)]. For a non
+   * default variant, we append [(default, type-subType), (default, type), (default, default)] to that
+   * list. Note that type-subType will only be added if it is a known ResourceRequirementsType.
    */
   private List<Map.Entry<String, ResourceType>> getLookupList(final ResourceRequirementsType type,
                                                               final Optional<String> subType,
