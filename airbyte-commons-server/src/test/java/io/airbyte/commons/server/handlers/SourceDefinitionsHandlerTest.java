@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -54,6 +55,12 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -86,6 +93,7 @@ class SourceDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private AirbyteProtocolVersionRange protocolVersionRange;
+  private FeatureFlagClient featureFlagClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -100,9 +108,9 @@ class SourceDefinitionsHandlerTest {
     sourceDefinition = generateSourceDefinition();
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
     protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
-
+    featureFlagClient = mock(TestClient.class);
     sourceDefinitionsHandler = new SourceDefinitionsHandler(configRepository, uuidSupplier, schedulerSynchronousClient, githubStore, sourceHandler,
-        protocolVersionRange);
+        protocolVersionRange, featureFlagClient);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -184,6 +192,7 @@ class SourceDefinitionsHandlerTest {
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
     final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
 
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
     when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
@@ -223,6 +232,32 @@ class SourceDefinitionsHandlerTest {
     assertEquals(
         Lists.newArrayList(expectedSourceDefinitionRead1, expectedSourceDefinitionRead2),
         actualSourceDefinitionReadList.getSourceDefinitions());
+  }
+
+  @Test
+  @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
+  void testListSourceDefinitionsForWorkspaceWithHiddenConnectors() throws IOException, URISyntaxException {
+    final StandardSourceDefinition hiddenSourceDefinition = generateSourceDefinition();
+    final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(featureFlagClient.boolVariation(HideActorDefinitionFromList.INSTANCE,
+        new Multi(List.of(new SourceDefinition(hiddenSourceDefinition.getSourceDefinitionId()), new Workspace(workspaceId))))).thenReturn(true);
+
+    when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(hiddenSourceDefinition, sourceDefinition));
+    when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
+    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
+        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
+
+    final SourceDefinitionReadList actualSourceDefinitionReadList =
+        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final List<UUID> expectedIds = Lists.newArrayList(sourceDefinition.getSourceDefinitionId(), sourceDefinition2.getSourceDefinitionId());
+    assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualSourceDefinitionReadList.getSourceDefinitions().stream()
+        .map(SourceDefinitionRead::getSourceDefinitionId)
+        .toList()));
   }
 
   @Test

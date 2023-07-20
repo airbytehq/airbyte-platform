@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -52,6 +54,12 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.DestinationDefinition;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -87,6 +95,7 @@ class DestinationDefinitionsHandlerTest {
   private UUID workspaceId;
   private UUID organizationId;
   private AirbyteProtocolVersionRange protocolVersionRange;
+  private FeatureFlagClient featureFlagClient;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -103,14 +112,15 @@ class DestinationDefinitionsHandlerTest {
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
-
+    featureFlagClient = mock(TestClient.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
         configRepository,
         uuidSupplier,
         schedulerSynchronousClient,
         remoteOssCatalog,
         destinationHandler,
-        protocolVersionRange);
+        protocolVersionRange,
+        featureFlagClient);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -206,6 +216,7 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
   void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException {
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(Lists.newArrayList(destinationDefinition));
     when(configRepository.listGrantedDestinationDefinitions(workspaceId, false))
         .thenReturn(Lists.newArrayList(destinationDefinitionWithNormalization));
@@ -256,6 +267,34 @@ class DestinationDefinitionsHandlerTest {
     assertEquals(
         Lists.newArrayList(expectedDestinationDefinitionRead1, expectedDestinationDefinitionRead2),
         actualDestinationDefinitionReadList.getDestinationDefinitions());
+  }
+
+  @Test
+  @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
+  void testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() throws IOException {
+    final StandardDestinationDefinition hiddenDestinationDefinition = generateDestinationDefinition();
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(featureFlagClient.boolVariation(HideActorDefinitionFromList.INSTANCE,
+        new Multi(List.of(new DestinationDefinition(hiddenDestinationDefinition.getDestinationDefinitionId()), new Workspace(workspaceId)))))
+            .thenReturn(true);
+
+    when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(Lists.newArrayList(destinationDefinition, hiddenDestinationDefinition));
+    when(configRepository.listGrantedDestinationDefinitions(workspaceId, false))
+        .thenReturn(Lists.newArrayList(destinationDefinitionWithNormalization));
+    when(configRepository.getActorDefinitionVersions(
+        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
+            .thenReturn(Lists.newArrayList(destinationDefinitionVersion, destinationDefinitionVersionWithNormalization));
+
+    final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+
+    final List<UUID> expectedIds =
+        Lists.newArrayList(destinationDefinition.getDestinationDefinitionId(), destinationDefinitionWithNormalization.getDestinationDefinitionId());
+
+    assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
+        .map(DestinationDefinitionRead::getDestinationDefinitionId).toList()));
   }
 
   @Test

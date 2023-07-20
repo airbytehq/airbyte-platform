@@ -41,6 +41,11 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -69,6 +74,7 @@ public class SourceDefinitionsHandler {
   private final SynchronousSchedulerClient schedulerSynchronousClient;
   private final SourceHandler sourceHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
+  private final FeatureFlagClient featureFlagClient;
 
   @Inject
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
@@ -76,25 +82,29 @@ public class SourceDefinitionsHandler {
                                   final SynchronousSchedulerClient schedulerSynchronousClient,
                                   final AirbyteRemoteOssCatalog remoteOssCatalog,
                                   final SourceHandler sourceHandler,
-                                  final AirbyteProtocolVersionRange protocolVersionRange) {
+                                  final AirbyteProtocolVersionRange protocolVersionRange,
+                                  final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
     this.remoteOssCatalog = remoteOssCatalog;
     this.sourceHandler = sourceHandler;
     this.protocolVersionRange = protocolVersionRange;
+    this.featureFlagClient = featureFlagClient;
   }
 
   // This should be deleted when cloud is migrated to micronaut
   @Deprecated(forRemoval = true)
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
                                   final SynchronousSchedulerClient schedulerSynchronousClient,
-                                  final SourceHandler sourceHandler) {
+                                  final SourceHandler sourceHandler,
+                                  final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = UUID::randomUUID;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
     this.remoteOssCatalog = new AirbyteRemoteOssCatalog();
     this.sourceHandler = sourceHandler;
+    this.featureFlagClient = featureFlagClient;
     final Configs configs = new EnvConfigs();
     this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
   }
@@ -167,8 +177,15 @@ public class SourceDefinitionsHandler {
     final List<StandardSourceDefinition> sourceDefs = Stream.concat(
         configRepository.listPublicSourceDefinitions(false).stream(),
         configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
-    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = getVersionsForSourceDefinitions(sourceDefs);
-    return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap);
+
+    // Hide source definitions from the list via feature flag
+    final List<StandardSourceDefinition> shownSourceDefs = sourceDefs.stream().filter((sourceDefinition) -> !featureFlagClient.boolVariation(
+        HideActorDefinitionFromList.INSTANCE,
+        new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
+        .toList();
+
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = getVersionsForSourceDefinitions(shownSourceDefs);
+    return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap);
   }
 
   public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)

@@ -40,6 +40,11 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.DestinationDefinition;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -69,6 +74,7 @@ public class DestinationDefinitionsHandler {
   private final AirbyteRemoteOssCatalog remoteOssCatalog;
   private final DestinationHandler destinationHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
+  private final FeatureFlagClient featureFlagClient;
 
   @VisibleForTesting
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
@@ -76,25 +82,29 @@ public class DestinationDefinitionsHandler {
                                        final SynchronousSchedulerClient schedulerSynchronousClient,
                                        final AirbyteRemoteOssCatalog remoteOssCatalog,
                                        final DestinationHandler destinationHandler,
-                                       final AirbyteProtocolVersionRange protocolVersionRange) {
+                                       final AirbyteProtocolVersionRange protocolVersionRange,
+                                       final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
     this.remoteOssCatalog = remoteOssCatalog;
     this.destinationHandler = destinationHandler;
     this.protocolVersionRange = protocolVersionRange;
+    this.featureFlagClient = featureFlagClient;
   }
 
   // This should be deleted when cloud is migrated to micronaut
   @Deprecated(forRemoval = true)
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
                                        final SynchronousSchedulerClient schedulerSynchronousClient,
-                                       final DestinationHandler destinationHandler) {
+                                       final DestinationHandler destinationHandler,
+                                       final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = UUID::randomUUID;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
     this.remoteOssCatalog = new AirbyteRemoteOssCatalog();
     this.destinationHandler = destinationHandler;
+    this.featureFlagClient = featureFlagClient;
     final Configs configs = new EnvConfigs();
     this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
   }
@@ -162,8 +172,17 @@ public class DestinationDefinitionsHandler {
     final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
         configRepository.listPublicDestinationDefinitions(false).stream(),
         configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
-    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = getVersionsForDestinationDefinitions(destinationDefs);
-    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersionMap);
+
+    // Hide destination definitions from the list via feature flag
+    final List<StandardDestinationDefinition> shownDestinationDefs = destinationDefs
+        .stream().filter((destinationDefinition) -> !featureFlagClient.boolVariation(
+            HideActorDefinitionFromList.INSTANCE,
+            new Multi(List.of(new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()),
+                new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
+        .toList();
+
+    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = getVersionsForDestinationDefinitions(shownDestinationDefs);
+    return toDestinationDefinitionReadList(shownDestinationDefs, destinationDefVersionMap);
   }
 
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)

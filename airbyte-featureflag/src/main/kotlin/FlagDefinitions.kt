@@ -93,6 +93,8 @@ object CompleteFailureBackoffBase : Temporary<Int>(key = "complete-failures.back
 
 object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-scheduler", default = "")
 
+object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
