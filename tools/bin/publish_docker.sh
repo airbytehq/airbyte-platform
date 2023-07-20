@@ -46,10 +46,6 @@ for workdir in "${projectDir[@]}"
     esac
 
     case $workdir in
-      "connector-builder-server")
-        dockerDir="build/docker"
-        ;;
-
       "webapp")
         dockerDir="build/docker"
         ;;
