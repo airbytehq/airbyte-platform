@@ -228,7 +228,7 @@ class DefaultSynchronousSchedulerClientTest {
       when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
+          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
       assertEquals(mockOutput, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }
@@ -251,7 +251,7 @@ class DefaultSynchronousSchedulerClientTest {
       when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
+          schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
       assertEquals(mockOutput, response.getOutput());
     }
 
@@ -270,7 +270,7 @@ class DefaultSynchronousSchedulerClientTest {
       when(temporalClient.submitCheckConnection(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(CHECK_TASK_QUEUE), eq(jobCheckConnectionConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
-          schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false);
+          schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
       assertEquals(mockOutput, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(DESTINATION_CONNECTION.getDestinationDefinitionId()));
     }
@@ -283,7 +283,7 @@ class DefaultSynchronousSchedulerClientTest {
           temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class)))
               .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
-          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false);
+          schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
       assertEquals(expectedCatalogId, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }

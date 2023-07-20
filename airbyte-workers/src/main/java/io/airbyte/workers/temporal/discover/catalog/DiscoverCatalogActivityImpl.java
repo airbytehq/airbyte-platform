@@ -20,12 +20,14 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
@@ -122,7 +124,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
             workerEnvironment,
             logConfigs,
             jobRunConfig,
-            getWorkerFactory(launcherConfig),
+            getWorkerFactory(launcherConfig, config.getResourceRequirements()),
             () -> input,
             new CancellationHandler.TemporalCancellationHandler(context),
             airbyteApiClient,
@@ -134,13 +136,18 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardDiscoverCatalogInput, ConnectorJobOutput>, Exception> getWorkerFactory(
-                                                                                                                final IntegrationLauncherConfig launcherConfig) {
+                                                                                                                final IntegrationLauncherConfig launcherConfig,
+                                                                                                                final ResourceRequirements actorDefinitionResourceRequirements) {
     return () -> {
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DISCOVER);
+      final ResourceRequirements defaultWorkerConfigResourceRequirements = workerConfigs.getResourceRequirements();
+
       final IntegrationLauncher integrationLauncher =
           new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getConnectionId(),
               launcherConfig.getWorkspaceId(), launcherConfig.getDockerImage(),
-              processFactory, workerConfigs.getResourceRequirements(), launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
+              processFactory,
+              ResourceRequirementsUtils.getResourceRequirements(actorDefinitionResourceRequirements, defaultWorkerConfigResourceRequirements),
+              launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
               featureFlags, Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),

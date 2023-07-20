@@ -570,10 +570,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
             checkInputs.getSourceCheckConnectionInput().getActorId());
       } else if (checkWithChildWorkflowVersion >= CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION
           && featureFlags.get(CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey())) {
+        // Retrieve source definition;
+
         sourceCheckResponse = runCheckInChildWorkflow(jobRunConfig, sourceLauncherConfig, new StandardCheckConnectionInput()
             .withActorType(ActorType.SOURCE)
             .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
-            .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration()));
+            .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration())
+            .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements()));
       } else {
         final CheckConnectionInput checkSourceInput = new CheckConnectionInput(
             jobRunConfig,

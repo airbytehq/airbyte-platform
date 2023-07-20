@@ -27,3 +27,7 @@ properties:
   isCustomConnector:
     description: determine if the running image is a custom connector.
     type: boolean
+  resourceRequirements:
+    description: optional resource requirements to run check workers; will use bigger one of this value or the default check worker resource requirements.
+    type: object
+    "$ref": ResourceRequirements.yaml

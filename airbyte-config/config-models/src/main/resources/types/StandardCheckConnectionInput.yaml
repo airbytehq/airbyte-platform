@@ -18,3 +18,7 @@ properties:
     description: Integration specific blob. Must be a valid JSON string.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  resourceRequirements:
+    description: optional resource requirements to run check workers; will prefer to use this value than the default check worker resource requirements.
+    type: object
+    "$ref": ResourceRequirements.yaml

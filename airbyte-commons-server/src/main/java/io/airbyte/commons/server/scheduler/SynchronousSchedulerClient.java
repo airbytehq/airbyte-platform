@@ -6,6 +6,7 @@ package io.airbyte.commons.server.scheduler;
 
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -20,17 +21,20 @@ public interface SynchronousSchedulerClient {
 
   SynchronousResponse<StandardCheckConnectionOutput> createSourceCheckConnectionJob(SourceConnection source,
                                                                                     ActorDefinitionVersion sourceVersion,
-                                                                                    boolean isCustomConnector)
+                                                                                    boolean isCustomConnector,
+                                                                                    ResourceRequirements actorDefinitionResourceRequirements)
       throws IOException;
 
   SynchronousResponse<StandardCheckConnectionOutput> createDestinationCheckConnectionJob(DestinationConnection destination,
                                                                                          ActorDefinitionVersion destinationVersion,
-                                                                                         boolean isCustomConnector)
+                                                                                         boolean isCustomConnector,
+                                                                                         ResourceRequirements actorDefinitionResourceRequirements)
       throws IOException;
 
   SynchronousResponse<UUID> createDiscoverSchemaJob(SourceConnection source,
                                                     ActorDefinitionVersion sourceVersion,
-                                                    boolean isCustomConnector)
+                                                    boolean isCustomConnector,
+                                                    ResourceRequirements actorDefinitionResourceRequirements)
       throws IOException;
 
   SynchronousResponse<ConnectorSpecification> createGetSpecJob(String dockerImage, boolean isCustomConnector) throws IOException;

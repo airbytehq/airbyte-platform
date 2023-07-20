@@ -401,7 +401,8 @@ public class TemporalClient {
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorType(config.getActorType())
         .withActorId(config.getActorId())
-        .withConnectionConfiguration(config.getConnectionConfiguration());
+        .withConnectionConfiguration(config.getConnectionConfiguration())
+        .withResourceRequirements(config.getResourceRequirements());
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
@@ -430,7 +431,8 @@ public class TemporalClient {
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
-        .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash());
+        .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
+        .withResourceRequirements(config.getResourceRequirements());
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));

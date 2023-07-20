@@ -21,6 +21,7 @@ import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
@@ -29,6 +30,7 @@ import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
@@ -115,7 +117,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         new TemporalAttemptExecution<>(
             workspaceRoot, workerEnvironment, logConfigs,
             args.getJobRunConfig(),
-            getWorkerFactory(args.getLauncherConfig()),
+            getWorkerFactory(args.getLauncherConfig(), rawInput.getResourceRequirements()),
             () -> input,
             new CancellationHandler.TemporalCancellationHandler(context),
             airbyteApiClient,
@@ -140,9 +142,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
   @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardCheckConnectionInput, ConnectorJobOutput>, Exception> getWorkerFactory(
-                                                                                                                final IntegrationLauncherConfig launcherConfig) {
+                                                                                                                final IntegrationLauncherConfig launcherConfig,
+                                                                                                                final ResourceRequirements actorDefinitionResourceRequirements) {
     return () -> {
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.CHECK);
+      final ResourceRequirements defaultWorkerConfigResourceRequirements = workerConfigs.getResourceRequirements();
+
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),
           Math.toIntExact(launcherConfig.getAttemptId()),
@@ -150,7 +155,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           launcherConfig.getWorkspaceId(),
           launcherConfig.getDockerImage(),
           processFactory,
-          workerConfigs.getResourceRequirements(),
+          ResourceRequirementsUtils.getResourceRequirements(actorDefinitionResourceRequirements, defaultWorkerConfigResourceRequirements),
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
           featureFlags, Collections.emptyMap());

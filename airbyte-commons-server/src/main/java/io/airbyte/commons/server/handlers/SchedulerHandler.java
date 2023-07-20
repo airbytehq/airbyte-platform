@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
+import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -65,6 +66,8 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -84,6 +87,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -197,8 +201,14 @@ public class SchedulerHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final boolean isCustomConnector = sourceDef.getCustom();
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
 
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
+    return reportConnectionStatus(
+        synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceCreate(final SourceCoreConfig sourceConfig)
@@ -219,7 +229,14 @@ public class SchedulerHandler {
         .withWorkspaceId(sourceConfig.getWorkspaceId());
 
     final boolean isCustomConnector = sourceDef.getCustom();
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        ResourceRequirementsUtils.getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+
+    return reportConnectionStatus(
+        synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceIdForUpdate(final SourceUpdate sourceUpdate)
@@ -248,8 +265,13 @@ public class SchedulerHandler {
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
     final boolean isCustomConnector = destinationDef.getCustom();
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        getResourceRequirementsForJobType(destinationDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationCreate(final DestinationCoreConfig destinationConfig)
@@ -269,8 +291,14 @@ public class SchedulerHandler {
         .withDestinationDefinitionId(destinationConfig.getDestinationDefinitionId())
         .withConfiguration(partialConfig)
         .withWorkspaceId(destinationConfig.getWorkspaceId());
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        getResourceRequirementsForJobType(destDef.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationIdForUpdate(final DestinationUpdate destinationUpdate)
@@ -300,6 +328,11 @@ public class SchedulerHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final boolean isCustomConnector = sourceDef.getCustom();
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA).orElse(null);
 
     final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
         Charsets.UTF_8)).toString();
@@ -312,7 +345,8 @@ public class SchedulerHandler {
           synchronousSchedulerClient.createDiscoverSchemaJob(
               source,
               sourceVersion,
-              isCustomConnector);
+              isCustomConnector,
+              resourceRequirements);
       final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
@@ -398,6 +432,11 @@ public class SchedulerHandler {
         sourceVersion.getSpec());
 
     final boolean isCustomConnector = sourceDef.getCustom();
+    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
+    // have higher priority and overwrite
+    // the default settings in WorkerConfig.
+    final ResourceRequirements resourceRequirements =
+        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA).orElse(null);
     // todo (cgardens) - narrow the struct passed to the client. we are not setting fields that are
     // technically declared as required.
     final SourceConnection source = new SourceConnection()
@@ -407,7 +446,8 @@ public class SchedulerHandler {
     final SynchronousResponse<UUID> response = synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
-        isCustomConnector);
+        isCustomConnector,
+        resourceRequirements);
     return retrieveDiscoveredSchema(response, sourceVersion);
   }
 

@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
+import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;
@@ -30,7 +31,9 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResetSourceConfiguration;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -280,15 +283,23 @@ public class JobInputHandler {
               destinationConfiguration,
               Collections.emptyMap());
 
+      final ResourceRequirements sourceCheckResourceRequirements =
+          getResourceRequirementsForJobType(sourceDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+
       final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.SOURCE)
           .withActorId(source.getSourceId())
-          .withConnectionConfiguration(sourceConfiguration);
+          .withConnectionConfiguration(sourceConfiguration)
+          .withResourceRequirements(sourceCheckResourceRequirements);
+
+      final ResourceRequirements destinationCheckResourceRequirements =
+          getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
 
       final StandardCheckConnectionInput destinationCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.DESTINATION)
           .withActorId(destination.getDestinationId())
-          .withConnectionConfiguration(destinationConfiguration);
+          .withConnectionConfiguration(destinationConfiguration)
+          .withResourceRequirements(destinationCheckResourceRequirements);
       return new SyncJobCheckConnectionInputs(
           sourceLauncherConfig,
           destinationLauncherConfig,
