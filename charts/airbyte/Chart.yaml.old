@@ -1,10 +1,6 @@
-### This Chart.yaml file is used for local testing purposes
-### If you want to test the chart before creating PR, rename this file into Chart.yaml and test the deployment
-
 apiVersion: v2
 name: airbyte
 description: Helm chart to deploy airbyte
-
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -19,13 +15,13 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.45.2
+version: 0.47.1
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "0.40.0-alpha"
+appVersion: 0.50.8
 
 dependencies:
   - name: common
@@ -35,37 +31,37 @@ dependencies:
     version: 1.x.x
   - condition: airbyte-bootloader.enabled
     name: airbyte-bootloader
-    repository: "file://../airbyte-bootloader"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: temporal.enabled
     name: temporal
-    repository: "file://../airbyte-temporal"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: webapp.enabled
     name: webapp
-    repository: "file://../airbyte-webapp"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: server.enabled
     name: server
-    repository: "file://../airbyte-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: worker.enabled
     name: worker
-    repository: "file://../airbyte-worker"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: pod-sweeper.enabled
     name: pod-sweeper
-    repository: "file://../airbyte-pod-sweeper"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: metrics.enabled
     name: metrics
-    repository: "file://../airbyte-metrics"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
   - condition: cron.enabled
     name: cron
-    repository: "file://../airbyte-cron"
-    version: "*"
-  - condition: connector-builder-server.enabled
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
+  - condition: false
     name: connector-builder-server
-    repository: "file://../airbyte-connector-builder-server"
-    version: "*"
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1

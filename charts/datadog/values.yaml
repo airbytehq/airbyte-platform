@@ -1,0 +1,122 @@
+# Defaults: https://github.com/DataDog/helm-charts/blob/main/charts/datadog/values.yaml
+# AB Docs : https://github.com/airbytehq/airbyte-cloud/wiki/Datadog
+datadog:
+  apiKey: 
+  site: datadoghq.com
+  apm:
+    portEnabled: false
+  networkMonitoring:
+    enabled: false
+  env:
+    - name: DD_ENV
+      value: davin-local
+    - name: DD_CHECKS_TAG_CARDINALITY
+      value: orchestrator
+    - name: DD_CLOUD_PROVIDER_METADATA
+      value: gcp
+    - name: DD_CHECK_RUNNERS
+      # '0' means 'no fixed value' or 'DD decides how many runners to start'
+      value: "0"
+    - name: DD_HISTOGRAM_PERCENTILES
+      # By default only 0.95 percentile is calculated, but we need more
+      value: '["0.85","0.95","0.99"]'
+    - name: DD_KUBERNETES_POD_LABELS_AS_TAGS
+      value: '{"job_id":"ab_job_id", "workspace_id":"ab_workspace_id", "sync_step":"ab_sync_step", "connection_id":"ab_connection_id"}'
+    - name: DD_KUBELET_TLS_VERIFY
+      value: 'false'
+    - name: DD_SYSTEM_PROBE_ENABLED
+      value: 'false'
+  dogstatsd:
+    # Sets the hostPort to the same value of the container port
+    # (DogStatsD listens 8125/udp by default)
+    useHostPort: true
+
+clusterAgent:
+  env:
+    - name: DD_ENV
+      value: prod
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 384Mi
+  createPodDisruptionBudget: true
+  confd:
+    postgres.yaml: |
+      cluster_check: true
+      init_config:
+      instances:
+        - dbm: true
+          host: 172.24.100.4
+          port: 5432
+          username: datadog
+          password: ""
+          gcp:
+            project_id: "prod-ab-cloud-proj"
+            instance_id: "prod-pgsql-instance"
+agents:
+  containers:
+    agent:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 1536Mi
+      ports:
+        - containerPort: 4317
+          hostPort: 4317
+          name: otlpgrpcport
+          protocol: TCP
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  # We disable collectors, which metrics are not used.
+  collectors:
+    certificatesigningrequests: false
+    configmaps: false
+    cronjobs: false
+    daemonsets: true
+    deployments: true
+    endpoints: true
+    horizontalpodautoscalers: true
+    ingresses: false
+    jobs: false
+    limitranges: false
+    mutatingwebhookconfigurations: false
+    namespaces: true
+    networkpolicies: false
+    nodes: true
+    persistentvolumeclaims: false
+    persistentvolumes: false
+    poddisruptionbudgets: true
+    pods: true
+    replicasets: true
+    replicationcontrollers: true
+    resourcequotas: true
+    secrets: false
+    services: true
+    statefulsets: true
+    storageclasses: false
+    validatingwebhookconfigurations: false
+    verticalpodautoscalers: false
+    volumeattachments: false
+  extraArgs:
+    # This may reduce scraping time (when a HTTP client supports compression)
+    - --enable-gzip-encoding
+  autosharding:
+    # An experimental feature, which splits the set of metrics onto several
+    # groups, and each group is served by one instance of KSM (horizontal
+    # scaling of KSM service).  NOTE: 'auto' is misleading here, number of
+    # shards is defined by the following 'replicas' value.
+    enabled: true
+  replicas: 3
