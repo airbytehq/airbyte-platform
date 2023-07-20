@@ -6,15 +6,21 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.oauth.BaseOAuth2Flow;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
-import java.util.Arrays;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -22,26 +28,7 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class ShopifyOAuthFlow extends BaseOAuth2Flow {
 
-  private static final List<String> SCOPES = Arrays.asList(
-      "read_themes",
-      "read_orders",
-      "read_all_orders",
-      "read_assigned_fulfillment_orders",
-      "read_content",
-      "read_customers",
-      "read_discounts",
-      "read_draft_orders",
-      "read_fulfillments",
-      "read_locales",
-      "read_locations",
-      "read_price_rules",
-      "read_products",
-      "read_product_listings",
-      "read_shopify_payments_payouts");
-
-  public String getScopes() {
-    return String.join(",", SCOPES);
-  }
+  private static final String shop = "shop";
 
   public ShopifyOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
@@ -53,24 +40,69 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
                                     final String redirectUrl,
                                     final JsonNode inputOAuthConfiguration)
       throws IOException {
-
-    // getting shop value from user's config
-    final String shop = getConfigValueUnsafe(inputOAuthConfiguration, "shop");
-    // building consent url
+    /*
+     * Build the URL that leads to the Shopify Marketplace showing the `Airbyte` application to install.
+     */
     final URIBuilder builder = new URIBuilder()
         .setScheme("https")
-        .setHost(shop + ".myshopify.com")
-        .setPath("admin/oauth/authorize")
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("state", getState())
-        .addParameter("grant_options[]", "value")
-        .addParameter("scope", getScopes());
+        .setHost("partners.shopify.com")
+        .setPath("2027738/apps/5841799/overview");
 
     try {
       return builder.build().toString();
     } catch (URISyntaxException e) {
       throw new IOException("Failed to format Consent URL for OAuth flow", e);
+    }
+  }
+
+  @Override
+  public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
+                                                 final UUID sourceDefinitionId,
+                                                 final Map<String, Object> queryParams,
+                                                 final String redirectUrl,
+                                                 final JsonNode inputOAuthConfiguration,
+                                                 final OAuthConfigSpecification oauthConfigSpecification,
+                                                 final JsonNode oauthParamConfig)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
+    return formatOAuthOutput(
+        oauthParamConfig,
+        completeOAuthFlow(
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
+            extractCodeParameter(queryParams),
+            extractShopParameter(queryParams),
+            redirectUrl,
+            inputOAuthConfiguration,
+            oauthParamConfig),
+        oauthConfigSpecification);
+  }
+
+  protected Map<String, Object> completeOAuthFlow(final String clientId,
+                                                  final String clientSecret,
+                                                  final String authCode,
+                                                  final String shopName,
+                                                  final String redirectUrl,
+                                                  final JsonNode inputOAuthConfiguration,
+                                                  final JsonNode oauthParamConfig)
+      throws IOException {
+    final var accessTokenUrl = formatAccessTokenUrl(shopName);
+    final HttpRequest request = HttpRequest.newBuilder()
+        .POST(HttpRequest.BodyPublishers
+            .ofString(tokenReqContentType.getConverter().apply(
+                getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))))
+        .uri(URI.create(accessTokenUrl))
+        .header("Content-Type", tokenReqContentType.getContentType())
+        .header("Accept", "application/json")
+        .build();
+    try {
+      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl, shopName);
+    } catch (final InterruptedException e) {
+      throw new IOException("Failed to complete OAuth flow", e);
     }
   }
 
@@ -88,14 +120,24 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
 
   @Override
   protected String getAccessTokenUrl(final JsonNode inputOAuthConfiguration) {
-    // getting shop value from user's config
-    final String shop = getConfigValueUnsafe(inputOAuthConfiguration, "shop");
-    // building the access_token_url
-    return "https://" + shop + ".myshopify.com/admin/oauth/access_token";
+    return StringUtils.EMPTY;
   }
 
-  @Override
-  protected Map<String, Object> extractOAuthOutput(final JsonNode data, final String accessTokenUrl) throws IOException {
+  private String formatAccessTokenUrl(final String shopName) {
+    // building the access_token_url with the shop name
+    return "https://" + shopName + "/admin/oauth/access_token";
+  }
+
+  private String extractShopParameter(final Map<String, Object> queryParams) throws IOException {
+    if (queryParams.containsKey(shop)) {
+      return (String) queryParams.get(shop);
+    } else {
+      throw new IOException("Undefined 'shop' from consent redirected url.");
+    }
+  }
+
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
+  protected Map<String, Object> extractOAuthOutput(final JsonNode data, final String accessTokenUrl, final String shopName) throws IOException {
     final Map<String, Object> result = new HashMap<>();
     // getting out access_token
     if (data.has("access_token")) {
@@ -103,7 +145,7 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
     } else {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
     }
-
+    result.put("shop", shopName);
     return result;
   }
 
