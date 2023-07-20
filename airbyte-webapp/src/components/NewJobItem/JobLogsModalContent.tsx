@@ -8,11 +8,11 @@ import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useGetDebugInfoJob } from "core/api";
-import { FailureType } from "core/request/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import { DownloadLogsButton } from "./DownloadLogsButton";
 import styles from "./JobLogsModalContent.module.scss";
+import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
 import { AttemptStatusIcon } from "./JobStatusIcon";
 import { LogSearchInput } from "./LogSearchInput";
 import { useCleanLogs } from "./useCleanLogs";
@@ -133,20 +133,6 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
     return () => document.body.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const showFailureReason = useMemo(
-    () =>
-      debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary?.failures[0] &&
-      !debugInfo.attempts[selectedAttemptIndex].attempt.failureSummary?.failures.some(
-        ({ failureType }) => failureType === FailureType.manual_cancellation
-      ),
-    [debugInfo, selectedAttemptIndex]
-  );
-
-  const failureReason = useMemo(
-    () => debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary?.failures[0]?.internalMessage,
-    [debugInfo, selectedAttemptIndex]
-  );
-
   const selectedAttempt = useMemo(
     () => debugInfo.attempts[selectedAttemptIndex],
     [debugInfo.attempts, selectedAttemptIndex]
@@ -222,18 +208,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
           </Text>
         </FlexContainer>
       </Box>
-
-      {showFailureReason && (
-        <Box pl="xl" pr="md">
-          <Text color="grey" size="sm">
-            {failureReason ? (
-              <FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: failureReason }} />
-            ) : (
-              <FormattedMessage id="errorView.unknown" />
-            )}
-          </Text>
-        </Box>
-      )}
+      <JobLogsModalFailureMessage failureSummary={debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary} />
       <VirtualLogs
         selectedAttempt={selectedAttemptIndex}
         logLines={logLines}

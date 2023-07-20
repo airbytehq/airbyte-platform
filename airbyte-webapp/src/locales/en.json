@@ -353,6 +353,7 @@
   "jobs.failure.internalMessageLabel": "Internal message:",
   "jobs.failure.originLabel": "Failure origin:",
   "jobs.failure.typeLabel": "Failure type:",
+  "jobs.failure.seeMore": "See more",
   "sources.additionLogs": " Logs",
   "sources.emptyLogs": "Waiting for logs...",
   "sources.hour": "{hour}h ",
