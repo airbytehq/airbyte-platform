@@ -6,13 +6,21 @@ package io.airbyte.workers.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.RetryStateRead;
+import io.airbyte.featureflag.CompleteFailureBackoffBase;
+import io.airbyte.featureflag.CompleteFailureBackoffMaxInterval;
+import io.airbyte.featureflag.CompleteFailureBackoffMinInterval;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.SuccessiveCompleteFailureLimit;
+import io.airbyte.featureflag.SuccessivePartialFailureLimit;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.TotalCompleteFailureLimit;
+import io.airbyte.featureflag.TotalPartialFailureLimit;
 import io.micronaut.http.HttpStatus;
 import java.time.Duration;
 import java.util.UUID;
@@ -39,7 +47,6 @@ class RetryStateClientTest {
 
   @Test
   void hydratesBackoffAndLimitsFromConstructor() {
-
     final var client = new RetryStateClient(
         mJobRetryStatesApi,
         mFeatureFlagClient,
@@ -62,6 +69,44 @@ class RetryStateClientTest {
     assertEquals(Duration.ofSeconds(Fixtures.minInterval), backoffPolicy.getMinInterval());
     assertEquals(Duration.ofSeconds(Fixtures.maxInterval), backoffPolicy.getMaxInterval());
     assertEquals(Fixtures.base, backoffPolicy.getBase());
+  }
+
+  @Test
+  void featureFlagsOverrideValues() {
+    final var client = new RetryStateClient(
+        mJobRetryStatesApi,
+        mFeatureFlagClient,
+        Fixtures.successiveCompleteFailureLimit,
+        Fixtures.totalCompleteFailureLimit,
+        Fixtures.successivePartialFailureLimit,
+        Fixtures.totalPartialFailureLimit,
+        Fixtures.minInterval,
+        Fixtures.maxInterval,
+        Fixtures.base);
+
+    when(mFeatureFlagClient.intVariation(eq(SuccessiveCompleteFailureLimit.INSTANCE), Mockito.any())).thenReturn(91);
+    when(mFeatureFlagClient.intVariation(eq(TotalCompleteFailureLimit.INSTANCE), Mockito.any())).thenReturn(92);
+    when(mFeatureFlagClient.intVariation(eq(SuccessivePartialFailureLimit.INSTANCE), Mockito.any())).thenReturn(93);
+    when(mFeatureFlagClient.intVariation(eq(TotalPartialFailureLimit.INSTANCE), Mockito.any())).thenReturn(94);
+    when(mFeatureFlagClient.intVariation(eq(CompleteFailureBackoffMinInterval.INSTANCE), Mockito.any())).thenReturn(0);
+    when(mFeatureFlagClient.intVariation(eq(CompleteFailureBackoffMaxInterval.INSTANCE), Mockito.any())).thenReturn(96);
+    when(mFeatureFlagClient.intVariation(eq(CompleteFailureBackoffBase.INSTANCE), Mockito.any())).thenReturn(97);
+
+    final var manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId);
+
+    assertEquals(91, manager.getSuccessiveCompleteFailureLimit());
+    assertEquals(92, manager.getTotalCompleteFailureLimit());
+    assertEquals(93, manager.getSuccessivePartialFailureLimit());
+    assertEquals(94, manager.getTotalPartialFailureLimit());
+
+    final var backoffPolicy = manager.getCompleteFailureBackoffPolicy();
+    assertEquals(Duration.ofSeconds(0), backoffPolicy.getMinInterval());
+    assertEquals(Duration.ofSeconds(96), backoffPolicy.getMaxInterval());
+    assertEquals(97, backoffPolicy.getBase());
+    assertEquals(Duration.ZERO, backoffPolicy.getBackoff(0));
+    assertEquals(Duration.ZERO, backoffPolicy.getBackoff(1));
+    assertEquals(Duration.ZERO, backoffPolicy.getBackoff(2));
+    assertEquals(Duration.ZERO, backoffPolicy.getBackoff(3));
   }
 
   @Test

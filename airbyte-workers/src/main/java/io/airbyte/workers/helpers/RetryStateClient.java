@@ -163,14 +163,15 @@ public class RetryStateClient {
         .successiveCompleteFailures(manager.getSuccessiveCompleteFailures())
         .successivePartialFailures(manager.getSuccessivePartialFailures());
 
-    final var resp = AirbyteApiClient.retryWithJitter(
+    final var result = AirbyteApiClient.retryWithJitter(
         () -> {
           jobRetryStatesApi.createOrUpdateWithHttpInfo(req);
-          return null;
+          return true;
         }, // retryWithJitter doesn't like `void` "consumer" fn's
         String.format("Persisting retry state for job: %d connection: %s", req.getJobId(), req.getConnectionId()));
 
-    return resp != null;
+    // retryWithJitter returns null if unsuccessful
+    return result != null;
   }
 
 }
