@@ -18,7 +18,7 @@ DEFAULT_NAMESPACE_RETENTION=${DEFAULT_NAMESPACE_RETENTION:-1}
 # See https://github.com/temporalio/temporal/blob/release/v1.13.x/docker/entrypoint.sh
 init_entry_point() {
   echo "Start init"
-  export BIND_ON_IP="${BIND_ON_IP:-$(hostname -i)}"
+  export BIND_ON_IP="`ip addr show dev eth0 | sed -e's/^.*inet6 \([^ ]*\)\/.*$/\1/;t;d' | head -n 1`"
 
   if [[ "${BIND_ON_IP}" =~ ":" ]]; then
       # ipv6
@@ -47,11 +47,11 @@ update_postgres_schema() {
   CONTAINER_ALREADY_STARTED="CONTAINER_ALREADY_STARTED_PLACEHOLDER"
   if [ ! -e $CONTAINER_ALREADY_STARTED ]; then
       touch $CONTAINER_ALREADY_STARTED
-      temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" create --db "${DBNAME}"
+      temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" --db "${DBNAME}" create
       temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" --db "${DBNAME}" setup-schema -v 0.0
 
 
-      temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" create --db "${VISIBILITY_DBNAME}"
+      temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" --db "${VISIBILITY_DBNAME}" create
       temporal-sql-tool --plugin postgres --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" --db "${VISIBILITY_DBNAME}" setup-schema -v 0.0
   fi
   echo "Starting to update the temporal DB"
