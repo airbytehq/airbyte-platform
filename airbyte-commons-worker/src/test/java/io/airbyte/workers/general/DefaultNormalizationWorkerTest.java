@@ -27,6 +27,7 @@ import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ class DefaultNormalizationWorkerTest {
 
   private static final String JOB_ID = "0";
   private static final int JOB_ATTEMPT = 0;
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final Path WORKSPACE_ROOT = Path.of("workspaces/10");
   private static final AirbyteTraceMessage ERROR_TRACE_MESSAGE =
       AirbyteMessageUtils.createErrorTraceMessage("a normalization error occurred", 123.0);
@@ -56,13 +59,17 @@ class DefaultNormalizationWorkerTest {
     normalizationInput = new NormalizationInput()
         .withDestinationConfiguration(syncPair.getValue().getDestinationConfiguration())
         .withCatalog(syncPair.getValue().getCatalog())
-        .withResourceRequirements(workerConfigs.getResourceRequirements());
+        .withResourceRequirements(workerConfigs.getResourceRequirements())
+        .withConnectionId(CONNECTION_ID)
+        .withWorkspaceId(WORKSPACE_ID);
 
     normalizationRunner = mock(NormalizationRunner.class);
 
     when(normalizationRunner.normalize(
         JOB_ID,
         JOB_ATTEMPT,
+        CONNECTION_ID,
+        WORKSPACE_ID,
         normalizationRoot,
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements()))
@@ -80,6 +87,8 @@ class DefaultNormalizationWorkerTest {
     verify(normalizationRunner).normalize(
         JOB_ID,
         JOB_ATTEMPT,
+        CONNECTION_ID,
+        WORKSPACE_ID,
         normalizationRoot,
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements());
@@ -94,6 +103,8 @@ class DefaultNormalizationWorkerTest {
   void testFailure() throws Exception {
     when(normalizationRunner.normalize(JOB_ID,
         JOB_ATTEMPT,
+        CONNECTION_ID,
+        WORKSPACE_ID,
         normalizationRoot,
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements()))
@@ -114,6 +125,8 @@ class DefaultNormalizationWorkerTest {
   void testFailureWithTraceMessage() throws Exception {
     when(normalizationRunner.normalize(JOB_ID,
         JOB_ATTEMPT,
+        CONNECTION_ID,
+        WORKSPACE_ID,
         normalizationRoot,
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements()))
@@ -130,6 +143,8 @@ class DefaultNormalizationWorkerTest {
     verify(normalizationRunner).normalize(
         JOB_ID,
         JOB_ATTEMPT,
+        CONNECTION_ID,
+        WORKSPACE_ID,
         normalizationRoot,
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements());

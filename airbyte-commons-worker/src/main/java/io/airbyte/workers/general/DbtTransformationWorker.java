@@ -64,6 +64,8 @@ public class DbtTransformationWorker implements Worker<OperatorDbtInput, Void> {
       if (!dbtTransformationRunner.run(
           jobId,
           attempt,
+          operatorDbtInput.getConnectionId(),
+          operatorDbtInput.getWorkspaceId(),
           transformRoot,
           operatorDbtInput.getDestinationConfiguration(),
           resourceRequirements,

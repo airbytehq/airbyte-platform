@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.tools.ant.types.Commandline;
 import org.slf4j.Logger;
@@ -71,12 +72,14 @@ public class DbtTransformationRunner implements AutoCloseable {
    */
   public boolean run(final String jobId,
                      final int attempt,
+                     final UUID connectionId,
+                     final UUID workspaceId,
                      final Path jobRoot,
                      final JsonNode config,
                      final ResourceRequirements resourceRequirements,
                      final OperatorDbt dbtConfig)
       throws Exception {
-    if (!normalizationRunner.configureDbt(jobId, attempt, jobRoot, config, resourceRequirements, dbtConfig)) {
+    if (!normalizationRunner.configureDbt(jobId, attempt, connectionId, workspaceId, jobRoot, config, resourceRequirements, dbtConfig)) {
       return false;
     }
     return transform(jobId, attempt, jobRoot, config, resourceRequirements, dbtConfig);

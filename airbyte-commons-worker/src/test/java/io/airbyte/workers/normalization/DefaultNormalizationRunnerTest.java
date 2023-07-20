@@ -125,7 +125,7 @@ class DefaultNormalizationRunnerTest {
 
     when(process.exitValue()).thenReturn(0);
 
-    assertTrue(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertTrue(runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
   }
 
   @Test
@@ -136,7 +136,7 @@ class DefaultNormalizationRunnerTest {
 
     when(process.exitValue()).thenReturn(0);
 
-    assertTrue(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertTrue(runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
 
     final Path logPath = logJobRoot.resolve(LogClientSingleton.LOG_FILENAME);
     final Stream<String> logs = IOs.readFile(logPath).lines();
@@ -155,7 +155,7 @@ class DefaultNormalizationRunnerTest {
 
     final NormalizationRunner runner =
         new DefaultNormalizationRunner(processFactory, getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), INTEGRATION_TYPE);
-    runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements());
+    runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements());
     runner.close();
 
     verify(process).waitFor();
@@ -167,7 +167,8 @@ class DefaultNormalizationRunnerTest {
 
     final NormalizationRunner runner =
         new DefaultNormalizationRunner(processFactory, getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), INTEGRATION_TYPE);
-    assertFalse(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertFalse(
+        runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
 
     verify(process).waitFor();
 
@@ -188,7 +189,8 @@ class DefaultNormalizationRunnerTest {
 
     final NormalizationRunner runner = new DefaultNormalizationRunner(processFactory, getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG),
         INTEGRATION_TYPE);
-    assertFalse(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertFalse(
+        runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
 
     assertEquals(1, runner.getTraceMessages().count());
 
@@ -214,7 +216,8 @@ class DefaultNormalizationRunnerTest {
 
     final NormalizationRunner runner =
         new DefaultNormalizationRunner(processFactory, getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), INTEGRATION_TYPE);
-    assertFalse(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertFalse(
+        runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
 
     assertEquals(1, runner.getTraceMessages().count());
 
@@ -236,7 +239,8 @@ class DefaultNormalizationRunnerTest {
 
     final NormalizationRunner runner =
         new DefaultNormalizationRunner(processFactory, getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), INTEGRATION_TYPE);
-    assertFalse(runner.normalize(JOB_ID, JOB_ATTEMPT, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
+    assertFalse(
+        runner.normalize(JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot, config, catalog, workerConfigs.getResourceRequirements()));
 
     assertEquals(1, runner.getTraceMessages().count());
 

@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,6 +75,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
   @Override
   public boolean configureDbt(final String jobId,
                               final int attempt,
+                              final UUID connectionId,
+                              final UUID workspaceId,
                               final Path jobRoot,
                               final JsonNode config,
                               final ResourceRequirements resourceRequirements,
@@ -87,12 +90,12 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
     }
     final String gitRepoBranch = dbtConfig.getGitRepoBranch();
     if (Strings.isNullOrEmpty(gitRepoBranch)) {
-      return runProcess(jobId, attempt, jobRoot, files, resourceRequirements, "configure-dbt",
+      return runProcess(jobId, attempt, connectionId, workspaceId, jobRoot, files, resourceRequirements, "configure-dbt",
           "--integration-type", normalizationIntegrationType.toLowerCase(),
           "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
           "--git-repo", gitRepoUrl);
     } else {
-      return runProcess(jobId, attempt, jobRoot, files, resourceRequirements, "configure-dbt",
+      return runProcess(jobId, attempt, connectionId, workspaceId, jobRoot, files, resourceRequirements, "configure-dbt",
           "--integration-type", normalizationIntegrationType.toLowerCase(),
           "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
           "--git-repo", gitRepoUrl,
@@ -103,6 +106,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
   @Override
   public boolean normalize(final String jobId,
                            final int attempt,
+                           final UUID connectionId,
+                           final UUID workspaceId,
                            final Path jobRoot,
                            final JsonNode config,
                            final ConfiguredAirbyteCatalog catalog,
@@ -112,7 +117,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
         WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME, Jsons.serialize(catalog));
 
-    return runProcess(jobId, attempt, jobRoot, files, resourceRequirements, "run",
+    return runProcess(jobId, attempt, connectionId, workspaceId, jobRoot, files, resourceRequirements, "run",
         "--integration-type", normalizationIntegrationType.toLowerCase(),
         "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
         "--catalog", WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME);
@@ -121,6 +126,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   private boolean runProcess(final String jobId,
                              final int attempt,
+                             final UUID connectionId,
+                             final UUID workspaceId,
                              final Path jobRoot,
                              final Map<String, String> files,
                              final ResourceRequirements resourceRequirements,
@@ -133,8 +140,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
           NORMALIZE_STEP,
           jobId,
           attempt,
-          null, // TODO: Provide connectionId
-          null, // TODO: Provide workspaceId
+          connectionId,
+          workspaceId,
           jobRoot,
           normalizationImageName,
           // custom connector does not use normalization

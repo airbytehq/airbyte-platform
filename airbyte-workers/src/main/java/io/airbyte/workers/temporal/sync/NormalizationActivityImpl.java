@@ -153,7 +153,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       if (containerOrchestratorConfig.isPresent()) {
         final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
         workerFactory = getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-            () -> context, input.getConnectionId());
+            () -> context, input.getConnectionId(), input.getWorkspaceId());
       } else {
         workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig);
       }
@@ -260,10 +260,11 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                                          final JobRunConfig jobRunConfig,
                                                                                                                          final Supplier<ActivityExecutionContext> activityContext,
-                                                                                                                         final UUID connectionId) {
+                                                                                                                         final UUID connectionId,
+                                                                                                                         final UUID workspaceId) {
     return () -> new NormalizationLauncherWorker(
         connectionId,
-        null,
+        workspaceId,
         destinationLauncherConfig,
         jobRunConfig,
         workerConfigs,

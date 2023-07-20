@@ -140,11 +140,15 @@ class SyncWorkflowTest {
     normalizationInput = new NormalizationInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withCatalog(syncInput.getCatalog())
-        .withResourceRequirements(new ResourceRequirements());
+        .withResourceRequirements(new ResourceRequirements())
+        .withConnectionId(syncInput.getConnectionId())
+        .withWorkspaceId(syncInput.getWorkspaceId());
 
     operatorDbtInput = new OperatorDbtInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-        .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt());
+        .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt())
+        .withConnectionId(syncInput.getConnectionId())
+        .withWorkspaceId(syncInput.getWorkspaceId());
 
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);

@@ -13,6 +13,10 @@ properties:
     description: The id of the connection associated with the dbt transformation.
     type: string
     format: uuid
+  workspaceId:
+    description: The id of the workspace associated with the dbt transformation.
+    type: string
+    format: uuid
   destinationConfiguration:
     description: Integration specific blob. Must be a valid JSON string.
     type: object

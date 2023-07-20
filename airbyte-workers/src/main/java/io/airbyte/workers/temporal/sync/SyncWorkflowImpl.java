@@ -134,6 +134,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
           final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
               .withConnectionId(syncInput.getConnectionId())
+              .withWorkspaceId(syncInput.getWorkspaceId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
               .withOperatorDbt(standardSyncOperation.getOperatorDbt());
 

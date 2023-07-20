@@ -10,6 +10,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.nio.file.Path;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -39,6 +40,8 @@ public interface NormalizationRunner extends AutoCloseable {
    */
   boolean configureDbt(String jobId,
                        int attempt,
+                       final UUID connectionId,
+                       final UUID workspaceId,
                        Path jobRoot,
                        JsonNode config,
                        ResourceRequirements resourceRequirements,
@@ -61,6 +64,8 @@ public interface NormalizationRunner extends AutoCloseable {
    */
   boolean normalize(String jobId,
                     int attempt,
+                    final UUID connectionId,
+                    final UUID workspaceId,
                     Path jobRoot,
                     JsonNode config,
                     ConfiguredAirbyteCatalog catalog,

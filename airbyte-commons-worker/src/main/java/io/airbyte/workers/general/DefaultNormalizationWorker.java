@@ -77,7 +77,8 @@ public class DefaultNormalizationWorker implements NormalizationWorker {
         normalizationRoot = Files.createDirectories(jobRoot.resolve("normalize"));
       }
 
-      if (!normalizationRunner.normalize(jobId, attempt, normalizationRoot, input.getDestinationConfiguration(), input.getCatalog(),
+      if (!normalizationRunner.normalize(jobId, attempt, input.getConnectionId(), input.getWorkspaceId(), normalizationRoot,
+          input.getDestinationConfiguration(), input.getCatalog(),
           input.getResourceRequirements())) {
         buildFailureReasonsAndSetFailure();
       }
