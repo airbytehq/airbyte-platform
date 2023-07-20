@@ -127,6 +127,54 @@ describe("Conversion throws error when", () => {
     await expect(convert).rejects.toThrow("api_token value must be of the form {{ config[");
   });
 
+  it("manifest has an authenticator with a interpolated secret key of type config.<config key>", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            requester: {
+              authenticator: {
+                type: "ApiKeyAuthenticator",
+                api_token: "{{ config.api_token }}",
+                header: "API_KEY",
+              },
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.global.authenticator.type !== "ApiKeyAuthenticator") {
+      throw new Error("Has to be ApiKeyAuthenticator");
+    }
+    expect(formValues.global.authenticator.api_token).toEqual("{{ config.api_token }}");
+  });
+
+  it("manifest has an authenticator with a interpolated secret key of type config['config key']", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            requester: {
+              authenticator: {
+                type: "ApiKeyAuthenticator",
+                api_token: "{{ config['api_token'] }}",
+                header: "API_KEY",
+              },
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.global.authenticator.type !== "ApiKeyAuthenticator") {
+      throw new Error("Has to be ApiKeyAuthenticator");
+    }
+    expect(formValues.global.authenticator.api_token).toEqual("{{ config['api_token'] }}");
+  });
+
   it("manifest has an OAuthAuthenticator with a refresh_request_body containing non-string values", async () => {
     const convert = () => {
       const manifest: ConnectorManifest = {

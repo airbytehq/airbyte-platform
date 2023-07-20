@@ -496,7 +496,7 @@ const interpolateConfigKey = (key: string): string => {
   return `{{ config['${key}'] }}`;
 };
 
-const interpolatedConfigValueRegex = /^{{config\[('|"+)(.+)('|"+)\]}}$/;
+const interpolatedConfigValueRegex = /^{{config(\.(.+)|\[('|"+)(.+)('|"+)\])}}$/;
 
 export function isInterpolatedConfigKey(str: string | undefined): boolean {
   if (str === undefined) {
@@ -507,6 +507,10 @@ export function isInterpolatedConfigKey(str: string | undefined): boolean {
 }
 
 export function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
+  /**
+   * This methods does not work for nested configs like `config["credentials"]["client_secret"]` as the interpolated config key would be
+   * `credentials"]["client_secret`. Same for config.credentials.client_secret which would output `credentials.client_secret` as a key
+   */
   if (str === undefined) {
     return undefined;
   }
@@ -514,6 +518,8 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
   const regexResult = interpolatedConfigValueRegex.exec(noWhitespaceString);
   if (regexResult === null) {
     return undefined;
+  } else if (regexResult.length > 2) {
+    return regexResult[4];
   }
   return regexResult[2];
 }
