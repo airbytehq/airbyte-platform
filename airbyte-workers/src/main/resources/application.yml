@@ -165,6 +165,36 @@ airbyte:
         cpu-request: ${SOURCE_DATABASE_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${SOURCE_DATABASE_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${SOURCE_DATABASE_CONTAINER_MEMORY_REQUEST:}
+      lowrss--source:
+        cpu-limit: 1
+        cpu-request: 0.25
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      lowrss--orchestrator-api:
+        cpu-limit: 2
+        cpu-request: 1
+        memory-limit: 2Gi
+        memory-request: 2Gi
+      lowrss--destination-api:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      verylowrss--source:
+        cpu-limit: 1
+        cpu-request: 0.1
+        memory-limit: 1Gi
+        memory-request: 0.5Gi
+      verylowrss--orchestrator-api:
+        cpu-limit: 1
+        cpu-request: 0.2
+        memory-limit: 2Gi
+        memory-request: 1.5Gi
+      verylowrss--destination-api:
+        cpu-limit: 1
+        cpu-request: 0.1
+        memory-limit: 1Gi
+        memory-request: 0.5Gi
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}

@@ -4,6 +4,7 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.config.provider.ResourceRequirementsProvider.DEFAULT_VARIANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +40,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -189,18 +191,19 @@ class DefaultJobCreatorTest {
         .withMemoryLimit("1200Mi")
         .withMemoryRequest("1000Mi");
     resourceRequirementsProvider = mock(ResourceRequirementsProvider.class);
-    when(resourceRequirementsProvider.getResourceRequirements(any(), any()))
+    when(resourceRequirementsProvider.getResourceRequirements(any(), any(), any()))
         .thenReturn(workerResourceRequirements);
-    jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider);
+    jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider, new TestClient());
   }
 
   @Test
   void testCreateSyncJob() throws IOException {
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.empty()))
+    final Optional<String> expectedSourceType = Optional.of("database");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(workerResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database")))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(sourceResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, Optional.empty()))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
@@ -227,10 +230,7 @@ class DefaultJobCreatorTest {
         .withConfigType(JobConfig.ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
-
-    final long jobId = jobCreator.createSyncJob(
+    jobCreator.createSyncJob(
         SOURCE_CONNECTION,
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
@@ -244,9 +244,10 @@ class DefaultJobCreatorTest {
         STANDARD_DESTINATION_DEFINITION,
         SOURCE_DEFINITION_VERSION,
         DESTINATION_DEFINITION_VERSION,
-        WORKSPACE_ID).orElseThrow();
+        WORKSPACE_ID);
 
-    assertEquals(JOB_ID, jobId);
+    final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
+    verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
   }
 
   @Test

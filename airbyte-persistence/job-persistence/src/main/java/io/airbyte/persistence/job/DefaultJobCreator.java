@@ -4,6 +4,8 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.config.provider.ResourceRequirementsProvider.DEFAULT_VARIANT;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -23,15 +25,27 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Destination;
+import io.airbyte.featureflag.DestinationDefinition;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Source;
+import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.UseResourceRequirementsVariant;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,11 +58,14 @@ public class DefaultJobCreator implements JobCreator {
 
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
+  private final FeatureFlagClient featureFlagClient;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
-                           final ResourceRequirementsProvider resourceRequirementsProvider) {
+                           final ResourceRequirementsProvider resourceRequirementsProvider,
+                           final FeatureFlagClient featureFlagClient) {
     this.jobPersistence = jobPersistence;
     this.resourceRequirementsProvider = resourceRequirementsProvider;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Override
@@ -69,9 +86,16 @@ public class DefaultJobCreator implements JobCreator {
       throws IOException {
     // reusing this isn't going to quite work.
 
-    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync);
-    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition);
-    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition);
+    final String variant = getResourceRequirementsVariant(workspaceId, standardSync, sourceDefinition, destinationDefinition);
+
+    // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
+    // going to be slow. With this in mind, we align the resources given to the orchestrator and the
+    // destination based on the source to avoid oversizing orchestrator and destination when the source
+    // is slow.
+    final Optional<String> sourceType = getSourceType(sourceDefinition);
+    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
+    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
+    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -136,7 +160,8 @@ public class DefaultJobCreator implements JobCreator {
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withConfiguredAirbyteCatalog(configuredAirbyteCatalog)
-        .withResourceRequirements(getOrchestratorResourceRequirements(standardSync))
+        // We should lookup variant here but we are missing some information such as workspaceId
+        .withResourceRequirements(getOrchestratorResourceRequirements(standardSync, Optional.empty(), DEFAULT_VARIANT))
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(isDestinationCustomConnector)
@@ -149,18 +174,41 @@ public class DefaultJobCreator implements JobCreator {
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 
-  private ResourceRequirements getOrchestratorResourceRequirements(final StandardSync standardSync) {
+  private String getResourceRequirementsVariant(final UUID workspaceId,
+                                                final StandardSync standardSync,
+                                                final StandardSourceDefinition sourceDefinition,
+                                                final StandardDestinationDefinition destinationDefinition) {
+    final List<Context> contextList = new ArrayList<>();
+    addIfNotNull(contextList, workspaceId, Workspace::new);
+    addIfNotNull(contextList, standardSync.getConnectionId(), Connection::new);
+    addIfNotNull(contextList, standardSync.getSourceId(), Source::new);
+    addIfNotNull(contextList, sourceDefinition.getSourceDefinitionId(), SourceDefinition::new);
+    addIfNotNull(contextList, standardSync.getDestinationId(), Destination::new);
+    addIfNotNull(contextList, destinationDefinition.getDestinationDefinitionId(), DestinationDefinition::new);
+    return featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, new Multi(contextList));
+  }
+
+  private static void addIfNotNull(final List<Context> contextList, final UUID uuid, final Function<UUID, Context> supplier) {
+    if (uuid != null) {
+      contextList.add(supplier.apply(uuid));
+    }
+  }
+
+  private ResourceRequirements getOrchestratorResourceRequirements(final StandardSync standardSync,
+                                                                   final Optional<String> sourceType,
+                                                                   final String variant) {
     final ResourceRequirements defaultOrchestratorRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.empty());
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType, variant);
     return ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         defaultOrchestratorRssReqs);
   }
 
-  private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync, final StandardSourceDefinition sourceDefinition) {
+  private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync,
+                                                             final StandardSourceDefinition sourceDefinition,
+                                                             final String variant) {
     final ResourceRequirements defaultSrcRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
-            Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString));
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition), variant);
     return ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         sourceDefinition.getResourceRequirements(),
@@ -169,14 +217,20 @@ public class DefaultJobCreator implements JobCreator {
   }
 
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
-                                                                  final StandardDestinationDefinition destinationDefinition) {
+                                                                  final StandardDestinationDefinition destinationDefinition,
+                                                                  final Optional<String> sourceType,
+                                                                  final String variant) {
     final ResourceRequirements defaultDstRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, Optional.empty());
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, sourceType, variant);
     return ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         destinationDefinition.getResourceRequirements(),
         defaultDstRssReqs,
         JobType.SYNC);
+  }
+
+  private Optional<String> getSourceType(final StandardSourceDefinition sourceDefinition) {
+    return Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString);
   }
 
 }

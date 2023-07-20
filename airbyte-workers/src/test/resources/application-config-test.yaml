@@ -18,3 +18,15 @@ airbyte:
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:spec node selectors}
         memory-limit: spec memory limit
         memory-request: ${SOMETHING_NOT_THERE:}
+      source:
+        cpu-request: 0.5
+      source-database:
+        cpu-request: 1
+      orchestrator-api:
+        cpu-request: 11
+      destination-api:
+        cpu-request: 12
+      micronauttest-source:
+        cpu-limit: 5
+      micronauttest-source-database:
+        cpu-limit: 10

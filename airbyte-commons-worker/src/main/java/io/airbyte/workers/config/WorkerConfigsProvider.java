@@ -15,11 +15,11 @@ import io.airbyte.workers.WorkerConfigs;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,14 +38,23 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
    */
   public enum ResourceType {
 
+    // Global default
     DEFAULT("default"),
+
+    // Command specific resources
     CHECK("check"),
     DISCOVER("discover"),
     NORMALIZATION("normalization"),
     REPLICATION("replication"),
+    SPEC("spec"),
+
+    // Sync related resources
+    DESTINATION("destination"),
+    DESTINATION_API("destination-api"),
+    ORCHESTRATOR("orchestrator"),
+    ORCHESTRATOR_API("orchestrator-api"),
     SOURCE("source"),
-    SOURCE_DATABASE("source-database"),
-    SPEC("spec");
+    SOURCE_DATABASE("source-database");
 
     private final String value;
     private static final Map<String, ResourceType> CONSTANTS = new HashMap<>();
@@ -97,13 +106,38 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   }
 
-  private final Map<ResourceType, KubeResourceConfig> kubeResourceConfigsByName;
+  private final Map<String, Map<ResourceType, KubeResourceConfig>> kubeResourceConfigsByVariantAndName;
   private final WorkerConfigsDefaults workerConfigsDefaults;
 
   public WorkerConfigsProvider(final List<KubeResourceConfig> kubeResourceConfigs, final WorkerConfigsDefaults defaults) {
-    this.kubeResourceConfigsByName = kubeResourceConfigs.stream()
-        .collect(Collectors.toMap(c -> ResourceType.fromValue(c.getName()), Function.identity()));
+    this.kubeResourceConfigsByVariantAndName = new HashMap<>();
+    for (final var config : kubeResourceConfigs) {
+      final Map.Entry<String, ResourceType> variantAndType = getVariantAndType(config.getName());
+      final Map<ResourceType, KubeResourceConfig> typeToConfigMap =
+          kubeResourceConfigsByVariantAndName.computeIfAbsent(variantAndType.getKey(), k -> new HashMap<>());
+      typeToConfigMap.put(variantAndType.getValue(), config);
+    }
     this.workerConfigsDefaults = defaults;
+  }
+
+  private static Map.Entry<String, ResourceType> getVariantAndType(final String value) {
+    try {
+      final ResourceType type = ResourceType.fromValue(value);
+      return Map.entry(DEFAULT_VARIANT, type);
+    } catch (final IllegalArgumentException e) {
+      // See if it's a variant
+      // Note: micronaut normalizes delimiters into a singe '-'
+      final String[] splitValue = value.split("-", 2);
+      final boolean hasVariantDelimiter = splitValue.length != 2;
+      if (hasVariantDelimiter) {
+        // No variant delimiter found, rethrow the initial exception.
+        throw e;
+      }
+
+      final String variant = splitValue[0];
+      final ResourceType type = ResourceType.fromValue(splitValue[1]);
+      return Map.entry(variant, type);
+    }
   }
 
   /**
@@ -113,7 +147,18 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
    * @return the WorkerConfig.
    */
   public WorkerConfigs getConfig(final ResourceType name) {
-    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(name).orElseThrow();
+    return getConfig(name, DEFAULT_VARIANT);
+  }
+
+  /**
+   * Get the WorkerConfigs associated to a given task.
+   *
+   * @param name of the Task.
+   * @param variant of the Config.
+   * @return the WorkerConfig.
+   */
+  private WorkerConfigs getConfig(final ResourceType name, final String variant) {
+    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(name, variant).orElseThrow();
 
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
@@ -145,17 +190,50 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   @Override
   public ResourceRequirements getResourceRequirements(final ResourceRequirementsType type, final Optional<String> subType) {
-    final ResourceType actualType = inferResourceRequirementsType(type, subType);
+    return getResourceRequirements(type, subType, DEFAULT_VARIANT);
+  }
 
-    WorkerConfigs workerConfigs;
-    try {
-      workerConfigs = getConfig(actualType);
-    } catch (final Exception e) {
-      log.info("unable to find resource requirements for ({}, {}), falling back to default", type, subType.orElse(""));
-      workerConfigs = getConfig(ResourceType.DEFAULT);
+  @Override
+  public ResourceRequirements getResourceRequirements(final ResourceRequirementsType type,
+                                                      final Optional<String> subType,
+                                                      final String variant) {
+    for (final var kvp : getLookupList(type, subType, variant)) {
+      try {
+        return getConfig(kvp.getValue(), kvp.getKey()).getResourceRequirements();
+      } catch (final Exception e) {
+        // No such config, try the next candidate.
+        continue;
+      }
     }
 
-    return workerConfigs.getResourceRequirements();
+    log.info("unable to find resource requirements for ({}, {}, {}), falling back to default", type, subType.orElse(""), variant);
+    return getConfig(ResourceType.DEFAULT).getResourceRequirements();
+  }
+
+  /**
+   * Build the ordered lookup list for resource requirements.
+   * <p>
+   * List is as follows [(variant, exact type), (variant, fallback type), (variant, default)]. For a
+   * non default variant, we append [(default, exact type), (default, fallback type), (default,
+   * default)] to that list.
+   */
+  private List<Map.Entry<String, ResourceType>> getLookupList(final ResourceRequirementsType type,
+                                                              final Optional<String> subType,
+                                                              final String variant) {
+    final List<Map.Entry<String, ResourceType>> lookupList = new ArrayList<>();
+
+    final ResourceType actualType = inferResourceRequirementsType(type, subType);
+    final ResourceType fallbackType = inferResourceRequirementsType(type, Optional.empty());
+
+    lookupList.add(Map.entry(variant, actualType));
+    lookupList.add(Map.entry(variant, fallbackType));
+    lookupList.add(Map.entry(variant, ResourceType.DEFAULT));
+    if (!variant.equals(DEFAULT_VARIANT)) {
+      lookupList.add(Map.entry(DEFAULT_VARIANT, actualType));
+      lookupList.add(Map.entry(DEFAULT_VARIANT, fallbackType));
+      lookupList.add(Map.entry(DEFAULT_VARIANT, ResourceType.DEFAULT));
+    }
+    return lookupList;
   }
 
   @SuppressWarnings("PMD.EmptyCatchBlock")
@@ -182,8 +260,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     }
   }
 
-  private Optional<KubeResourceConfig> getKubeResourceConfig(final ResourceType name) {
-    return Optional.ofNullable(kubeResourceConfigsByName.get(name));
+  private Optional<KubeResourceConfig> getKubeResourceConfig(final ResourceType name, final String variant) {
+    final Map<ResourceType, KubeResourceConfig> resourceMap = kubeResourceConfigsByVariantAndName.get(variant);
+    return resourceMap != null ? Optional.ofNullable(resourceMap.get(name)) : Optional.empty();
   }
 
   private void validateIsolatedPoolConfigInitialization(boolean useCustomNodeSelector, Map<String, String> isolatedNodeSelectors) {

@@ -96,4 +96,56 @@ class WorkerConfigProviderMicronautTest {
     assertEquals("default cpu limit", resourceRequirements.getCpuLimit());
   }
 
+  @Test
+  void testVariantLookups() {
+    final String testVariant = "micronauttest";
+    final ResourceRequirements sourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("api"));
+    final ResourceRequirements sourceDatabase =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database"));
+    final ResourceRequirements testSourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("api"),
+        testVariant);
+    final ResourceRequirements testSourceDatabase = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of(
+        "database"), testVariant);
+
+    // Testing the variant override lookup
+    assertEquals("5", testSourceApi.getCpuLimit());
+    assertEquals("10", testSourceDatabase.getCpuLimit());
+    assertEquals("default cpu limit", sourceApi.getCpuLimit());
+    assertEquals("default cpu limit", sourceDatabase.getCpuLimit());
+
+    // Verifying the default inheritance
+    assertEquals("0.5", sourceApi.getCpuRequest());
+    assertEquals("1", sourceDatabase.getCpuRequest());
+    assertEquals("", testSourceApi.getCpuRequest());
+    assertEquals("", testSourceDatabase.getCpuRequest());
+  }
+
+  @Test
+  void testUnknownVariantFallsBackToDefaultVariant() {
+    final ResourceRequirements unknownVariantSourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
+        Optional.of("api"), "unknownVariant");
+    final ResourceRequirements sourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
+        Optional.of("api"));
+    assertEquals(sourceApi, unknownVariantSourceApi);
+
+    final ResourceRequirements unknownVariantSourceDatabase = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
+        Optional.of("database"), "unknownVariant");
+    final ResourceRequirements sourceDatabase = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
+        Optional.of("database"));
+    assertEquals(sourceDatabase, unknownVariantSourceDatabase);
+  }
+
+  @Test
+  void testSubTypeLookup() {
+    final ResourceRequirements destApi = workerConfigsProvider.getResourceRequirements(
+        ResourceRequirementsType.DESTINATION,
+        Optional.of("api"));
+    assertEquals("12", destApi.getCpuRequest());
+
+    final ResourceRequirements orchestratorApi = workerConfigsProvider.getResourceRequirements(
+        ResourceRequirementsType.ORCHESTRATOR,
+        Optional.of("api"));
+    assertEquals("11", orchestratorApi.getCpuRequest());
+  }
+
 }

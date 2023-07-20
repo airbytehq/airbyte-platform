@@ -16,6 +16,7 @@ import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
@@ -73,8 +74,9 @@ public class ApplicationBeanFactory {
 
   @Singleton
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
-                                             final WorkerConfigsProvider workerConfigsProvider) {
-    return new DefaultJobCreator(jobPersistence, workerConfigsProvider);
+                                             final WorkerConfigsProvider workerConfigsProvider,
+                                             final FeatureFlagClient featureFlagClient) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
   }
 
   @Singleton

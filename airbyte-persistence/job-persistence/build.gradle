@@ -29,6 +29,7 @@ dependencies {
     implementation project(':airbyte-db:db-lib')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-config:config-persistence')
+    implementation project(":airbyte-featureflag")
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-notification')
     implementation project(':airbyte-analytics')
