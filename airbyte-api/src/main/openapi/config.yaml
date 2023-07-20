@@ -2941,6 +2941,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StreamStatusRead"
+  # Instance Configuration
+  /v1/instance_configuration:
+    get:
+      tags:
+        - instance_configuration
+      summary: Get instance configuration
+      operationId: getInstanceConfiguration
+      responses:
+        "200":
+          description: Successfully returned instance configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceConfigurationResponse"
+        "401":
+          description: Fetching instance configuration failed.
   /v1/jobs/retry_states/create_or_update:
     post:
       summary: Creates or updates a retry state for a job.
@@ -6508,6 +6524,39 @@ components:
       properties:
         id:
           $ref: "#/components/schemas/StreamStatusId"
+    AuthConfiguration:
+      type: object
+      required:
+        - clientId
+        - defaultRealm
+      properties:
+        clientId:
+          type: string
+          default: "airbyte-webapp"
+        defaultRealm:
+          type: string
+          default: "airbyte"
+    InstanceConfigurationResponse:
+      type: object
+      required:
+        - edition
+        - webappUrl
+      properties:
+        edition:
+          type: string
+          enum:
+            - community
+            - pro
+        licenseType:
+          type: string
+          enum:
+            - pro
+            - invalid
+          nullable: true
+        auth:
+          $ref: "#/components/schemas/AuthConfiguration"
+        webappUrl:
+          type: string
     StreamStatusRead:
       type: object
       required:

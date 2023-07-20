@@ -2,10 +2,11 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.auth;
+package io.airbyte.commons.auth.roles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.airbyte.commons.auth.AuthRole;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 

@@ -1,0 +1,29 @@
+plugins {
+    id "io.airbyte.gradle.docker"
+}
+
+airbyte {
+    docker {
+        imageName = "keycloak"
+    }
+}
+
+def copyTheme = tasks.register("copyTheme", Copy) {
+    from('themes')
+    into 'build/airbyte/docker/bin/themes'
+}
+
+def copyScripts = tasks.register("copyScripts", Copy) {
+    from('scripts')
+    into 'build/airbyte/docker/bin/scripts'
+}
+
+tasks.named("dockerBuildImage") {
+    dependsOn copyScripts
+    dependsOn copyTheme
+}
+
+tasks.register("test")  {
+    description "dummy test task because `test` is part of the base jvm plugin, but there are no tests to run for this module." +
+            "Without this, running something like `build -x test` will fail because it can't find a test task to exclude."
+}

@@ -68,6 +68,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
         - name: AUTO_DETECT_SCHEMA
           valueFrom:
             configMapKeyRef:
@@ -234,6 +239,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKER_STATE_STORAGE_TYPE
+        - name: KEYCLOAK_INTERNAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KEYCLOAK_INTERNAL_HOST
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}
@@ -301,6 +311,11 @@ spec:
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
+        {{- if eq .Values.global.edition "pro" }} # for now, only mount airbyte.yml for pro edition
+        - name: airbyte-yml-volume
+          mountPath: /app/airbyte.yml
+          subPath: fileContents
+        {{- end }}
         {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -320,6 +335,11 @@ spec:
       - name: gcs-log-creds-volume
         secret:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
+      {{- if eq .Values.global.edition "pro" }} # for now, only mount airbyte.yml for pro edition
+      - name: airbyte-yml-volume
+        configMap:
+          name: {{ .Release.Name }}-airbyte-yml
+      {{- end }}
       {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}

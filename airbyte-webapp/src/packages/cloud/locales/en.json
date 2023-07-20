@@ -88,8 +88,6 @@
   "connection.dbtCloudJobs.job.deleteButton": "Delete job",
   "connection.dbtCloudJobs.noIntegration": "Go to your <settingsLink>settings</settingsLink> to connect a dbt Cloud account",
 
-  "settings.accountSettings.logoutLabel": "Sign out",
-  "settings.accountSettings.logoutText": "Sign out",
   "settings.accountSettings.firstName": "First name",
   "settings.accountSettings.enterPassword": "Enter current password",
   "settings.accountSettings.firstName.placeholder": "Christopher",

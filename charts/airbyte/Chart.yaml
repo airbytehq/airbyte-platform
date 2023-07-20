@@ -65,3 +65,11 @@ dependencies:
     name: connector-builder-server
     repository: https://airbytehq.github.io/helm-charts/
     version: 0.47.1
+  - condition: keycloak.enabled
+    name: keycloak
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1
+  - condition: keycloak-setup.enabled
+    name: keycloak-setup
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.47.1

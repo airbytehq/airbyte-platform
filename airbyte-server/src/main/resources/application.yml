@@ -28,6 +28,7 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  edition: ${AIRBYTE_EDITION:community}
   shutdown:
     delay_ms: 20000
   cloud:
@@ -111,6 +112,14 @@ airbyte:
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
+
+  # specify the minimum necessary configurations for the server to authenticate with keycloak
+  keycloak:
+    host: ${KEYCLOAK_INTERNAL_HOST:}
+    protocol: ${KEYCLOAK_PROTOCOL:http}
+    base-path: ${KEYCLOAK_BASE_PATH:`/auth`}
+    airbyte-realm: ${KEYCLOAK_AIRBYTE_REALM:airbyte}
+    web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
 
 temporal:
   cloud:

@@ -1,4 +1,5 @@
 {{- if eq .Values.global.deploymentMode "oss"  }}
+{{- $airbyteYmlDict := (default "" .Values.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,6 +11,7 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
   AIRBYTE_VERSION: {{ .Values.version | default .Chart.AppVersion }}
+  AIRBYTE_EDITION: {{ .Values.global.edition | default "community" | quote }}
   API_URL: {{ .Values.webapp.api.url }}
   CONNECTOR_BUILDER_API_URL: {{ index .Values.webapp "connector-builder-server" "url" | quote }}
   CONFIG_ROOT: /configs
@@ -23,6 +25,13 @@ data:
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
+{{- if eq .Values.global.edition "pro" }}
+  KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
+  KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
+  KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
+{{- else }}
+  KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
+{{- end }}
   CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
 {{- if $.Values.global.jobs.kube.annotations }}
   JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}

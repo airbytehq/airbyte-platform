@@ -69,3 +69,11 @@ dependencies:
     name: connector-builder-server
     repository: "file://../airbyte-connector-builder-server"
     version: "*"
+  - condition: keycloak.enabled
+    name: keycloak
+    repository: "file://../airbyte-keycloak"
+    version: "*"
+  - condition: keycloak-setup.enabled
+    name: keycloak-setup
+    repository: "file://../airbyte-keycloak-setup"
+    version: "*"

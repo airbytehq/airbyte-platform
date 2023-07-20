@@ -1,5 +1,7 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
+import { InstanceConfigurationResponse } from "core/api/types/AirbyteClient";
+
 import { FeatureItem, FeatureSet } from "./types";
 
 interface FeatureServiceContext {
@@ -13,8 +15,15 @@ const featureSetFromList = (featureList: FeatureItem[]): FeatureSet => {
   return featureList.reduce((set, val) => ({ ...set, [val]: true }), {} as FeatureSet);
 };
 
+const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationResponse): FeatureSet => {
+  return {
+    [FeatureItem.KeycloakAuthentication]: !!instanceConfig.auth,
+  };
+};
+
 interface FeatureServiceProps {
   features: FeatureItem[];
+  instanceConfig?: InstanceConfigurationResponse;
 }
 
 /**
@@ -31,6 +40,7 @@ interface FeatureServiceProps {
  */
 export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProps>> = ({
   features: defaultFeatures,
+  instanceConfig,
   children,
 }) => {
   const [overwrittenFeatures, setOverwrittenFeaturesState] = useState<FeatureSet>();
@@ -58,6 +68,7 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
+      ...(instanceConfig ? featureSetFromInstanceConfig(instanceConfig) : {}),
       ...overwrittenFeatures,
       ...envOverwrites,
     };
@@ -66,7 +77,7 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
       .filter(([, enabled]) => enabled)
       .map(([id]) => id) as FeatureItem[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overwrittenFeatures, ...defaultFeatures]);
+  }, [overwrittenFeatures, instanceConfig, ...defaultFeatures]);
 
   const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined) => {
     setOverwrittenFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);

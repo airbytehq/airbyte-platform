@@ -24,18 +24,18 @@ global:
 
 
 enabled: true
-##  image.repository The repository to use for the airbyte bootloader image.
-##  image.pullPolicy the pull policy to use for the airbyte bootloader image
-##  image.tag The airbyte bootloader image tag. Defaults to the chart's AppVersion
+##  image.repository The repository to use for the airbyte keycloak image.
+##  image.pullPolicy the pull policy to use for the airbyte keycloak image
+##  image.tag The airbyte keycloak image tag. Defaults to the chart's AppVersion
 image:
   repository: airbyte/keycloak
   pullPolicy: IfNotPresent
 
-##  podAnnotations [object] Add extra annotations to the bootloader pod
+##  podAnnotations [object] Add extra annotations to the keycloak pod
 ##
 podAnnotations: {}
 
-##  podLabels [object] Add extra labels to the bootloader pod
+##  podLabels [object] Add extra labels to the keycloak pod
 ##
 podLabels: {}
 
@@ -96,14 +96,14 @@ service:
   port: 8180
   annotations: {}
 
-## Bootloader resource requests and limits
+## Keycloak resource requests and limits
 ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
 ## We usually recommend not to specify default resources and to leave this as a conscious
 ## choice for the user. This also increases chances charts run on environments with little
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-##  bootloader.resources.limits [object] The resources limits for the airbyte bootloader image
-##  bootloader.resources.requests [object] The requested resources for the airbyte bootloader image
+##  keycloak.resources.limits [object] The resources limits for the keycloak image
+##  keycloak.resources.requests [object] The requested resources for the keycloak image
 resources:
   ## Example:
   ## limits:
@@ -115,7 +115,7 @@ resources:
   ##    cpu: 250m
   requests: {}
 
-##  affinity [object] Affinity and anti-affinity for bootloader pod assignment.
+##  affinity [object] Affinity and anti-affinity for keycloak pod assignment.
 ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
 ##
 affinity: {}

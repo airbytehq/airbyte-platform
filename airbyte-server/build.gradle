@@ -20,6 +20,7 @@ dependencies {
     annotationProcessor libs.bundles.micronaut.annotation.processor
     annotationProcessor libs.micronaut.jaxrs.processor
 
+    implementation libs.reactor.core
     compileOnly libs.lombok
 
     testCompileOnly libs.lombok
@@ -37,7 +38,9 @@ dependencies {
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-auth')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-license')
     implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-server')
@@ -75,6 +78,8 @@ dependencies {
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
     testImplementation libs.mockito.inline
+
+    testImplementation libs.reactor.test
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core

@@ -6,7 +6,7 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { config } from "config";
-import { QueryProvider } from "core/api";
+import { QueryProvider, useGetInstanceConfiguration } from "core/api";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
@@ -17,6 +17,7 @@ import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
+import { KeycloakAuthService } from "services/KeycloakAuthService";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
@@ -29,25 +30,21 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 );
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-  <AnalyticsProvider>
-    <AppMonitoringServiceProvider>
-      <ApiErrorBoundary>
-        <FeatureService features={defaultOssFeatures}>
-          <NotificationService>
-            <ConfirmationModalService>
-              <ModalServiceProvider>
-                <FormChangeTrackerService>
-                  <ConnectorBuilderTestInputProvider>
-                    <HelmetProvider>{children}</HelmetProvider>
-                  </ConnectorBuilderTestInputProvider>
-                </FormChangeTrackerService>
-              </ModalServiceProvider>
-            </ConfirmationModalService>
-          </NotificationService>
-        </FeatureService>
-      </ApiErrorBoundary>
-    </AppMonitoringServiceProvider>
-  </AnalyticsProvider>
+  <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
+    <KeycloakAuthService>
+      <NotificationService>
+        <ConfirmationModalService>
+          <ModalServiceProvider>
+            <FormChangeTrackerService>
+              <ConnectorBuilderTestInputProvider>
+                <HelmetProvider>{children}</HelmetProvider>
+              </ConnectorBuilderTestInputProvider>
+            </FormChangeTrackerService>
+          </ModalServiceProvider>
+        </ConfirmationModalService>
+      </NotificationService>
+    </KeycloakAuthService>
+  </FeatureService>
 );
 
 const App: React.FC = () => {
@@ -60,9 +57,15 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingPage />}>
                 <ConfigServiceProvider config={config}>
                   <Router>
-                    <Services>
-                      <Routing />
-                    </Services>
+                    <AnalyticsProvider>
+                      <AppMonitoringServiceProvider>
+                        <ApiErrorBoundary>
+                          <Services>
+                            <Routing />
+                          </Services>
+                        </ApiErrorBoundary>
+                      </AppMonitoringServiceProvider>
+                    </AnalyticsProvider>
                   </Router>
                 </ConfigServiceProvider>
               </Suspense>

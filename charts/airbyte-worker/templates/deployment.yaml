@@ -356,6 +356,12 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKER_STATE_STORAGE_TYPE
+        {{- if eq .Values.global.edition "pro" }}
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- end }}
 
         {{- end }}
         # Values from secret

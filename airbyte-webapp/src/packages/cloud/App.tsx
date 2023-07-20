@@ -33,31 +33,25 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 );
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-  <AnalyticsProvider>
-    <AppMonitoringServiceProvider>
-      <ApiErrorBoundary>
-        <NotificationService>
-          <ConfirmationModalService>
-            <FormChangeTrackerService>
-              <FeatureService features={defaultCloudFeatures}>
-                <AppServicesProvider>
-                  <ModalServiceProvider>
-                    <AuthenticationProvider>
-                      <ConnectorBuilderTestInputProvider>
-                        <HelmetProvider>
-                          <ZendeskProvider>{children}</ZendeskProvider>
-                        </HelmetProvider>
-                      </ConnectorBuilderTestInputProvider>
-                    </AuthenticationProvider>
-                  </ModalServiceProvider>
-                </AppServicesProvider>
-              </FeatureService>
-            </FormChangeTrackerService>
-          </ConfirmationModalService>
-        </NotificationService>
-      </ApiErrorBoundary>
-    </AppMonitoringServiceProvider>
-  </AnalyticsProvider>
+  <NotificationService>
+    <ConfirmationModalService>
+      <FormChangeTrackerService>
+        <FeatureService features={defaultCloudFeatures}>
+          <AppServicesProvider>
+            <ModalServiceProvider>
+              <AuthenticationProvider>
+                <ConnectorBuilderTestInputProvider>
+                  <HelmetProvider>
+                    <ZendeskProvider>{children}</ZendeskProvider>
+                  </HelmetProvider>
+                </ConnectorBuilderTestInputProvider>
+              </AuthenticationProvider>
+            </ModalServiceProvider>
+          </AppServicesProvider>
+        </FeatureService>
+      </FormChangeTrackerService>
+    </ConfirmationModalService>
+  </NotificationService>
 );
 
 const App: React.FC = () => {
@@ -69,9 +63,15 @@ const App: React.FC = () => {
             <Suspense fallback={<LoadingPage />}>
               <ConfigServiceProvider config={config}>
                 <Router>
-                  <Services>
-                    <Routing />
-                  </Services>
+                  <AnalyticsProvider>
+                    <AppMonitoringServiceProvider>
+                      <ApiErrorBoundary>
+                        <Services>
+                          <Routing />
+                        </Services>
+                      </ApiErrorBoundary>
+                    </AppMonitoringServiceProvider>
+                  </AnalyticsProvider>
                 </Router>
               </ConfigServiceProvider>
             </Suspense>

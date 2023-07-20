@@ -644,6 +644,7 @@
   "admin.upgraded": "Upgraded!",
 
   "settings.accountSettings": "Account Settings",
+  "settings.accountSettings.logoutText": "Sign out",
   "settings.webhook": "Connection status Webhook",
   "settings.webhook.test.passed": "Webhook test passed!",
   "settings.webhook.test.failed": "Webhook test failed. Please verify that the webhook URL is valid.",
@@ -1012,6 +1013,8 @@
   "jobHistory.copyLinkToJob.success": "Link copied to clipboard",
   "jobHistory.viewLogs": "View logs",
   "jobHistory.downloadLogs": "Download logs",
+
+  "auth.authError": "An error occured during authentication: {errorMessage}",
 
   "modal.closeButtonLabel": "Close dialog"
 }

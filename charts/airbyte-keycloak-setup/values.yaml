@@ -57,6 +57,25 @@ nodeSelector: {}
 ##
 tolerations: []
 
+## Keycloak Setup resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+##  keycloak-setup.resources.limits [object] The resources limits for the airbyte keycloak-setup image
+##  keycloak-setup.resources.requests [object] The requested resources for the airbyte keycloak-setup image
+resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 200m
+  ##    memory: 1Gi
+  limits: {}
+  ## requests:
+  ##    memory: 256Mi
+  ##    cpu: 250m
+  requests: {}
+
 ##  affinity [object] Affinity and anti-affinity for keycloak-setup pod assignment.
 ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
 ##

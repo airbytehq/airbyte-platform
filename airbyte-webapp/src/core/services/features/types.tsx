@@ -14,6 +14,7 @@ export enum FeatureItem {
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   FreeConnectorProgram = "FREE_CONNECTOR_PROGRAM",
+  KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
 }

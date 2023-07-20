@@ -1,0 +1,17 @@
+# for now, only include this for Pro. TODO: also use for Community edition, ie to establish
+# the username and password for the initial admin user.
+{{- if eq .Values.global.edition "pro" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-airbyte-yml
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-1"
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+data:
+  # helm install with `--set-file airbyteYml=../../airbyte.yml` to populate .Values.airbyteYml with the root-level airbyte.yml file
+  fileContents: |-
+  {{ .Values.airbyteYml | nindent 4 }}
+{{- end }}

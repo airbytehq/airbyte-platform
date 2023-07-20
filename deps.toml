@@ -14,6 +14,7 @@ jax-rs = "2.1.1"
 jmh = "1.36"
 jooq = "3.17.8"
 junit-jupiter = "5.9.1"
+keycloak = "21.1.1" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotlin = "1.8.20"
 kubernetes-client = "6.5.1"
 log4j = "2.17.2"
@@ -89,6 +90,8 @@ junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", vers
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
 junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter", version = "2.0.1" }
 junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" }
+keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
+keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.0.1" }
@@ -173,6 +176,7 @@ apache = ["apache-commons", "apache-commons-lang"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype"]
 junit = ["junit-jupiter-api", "junit-jupiter-params", "mockito-junit-jupiter"]
+keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
 log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]

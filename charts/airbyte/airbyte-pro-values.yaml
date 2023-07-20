@@ -1,0 +1,14 @@
+# This file contains helm value overrides that should be applied for Airbyte Pro deployments.
+
+global:
+  edition: "pro"
+
+keycloak:
+  enabled: true
+
+keycloak-setup:
+  enabled: true
+
+server:
+  env_vars:
+    API_AUTHORIZATION_ENABLED: "true"

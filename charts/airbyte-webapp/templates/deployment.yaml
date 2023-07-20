@@ -67,6 +67,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: INTERNAL_API_HOST
+        - name: KEYCLOAK_INTERNAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KEYCLOAK_INTERNAL_HOST
         - name: CONNECTOR_BUILDER_API_HOST
           valueFrom:
             configMapKeyRef:
