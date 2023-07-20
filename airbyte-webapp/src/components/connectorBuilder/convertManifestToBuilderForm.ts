@@ -574,6 +574,8 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "authenticator has no type");
   } else if (manifestAuthenticator.type === "CustomAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
+  } else if (manifestAuthenticator.type === "LegacySessionTokenAuthenticator") {
+    throw new ManifestCompatibilityError(streamName, "uses a LegacySessionTokenAuthenticator");
   } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a SessionTokenAuthenticator");
   } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
