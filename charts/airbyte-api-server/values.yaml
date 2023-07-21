@@ -71,7 +71,7 @@ replicaCount: 1
 ##  image.pullPolicy the pull policy to use for the airbyte server image
 ##  image.tag The airbyte server image tag. Defaults to the chart's AppVersion
 image:
-  repository: airbyte/server
+  repository: airbyte/airbyte-api-server
   pullPolicy: IfNotPresent
 
 ##  podAnnotations [object] Add extra annotations to the server pod
@@ -146,7 +146,7 @@ resources:
 ##  service.port The service port to expose the API server on
 service:
   type: ClusterIP
-  port: 8001
+  port: 8006
   annotations: {}
 
 ##  nodeSelector [object] Node labels for pod assignment
