@@ -20,6 +20,7 @@ import {
 } from "components/connectorBuilder/types";
 import { formatJson } from "components/connectorBuilder/utils";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
   BuilderProject,
   BuilderProjectPublishBody,
@@ -414,7 +415,7 @@ function useTestInputDefaultValues(testInputJson: ConnectorConfig | undefined, s
 function useInitializedBuilderProject(projectId: string) {
   const builderProject = useBuilderProject(projectId);
   const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
-  const resolvedManifest = useBuilderResolvedManifest(builderProject.declarativeManifest?.manifest);
+  const resolvedManifest = useBuilderResolvedManifest(builderProject.declarativeManifest?.manifest, projectId);
   const [initialFormValues, failedInitialFormValueConversion] = useMemo(() => {
     if (!resolvedManifest) {
       // could not resolve manifest, use default form values
@@ -513,6 +514,7 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
+  const workspaceId = useCurrentWorkspaceId();
   const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
     useConnectorBuilderFormState();
 
@@ -530,7 +532,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     error: streamListError,
     isFetching: isFetchingStreamList,
   } = useBuilderListStreams(
-    { manifest, config: testInputWithDefaults },
+    { manifest, config: testInputWithDefaults, workspace_id: workspaceId, project_id: projectId },
     Boolean(editorView === "yaml" || manifest.streams?.length)
   );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
@@ -560,6 +562,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       stream: streamName,
       config: testInputWithDefaults,
       record_limit: 1000,
+      workspace_id: workspaceId,
+      project_id: projectId,
     },
     (data) => {
       if (data.latest_config_update) {

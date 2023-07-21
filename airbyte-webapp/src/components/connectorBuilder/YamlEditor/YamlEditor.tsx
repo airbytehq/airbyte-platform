@@ -42,6 +42,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
     builderFormValues,
     displayedVersion,
     formValuesValid,
+    projectId,
     setYamlEditorIsMounted,
     setYamlIsValid,
     setJsonManifest,
@@ -108,7 +109,8 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
     try {
       const convertedFormValues = await convertToBuilderFormValues(
         jsonManifest,
-        builderFormValues.global.connectorName
+        builderFormValues.global.connectorName,
+        projectId
       );
       Object.entries(convertedFormValues).forEach(([key, value]) => {
         setValue(key, value, { shouldValidate: true });

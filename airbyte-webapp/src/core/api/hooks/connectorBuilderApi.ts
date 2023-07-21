@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { listStreams, readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
 import {
   ConnectorConfig,
@@ -55,10 +57,12 @@ export const useBuilderListStreams = (params: StreamsListRequestBody, enabled = 
 
 export const useBuilderResolveManifestQuery = () => {
   const requestOptions = useRequestOptions();
-  return (manifest: ConnectorManifest) => resolveManifest({ manifest }, requestOptions);
+  const workspaceId = useCurrentWorkspaceId();
+  return (manifest: ConnectorManifest, projectId?: string) =>
+    resolveManifest({ manifest, workspace_id: workspaceId, project_id: projectId }, requestOptions);
 };
 
-export const useBuilderResolvedManifest = (manifest?: ConnectorManifest) => {
+export const useBuilderResolvedManifest = (manifest?: ConnectorManifest, projectId?: string) => {
   const resolveManifestQuery = useBuilderResolveManifestQuery();
 
   return useSuspenseQuery(connectorBuilderKeys.resolve(manifest), async () => {
@@ -66,7 +70,7 @@ export const useBuilderResolvedManifest = (manifest?: ConnectorManifest) => {
       return DEFAULT_JSON_MANIFEST_VALUES;
     }
     try {
-      return (await resolveManifestQuery(manifest)).manifest as DeclarativeComponentSchema;
+      return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;
     } catch {
       return null;
     }

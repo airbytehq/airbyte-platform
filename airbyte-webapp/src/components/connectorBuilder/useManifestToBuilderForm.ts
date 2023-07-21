@@ -12,13 +12,14 @@ export const useManifestToBuilderForm = () => {
 };
 
 export const convertToBuilderFormValues = async (
-  resolve: (manifest: ConnectorManifest) => Promise<ResolveManifest>,
+  resolve: (manifest: ConnectorManifest, projectId?: string) => Promise<ResolveManifest>,
   manifest: ConnectorManifest,
-  connectorName: string
+  connectorName: string,
+  projectId?: string
 ) => {
   let resolveResult: ResolveManifest;
   try {
-    resolveResult = await resolve(manifest);
+    resolveResult = await resolve(manifest, projectId);
   } catch (e) {
     let errorMessage = e.message;
     if (errorMessage[0] === '"') {
