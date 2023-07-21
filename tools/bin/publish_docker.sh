@@ -14,9 +14,10 @@ projectDir=(
   "server"
   "temporal"
   "webapp"
-  "workers",
-  "keycloak",
+  "workers"
+  "keycloak"
   "keycloak-setup"
+  "api-server"
 )
 
 # Set default values to required vars. If set in env, values will be taken from there.
@@ -40,6 +41,10 @@ for workdir in "${projectDir[@]}"
 
       "workers")
         artifactName="worker"
+        ;;
+
+      "api-server")
+        artifactName="airbyte-api-server"
         ;;
 
       *)
