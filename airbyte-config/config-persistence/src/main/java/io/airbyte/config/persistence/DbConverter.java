@@ -32,6 +32,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.DeclarativeManifest;
@@ -490,7 +491,8 @@ public class DbConverter {
                         .withNormalizationRepository(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
                         .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
                         .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
-                    : null);
+                    : null)
+        .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
   }
 
 }

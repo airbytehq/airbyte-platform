@@ -44,3 +44,5 @@ properties:
   supportsDbt:
     type: boolean
     description: an optional flag indicating whether DBT is used in the normalization. If the flag value is NULL - DBT is not used.
+  supportState:
+    "$ref": SupportState.yaml
