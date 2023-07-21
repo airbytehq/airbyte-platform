@@ -149,6 +149,14 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
   public List<StreamSyncStats> getAllStreamSyncStats(final boolean hasReplicationCompleted) {
     final List<StreamSyncStats> streamSyncStatsList = new ArrayList<>();
     for (final var streamTracker : streamTrackers.values()) {
+      if (streamTracker.getNameNamespacePair().getName() == null) {
+        // null name means that those are stats from global states or legacy states. We should not
+        // report them as stream stats because a null stream doesn't exist.
+        // We should still track them as this is how we track stats for legacy states, but they
+        // should end up being reported as global sync stats only.
+        continue;
+      }
+
       final StreamStatsCounters streamStats = streamTracker.getStreamStats();
       streamSyncStatsList.add(new StreamSyncStats()
           .withStreamName(streamTracker.getNameNamespacePair().getName())
@@ -211,6 +219,7 @@ public class ParallelStreamStatsTracker implements SyncStatsTracker {
   // field.
   private Optional<Map<AirbyteStreamNameNamespacePair, Long>> toMap(final Function<StreamStatsTracker, Long> valueReader) {
     return Optional.of(streamTrackers.values().stream()
+        .filter(streamStatsTracker -> streamStatsTracker.getNameNamespacePair().getName() != null)
         .collect(Collectors.toMap(StreamStatsTracker::getNameNamespacePair, valueReader::apply)));
   }
 

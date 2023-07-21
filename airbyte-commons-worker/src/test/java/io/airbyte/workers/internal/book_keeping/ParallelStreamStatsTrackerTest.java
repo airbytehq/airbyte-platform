@@ -439,6 +439,34 @@ class ParallelStreamStatsTrackerTest {
     assertTrue(statsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted().get() > 0);
   }
 
+  @Test
+  void testNoStatsForNullStreamAreReturned() {
+    // Checking for LegacyStates
+    final var legacyState = AirbyteMessageUtils.createStateMessage(1337).getState();
+
+    statsTracker.updateSourceStatesStats(legacyState);
+    statsTracker.updateDestinationStateStats(legacyState);
+
+    final List<StreamSyncStats> actualLegacyStreamStats = statsTracker.getAllStreamSyncStats(false);
+    assertStreamSyncStatsCoreStatsEquals(List.of(), actualLegacyStreamStats);
+
+    assertTrue(statsTracker.getStreamToEmittedRecords().isEmpty());
+    assertTrue(statsTracker.getStreamToEmittedBytes().isEmpty());
+    assertTrue(statsTracker.getStreamToEstimatedRecords().isEmpty());
+    assertTrue(statsTracker.getStreamToEstimatedBytes().isEmpty());
+    assertTrue(statsTracker.getStreamToCommittedRecords().get().isEmpty());
+    assertTrue(statsTracker.getStreamToCommittedBytes().get().isEmpty());
+
+    // Checking for GlobalStates
+    final var globalState = AirbyteMessageUtils.createGlobalStateMessage(1337).getState();
+
+    statsTracker.updateSourceStatesStats(globalState);
+    statsTracker.updateDestinationStateStats(globalState);
+
+    final List<StreamSyncStats> actualGlobalStreamStats = statsTracker.getAllStreamSyncStats(false);
+    assertStreamSyncStatsCoreStatsEquals(List.of(), actualGlobalStreamStats);
+  }
+
   /**
    * Focus SyncStats comparison on the records related metrics by blanking out the rest.
    */
