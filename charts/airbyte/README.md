@@ -229,8 +229,8 @@ Helm chart to deploy airbyte
 | temporal.extraVolumeMounts | list | `[]`                                 |  |
 | temporal.extraVolumes | list | `[]`                                 |  |
 | temporal.image.pullPolicy | string | `"IfNotPresent"`                     |  |
-| temporal.image.repository | string | `"airbyte/temporal-auto-setup"`      |  |
-| temporal.image.tag | string | `"1.13.0"`                           |  |
+| temporal.image.repository | string | `"temporalio/auto-setup"`      |  |
+| temporal.image.tag | string | `"1.20.1"`                           |  |
 | temporal.livenessProbe.enabled | bool | `false`                              |  |
 | temporal.nodeSelector | object | `{}`                                 |  |
 | temporal.podAnnotations | object | `{}`                                 |  |
