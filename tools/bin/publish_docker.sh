@@ -14,7 +14,9 @@ projectDir=(
   "server"
   "temporal"
   "webapp"
-  "workers"
+  "workers",
+  "keycloak",
+  "keycloak-setup"
 )
 
 # Set default values to required vars. If set in env, values will be taken from there.

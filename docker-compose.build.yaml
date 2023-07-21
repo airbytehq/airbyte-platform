@@ -78,3 +78,17 @@ services:
       context: airbyte-metrics/reporter
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
+  keycloak:
+    image: airbyte/keycloak:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: airbyte-keycloak
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  keycloak-setup:
+    image: airbyte/keycloak-setup:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: airbyte-keycloak-setup
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
