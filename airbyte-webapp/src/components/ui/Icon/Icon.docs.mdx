@@ -1,6 +1,8 @@
 import { Canvas, Controls, Meta, Story } from "@storybook/addon-docs";
 import * as IconStories from "./Icon.stories.tsx";
 import { Icon } from "./Icon";
+import { FlexContainer, FlexItem } from "../Flex";
+import styles from "./Icon.docs.module.scss";
 
 <Meta of={IconStories} />
 
@@ -18,13 +20,13 @@ import { Icon } from "./Icon";
 <div style={{ display: 'flex', columnGap: 50, flexFlow: 'row wrap' }}>
   <div>
     ## Sizes
-|                                  | size         |
-| -------------------------------- | ------------ |
-| <Icon type="pencil" size="xs" /> | xs           |
-| <Icon type="pencil" size="sm" /> | sm           |
-| <Icon type="pencil" size="md" /> | md (default) |
-| <Icon type="pencil" size="lg" /> | lg           |
-| <Icon type="pencil" size="xl" /> | xl           |
+|                                  | size         | when used alongside text               |
+| -------------------------------- | ------------ | -------------------------------------- |
+| <Icon type="pencil" size="xs" /> | xs           |                                        |
+| <Icon type="pencil" size="sm" /> | sm           |                                        |
+| <Icon type="pencil" size="md" /> | md (default) | matches flow of text                   |
+| <Icon type="pencil" size="lg" /> | lg           | roughly fills line height              |
+| <Icon type="pencil" size="xl" /> | xl           | expands line height in both directions |
 
   </div>
 
@@ -48,3 +50,24 @@ import { Icon } from "./Icon";
 <Canvas of={IconStories.Primary} />
 
 <Controls of={IconStories.Primary} />
+
+## All icons
+
+<div className={styles.iconGrid}>
+  {Icon.__docgenInfo.props.type.type.value.sort((a, b) => {
+    if (a.value < b.value) return -1;
+    if (a.value > b.value) return 1;
+    return 0;
+  }).map(({ value: icon }) => {
+    const iconName = icon.replace(/"/g, "");
+
+    return (
+      <FlexContainer key={icon} alignItems="center" justifyContent="center" direction="column" className={styles.iconGridItem}>
+        <FlexItem><Icon type={iconName} size="lg" /></FlexItem>
+        <FlexItem>{iconName}</FlexItem>
+      </FlexContainer>
+    );
+
+})}
+
+</div>

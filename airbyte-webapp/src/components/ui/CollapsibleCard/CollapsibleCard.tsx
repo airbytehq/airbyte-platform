@@ -44,7 +44,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       {collapsible && (
         <Icon
           type="chevronRight"
-          size="xl"
+          size="lg"
           color="affordance"
           className={classNames(styles.icon, { [styles.expanded]: !isCollapsed })}
           data-testid={`${testId}-card-expand-arrow`}

@@ -1,0 +1,16 @@
+@use "scss/colors";
+
+.flexwrap {
+  flex-wrap: wrap;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-gap: 50px 10px;
+
+  .iconGridItem {
+    border: 1px solid colors.$grey-300;
+    aspect-ratio: 1;
+  }
+}
