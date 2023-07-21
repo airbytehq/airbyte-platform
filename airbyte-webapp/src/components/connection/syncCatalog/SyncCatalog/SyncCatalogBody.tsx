@@ -27,7 +27,7 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   onStreamChanged,
   isFilterApplied = false,
 }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
   const onUpdateStream = useCallback(
     (id: string | undefined, newConfig: Partial<AirbyteStreamConfiguration>) => {
       const streamNode = streams.find((streamNode) => streamNode.id === id);

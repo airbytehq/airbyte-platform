@@ -206,19 +206,20 @@ describe("Connection - sync modes", () => {
   describe("Incremental | Deduped + history", () => {
     it("selects and saves with source-defined primary keys", () => {
       const users2StreamRow = streamsTable.getRow("public", "users2");
-      const cursor = "updated_at"; // todo: should we get this from syncCatalog.streams[??].config.defaultCursorField with sourceDefinedCursor === true? and/or
-      const primaryKey = "id"; // todo: should we get this from syncCatalog.streams[??].config.primaryKeys?
+      const cursor = "updated_at";
+      const primaryKey = "id";
 
       users2StreamRow.toggleStreamSync();
       users2StreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Select cursor mode
-      users2StreamRow.hasEmptyCursorSelect();
-      users2StreamRow.selectCursor(cursor);
-      users2StreamRow.hasSelectedCursorField(cursor);
+      users2StreamRow.showStreamDetails();
+      streamDetails.selectCursor(cursor);
+      streamDetails.close();
+      users2StreamRow.verifyCursor(cursor);
 
       // Check primary key
-      users2StreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
+      users2StreamRow.verifyPrimaryKeys([primaryKey]);
 
       // Check Stream details table
       users2StreamRow.showStreamDetails();
@@ -244,8 +245,8 @@ describe("Connection - sync modes", () => {
 
       // Verify changes after save
       users2StreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
-      users2StreamRow.hasSelectedCursorField(cursor);
-      users2StreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
+      users2StreamRow.verifyCursor(cursor);
+      users2StreamRow.verifyPrimaryKeys([primaryKey]);
     });
 
     it("selects and saves with source-defined cursor and primary keys", () => {
@@ -257,8 +258,8 @@ describe("Connection - sync modes", () => {
       accountsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check cursor and primary key
-      accountsStreamRow.hasSourceDefinedCursor(cursor);
-      accountsStreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
+      accountsStreamRow.verifyCursor(cursor);
+      accountsStreamRow.verifyPrimaryKeys([primaryKey]);
 
       // Check Stream details table
       accountsStreamRow.showStreamDetails();
@@ -285,8 +286,8 @@ describe("Connection - sync modes", () => {
 
       // Verify after save
       accountsStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
-      accountsStreamRow.hasSourceDefinedCursor(cursor);
-      accountsStreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
+      accountsStreamRow.verifyCursor(cursor);
+      accountsStreamRow.verifyPrimaryKeys([primaryKey]);
     });
 
     it("selects and saves with selectable user-defined keys and cursors", () => {
@@ -298,30 +299,41 @@ describe("Connection - sync modes", () => {
       userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check that cursor and primary key is required
-      userCarsStreamRow.hasEmptyCursorSelect();
-      userCarsStreamRow.hasEmptyPrimaryKeySelect();
+      userCarsStreamRow.verifyCursor("missing");
+      userCarsStreamRow.verifyPrimaryKeys(["missing"]);
       replicationPage.getSaveButton().should("be.disabled");
 
-      // Can save when stream is disabled
+      // Can save if stream is disabled
       userCarsStreamRow.toggleStreamSync();
+      const usersStreamRow = streamsTable.getRow("public", "users");
+      usersStreamRow.toggleStreamSync();
       replicationPage.getSaveButton().should("be.enabled");
       userCarsStreamRow.toggleStreamSync();
 
       // Can select cursor
-      userCarsStreamRow.selectCursor(cursorValue);
-      userCarsStreamRow.hasSelectedCursorField(cursorValue);
+      userCarsStreamRow.showStreamDetails();
+      streamDetails.selectCursor(cursorValue);
+      streamDetails.close();
+      userCarsStreamRow.verifyCursor(cursorValue);
 
       // Can select single primary key
       const singlePrimaryKeyValue = [primaryKeyValue[0]];
-      userCarsStreamRow.selectPrimaryKeys(singlePrimaryKeyValue);
-      userCarsStreamRow.hasSelectedPrimaryKeys(singlePrimaryKeyValue);
+      userCarsStreamRow.showStreamDetails();
+      streamDetails.selectPrimaryKeys(singlePrimaryKeyValue);
+      streamDetails.close();
+      userCarsStreamRow.verifyPrimaryKeys(singlePrimaryKeyValue);
 
       // Unchecks:
-      userCarsStreamRow.selectPrimaryKeys(singlePrimaryKeyValue);
+      userCarsStreamRow.showStreamDetails();
+      streamDetails.deSelectPrimaryKeys(singlePrimaryKeyValue);
+      streamDetails.close();
+      userCarsStreamRow.verifyPrimaryKeys(["missing"]);
 
       // Can select multiple values
-      userCarsStreamRow.selectPrimaryKeys(primaryKeyValue);
-      userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeyValue);
+      userCarsStreamRow.showStreamDetails();
+      streamDetails.selectPrimaryKeys(primaryKeyValue);
+      streamDetails.close();
+      userCarsStreamRow.verifyPrimaryKeys(primaryKeyValue);
 
       // Check Stream details table
       userCarsStreamRow.showStreamDetails();
@@ -346,8 +358,8 @@ describe("Connection - sync modes", () => {
 
       // Verify save
       userCarsStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
-      userCarsStreamRow.hasSelectedCursorField(cursorValue);
-      userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeyValue);
+      userCarsStreamRow.verifyCursor(cursorValue);
+      userCarsStreamRow.verifyPrimaryKeys(primaryKeyValue);
     });
   });
 
@@ -355,23 +367,26 @@ describe("Connection - sync modes", () => {
     it("selects and saves", () => {
       const cursor = "updated_at";
 
+      usersStreamRow.toggleStreamSync();
       usersStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
 
       // Cursor selection is required
       replicationPage.getSaveButton().should("be.disabled");
-      usersStreamRow.hasEmptyCursorSelect();
-
-      // No primary key required
-      usersStreamRow.hasNoSourceDefinedPrimaryKeys();
+      usersStreamRow.verifyCursor("missing");
 
       // Can save if disabled
       usersStreamRow.toggleStreamSync();
-      replicationPage.getSaveButton().should("be.enabled");
+
+      const users2StreamRow = streamsTable.getRow("public", "users2");
+      users2StreamRow.toggleStreamSync();
+      replicationPage.getSaveButton().should("be.enabled"); // users 2 is enabled
       usersStreamRow.toggleStreamSync();
 
       // Select cursor
-      usersStreamRow.selectCursor(cursor);
-      usersStreamRow.hasSelectedCursorField(cursor);
+      usersStreamRow.showStreamDetails();
+      streamDetails.selectCursor(cursor);
+      streamDetails.close();
+      usersStreamRow.verifyCursor(cursor);
 
       // Check Stream details table
       usersStreamRow.showStreamDetails();
@@ -394,7 +409,7 @@ describe("Connection - sync modes", () => {
 
       // Verify save
       usersStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append);
-      usersStreamRow.hasSelectedCursorField(cursor);
+      usersStreamRow.verifyCursor(cursor);
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
     });
   });

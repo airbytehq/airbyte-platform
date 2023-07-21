@@ -191,7 +191,7 @@ export const NextStreamsConfigTableRow: React.FC<NextStreamsConfigTableRowProps>
         {(cursorType || pkType) && (
           <FlexContainer direction="column" gap="xs">
             {cursorType && (
-              <FlexContainer direction="row" gap="xs" alignItems="baseline">
+              <FlexContainer direction="row" gap="xs" alignItems="baseline" data-testid="cursor-field-cell">
                 <Text as="span" color={!!configErrors?.cursorField ? "red" : "grey"}>
                   <FormattedMessage id="form.cursorField" />
                 </Text>
@@ -206,7 +206,7 @@ export const NextStreamsConfigTableRow: React.FC<NextStreamsConfigTableRowProps>
               </FlexContainer>
             )}
             {pkType && (
-              <FlexContainer direction="row" gap="xs" alignItems="baseline">
+              <FlexContainer direction="row" gap="xs" alignItems="baseline" data-testid="primary-key-cell">
                 <Text as="span" color={!!configErrors?.primaryKey ? "red" : "grey"}>
                   <FormattedMessage id="form.primaryKey" />
                 </Text>

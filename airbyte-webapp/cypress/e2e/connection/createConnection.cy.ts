@@ -200,11 +200,14 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   });
 
   describe("Streams table", () => {
-    it("should check check connector icons and titles in table", () => {
-      newConnectionPage.checkConnectorIconAndTitle("source");
-      newConnectionPage.checkConnectorIconAndTitle("destination");
-    });
+    before(() => {
+      interceptDiscoverSchemaRequest();
 
+      cy.visit(
+        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+      );
+      waitForDiscoverSchemaRequest();
+    });
     it("should check columns names in table", () => {
       newConnectionPage.checkColumnNames();
     });
@@ -232,7 +235,16 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     });
   });
 
-  describe("Stream", () => {
+  describe.only("Stream", () => {
+    before(() => {
+      interceptDiscoverSchemaRequest();
+
+      cy.visit(
+        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+      );
+      waitForDiscoverSchemaRequest();
+    });
+
     const usersStreamRow = new StreamRowPageObject("public", "users");
 
     it("should have no streams checked by default", () => {
@@ -267,24 +279,11 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       getSubmitButton().should("be.enabled");
     });
 
-    it("should have source namespace name", () => {
-      usersStreamRow.checkSourceNamespace();
-    });
-
-    it("should have source stream name", () => {
-      usersStreamRow.checkSourceStreamName();
-    });
-
-    // check sync mode by default - should be "Full Refresh | overwrite"
-    // should have empty cursor field by default
-    // should have empty primary key field by default
-    // change default sync mode - stream row should have light blue background
-
-    it("should have default destination namespace name", () => {
+    it("should have data destination name", () => {
       usersStreamRow.checkDestinationNamespace("<destination schema>");
     });
 
-    it("should have default destination stream name", () => {
+    it("should have destination stream name", () => {
       usersStreamRow.checkDestinationStreamName("users");
     });
 

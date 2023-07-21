@@ -83,7 +83,6 @@ describe("Connection - Stream details", () => {
       streamDetails.isSyncStreamDisabled();
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
-      streamDetails.isSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
       streamDetails.areFieldsValid({ names: fieldNames, dataTypes: fieldTypes });
     });
 
@@ -122,8 +121,28 @@ describe("Connection - Stream details", () => {
 
       streamDetails.close();
 
-      userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeys);
-      userCarsStreamRow.hasSelectedCursorField(cursor);
+      userCarsStreamRow.verifyPrimaryKeys(primaryKeys);
+      userCarsStreamRow.verifyCursor(cursor);
+    });
+  });
+
+  describe("sync mode", () => {
+    const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
+    it("can select cursor and primary key", () => {
+      const cursor = "created_at";
+      const primaryKeys = ["car_id", "user_id"];
+
+      userCarsStreamRow.showStreamDetails();
+
+      streamDetails.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      streamDetails.selectCursor(cursor);
+      streamDetails.selectPrimaryKeys(primaryKeys);
+
+      streamDetails.close();
+
+      userCarsStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
+      userCarsStreamRow.verifyPrimaryKeys(primaryKeys);
+      userCarsStreamRow.verifyCursor(cursor);
     });
   });
 
@@ -137,7 +156,7 @@ describe("Connection - Stream details", () => {
       streamDetails.selectCursor("field_49");
       streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
       streamDetails.close();
-      columnsStreamRow.hasSelectedCursorField("field_0");
+      columnsStreamRow.verifyCursor("field_0");
     });
   });
 });

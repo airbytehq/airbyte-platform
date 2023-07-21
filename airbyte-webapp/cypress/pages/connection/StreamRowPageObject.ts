@@ -13,20 +13,11 @@ const getFieldSelectButtonTestId = (type: SyncFieldType) =>
 
 const getSourceDefinedTestId = (type: SyncFieldType) => getTestId(`${type}-text`);
 
-const syncModeSelectButton = joinTestIds(getTestId("sync-mode-select"), getTestId("pill-select-button"));
+export const syncModeSelectButton = joinTestIds(getTestId("sync-mode-select"), getTestId("pill-select-button"));
 
-const [
-  streamSyncSwitch,
-  sourceStreamNameCell,
-  destinationStreamNameCell,
-  sourceNamespaceCell,
-  destinationNamespaceCell,
-  dropDownOverlayContainer,
-] = getTestIds(
+const [streamSyncSwitch, destinationStreamNameCell, destinationNamespaceCell, dropDownOverlayContainer] = getTestIds(
   ["selected-switch", "input"],
-  ["source-stream-name-cell", "div"],
   ["destination-stream-name-cell", "div"],
-  ["source-namespace-cell", "div"],
   ["destination-namespace-cell", "div"],
   "overlayContainer"
 );
@@ -101,14 +92,6 @@ export class StreamRowPageObject {
       .should(`${expectedValue ? "" : "not."}match`, /added/);
   }
 
-  checkSourceNamespace() {
-    cy.get(this.stream).within(() => cy.get(sourceNamespaceCell).contains(this.namespace));
-  }
-
-  checkSourceStreamName() {
-    cy.get(this.stream).within(() => cy.get(sourceStreamNameCell).contains(this.streamName));
-  }
-
   checkDestinationNamespace(expectedValue: string) {
     cy.get(this.stream).within(() => cy.get(destinationNamespaceCell).should("have.text", expectedValue));
   }
@@ -135,14 +118,6 @@ export class StreamRowPageObject {
     });
   }
 
-  selectCursor(cursorValue: string): void {
-    this.selectFieldOption("cursor", cursorValue);
-  }
-
-  selectPrimaryKeys(primaryKeyValues: string[]): void {
-    this.selectFieldOption("primary-key", primaryKeyValues);
-  }
-
   hasSelectedSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[source]}`);
@@ -150,23 +125,15 @@ export class StreamRowPageObject {
     });
   }
 
-  hasSelectedCursorField(expectedValue: string): void {
-    this.checkFieldSelectedValue("cursor", expectedValue);
-  }
-
-  hasSelectedPrimaryKeys(expectedValues: string[]): void {
-    this.checkFieldSelectedValue("primary-key", expectedValues);
-  }
-
-  hasSourceDefinedPrimaryKeys(expectedValue: string): void {
+  verifyCursor(expectedValue: string): void {
     cy.get(this.stream).within(() => {
-      cy.get(getSourceDefinedTestId("primary-key")).contains(expectedValue);
+      cy.get(getTestId("cursor-field-cell")).contains(expectedValue);
     });
   }
 
-  hasSourceDefinedCursor(expectedValue: string): void {
+  verifyPrimaryKeys(expectedValues: string[]): void {
     cy.get(this.stream).within(() => {
-      cy.get(getSourceDefinedTestId("cursor")).contains(expectedValue);
+      cy.get(getTestId("primary-key-cell")).contains(expectedValues.join(", "));
     });
   }
 

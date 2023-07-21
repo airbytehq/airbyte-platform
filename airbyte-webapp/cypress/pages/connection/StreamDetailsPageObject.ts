@@ -1,6 +1,7 @@
 import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
 import { getTestId, getTestIds } from "utils/selectors";
 
+import { syncModeSelectButton } from "./StreamRowPageObject";
 import { SYNC_MODE_STRINGS } from "./types";
 
 const [
@@ -8,7 +9,6 @@ const [
   syncStreamSwitch,
   namespace,
   streamName,
-  syncMode,
   closeButton,
   streamSourceFieldName,
   streamSourceDataType,
@@ -20,7 +20,6 @@ const [
   "stream-details-sync-stream-switch",
   "stream-details-namespace",
   "stream-details-stream-name-value",
-  "stream-details-sync-mode-value",
   "stream-details-close-button",
   "stream-source-field-name",
   "stream-source-field-data-type",
@@ -107,13 +106,6 @@ export class StreamDetailsPageObject {
     cy.get(streamName).should("contain.text", value);
   }
 
-  isSyncMode(sourceSyncMode: SyncMode, destSyncMode: DestinationSyncMode) {
-    cy.get(syncMode).should(
-      "contain.text",
-      `${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`
-    );
-  }
-
   areFieldsValid({
     names,
     dataTypes,
@@ -141,6 +133,16 @@ export class StreamDetailsPageObject {
     });
   }
 
+  selectSyncMode(sourceSyncMode: SyncMode, destSyncMode: DestinationSyncMode) {
+    // todo: this is targeting every sync mode select, not just the one within the panel
+    cy.get(streamDetailsPanel).within(() => {
+      cy.get(syncModeSelectButton).click({ force: true });
+      cy.get(`.react-select__option`)
+        .contains(`${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`)
+        .click();
+    });
+  }
+
   selectCursor(fieldName: string) {
     getRowByFieldName(fieldName).within(() => {
       cy.get(cursorRadioButton).parent().click();
@@ -165,6 +167,15 @@ export class StreamDetailsPageObject {
       getRowByFieldName(name).within(() => {
         cy.get(primaryKeyCheckbox).parent().click();
         cy.get(primaryKeyCheckbox).should("be.checked");
+      });
+    });
+  }
+
+  deSelectPrimaryKeys(fieldNames: string[]) {
+    fieldNames.forEach((name) => {
+      getRowByFieldName(name).within(() => {
+        cy.get(primaryKeyCheckbox).parent().click();
+        cy.get(primaryKeyCheckbox).should("not.be.checked");
       });
     });
   }

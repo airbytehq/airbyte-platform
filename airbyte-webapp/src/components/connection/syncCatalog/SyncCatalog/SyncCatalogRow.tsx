@@ -50,7 +50,7 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   errors,
 }) => {
   const { stream, config } = streamNode;
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
 
   const fields = useMemo(() => {
     const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);

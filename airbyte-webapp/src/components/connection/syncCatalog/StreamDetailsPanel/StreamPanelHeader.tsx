@@ -44,7 +44,7 @@ export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value
 );
 
 const NamespaceProperty: React.FC<{ namespace?: string }> = ({ namespace }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
 
   if (isSimplifiedCatalogRowEnabled) {
     return namespace ? (
@@ -70,7 +70,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   availableSyncModes,
   onSelectSyncMode,
 }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
   const syncSchema = useMemo(() => {
     const { syncMode, destinationSyncMode } = config || {};
     return { syncMode, destinationSyncMode };

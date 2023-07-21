@@ -7,8 +7,6 @@ const getExistingConnectorTypeOption = (connectorType: ConnectorType) =>
 const getNewConnectorTypeOption = (connectorType: ConnectorType) =>
   `input[data-testid='radio-button-tile-${connectorType}Type-new']`;
 
-const connectorHeaderGroupIcon = (connectorType: ConnectorType) =>
-  `span[data-testid='connector-header-group-icon-container-${connectorType}']`;
 const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
 
@@ -40,25 +38,13 @@ export const isAtConnectionOverviewPage = (connectionId: string) =>
 /*
   Stream table
  */
-export const checkConnectorIconAndTitle = (connectorType: ConnectorType) => {
-  const connectorIcon = connectorHeaderGroupIcon(connectorType);
-  cy.get(connectorIcon)
-    .contains(connectorType, { matchCase: false })
-    .within(() => {
-      cy.get("img").should("have.attr", "src").should("not.be.empty");
-    });
-};
 
 export const checkColumnNames = () => {
-  const columnNames = ["Sync", "Namespace", "Stream name", "Sync mode", "Cursor field", "Primary key"];
+  const columnNames = ["Sync", "Data destination", "Stream", "Sync mode"];
   cy.get(catalogTreeTableHeader).within(($header) => {
     columnNames.forEach((columnName) => {
       cy.contains(columnName);
     });
-    // we have two Namespace columns
-    cy.get(`div:contains(${columnNames[1]})`).should("have.length", 2);
-    // we have two Stream Name columns
-    cy.get(`div:contains(${columnNames[2]})`).should("have.length", 2);
   });
 };
 
