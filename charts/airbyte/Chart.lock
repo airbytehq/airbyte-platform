@@ -14,9 +14,6 @@ dependencies:
 - name: server
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.47.2
-- name: airbyte-api-server
-  repository: https://airbytehq.github.io/helm-charts/
-  version: 0.47.2
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.47.2

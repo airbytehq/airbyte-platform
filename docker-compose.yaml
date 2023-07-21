@@ -250,21 +250,6 @@ services:
     depends_on:
       bootloader:
         condition: service_completed_successfully
-  airbyte-api-server:
-    image: airbyte/airbyte-api-server:${VERSION}
-    logging: *default-logging
-    container_name: airbyte-api-server
-    restart: unless-stopped
-    ports:
-      - "8006"
-    environment:
-      - AIRBYTE_VERSION=${VERSION}
-      - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
-    networks:
-      - airbyte_internal
-    depends_on:
-      bootloader:
-        condition: service_completed_successfully
   airbyte-connector-builder-server:
     image: airbyte/connector-builder-server:${VERSION}
     logging: *default-logging
@@ -290,7 +275,6 @@ services:
       - "8000:8000"
       - "8001:8001"
       - "8003:8003"
-      - "8006:8006"
     environment:
       - BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
       - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
@@ -301,7 +285,6 @@ services:
     depends_on:
       - webapp
       - server
-      - airbyte-api-server
 volumes:
   workspace:
     name: ${WORKSPACE_DOCKER_MOUNT}

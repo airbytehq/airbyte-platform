@@ -52,24 +52,4 @@ http {
       proxy_pass "${CONNECTOR_BUILDER_SERVER_API}";
     }
   }
-
-  server {
-    listen 8006;
-
-    location / {
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-      client_max_body_size 200M;
-
-      proxy_pass "${PROXY_PASS_AIRBYTE_API_SERVER}";
-
-      proxy_connect_timeout       ${BASIC_AUTH_PROXY_TIMEOUT};
-      proxy_send_timeout          ${BASIC_AUTH_PROXY_TIMEOUT};
-      proxy_read_timeout          ${BASIC_AUTH_PROXY_TIMEOUT};
-      send_timeout                ${BASIC_AUTH_PROXY_TIMEOUT};
-    }
-  }
-
 }
