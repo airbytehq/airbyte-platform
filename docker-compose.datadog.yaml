@@ -64,6 +64,11 @@ services:
     environment:
       <<: *datadogged-environment
       DD_SERVICE: airbyte-server
+  airbyte-api-server:
+    <<: *datadogged-volumes
+    environment:
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-api-server
   airbyte-connector-builder-server:
     <<: *datadogged-volumes
     environment:
