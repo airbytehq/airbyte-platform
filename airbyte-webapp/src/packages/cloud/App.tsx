@@ -16,6 +16,7 @@ import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
+import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import en from "locales/en.json";
 import { Routing } from "packages/cloud/cloudRoutes";
 import cloudLocales from "packages/cloud/locales/en.json";
@@ -57,27 +58,29 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
 const App: React.FC = () => {
   return (
     <React.StrictMode>
-      <StyleProvider>
-        <I18nProvider locale="en" messages={messages}>
-          <QueryProvider>
-            <Suspense fallback={<LoadingPage />}>
-              <ConfigServiceProvider config={config}>
-                <Router>
-                  <AnalyticsProvider>
-                    <AppMonitoringServiceProvider>
-                      <ApiErrorBoundary>
-                        <Services>
-                          <Routing />
-                        </Services>
-                      </ApiErrorBoundary>
-                    </AppMonitoringServiceProvider>
-                  </AnalyticsProvider>
-                </Router>
-              </ConfigServiceProvider>
-            </Suspense>
-          </QueryProvider>
-        </I18nProvider>
-      </StyleProvider>
+      <AirbyteThemeProvider>
+        <StyleProvider>
+          <I18nProvider locale="en" messages={messages}>
+            <QueryProvider>
+              <Suspense fallback={<LoadingPage />}>
+                <ConfigServiceProvider config={config}>
+                  <Router>
+                    <AnalyticsProvider>
+                      <AppMonitoringServiceProvider>
+                        <ApiErrorBoundary>
+                          <Services>
+                            <Routing />
+                          </Services>
+                        </ApiErrorBoundary>
+                      </AppMonitoringServiceProvider>
+                    </AnalyticsProvider>
+                  </Router>
+                </ConfigServiceProvider>
+              </Suspense>
+            </QueryProvider>
+          </I18nProvider>
+        </StyleProvider>
+      </AirbyteThemeProvider>
     </React.StrictMode>
   );
 };

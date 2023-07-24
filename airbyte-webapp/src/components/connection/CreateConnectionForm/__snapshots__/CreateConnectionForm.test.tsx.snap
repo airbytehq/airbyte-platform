@@ -1265,6 +1265,7 @@ exports[`CreateConnectionForm should render 1`] = `
               >
                 <label
                   class="<removed-for-snapshot-test>"
+                  for="radiobutton-normalization.raw"
                 >
                   <div
                     class="<removed-for-snapshot-test>"
@@ -1293,6 +1294,7 @@ exports[`CreateConnectionForm should render 1`] = `
               >
                 <label
                   class="<removed-for-snapshot-test>"
+                  for="radiobutton-normalization.basic"
                 >
                   <div
                     class="<removed-for-snapshot-test>"
@@ -1302,6 +1304,7 @@ exports[`CreateConnectionForm should render 1`] = `
                     class="<removed-for-snapshot-test>"
                     id="radiobutton-normalization.basic"
                     label="[object Object]"
+                    message="[object Object]"
                     name="normalization"
                     type="radio"
                     value="basic"
@@ -1389,18 +1392,23 @@ exports[`CreateConnectionForm should render when loading 1`] = `
       >
         <div
           class="<removed-for-snapshot-test>"
-        />
-        <div
-          class="<removed-for-snapshot-test>"
         >
-          Please wait a little bit more…
+          <div
+            class="<removed-for-snapshot-test>"
+          />
+          <div
+            class="<removed-for-snapshot-test>"
+          >
+            Please wait a little bit more…
+          </div>
         </div>
-      </div>
-      <div
-        class="<removed-for-snapshot-test>"
-      >
-        We are fetching the schema of your data source. 
+        <p
+          class="<removed-for-snapshot-test>"
+          data-type="text"
+        >
+          We are fetching the schema of your data source. 
 This should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of tables.
+        </p>
       </div>
     </div>
     <div

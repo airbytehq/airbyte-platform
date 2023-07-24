@@ -12,14 +12,14 @@
 }
 
 .google {
-  background: colors.$white;
+  background: colors.$primary;
   border: 1px solid colors.$grey-300;
 }
 
 .github {
   /* stylelint-disable-next-line color-no-hex */
   background: #333;
-  color: colors.$white;
+  color: colors.$primary;
   border: none;
 }
 

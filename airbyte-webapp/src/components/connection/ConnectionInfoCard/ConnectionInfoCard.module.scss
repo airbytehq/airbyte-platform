@@ -45,7 +45,7 @@
 .container {
   flex-wrap: wrap;
   padding: variables.$spacing-md variables.$spacing-xl;
-  background-color: white;
+  background-color: colors.$primary;
   border-radius: variables.$border-radius-lg;
 }
 

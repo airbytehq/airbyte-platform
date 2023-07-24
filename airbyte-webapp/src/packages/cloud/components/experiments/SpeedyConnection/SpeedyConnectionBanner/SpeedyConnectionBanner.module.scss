@@ -5,18 +5,18 @@
   &__container {
     padding: variables.$spacing-md;
     background-color: colors.$blue;
-    color: colors.$white;
+    color: colors.$primary;
   }
 
   &__message {
     margin: auto;
-    color: colors.$white;
+    color: colors.$primary;
     text-align: center;
   }
 
   &__cta {
     display: inline;
-    color: colors.$white;
+    color: colors.$primary;
     font-weight: 700;
   }
 }

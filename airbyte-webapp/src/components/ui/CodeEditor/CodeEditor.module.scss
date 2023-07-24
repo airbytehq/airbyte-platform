@@ -2,16 +2,17 @@
 
 // Export colors to be used in monaco editor
 :export {
-  darkString: colors.$white;
-  darkType: colors.$blue-300;
-  darkNumber: colors.$orange-300;
-  darkDelimiter: colors.$yellow-300;
-  darkKeyword: colors.$green-300;
-  lightString: colors.$dark-blue;
-  lightType: colors.$blue-500;
-  lightNumber: colors.$orange-600;
-  lightDelimiter: colors.$black;
-  lightKeyword: colors.$green-600;
-  lightLineNumber: colors.$dark-blue-300;
-  lightLineNumberActive: colors.$dark-blue;
+  string: colors.$dark-blue;
+  type: colors.$blue-500;
+  number: colors.$orange-600;
+  delimiter: colors.$secondary;
+  keyword: colors.$green-600;
+  lineNumber: colors.$dark-blue-300;
+  lineNumberActive: colors.$dark-blue;
+  line: colors.$grey-100;
+  scrollShadow: colors.$grey-100;
+  comment: colors.$grey-400;
+  cursor: colors.$secondary;
+  selection: colors.$blue-100;
+  inactiveSelection: colors.$blue-50;
 }

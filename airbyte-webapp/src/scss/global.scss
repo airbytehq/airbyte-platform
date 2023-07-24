@@ -1,8 +1,9 @@
-@use "./theme-light";
 @use "./colors";
 @use "./fonts";
 @use "./variables";
 
+@import "./theme-light";
+@import "./theme-dark";
 @import "normalize.css";
 
 :root {
@@ -22,7 +23,7 @@ body,
   -webkit-font-smoothing: antialiased;
   color: colors.$dark-blue;
   font-family: fonts.$primary;
-  background: colors.$grey-50;
+  background: colors.$backdrop;
 }
 
 button,

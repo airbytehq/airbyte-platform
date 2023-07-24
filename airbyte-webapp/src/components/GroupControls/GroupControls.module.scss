@@ -32,14 +32,14 @@ $border-width: variables.$border-thick;
   padding-right: variables.$spacing-md;
   display: flex;
   align-items: center;
-  background-color: colors.$white;
+  background-color: colors.$primary;
   white-space: nowrap;
 }
 
 .control {
   margin-left: auto;
   padding: 0 variables.$spacing-xs;
-  background-color: colors.$white;
+  background-color: colors.$primary;
 }
 
 .content {

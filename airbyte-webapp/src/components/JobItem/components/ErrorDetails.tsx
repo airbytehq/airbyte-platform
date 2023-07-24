@@ -1,6 +1,9 @@
 import dayjs from "dayjs";
 import { useIntl } from "react-intl";
-import styled from "styled-components";
+
+import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { AttemptRead } from "core/request/AirbyteClient";
 
@@ -9,18 +12,6 @@ import { getFailureFromAttempt, isCancelledAttempt } from "../utils";
 interface IProps {
   attempts?: AttemptRead[];
 }
-
-const ExpandedFailureContainer = styled.div`
-  font-size: 12px;
-  line-height: 15px;
-  padding: 10px;
-  padding-left: 40px;
-  color: ${({ theme }) => theme.greyColor40};
-`;
-
-const FailureDateDisplay = styled.span`
-  font-style: italic;
-`;
 
 const ErrorDetails: React.FC<IProps> = ({ attempts }) => {
   const { formatMessage } = useIntl();
@@ -48,12 +39,18 @@ const ErrorDetails: React.FC<IProps> = ({ attempts }) => {
 
   const internalMessage = getInternalFailureMessage(attempt);
   return (
-    <ExpandedFailureContainer>
-      {!!failure.timestamp && (
-        <FailureDateDisplay>{dayjs.utc(failure.timestamp).format("YYYY-MM-DD HH:mm:ss")} - </FailureDateDisplay>
-      )}
-      {internalMessage}
-    </ExpandedFailureContainer>
+    <Box pl="2xl" py="md">
+      <FlexContainer gap="xs">
+        {!!failure.timestamp && (
+          <Text size="sm" color="grey" italicized>
+            {dayjs.utc(failure.timestamp).format("YYYY-MM-DD HH:mm:ss")} -
+          </Text>
+        )}
+        <Text size="sm" color="grey">
+          {internalMessage}
+        </Text>
+      </FlexContainer>
+    </Box>
   );
 };
 

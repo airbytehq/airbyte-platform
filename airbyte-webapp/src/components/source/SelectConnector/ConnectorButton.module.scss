@@ -2,13 +2,13 @@
 @use "scss/variables";
 
 .button {
-  border: none;
+  border: 1px solid transparent;
   display: flex;
   gap: variables.$spacing-lg;
   align-items: center;
   padding: variables.$spacing-lg;
   box-shadow: variables.$box-shadow;
-  background-color: colors.$white;
+  background-color: colors.$primary;
   border-radius: variables.$border-radius-md;
   cursor: pointer;
   transition: box-shadow variables.$transition ease;
@@ -17,6 +17,7 @@
 
   &:hover {
     box-shadow: variables.$box-shadow-raised;
+    border-color: colors.$blue-100;
   }
 }
 

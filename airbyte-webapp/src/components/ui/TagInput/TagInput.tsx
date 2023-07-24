@@ -31,6 +31,7 @@ const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<T
     ...provided,
     color: `${styles.fontColor}`,
     fontWeight: 500,
+    fontSize: styles.fontSize,
   }),
   multiValueRemove: (provided) => ({
     ...provided,
@@ -54,8 +55,13 @@ const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<T
         cursor: "text",
         borderColor: state.isFocused ? styles.focusedBorderColor : hoveredBorderColor,
       },
+      fontSize: styles.fontSize,
     };
   },
+  input: (provided) => ({
+    ...provided,
+    color: styles.fontColor,
+  }),
 });
 
 interface Tag {

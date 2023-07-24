@@ -284,7 +284,6 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             value={schema || ""}
             language="json"
             automaticLayout
-            theme="airbyte-light"
             onChange={(val: string | undefined) => {
               setValue(path, val, {
                 shouldValidate: true,

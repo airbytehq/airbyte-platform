@@ -40,6 +40,7 @@
   border: variables.$border-thick solid colors.$grey-100;
   border-radius: variables.$border-radius-md;
   box-shadow: variables.$box-shadow-popup;
+  background-color: colors.$primary;
 }
 
 /** Main calendar area **/
@@ -88,7 +89,7 @@
 }
 
 :global(.react-datepicker__day--selected) {
-  color: colors.$white;
+  color: colors.$primary;
   background-color: colors.$blue-400;
   font-weight: 700;
 
@@ -102,11 +103,16 @@
 }
 
 /** Time **/
+:global(.react-datepicker__time-container .react-datepicker__time) {
+  background: colors.$primary;
+}
+
 :global(.react-datepicker__time-container) {
   border-left-color: colors.$grey-100;
   border-left-width: variables.$border-thick;
   border-bottom-right-radius: variables.$border-radius-md;
   overflow: hidden;
+  background-color: colors.$primary;
 }
 
 :global(.react-datepicker-time__header) {
@@ -134,6 +140,10 @@
       li.react-datepicker__time-list-item
   ) {
   justify-content: center;
+
+  &:hover {
+    background-color: colors.$grey-100;
+  }
 }
 
 :global(
@@ -143,7 +153,7 @@
       ul.react-datepicker__time-list
       li.react-datepicker__time-list-item--selected
   ) {
-  color: colors.$white;
+  color: colors.$primary;
   background-color: colors.$blue-400;
 
   &:hover {

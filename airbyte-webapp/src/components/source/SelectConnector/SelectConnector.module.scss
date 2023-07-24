@@ -17,12 +17,12 @@
     padding: variables.$spacing-md variables.$spacing-md variables.$spacing-md;
     position: sticky;
     top: 0;
-    background-color: colors.$grey-50;
+    background-color: colors.$backdrop;
     z-index: 1;
   }
 
   &__gutter {
-    background-color: colors.$grey-50;
+    background-color: colors.$backdrop;
     position: sticky;
     top: 0;
   }

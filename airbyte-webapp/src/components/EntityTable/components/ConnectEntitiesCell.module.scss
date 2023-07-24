@@ -1,0 +1,16 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  color: inherit;
+}
+
+.disabled {
+  color: colors.$grey-300;
+}
+
+.connectors {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 150px;
+}

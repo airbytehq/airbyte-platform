@@ -1,0 +1,29 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  margin-bottom: 6px;
+}
+
+.label {
+  padding-left: variables.$spacing-md;
+  font-size: variables.$font-size-lg;
+  color: colors.$dark-blue;
+  cursor: pointer;
+}
+
+.disabled {
+  color: colors.$grey-300;
+  cursor: auto;
+}
+
+.message {
+  padding-left: variables.$spacing-sm;
+  color: colors.$grey-300;
+  font-size: variables.$font-size-md;
+
+  & a {
+    text-decoration: underline;
+    color: colors.$blue;
+  }
+}

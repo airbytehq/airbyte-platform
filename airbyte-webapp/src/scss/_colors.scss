@@ -82,8 +82,8 @@ $red-800: var(--color-red-800);
 $red-900: var(--color-red-900);
 $red: var(--color-red-300);
 
-$black: var(--color-black);
-$white: var(--color-white);
+$primary: var(--color-primary);
+$secondary: var(--color-secondary);
 
 $yellow-50: var(--color-yellow-50);
 $yellow-100: var(--color-yellow-100);
@@ -98,6 +98,15 @@ $yellow-900: var(--color-yellow-900);
 $yellow: var(--color-yellow-500);
 
 $overlay-background: var(--color-overlay-background);
+$backdrop: var(--color-backdrop);
+
+$ansi-blue-bg: var(--color-ansi-blue-bg);
+$ansi-cyan-bg: var(--color-ansi-cyan-bg);
+$ansi-yellow-bg: var(--color-ansi-yellow-bg);
+$ansi-cyan-fg: var(--color-ansi-cyan-fg);
+$ansi-green-fg: var(--color-ansi-green-fg);
+$ansi-yellow-fg: var(--color-ansi-yellow-fg);
+$ansi-red-fg: var(--color-ansi-red-fg);
 
 // LEGACY - DEPRECATED
 

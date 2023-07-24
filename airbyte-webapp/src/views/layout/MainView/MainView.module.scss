@@ -1,3 +1,6 @@
+@use "scss/variables";
+@use "scss/colors";
+
 .mainViewContainer {
   width: 100%;
   height: 100%;
@@ -9,4 +12,8 @@
   overflow-y: auto;
   width: 100%;
   height: 100%;
+}
+
+.themeContainer {
+  padding: variables.$spacing-md;
 }

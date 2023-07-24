@@ -1,0 +1,43 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  height: 18px;
+  width: 18px;
+  background: colors.$primary;
+  border: 1px solid colors.$grey-200;
+  color: colors.$primary;
+  text-align: center;
+  border-radius: 50%;
+  display: inline-block;
+  padding: 4px;
+  cursor: pointer;
+
+  &.checked {
+    background: colors.$blue;
+    border-color: colors.$blue;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.innerCircle {
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  background: colors.$grey-200;
+
+  &.checked {
+    background: colors.$primary;
+  }
+}
+
+.input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}

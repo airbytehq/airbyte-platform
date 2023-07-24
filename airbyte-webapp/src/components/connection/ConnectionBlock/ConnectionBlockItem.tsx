@@ -1,39 +1,26 @@
 import React from "react";
-import styled from "styled-components";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
+
+import styles from "./ConnectionBlockItem.module.scss";
 
 interface IProps {
-  name: string;
+  name?: string;
   icon?: string;
 }
 
-export const Content = styled.div`
-  background: ${({ theme }) => theme.lightPrimaryColor};
-  border-radius: 4px;
-  width: 356px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  flex-direction: row;
-  padding: 0 9px;
-`;
-
-const Name = styled.div`
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-  line-height: 20px;
-  margin-left: 6px;
-`;
-
 const ConnectionBlockItem: React.FC<IProps> = (props) => {
   return (
-    <Content>
-      <ConnectorIcon icon={props.icon} />
-      <Name>{props.name}</Name>
-    </Content>
+    <FlexContainer alignItems="center" className={styles.content} gap="md">
+      {props.icon && <ConnectorIcon icon={props.icon} />}
+      {props.name && (
+        <Text size="lg" className={styles.name}>
+          {props.name}
+        </Text>
+      )}
+    </FlexContainer>
   );
 };
 

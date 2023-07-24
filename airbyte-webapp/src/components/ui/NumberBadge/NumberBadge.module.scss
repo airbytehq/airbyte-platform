@@ -25,28 +25,28 @@
 
   &.green {
     background: colors.$green;
-    color: colors.$black;
+    color: colors.$secondary;
   }
 
   &.red {
     background: colors.$red;
-    color: colors.$black;
+    color: colors.$secondary;
   }
 
   &.blue {
     background: colors.$blue;
-    color: colors.$white;
+    color: colors.$primary;
   }
 
   &.blue--outline {
     border: variables.$border-thick solid colors.$blue;
     color: colors.$blue;
-    background: colors.$white;
+    background: colors.$primary;
   }
 
   &.grey--outline {
     border: variables.$border-thick solid colors.$grey-300;
     color: colors.$grey-300;
-    background: colors.$white;
+    background: colors.$primary;
   }
 }

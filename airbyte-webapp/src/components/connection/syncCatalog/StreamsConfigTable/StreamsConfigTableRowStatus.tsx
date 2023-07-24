@@ -23,7 +23,7 @@ const getIcon = (statusToDisplay: StatusToDisplay): React.ReactNode | null => {
     case "removed":
       return <MinusIcon />;
     case "changed":
-      return <ModificationIcon color="currentColor" />;
+      return <ModificationIcon />;
   }
 
   return null;

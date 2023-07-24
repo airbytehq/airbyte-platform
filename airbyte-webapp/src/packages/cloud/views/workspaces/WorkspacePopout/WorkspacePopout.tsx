@@ -62,7 +62,7 @@ const List = styled.div`
     & div {
       font-weight: 400;
       font-size: 11px;
-      color: #1a194d;
+      color: ${({ theme }) => theme.darkBlue};
     }
   }
 `;

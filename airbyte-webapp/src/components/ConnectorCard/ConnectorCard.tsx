@@ -3,7 +3,7 @@ import React from "react";
 
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 
-import { getIcon } from "area/connector/utils";
+import { SvgIcon } from "area/connector/utils";
 import { ReleaseStage } from "core/request/AirbyteClient";
 
 import styles from "./ConnectorCard.module.scss";
@@ -24,7 +24,11 @@ export const ConnectorCard: React.FC<ConnectorCardProps> = ({
   fullWidth,
 }) => (
   <div className={classnames(styles.container, { [styles.fullWidth]: fullWidth })}>
-    {icon && <div className={styles.entityIcon}>{getIcon(icon)}</div>}
+    {icon && (
+      <div className={styles.entityIcon}>
+        <SvgIcon svg={icon} />
+      </div>
+    )}
     <div className={styles.details}>
       <div className={styles.connectorDetails}>
         <div className={styles.connectionName}>{connectionName}</div>

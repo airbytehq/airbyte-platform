@@ -9,7 +9,7 @@
   border-radius: variables.$border-radius-xs;
 
   &.light {
-    background-color: colors.$white;
+    background-color: colors.$primary;
     border: variables.$border-thin solid colors.$grey-100;
   }
 
@@ -26,7 +26,7 @@
     border-color: colors.$grey-100;
 
     &.light {
-      background-color: colors.$white;
+      background-color: colors.$primary;
     }
 
     &.error {
@@ -38,7 +38,7 @@
     border-color: colors.$blue;
 
     &.light {
-      background-color: colors.$white;
+      background-color: colors.$primary;
     }
   }
 }
@@ -53,7 +53,7 @@
   border: none;
   background: none;
   color: colors.$dark-blue;
-  caret-color: colors.$blue;
+  caret-color: colors.$blue-700;
 
   &:not(.disabled).password {
     width: calc(100% - 22px);

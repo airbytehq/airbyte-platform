@@ -2,8 +2,6 @@
 @use "scss/variables";
 
 .jobSummary {
-  border-bottom: variables.$border-thin solid transparent;
-
   &--open {
     border-bottom: variables.$border-thin solid colors.$grey-100;
   }

@@ -49,7 +49,7 @@
 
   .quote {
     margin: 0;
-    color: colors.$white;
+    color: colors.$primary;
     font-family: fonts.$primary;
     font-weight: 400;
     font-size: 17px;
@@ -72,14 +72,14 @@
   }
 
   .companyLogo {
-    color: colors.$white;
+    color: colors.$primary;
     height: 110px;
     margin-top: 40px;
     margin-bottom: 40px;
   }
 
   .quoteAuthorFullName {
-    color: colors.$white;
+    color: colors.$primary;
     font-family: fonts.$primary;
     font-weight: 500;
     font-size: variables.$font-size-lg;
@@ -87,7 +87,7 @@
   }
 
   .quoteAuthorJobTitle {
-    color: colors.$white;
+    color: colors.$primary;
     font-family: fonts.$primary;
     font-weight: 700;
     font-size: 18px;

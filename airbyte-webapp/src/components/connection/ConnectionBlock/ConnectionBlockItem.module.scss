@@ -1,0 +1,15 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  background: colors.$blue-50;
+  border-radius: variables.$border-radius-xs;
+  width: 360px;
+  padding: variables.$spacing-sm variables.$spacing-md;
+}
+
+.name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

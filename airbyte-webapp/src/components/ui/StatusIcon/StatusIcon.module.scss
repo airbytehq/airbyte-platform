@@ -77,7 +77,7 @@ $lg-width: 40px;
 .container {
   border-radius: variables.$border-radius-pill;
   background-color: colors.$red;
-  color: colors.$white;
+  color: colors.$primary;
   width: fit-content;
 
   & .value {

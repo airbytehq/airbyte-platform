@@ -16,6 +16,7 @@
     "scss/percent-placeholder-pattern": null,
     "value-keyword-case": null,
     "color-no-hex": true,
+    "hue-degree-notation": "number",
     "airbyte/no-color-variables-in-rgba": true,
     "airbyte/no-use-renaming": true
   },

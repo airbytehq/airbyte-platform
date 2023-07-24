@@ -46,7 +46,7 @@ export const StreamRow: React.FC<StreamRowProps> = ({ streamTransform, syncMode,
             ) : diffVerb === "removed" ? (
               <FontAwesomeIcon icon={faMinus} size="1x" className={iconStyle} />
             ) : (
-              <ModificationIcon />
+              <ModificationIcon className={iconStyle} />
             )}
           </div>
           <div title={namespace} className={styles.text}>

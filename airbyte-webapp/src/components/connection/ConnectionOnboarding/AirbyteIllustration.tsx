@@ -3,6 +3,7 @@ import styles from "./AirbyteIllustration.module.scss";
 export type HighlightIndex = 0 | 1 | 2 | 3;
 
 interface AirbyteIllustrationProps {
+  className?: string;
   sourceHighlighted: HighlightIndex;
   destinationHighlighted: HighlightIndex;
 }
@@ -25,10 +26,18 @@ const highlightedDestination = {
 };
 
 export const AirbyteIllustration: React.FC<AirbyteIllustrationProps> = ({
+  className,
   sourceHighlighted,
   destinationHighlighted,
 }) => (
-  <svg width="492" height="318" viewBox="0 0 492 318" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="492"
+    height="318"
+    viewBox="0 0 492 318"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
     <path
       id="sourcePath0"
       d="M0 25H16.3176C38.7973 25 58.5134 40.0021 64.5074 61.668L80.4605 119.332C86.4545 140.998 106.171 156 128.65 156H179"
@@ -95,7 +104,7 @@ export const AirbyteIllustration: React.FC<AirbyteIllustrationProps> = ({
       </animateMotion>
     </circle>
     <g filter="url(#backgroundGradient)">
-      <rect x="179" y="88" width="134" height="134" rx="48" fill="white" />
+      <rect x="179" y="88" width="134" height="134" rx="48" fill="currentColor" />
       <path
         fillRule="evenodd"
         clipRule="evenodd"

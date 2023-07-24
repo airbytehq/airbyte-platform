@@ -11,13 +11,13 @@
 
   border-top-left-radius: variables.$border-radius-lg;
   border-bottom-left-radius: variables.$border-radius-lg;
-  background-color: colors.$white;
+  background-color: colors.$primary;
 }
 
 .gradientBg {
-  background-image: linear-gradient(colors.$grey-50, colors.$grey-100);
+  background-color: colors.$backdrop;
 }
 
 .solidBg {
-  background-color: colors.$grey-50;
+  background-color: colors.$backdrop;
 }

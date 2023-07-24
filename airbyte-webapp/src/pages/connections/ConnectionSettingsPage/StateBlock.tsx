@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { H5 } from "components/base/Titles";
 import { Card } from "components/ui/Card";
+import { Heading } from "components/ui/Heading";
 
 import { ConnectionState } from "core/request/AirbyteClient";
 import { useGetConnectionState } from "hooks/services/useConnectionHook";
@@ -35,9 +35,9 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId }) => {
 
   return (
     <Card withPadding>
-      <H5 bold>
+      <Heading as="h5" size="sm">
         <FormattedMessage id="tables.connectionState.title" />
-      </H5>
+      </Heading>
       <pre style={{ maxHeight: 200, overflowY: "scroll" }}>{stateString}</pre>
     </Card>
   );

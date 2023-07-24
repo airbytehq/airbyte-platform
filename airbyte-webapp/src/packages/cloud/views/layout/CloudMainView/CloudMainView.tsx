@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { Outlet } from "react-router-dom";
@@ -5,6 +6,8 @@ import { Outlet } from "react-router-dom";
 import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
+import { FlexItem } from "components/ui/Flex";
+import { ThemeToggle } from "components/ui/ThemeToggle";
 
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceAsync } from "core/api/cloud";
@@ -55,7 +58,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
 
   return (
-    <div className={styles.mainContainer}>
+    <div className={classNames(styles.mainContainer)}>
       <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <SideBar>
           <AirbyteHomeLink />
@@ -86,6 +89,9 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 icon={<SettingsIcon />}
                 to={RoutePaths.Settings}
               />
+              <FlexItem className={styles.themeContainer}>
+                <ThemeToggle />
+              </FlexItem>
             </MenuContent>
           </MenuContent>
         </SideBar>

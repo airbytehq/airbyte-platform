@@ -1,30 +1,14 @@
 import React from "react";
-import styled from "styled-components";
 
 import Logs from "components/Logs";
+import { Box } from "components/ui/Box";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { AttemptDetails } from "./AttemptDetails";
 import DownloadButton from "./DownloadButton";
 import { LinkToAttemptButton } from "./LinkToAttemptButton";
 import { AttemptRead, JobDebugInfoRead } from "../../../core/request/AirbyteClient";
-
-const LogHeader = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 9px;
-  font-size: 12px;
-  padding: 0 10px;
-`;
-
-const AttemptDetailsSection = styled.div`
-  padding: 10px 0 10px 10px;
-`;
-
-const LogPath = styled.span`
-  flex: 1;
-  color: ${({ theme }) => theme.greyColor40};
-`;
 
 export const LogsDetails: React.FC<{
   jobId: string;
@@ -36,15 +20,21 @@ export const LogsDetails: React.FC<{
 }> = ({ path, jobId, currentAttempt, jobDebugInfo, showAttemptStats, logs }) => (
   <>
     {currentAttempt && showAttemptStats && (
-      <AttemptDetailsSection>
+      <Box p="md">
         <AttemptDetails attempt={currentAttempt} jobId={jobId} />
-      </AttemptDetailsSection>
+      </Box>
     )}
-    <LogHeader>
-      <LogPath>{path}</LogPath>
-      <LinkToAttemptButton jobId={jobId} attemptId={currentAttempt?.id} />
-      {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${jobId}`} />}
-    </LogHeader>
+    <Box px="md" pt="md">
+      <FlexContainer alignItems="center" gap="sm">
+        <FlexItem grow>
+          <Text size="sm" color="grey">
+            {path}
+          </Text>
+        </FlexItem>
+        <LinkToAttemptButton jobId={jobId} attemptId={currentAttempt?.id} />
+        {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${jobId}`} />}
+      </FlexContainer>
+    </Box>
     <Logs logsArray={logs} />
   </>
 );

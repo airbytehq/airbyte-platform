@@ -1,6 +1,8 @@
-import Editor, { Monaco } from "@monaco-editor/react";
+import Editor, { Monaco, useMonaco } from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-import React from "react";
+import React, { useEffect } from "react";
+
+import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import styles from "./CodeEditor.module.scss";
 import { Spinner } from "../Spinner";
@@ -8,7 +10,6 @@ import { Spinner } from "../Spinner";
 interface CodeEditorProps {
   value: string;
   language?: string;
-  theme?: "airbyte-dark" | "airbyte-light" | "vs-dark" | "light";
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
   height?: string;
@@ -17,27 +18,31 @@ interface CodeEditorProps {
   automaticLayout?: boolean;
 }
 
-// Converts 3-character hex values into 6-character ones.
-// Required for custom monaco theme, because it fails when receiving 3-character hex values.
-// Only needed for non-dev mode, as that is when hex values get minified to 3 characters.
-function expandHexValue(input: string) {
-  const match = /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/.exec(input);
-  if (match) {
-    return `#${match[1].repeat(2)}${match[2].repeat(2)}${match[3].repeat(2)}`;
-  }
-  return input;
+function hslToHex(hue: number, saturation: number, lightness: number) {
+  lightness /= 100;
+  const chroma = (saturation * Math.min(lightness, 1 - lightness)) / 100;
+  const convertWithOffset = (offset: number) => {
+    const normalizedHue = (offset + hue / 30) % 12;
+    const color = lightness - chroma * Math.max(Math.min(normalizedHue - 3, 9 - normalizedHue, 1), -1);
+    // convert to Hex and prefix "0" if needed
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${convertWithOffset(0)}${convertWithOffset(8)}${convertWithOffset(4)}`;
 }
 
 function cssCustomPropToHex(cssCustomProperty: string) {
   const varName = cssCustomProperty.replace(/var\(|\)/g, "");
   const bodyStyles = window.getComputedStyle(document.body);
-  return expandHexValue(bodyStyles.getPropertyValue(varName).trim());
+  const hslString = bodyStyles.getPropertyValue(varName).trim();
+  const [, h, s, l] = /^hsl\(([0-9]+), ([0-9]+)%, ([0-9]+)%\)$/.exec(hslString)?.map(Number) ?? [0, 0, 0, 0];
+  return hslToHex(h, s, l);
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
   value,
   language,
-  theme,
   readOnly,
   onChange,
   height,
@@ -45,45 +50,42 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   onMount,
   automaticLayout,
 }) => {
-  const setAirbyteTheme = (monaco: Monaco) => {
-    monaco.editor.defineTheme("airbyte-dark", {
-      base: "vs-dark",
-      inherit: true,
-      rules: [
-        { token: "string", foreground: cssCustomPropToHex(styles.darkString) },
-        { token: "string.yaml", foreground: cssCustomPropToHex(styles.darkString) },
-        { token: "string.value.json", foreground: cssCustomPropToHex(styles.darkType) },
-        { token: "string.key.json", foreground: cssCustomPropToHex(styles.darkType) },
-        { token: "type", foreground: cssCustomPropToHex(styles.darkType) },
-        { token: "number", foreground: cssCustomPropToHex(styles.darkNumber) },
-        { token: "delimiter", foreground: cssCustomPropToHex(styles.darkDelimiter) },
-        { token: "keyword", foreground: cssCustomPropToHex(styles.darkKeyword) },
-      ],
-      colors: {
-        "editor.background": "#00000000", // transparent, so that parent background is shown instead
-      },
-    });
+  const monaco = useMonaco();
+  const { theme: airbyteTheme } = useAirbyteTheme();
 
-    monaco.editor.defineTheme("airbyte-light", {
+  const setAirbyteTheme = (monaco: Monaco | null) => {
+    monaco?.editor.defineTheme("airbyte", {
       base: "vs",
       inherit: true,
       rules: [
-        { token: "string", foreground: cssCustomPropToHex(styles.lightString) },
-        { token: "string.yaml", foreground: cssCustomPropToHex(styles.lightString) },
-        { token: "string.value.json", foreground: cssCustomPropToHex(styles.lightString) },
-        { token: "string.key.json", foreground: cssCustomPropToHex(styles.lightType) },
-        { token: "type", foreground: cssCustomPropToHex(styles.lightType) },
-        { token: "number", foreground: cssCustomPropToHex(styles.lightNumber) },
-        { token: "delimiter", foreground: cssCustomPropToHex(styles.lightDelimiter) },
-        { token: "keyword", foreground: cssCustomPropToHex(styles.lightKeyword) },
+        { token: "", foreground: cssCustomPropToHex(styles.string) },
+        { token: "string", foreground: cssCustomPropToHex(styles.string) },
+        { token: "string.yaml", foreground: cssCustomPropToHex(styles.string) },
+        { token: "string.value.json", foreground: cssCustomPropToHex(styles.string) },
+        { token: "string.key.json", foreground: cssCustomPropToHex(styles.type) },
+        { token: "type", foreground: cssCustomPropToHex(styles.type) },
+        { token: "number", foreground: cssCustomPropToHex(styles.number) },
+        { token: "delimiter", foreground: cssCustomPropToHex(styles.delimiter) },
+        { token: "keyword", foreground: cssCustomPropToHex(styles.keyword) },
+        { token: "comment", foreground: cssCustomPropToHex(styles.comment) },
       ],
       colors: {
         "editor.background": "#00000000", // transparent, so that parent background is shown instead
-        "editorLineNumber.foreground": cssCustomPropToHex(styles.lightLineNumber),
-        "editorLineNumber.activeForeground": cssCustomPropToHex(styles.lightLineNumberActive),
+        "editorLineNumber.foreground": cssCustomPropToHex(styles.lineNumber),
+        "editorLineNumber.activeForeground": cssCustomPropToHex(styles.lineNumberActive),
+        "editorIndentGuide.background": cssCustomPropToHex(styles.line),
+        "editor.lineHighlightBorder": cssCustomPropToHex(styles.line),
+        "editorCursor.foreground": cssCustomPropToHex(styles.cursor),
+        "scrollbar.shadow": cssCustomPropToHex(styles.scrollShadow),
+        "editor.selectionBackground": cssCustomPropToHex(styles.selection),
+        "editor.inactiveSelectionBackground": cssCustomPropToHex(styles.inactiveSelection),
       },
     });
   };
+
+  useEffect(() => {
+    setAirbyteTheme(monaco);
+  }, [airbyteTheme, monaco]);
 
   return (
     <Editor
@@ -93,7 +95,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       value={value}
       onChange={onChange}
       language={language}
-      theme={theme}
+      theme="airbyte"
       height={height}
       options={{
         lineNumbersMinChars: lineNumberCharacterWidth ?? 2,

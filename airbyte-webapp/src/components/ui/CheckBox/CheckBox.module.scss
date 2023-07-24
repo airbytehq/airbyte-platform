@@ -9,10 +9,10 @@ $sm-size: 14px;
   align-items: center;
   justify-content: center;
   padding: variables.$border-thin 0;
-  border: variables.$border-thin solid colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-2xs;
-  color: colors.$white;
-  background-color: colors.$white;
+  color: colors.$primary;
+  background-color: colors.$primary;
   cursor: pointer;
 
   input {

@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event";
 
 import { render } from "test-utils";
 import { mockSourceDefinition } from "test-utils/mock-data/mockSource";
+import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { SelectConnector } from "./SelectConnector";
@@ -10,6 +11,10 @@ const mockTrackSelectConnector = jest.fn();
 
 jest.mock("./useTrackSelectConnector", () => ({
   useTrackSelectConnector: () => mockTrackSelectConnector,
+}));
+
+jest.mock("hooks/theme/useAirbyteTheme", () => ({
+  useAirbyteTheme: () => mockTheme,
 }));
 
 jest.mock("core/api", () => ({

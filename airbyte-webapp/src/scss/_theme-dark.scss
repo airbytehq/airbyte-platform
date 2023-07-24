@@ -1,0 +1,126 @@
+/* stylelint-disable color-no-hex, color-hex-length  */
+.airbyteThemeDark {
+  color-scheme: dark;
+
+  --color-primary: hsl(240, 7%, 10%);
+  --color-secondary: hsl(0, 0%, 100%);
+
+  --color-backdrop: hsl(240, 7%, 5%);
+
+  --color-blue-30: hsl(252, 25%, 18%);
+  --color-blue-40: hsl(248, 27%, 20%);
+  --color-blue-50: hsl(246, 30%, 22%);
+  --color-blue-100: hsl(246, 40%, 40%);
+  --color-blue-200: hsl(243, 60%, 50%);
+  --color-blue-300: hsl(242, 80%, 60%);
+  --color-blue-400: hsl(241, 100%, 68%);
+  --color-blue-500: hsl(241, 100%, 75%);
+  --color-blue-600: hsl(243, 100%, 82%);
+  --color-blue-700: hsl(243, 100%, 89%);
+  --color-blue-800: hsl(244, 100%, 96%);
+  --color-blue-900: hsl(240, 100%, 98%);
+
+  --color-dark-blue-30: hsl(235, 30%, 11%);
+  --color-dark-blue-40: hsl(234, 30%, 20%);
+  --color-dark-blue-50: hsl(233, 30%, 27%);
+  --color-dark-blue-100: hsl(237, 30%, 31%);
+  --color-dark-blue-200: hsl(236, 30%, 35%);
+  --color-dark-blue-300: hsl(235, 30%, 37%);
+  --color-dark-blue-400: hsl(234, 26%, 46%);
+  --color-dark-blue-500: hsl(234, 23%, 56%);
+  --color-dark-blue-600: hsl(232, 23%, 67%);
+  --color-dark-blue-700: hsl(234, 22%, 81%);
+  --color-dark-blue-800: hsl(230, 23%, 95%);
+  --color-dark-blue-900: hsl(228, 45%, 98%);
+  --color-dark-blue-1000: hsl(225, 67%, 99%);
+
+  --color-grey-30: hsl(240, 7%, 9%);
+  --color-grey-40: hsl(240, 14%, 14%);
+  --color-grey-50: hsl(240, 12%, 17%);
+  --color-grey-100: hsl(240, 8%, 21%);
+  --color-grey-200: hsl(240, 10%, 49%);
+  --color-grey-300: hsl(240, 10%, 59%);
+  --color-grey-400: hsl(240, 13%, 72%);
+  --color-grey-500: hsl(240, 10%, 86%);
+  --color-grey-600: hsl(240, 12%, 92%);
+  --color-grey-700: hsl(240, 17%, 98%);
+  --color-grey-800: hsl(240, 25%, 98%);
+  --color-grey-900: hsl(240, 20%, 99%);
+
+  --color-orange-50: hsl(7, 75%, 43%);
+  --color-orange-100: hsl(8, 71%, 49%);
+  --color-orange-200: hsl(8, 79%, 53%);
+  --color-orange-300: hsl(8, 90%, 57%);
+  --color-orange-400: hsl(9, 100%, 60%);
+  --color-orange-500: hsl(10, 100%, 65%);
+  --color-orange-600: hsl(11, 99%, 71%);
+  --color-orange-700: hsl(11, 98%, 79%);
+  --color-orange-800: hsl(11, 97%, 87%);
+  --color-orange-900: hsl(3, 64%, 95%);
+
+  --color-green-30: hsl(180, 82%, 5%);
+  --color-green-40: hsl(184, 94%, 9%);
+  --color-green-50: hsl(184, 100%, 12%);
+  --color-green-100: hsl(185, 100%, 20%);
+  --color-green-200: hsl(185, 100%, 38%);
+  --color-green-300: hsl(184, 100%, 40%);
+  --color-green-400: hsl(183, 100%, 45%);
+  --color-green-500: hsl(183, 67%, 64%);
+  --color-green-600: hsl(183, 64%, 79%);
+  --color-green-700: hsl(184, 67%, 92%);
+  --color-green-800: hsl(185, 76%, 97%);
+  --color-green-900: hsl(187, 69%, 97%);
+
+  --color-red-30: hsl(335, 100%, 9%);
+  --color-red-40: hsl(339, 89%, 12%);
+  --color-red-50: hsl(341, 85%, 15%);
+  --color-red-100: hsl(346, 60%, 25%);
+  --color-red-200: hsl(348, 92%, 40%);
+  --color-red-300: hsl(348, 96%, 55%);
+  --color-red-400: hsl(349, 100%, 68%);
+  --color-red-500: hsl(349, 100%, 78%);
+  --color-red-600: hsl(350, 100%, 86%);
+  --color-red-700: hsl(351, 100%, 95%);
+  --color-red-800: hsl(349, 100%, 97%);
+  --color-red-900: hsl(349, 100%, 98%);
+
+  --color-yellow-50: hsl(39, 82%, 15%);
+  --color-yellow-100: hsl(40, 84%, 22%);
+  --color-yellow-200: hsl(39, 100%, 29%);
+  --color-yellow-300: hsl(44, 100%, 38%);
+  --color-yellow-400: hsl(47, 100%, 48%);
+  --color-yellow-500: hsl(47, 93%, 56%);
+  --color-yellow-600: hsl(48, 92%, 64%);
+  --color-yellow-700: hsl(48, 91%, 74%);
+  --color-yellow-800: hsl(48, 90%, 84%);
+  --color-yellow-900: hsl(49, 88%, 94%);
+
+  --color-overlay-background: hsla(236, 11%, 42%, 70%);
+
+  --color-ansi-blue-bg: hsl(209, 98%, 25%);
+  --color-ansi-cyan-bg: hsl(180, 83%, 25%);
+  --color-ansi-yellow-bg: hsl(45, 100%, 25%);
+  --color-ansi-cyan-fg: hsl(180, 88%, 38%);
+  --color-ansi-green-fg: hsl(120, 100%, 33%);
+  --color-ansi-yellow-fg: hsl(16, 100%, 50%);
+  --color-ansi-red-fg: hsl(0, 100%, 50%);
+
+  --box-shadow: 0 2px 4px hsla(0, 0%, 0%, 50%);
+  --box-shadow-left: -2px 0 10px hsla(0, 0%, 0%, 50%);
+  --box-shadow-right: 2px 0 10px hsla(0, 0%, 0%, 50%);
+  --box-shadow-raised: 0 10px 19px hsla(0, 0%, 0%, 50%);
+  --box-shadow-popup: 0 0 22px hsla(0, 0%, 0%, 50%);
+  --box-shadow-sidebar: 0 2px 4px hsla(0, 0%, 0%, 45%);
+
+  .react-select__menu {
+    background-color: var(--color-primary);
+  }
+
+  .react-select__single-value {
+    color: var(--color-dark-blue-900);
+  }
+
+  .react-select__control--is-disabled .react-select__dropdown-indicator {
+    color: var(--color-grey-200);
+  }
+}

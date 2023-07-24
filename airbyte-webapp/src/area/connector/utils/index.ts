@@ -1,2 +1,2 @@
 export { ConnectorIds } from "./constants";
-export { getIcon } from "./icons";
+export { SvgIcon } from "./SvgIcon";

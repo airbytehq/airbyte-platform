@@ -1,7 +1,6 @@
 import { faCog } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
-import styled from "styled-components";
 
 import { Link } from "components/ui/Link";
 
@@ -9,27 +8,11 @@ import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { ConnectionRoutePaths } from "pages/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
+import styles from "./ConnectionSettingsCell.module.scss";
+
 interface IProps {
   id: string;
 }
-
-const Content = styled.div`
-  color: ${({ theme }) => theme.greyColor60};
-  font-size: 17px;
-  min-width: 17px;
-`;
-
-const Icon = styled(FontAwesomeIcon)`
-  display: none;
-  color: ${({ theme }) => theme.greyColor60};
-
-  tr:hover & {
-    display: block;
-  }
-  &:hover {
-    color: ${({ theme }) => theme.greyColor70};
-  }
-`;
 
 const ConnectorCell: React.FC<IProps> = ({ id }) => {
   const { workspaceId } = useCurrentWorkspace();
@@ -41,11 +24,11 @@ const ConnectorCell: React.FC<IProps> = ({ id }) => {
   const settingPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${id}/${ConnectionRoutePaths.Replication}`;
 
   return (
-    <Content onClick={openSettings}>
-      <Link to={settingPath}>
-        <Icon icon={faCog} />
+    <button className={styles.button} onClick={openSettings} tabIndex={-1}>
+      <Link className={styles.link} to={settingPath}>
+        <FontAwesomeIcon className={styles.icon} icon={faCog} />
       </Link>
-    </Content>
+    </button>
   );
 };
 

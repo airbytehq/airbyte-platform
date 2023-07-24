@@ -4,9 +4,10 @@ import classNames from "classnames";
 import React from "react";
 
 import { Card } from "components/ui/Card";
+import { FlexItem } from "components/ui/Flex";
 
 import styles from "./ConnectionBlock.module.scss";
-import { ConnectionBlockItem, Content } from "./ConnectionBlockItem";
+import { ConnectionBlockItem } from "./ConnectionBlockItem";
 
 interface IProps {
   itemFrom?: { name: string; icon?: string };
@@ -14,9 +15,9 @@ interface IProps {
 }
 
 export const ConnectionBlock: React.FC<IProps> = (props) => (
-  <Card className={classNames(styles.lightContentCard)}>
-    {props.itemFrom ? <ConnectionBlockItem {...props.itemFrom} /> : <Content className={styles.extraBlock} />}
+  <Card className={classNames(styles.content)}>
+    {props.itemFrom ? <ConnectionBlockItem {...props.itemFrom} /> : <FlexItem grow />}
     <FontAwesomeIcon className={styles.arrow} icon={faChevronRight} />
-    {props.itemTo ? <ConnectionBlockItem {...props.itemTo} /> : <Content className={styles.extraBlock} />}
+    {props.itemTo ? <ConnectionBlockItem {...props.itemTo} /> : <FlexItem grow />}
   </Card>
 );

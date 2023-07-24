@@ -155,7 +155,6 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
         <CodeEditor
           value={yamlValue}
           language="yaml"
-          theme="airbyte-light"
           automaticLayout
           onChange={(value) => setYamlValue(value ?? "")}
           lineNumberCharacterWidth={6}

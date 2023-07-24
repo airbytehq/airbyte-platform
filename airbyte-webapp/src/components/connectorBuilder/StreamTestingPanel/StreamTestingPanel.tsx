@@ -9,13 +9,15 @@ import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 import { Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
+import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import addButtonScreenshot from "./add-button.png";
+import addStreamScreenshotDark from "./add-stream-screenshot-dark.png";
+import addStreamScreenshotLight from "./add-stream-screenshot-light.png";
 import { ConfigMenu } from "./ConfigMenu";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
@@ -44,6 +46,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
   const { jsonManifest, yamlEditorIsMounted, editorView } = useConnectorBuilderFormState();
   const { testInputJson } = useConnectorBuilderTestRead();
+  const { theme } = useAirbyteTheme();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
 
@@ -67,7 +70,12 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
         </>
       ) : (
         <div className={styles.addStreamMessage}>
-          <img className={styles.logo} alt="" src={addButtonScreenshot} width={320} />
+          <img
+            className={styles.logo}
+            alt=""
+            src={theme === "airbyteThemeLight" ? addStreamScreenshotLight : addStreamScreenshotDark}
+            width={320}
+          />
           <Heading as="h2" className={styles.addStreamHeading}>
             <FormattedMessage id="connectorBuilder.noStreamsMessage" />
           </Heading>

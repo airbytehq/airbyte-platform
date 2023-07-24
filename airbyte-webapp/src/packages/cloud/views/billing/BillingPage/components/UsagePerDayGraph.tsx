@@ -96,6 +96,8 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
             <Tooltip
               cursor={{ fill: chartHoverFill }}
               wrapperStyle={{ outline: "none" }}
+              wrapperClassName={styles.tooltipWrapper}
+              labelClassName={styles.tooltipLabel}
               formatter={(value: number, payload) => {
                 // The type cast is unfortunately necessary, due to broken typing in recharts.
                 // What we return is a [string, string], and the library accepts this as well, but the types

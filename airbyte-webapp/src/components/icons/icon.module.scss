@@ -1,3 +1,13 @@
+@use "scss/colors";
+
 .icon {
   vertical-align: middle;
+}
+
+.grey300 {
+  color: colors.$grey-300;
+}
+
+.white {
+  color: colors.$primary;
 }

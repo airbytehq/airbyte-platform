@@ -2,7 +2,7 @@
 @use "../../../scss/variables";
 
 .container {
-  background: colors.$white;
+  background: colors.$primary;
   display: inline-block;
   position: relative;
   width: 100%;
@@ -16,7 +16,7 @@
 %arrow {
   position: absolute;
   border: none;
-  background-color: colors.$white;
+  background-color: colors.$primary;
   top: 0;
   font-size: 11px;
   width: 17px;

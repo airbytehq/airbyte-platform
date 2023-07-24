@@ -23,7 +23,7 @@ $controlButtonWidth: 24px;
   transition: variables.$transition;
 
   &:hover {
-    color: colors.$white;
+    color: colors.$primary;
     background-color: colors.$grey-800;
   }
 }
@@ -47,7 +47,7 @@ $controlButtonWidth: 24px;
 }
 
 .selectedTab {
-  color: colors.$black;
+  color: colors.$secondary;
   border-bottom-color: colors.$yellow-900;
 }
 

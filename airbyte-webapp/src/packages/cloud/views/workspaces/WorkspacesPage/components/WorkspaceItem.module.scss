@@ -5,7 +5,7 @@
 .button {
   @include mixins.shadow;
 
-  background: colors.$white;
+  background: colors.$primary;
   border-radius: variables.$border-radius-lg;
   border: none;
   padding: variables.$spacing-xl variables.$spacing-xl;

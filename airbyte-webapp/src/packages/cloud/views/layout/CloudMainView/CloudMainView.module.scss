@@ -37,7 +37,7 @@ $sidebar-workspace-font-weight: 400;
   width: 85px;
   border: variables.$border-thin solid colors.$grey-100;
   border-radius: variables.$border-radius-lg;
-  background-color: rgba(255, 255, 255, 20%);
+  background-color: colors.$grey-30;
   padding: 0 variables.$spacing-md;
   font-size: $sidebar-workspace-font-size;
   font-weight: $sidebar-workspace-font-weight;
@@ -47,6 +47,10 @@ $sidebar-workspace-font-weight: 400;
   outline: none;
 
   &:focus-visible {
-    outline: 1px solid colors.$white;
+    outline: 1px solid colors.$primary;
   }
+}
+
+.themeContainer {
+  padding: variables.$spacing-md;
 }

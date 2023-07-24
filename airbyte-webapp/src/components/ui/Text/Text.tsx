@@ -20,6 +20,7 @@ export type TextProps = HTMLAttributes<TextHTMLElement> & {
   title?: string;
   gradient?: boolean;
   align?: TextAlignment;
+  italicized?: boolean;
 };
 
 const sizes: Record<TextSize, string> = {
@@ -54,11 +55,13 @@ const getTextClassNames = ({
   inverseColor,
   gradient,
   align,
-}: Required<Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align">>) =>
+  italicized,
+}: Required<Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align" | "italicized">>) =>
   classNames(styles.text, sizes[size], colors[color], textAlignments[align], {
     [styles.bold]: bold,
     [styles.inverse]: inverseColor,
     [styles.gradient]: gradient,
+    [styles.italicized]: italicized,
   });
 
 export const Text = React.memo(
@@ -74,12 +77,13 @@ export const Text = React.memo(
         inverseColor = false,
         gradient = false,
         align = "left",
+        italicized = false,
         ...remainingProps
       },
       ref
     ) => {
       const className = classNames(
-        getTextClassNames({ size, color, bold, inverseColor, gradient, align }),
+        getTextClassNames({ size, color, bold, inverseColor, gradient, align, italicized }),
         classNameProp
       );
 

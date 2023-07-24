@@ -2,7 +2,7 @@
 @use "scss/variables";
 
 .container + .container {
-  border-top: 1px solid colors.$white;
+  border-top: 1px solid colors.$primary;
 }
 
 .body {

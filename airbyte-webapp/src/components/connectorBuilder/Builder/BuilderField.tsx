@@ -258,7 +258,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
               automaticLayout
               value={field.value || ""}
               language="json"
-              theme="airbyte-light"
               onChange={(val: string | undefined) => {
                 setValue(val);
               }}

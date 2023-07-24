@@ -1,20 +1,18 @@
 @use "scss/colors";
+@use "scss/variables";
 
-.lightContentCard {
+.content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   flex-direction: row;
-  padding: 20px 21px 19px;
-  margin-bottom: 12px;
+  padding: variables.$spacing-xl;
+  margin-bottom: variables.$spacing-lg;
+  align-items: center;
+  justify-content: space-between;
+  gap: variables.$spacing-lg;
 }
 
 .arrow {
   font-size: 29px;
   line-height: 29px;
   color: colors.$blue-500;
-}
-
-.extraBlock {
-  background: none;
 }

@@ -15,6 +15,7 @@ import { ServicesProvider } from "../src/core/servicesProvider";
 import { analyticsServiceContext } from "../src/core/services/analytics";
 import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitoringService";
 import type { AnalyticsService } from "../src/core/services/analytics";
+import { AirbyteThemeProvider } from "../src/hooks/theme/useAirbyteTheme";
 
 const analyticsContextMock: AnalyticsService = {
   track: () => {},
@@ -33,30 +34,32 @@ const queryClient = new QueryClient({
 
 export const withProviders = (getStory) => (
   <React.Suspense fallback={null}>
-    <analyticsServiceContext.Provider value={analyticsContextMock}>
-      <QueryClientProvider client={queryClient}>
-        <ServicesProvider>
-          <MemoryRouter>
-            <IntlProvider
-              messages={messages}
-              locale={"en"}
-              defaultRichTextElements={{
-                b: (chunk) => <strong>{chunk}</strong>,
-              }}
-            >
-              <ThemeProvider theme={theme}>
-                <ConfigServiceProvider config={config}>
-                  <DocumentationPanelProvider>
-                    <AppMonitoringServiceProvider>
-                      <FeatureService features={[]}>{getStory()}</FeatureService>
-                    </AppMonitoringServiceProvider>
-                  </DocumentationPanelProvider>
-                </ConfigServiceProvider>
-              </ThemeProvider>
-            </IntlProvider>
-          </MemoryRouter>
-        </ServicesProvider>
-      </QueryClientProvider>
-    </analyticsServiceContext.Provider>
+    <AirbyteThemeProvider>
+      <analyticsServiceContext.Provider value={analyticsContextMock}>
+        <QueryClientProvider client={queryClient}>
+          <ServicesProvider>
+            <MemoryRouter>
+              <IntlProvider
+                messages={messages}
+                locale={"en"}
+                defaultRichTextElements={{
+                  b: (chunk) => <strong>{chunk}</strong>,
+                }}
+              >
+                <ThemeProvider theme={theme}>
+                  <ConfigServiceProvider config={config}>
+                    <DocumentationPanelProvider>
+                      <AppMonitoringServiceProvider>
+                        <FeatureService features={[]}>{getStory()}</FeatureService>
+                      </AppMonitoringServiceProvider>
+                    </DocumentationPanelProvider>
+                  </ConfigServiceProvider>
+                </ThemeProvider>
+              </IntlProvider>
+            </MemoryRouter>
+          </ServicesProvider>
+        </QueryClientProvider>
+      </analyticsServiceContext.Provider>
+    </AirbyteThemeProvider>
   </React.Suspense>
 );

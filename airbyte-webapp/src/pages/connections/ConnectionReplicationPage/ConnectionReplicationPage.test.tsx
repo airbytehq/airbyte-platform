@@ -12,6 +12,7 @@ import {
   mockDestinationDefinitionSpecification,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
@@ -47,6 +48,10 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+}));
+
+jest.mock("hooks/theme/useAirbyteTheme", () => ({
+  useAirbyteTheme: () => mockTheme,
 }));
 
 describe("ConnectionReplicationPage", () => {

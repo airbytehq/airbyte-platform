@@ -1,6 +1,8 @@
-import React from "react";
+import classNames from "classnames";
 
-import styles from "./icons.module.scss";
+import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+
+import styles from "./SvgIcon.module.scss";
 
 const noIconPlaceholder = `
   <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250" fill="none">
@@ -8,12 +10,16 @@ const noIconPlaceholder = `
   </svg>
 `;
 
-export const getIcon = (icon?: string): React.ReactNode => {
+export const SvgIcon = ({ svg }: { svg?: string }) => {
+  const { theme } = useAirbyteTheme();
+
   return (
-    <img
-      alt=""
-      className={styles.icon}
-      src={`data:image/svg+xml;utf8,${encodeURIComponent(icon || noIconPlaceholder)}`}
-    />
+    <div className={classNames({ [styles.background]: theme === "airbyteThemeDark" })}>
+      <img
+        alt=""
+        className={styles.icon}
+        src={`data:image/svg+xml;utf8,${encodeURIComponent(svg || noIconPlaceholder)}`}
+      />
+    </div>
   );
 };

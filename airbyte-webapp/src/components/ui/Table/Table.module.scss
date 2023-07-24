@@ -12,7 +12,7 @@ $border-radius: variables.$border-radius-lg;
   border-radius: $border-radius;
 
   &--default {
-    box-shadow: 0 2px 4px colors.$cardShadowColor;
+    box-shadow: variables.$box-shadow;
   }
 }
 
@@ -51,12 +51,12 @@ $border-radius: variables.$border-radius-lg;
   }
 
   &--white {
-    background-color: colors.$white;
+    background-color: colors.$primary;
   }
 
   &--inBlock {
     text-transform: none;
-    background-color: colors.$white;
+    background-color: colors.$primary;
     font-size: variables.$font-size-sm;
     font-weight: normal;
     border-bottom: variables.$border-thin solid colors.$grey-50;
@@ -78,7 +78,7 @@ $border-radius: variables.$border-radius-lg;
 
 // --------- <tr/> ---------
 .tr {
-  background-color: colors.$white;
+  background-color: colors.$primary;
   cursor: auto;
 
   &--clickable {

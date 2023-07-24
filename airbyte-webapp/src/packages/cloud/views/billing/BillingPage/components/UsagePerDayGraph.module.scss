@@ -10,8 +10,15 @@
   }
 }
 
+.tooltipWrapper {
+  background-color: colors.$primary !important;
+  color: colors.$dark-blue span {
+    color: colors.$dark-blue;
+  }
+}
+
 :export {
-  white: colors.$white;
+  white: colors.$primary;
   green: colors.$green;
   grey: colors.$grey-500;
   grey100: colors.$grey-100;

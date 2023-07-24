@@ -2,7 +2,9 @@
 @use "scss/variables";
 
 .jobItem {
-  border-bottom: variables.$border-thin solid colors.$grey-100;
+  &:not(:last-child) {
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
 
   &:hover {
     background-color: colors.$grey-50;
@@ -12,7 +14,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: colors.$white;
+    background: colors.$primary;
     padding: 6px 0;
     min-height: 58px;
   }

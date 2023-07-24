@@ -12,6 +12,7 @@
 
 .controlButtonLabel {
   width: calc(100% - variables.$spacing-lg);
+  color: colors.$dark-blue;
 
   p {
     overflow: hidden;

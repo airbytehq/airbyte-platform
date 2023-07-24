@@ -3,7 +3,7 @@
 
 .newJobItem {
   border: variables.$border-thick solid transparent;
-  border-bottom: variables.$border-thin solid colors.$grey-100;
+  border-top: variables.$border-thin solid colors.$grey-100;
   padding: variables.$spacing-xl;
   display: flex;
   align-items: center;

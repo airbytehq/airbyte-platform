@@ -11,7 +11,7 @@
 .rightPanel {
   @include mixins.left-shadow;
 
-  background-color: colors.$white;
+  background-color: colors.$primary;
   border-top-left-radius: variables.$border-radius-lg;
   border-bottom-left-radius: variables.$border-radius-lg;
 }

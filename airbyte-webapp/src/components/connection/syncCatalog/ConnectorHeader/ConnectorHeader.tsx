@@ -1,7 +1,7 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { getIcon } from "area/connector/utils";
+import { SvgIcon } from "area/connector/utils";
 
 import styles from "./ConnectorHeader.module.scss";
 
@@ -13,7 +13,9 @@ interface ConnectorHeaderProps {
 export const ConnectorHeader: React.FC<ConnectorHeaderProps> = ({ type, icon }) => {
   return (
     <span className={styles.container} data-testid={`connector-header-group-icon-container-${type}`}>
-      <div className={styles.icon}>{getIcon(icon)}</div>
+      <div className={styles.icon}>
+        <SvgIcon svg={icon} />
+      </div>
       <FormattedMessage id={`connector.${type}`} />
     </span>
   );

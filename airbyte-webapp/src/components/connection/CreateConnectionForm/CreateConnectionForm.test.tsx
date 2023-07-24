@@ -10,6 +10,7 @@ import {
   mockDestinationDefinitionSpecification,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
@@ -48,6 +49,10 @@ jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({
 
 jest.mock("hooks/domain/connector/useGetDestinationFromParams", () => ({
   useGetDestinationFromSearchParams: () => mockConnection.destination,
+}));
+
+jest.mock("hooks/theme/useAirbyteTheme", () => ({
+  useAirbyteTheme: () => mockTheme,
 }));
 
 jest.setTimeout(20000);

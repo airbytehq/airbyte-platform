@@ -6,7 +6,7 @@
   padding: 0;
 
   &.inverse {
-    color: colors.$white;
+    color: colors.$primary;
   }
 }
 
@@ -98,4 +98,8 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.italicized {
+  font-style: italic;
 }

@@ -10,8 +10,7 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { ConnectorIds } from "area/connector/utils";
-import { getIcon } from "area/connector/utils";
+import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
@@ -164,7 +163,9 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <div className={styles.connectorIcon}>{getIcon(source?.icon)}</div>
+                      <div className={styles.connectorIcon}>
+                        <SvgIcon svg={source?.icon} />
+                      </div>
                     </FlexContainer>
                   </Link>
                 }
@@ -193,7 +194,11 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
           </Tooltip>
         </div>
         <div className={styles.airbyte} aria-hidden="true">
-          <AirbyteIllustration sourceHighlighted={highlightedSource} destinationHighlighted={highlightedDestination} />
+          <AirbyteIllustration
+            sourceHighlighted={highlightedSource}
+            destinationHighlighted={highlightedDestination}
+            className={styles.illustration}
+          />
         </div>
         <div className={styles.destinations}>
           <Text bold as="div" className={styles.destinationsTitle}>
@@ -228,7 +233,9 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                     aria-label={tooltipText}
                     tabIndex={-1}
                   >
-                    <div className={styles.connectorIcon}>{getIcon(destination?.icon)}</div>
+                    <div className={styles.connectorIcon}>
+                      <SvgIcon svg={destination?.icon} />
+                    </div>
                   </button>
                 }
               >

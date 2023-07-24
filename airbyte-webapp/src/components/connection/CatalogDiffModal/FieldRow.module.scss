@@ -15,7 +15,7 @@
   display: flex;
   width: 100%;
   height: 35px;
-  border-bottom: 1px solid colors.$white;
+  border-bottom: 1px solid colors.$primary;
   align-items: center;
 
   &.add {
@@ -96,7 +96,7 @@ tr:last-child .content {
 
 .cell {
   &.update .dataType {
-    background-color: rgba(98, 94, 255, 10%);
+    background-color: colors.$blue-40;
     padding: variables.$spacing-sm;
     border-radius: variables.$border-radius-xs;
     display: flex;

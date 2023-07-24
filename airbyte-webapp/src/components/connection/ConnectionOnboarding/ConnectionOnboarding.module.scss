@@ -26,7 +26,7 @@
 
 .sourcesTitle,
 .destinationsTitle {
-  color: colors.$dark-blue-400;
+  color: colors.$dark-blue-500;
   text-align: center;
   cursor: help;
 
@@ -65,7 +65,7 @@
   border: none;
   padding: 18px;
   cursor: pointer;
-  background: colors.$white;
+  background: colors.$primary;
   border-radius: variables.$border-radius-2xl;
   transition: box-shadow variables.$transition ease;
 
@@ -105,4 +105,8 @@
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-xl;
+}
+
+.illustration {
+  color: colors.$primary;
 }

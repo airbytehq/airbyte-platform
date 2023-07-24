@@ -3,7 +3,7 @@ import React from "react";
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 
-import { getIcon } from "area/connector/utils";
+import { SvgIcon } from "area/connector/utils";
 import { ReleaseStage } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
@@ -39,7 +39,9 @@ const ConnectorCell: React.FC<ConnectorCellProps> = ({
       {allowUpdateConnectors && type === "destinations" && (
         <DestinationUpdateIndicator id={id} currentVersion={currentVersion} />
       )}
-      <div className={styles.iconContainer}>{getIcon(img)}</div>
+      <div className={styles.iconContainer}>
+        <SvgIcon svg={img} />
+      </div>
       <div>{connectorName}</div>
       <ReleaseStageBadge small tooltip={false} stage={releaseStage} />
     </FlexContainer>

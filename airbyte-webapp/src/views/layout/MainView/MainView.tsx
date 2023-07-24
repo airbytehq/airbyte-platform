@@ -1,11 +1,13 @@
 import { faRocket } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { LoadingPage } from "components";
 import { Version } from "components/common/Version";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { ThemeToggle } from "components/ui/ThemeToggle";
 
 import { useConfig } from "config";
 import { links } from "core/utils/links";
@@ -30,7 +32,7 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { hasNewVersions } = useGetConnectorsOutOfDate();
 
   return (
-    <FlexContainer className={styles.mainViewContainer} gap="none">
+    <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
       <SideBar>
         <AirbyteHomeLink />
         <MenuContent>
@@ -50,7 +52,10 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
               to={RoutePaths.Settings}
               withNotification={hasNewVersions}
             />
-            {version && <Version primary />}
+            <FlexItem className={styles.themeContainer}>
+              <ThemeToggle />
+            </FlexItem>
+            {version && <Version />}
           </MenuContent>
         </MenuContent>
       </SideBar>

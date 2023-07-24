@@ -99,7 +99,7 @@
     &::before {
       position: absolute;
       content: "";
-      background: colors.$white;
+      background: colors.$primary;
       transition: variables.$transition;
       border-radius: 50%;
     }

@@ -19,14 +19,14 @@
   overflow-y: auto;
   z-index: z-indices.$tooltip;
   background: colors.$dark-blue-900;
-  color: colors.$white;
+  color: colors.$primary;
 
   a {
     color: colors.$blue-100;
   }
 
   &.light {
-    background: colors.$white;
+    background: colors.$primary;
     color: colors.$dark-blue;
 
     a {
