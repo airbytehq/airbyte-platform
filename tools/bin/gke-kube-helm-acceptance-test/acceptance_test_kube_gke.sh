@@ -74,4 +74,4 @@ kubectl port-forward svc/echo-server-svc 6000:8080 --namespace=$NAMESPACE &
 sleep 10s
 
 echo "Running e2e tests via gradle..."
-KUBE=true IS_GKE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan -i
+KUBE=true IS_GKE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --scan -i

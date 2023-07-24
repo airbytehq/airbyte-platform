@@ -44,6 +44,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
@@ -56,6 +58,7 @@ import org.slf4j.LoggerFactory;
                                matches = "true")
 @Timeout(value = 2,
          unit = TimeUnit.MINUTES) // Default timeout of 2 minutes; individual tests should override if they need longer.
+@TestInstance(Lifecycle.PER_CLASS)
 class SchemaManagementTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaManagementTests.class);
@@ -168,9 +171,11 @@ class SchemaManagementTests {
         new WebBackendConnectionRequestBody().connectionId(createdConnection.getConnectionId()).withRefreshedCatalog(true)),
         "get connection and refresh schema", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     assertEquals(SchemaChange.BREAKING, getConnectionAndRefresh.getSchemaChange());
+
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     assertEquals(createdConnection.getSyncCatalog(), currentConnection.getSyncCatalog());
     assertEquals(ConnectionStatus.INACTIVE, currentConnection.getStatus());
+
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
     assertTrue(currentConnectionWithSameSource.getBreakingChange());
     assertEquals(createdConnectionWithSameSource.getSyncCatalog(), currentConnectionWithSameSource.getSyncCatalog());
@@ -195,8 +200,9 @@ class SchemaManagementTests {
     // Sync the connection, which will trigger a refresh. Wait for it to finish, because we don't have a
     // better way to know when the catalog
     // refresh step is complete.
-    testHarness.syncConnection(createdConnection.getConnectionId());
-    testHarness.waitForSuccessfulSyncNoTimeout(createdConnection.getConnectionId());
+    final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    // testHarness.waitForSuccessfulSyncNoTimeout(createdConnection.getConnectionId());
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
 
     // This connection has auto propagation enabled, so we expect it to be updated.
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());

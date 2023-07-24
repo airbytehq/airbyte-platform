@@ -64,6 +64,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +85,7 @@ import org.slf4j.LoggerFactory;
 @DisabledIfEnvironmentVariable(named = "KUBE",
                                matches = "true")
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@TestInstance(Lifecycle.PER_CLASS)
 class CdcAcceptanceTests {
 
   record DestinationCdcRecordMatcher(JsonNode sourceRecord, Instant minUpdatedAt, Optional<Instant> minDeletedAt) {
@@ -93,7 +96,7 @@ class CdcAcceptanceTests {
 
   private static final String POSTGRES_INIT_SQL_FILE = "postgres_init_cdc.sql";
   private static final String CDC_METHOD = "CDC";
-  // must match Postgres's default CDC cursor name
+  // must match Postgres' default CDC cursor name
   private static final String POSTGRES_DEFAULT_CDC_CURSOR = "_ab_cdc_lsn";
   // must match replication slot name used in the above POSTGRES_INIT_SQL_FILE
   private static final String REPLICATION_SLOT = "airbyte_slot";
@@ -124,7 +127,7 @@ class CdcAcceptanceTests {
   private AirbyteAcceptanceTestHarness testHarness;
 
   @BeforeAll
-  static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+  static void init() throws ApiException {
     apiClient = new AirbyteApiClient(
         new ApiClient().setScheme("http")
             .setHost("localhost")
@@ -164,6 +167,10 @@ class CdcAcceptanceTests {
 
   @Test
   void testIncrementalCdcSync(final TestInfo testInfo) throws Exception {
+    incrementalCdcSyncHelper(testInfo);
+  }
+
+  private void incrementalCdcSyncHelper(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
     final UUID connectionId = createCdcConnection();
@@ -271,7 +278,7 @@ class CdcAcceptanceTests {
       LOGGER.info("Setting postgres destination definition to version {}", POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION);
       testHarness.updateDestinationDefinitionVersion(postgresDestDefId, POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION);
 
-      testIncrementalCdcSync(testInfo);
+      incrementalCdcSyncHelper(testInfo);
     } finally {
       // set postgres destination definition back to latest version for other tests
       LOGGER.info("Setting postgres destination definition back to version {}", destinationDefinitionRead.getDockerImageTag());

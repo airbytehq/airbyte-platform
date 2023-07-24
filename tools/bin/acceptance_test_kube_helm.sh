@@ -125,6 +125,6 @@ fi
 
 echo "Running e2e tests via gradle..."
 # Note: we skip basic acceptance tests on local Kube.
-KUBE=true SKIP_BASIC_ACCEPTANCE_TESTS=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTests --scan
+KUBE=true SKIP_BASIC_ACCEPTANCE_TESTS=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTest --scan
 
 catch

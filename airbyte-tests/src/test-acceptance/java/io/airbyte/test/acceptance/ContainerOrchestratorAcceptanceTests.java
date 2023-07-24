@@ -39,6 +39,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +57,7 @@ import org.slf4j.MDC;
 @SuppressWarnings({"rawtypes", "ConstantConditions"})
 @EnabledIfEnvironmentVariable(named = "KUBE",
                               matches = "true")
+@TestInstance(Lifecycle.PER_CLASS)
 class ContainerOrchestratorAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContainerOrchestratorAcceptanceTests.class);
