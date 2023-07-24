@@ -7,7 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
-import logoUrl from "./components/workspaceHeaderLogo.svg";
+import { ReactComponent as AirbyteLogo } from "./components/workspaceHeaderLogo.svg";
 import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
@@ -17,7 +17,7 @@ const WorkspacesPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <img className={styles.logo} alt="" src={logoUrl} width={186} />
+      <AirbyteLogo className={styles.logo} width={186} />
       <Heading as="h1" size="lg" centered>
         <FormattedMessage id="workspaces.title" />
       </Heading>
