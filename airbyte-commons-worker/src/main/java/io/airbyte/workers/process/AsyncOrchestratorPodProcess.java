@@ -58,6 +58,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
   public static final String KUBE_POD_INFO = "KUBE_POD_INFO";
   public static final String NO_OP = "NO_OP";
+  // TODO Ths frequency should be configured and injected rather hard coded here.
+  public static final long JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS = 5000;
 
   private final KubePodInfo kubePodInfo;
   private final DocumentStoreClient documentStoreClient;
@@ -241,7 +243,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       // Most of the time we should be sleeping for 500ms except when we get to the actual timeout.
       // We are waiting polling every 500ms for status. The trade-off here is between how often
       // we poll our status storage (GCS) and how reactive we are to detect that a process is done.
-      Thread.sleep(Math.min(TimeUnit.NANOSECONDS.toMillis(remainingNanos) + 1, 500));
+      Thread.sleep(Math.min(TimeUnit.NANOSECONDS.toMillis(remainingNanos) + 1, JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS));
       if (hasExited()) {
         return true;
       }
