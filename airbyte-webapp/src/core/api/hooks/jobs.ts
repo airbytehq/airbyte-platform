@@ -3,7 +3,13 @@ import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@
 import { useExperiment } from "hooks/services/Experiment";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
-import { cancelJob, getJobDebugInfo, listJobsFor } from "../generated/AirbyteClient";
+import {
+  cancelJob,
+  getAttemptForJob,
+  getJobDebugInfo,
+  getJobInfoWithoutLogs,
+  listJobsFor,
+} from "../generated/AirbyteClient";
 import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -89,4 +95,30 @@ export const useCancelJob = () => {
   const activeMutationsCount = useIsMutating(["useCancelJob"]);
 
   return { ...mutation, isLoading: activeMutationsCount > 0 };
+};
+
+export const useJobInfoWithoutLogs = (id: number) => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery([SCOPE_WORKSPACE, "jobs", "infoWithoutLogs", id], () =>
+    getJobInfoWithoutLogs({ id }, requestOptions)
+  );
+};
+
+export const useAttemptForJob = (jobId: number, attemptNumber: number) => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(
+    [SCOPE_WORKSPACE, "jobs", "attemptForJob", jobId, attemptNumber],
+    () => getAttemptForJob({ jobId, attemptNumber }, requestOptions),
+    {
+      refetchInterval: (data) => {
+        // keep refetching data while the job is still running or hasn't ended too long ago.
+        // We need some time after the last attempt has stopped, since logs
+        // keep incoming for some time after the job has already been marked as finished.
+        const lastAttemptEndTimestamp = data?.attempt.endedAt;
+        // While no attempt ended timestamp exists yet (i.e. the job is still running) or it hasn't ended
+        // more than 2 minutes (2 * 60 * 1000ms) ago, keep refetching
+        return lastAttemptEndTimestamp && Date.now() - lastAttemptEndTimestamp * 1000 > 2 * 60 * 1000 ? false : 2500;
+      },
+    }
+  );
 };

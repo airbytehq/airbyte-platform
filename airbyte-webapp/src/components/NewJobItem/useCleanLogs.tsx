@@ -1,11 +1,7 @@
 import Anser from "anser";
 import { useMemo } from "react";
 
-import { JobDebugInfoRead } from "core/request/AirbyteClient";
-
-export interface CleanedLogs {
-  attempts: CleanedLogLines[];
-}
+import { AttemptInfoRead } from "core/request/AirbyteClient";
 
 export type CleanedLogLines = Array<{
   original: string;
@@ -33,28 +29,24 @@ const KNOWN_LOG_DOMAINS = [
 /**
  * useCleanLogs iterates through each log line of each attempt and transforms it to be more easily consumed by the UI.
  */
-export const useCleanLogs = (debugInfo: JobDebugInfoRead): CleanedLogs => {
+export const useCleanLogs = (attempt: AttemptInfoRead): CleanedLogLines => {
   const cleanedLogs = useMemo(() => {
     // Some logs are multi-line, so we want to associate those lines (which might not have the correct prefix) with the last domain that was detected
     let lastDomain: LogDomains | undefined;
-    const result = {
-      attempts: debugInfo.attempts.map((attempt) =>
-        attempt.logs.logLines.map((line) => {
-          const text = Anser.ansiToText(line);
-          const domain = KNOWN_LOG_DOMAINS.find((domain) => domain.regex.test(text))?.key;
-          if (domain) {
-            lastDomain = domain;
-          }
-          return {
-            original: line,
-            text,
-            domain: domain ?? lastDomain,
-          };
-        })
-      ),
-    };
+    const result = attempt.logs.logLines.map((line) => {
+      const text = Anser.ansiToText(line);
+      const domain = KNOWN_LOG_DOMAINS.find((domain) => domain.regex.test(text))?.key;
+      if (domain) {
+        lastDomain = domain;
+      }
+      return {
+        original: line,
+        text,
+        domain: domain ?? lastDomain,
+      };
+    });
     return result;
-  }, [debugInfo]);
+  }, [attempt]);
 
   return cleanedLogs;
 };

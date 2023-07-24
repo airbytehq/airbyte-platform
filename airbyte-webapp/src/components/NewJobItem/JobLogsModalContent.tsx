@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { useGetDebugInfoJob } from "core/api";
+import { useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
 import { formatBytes } from "core/utils/numberHelper";
 
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -25,13 +25,13 @@ interface JobLogsModalContentProps {
 export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
-  const debugInfo = useGetDebugInfoJob(jobId, typeof jobId === "number", true);
+  const job = useJobInfoWithoutLogs(jobId);
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
-  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState<number>(debugInfo.attempts.length - 1);
-  const cleanedLogs = useCleanLogs(debugInfo);
-  const logLines = useMemo(() => cleanedLogs.attempts[selectedAttemptIndex], [cleanedLogs, selectedAttemptIndex]);
+  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState(job.attempts.length - 1);
+  const jobAttempt = useAttemptForJob(jobId, selectedAttemptIndex);
+  const logLines = useCleanLogs(jobAttempt);
   const firstMatchIndex = 0;
   const lastMatchIndex = matchingLines.length - 1;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -42,15 +42,15 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
   const { formatMessage } = useIntl();
 
   const attemptListboxOptions = useMemo(() => {
-    return debugInfo.attempts.map((_, index) => ({
+    return job.attempts.map((_, index) => ({
       label: formatMessage(
         { id: "jobHistory.logs.attemptLabel" },
-        { attemptNumber: index + 1, totalAttempts: debugInfo.attempts.length }
+        { attemptNumber: index + 1, totalAttempts: job.attempts.length }
       ),
       value: index,
-      icon: <AttemptStatusIcon attempt={debugInfo.attempts[index]} />,
+      icon: <AttemptStatusIcon attempt={job.attempts[index]} />,
     }));
-  }, [debugInfo, formatMessage]);
+  }, [job, formatMessage]);
 
   const onSelectAttempt = (selectedIndex: number) => {
     setSelectedAttemptIndex(selectedIndex);
@@ -133,11 +133,6 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
     return () => document.body.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const selectedAttempt = useMemo(
-    () => debugInfo.attempts[selectedAttemptIndex],
-    [debugInfo.attempts, selectedAttemptIndex]
-  );
-
   return (
     <FlexContainer direction="column" style={{ height: "100%" }}>
       <Box p="md" pb="none">
@@ -148,7 +143,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
               selectedValue={selectedAttemptIndex}
               options={attemptListboxOptions}
               onSelect={onSelectAttempt}
-              isDisabled={debugInfo.attempts.length === 1}
+              isDisabled={job.attempts.length === 1}
             />
           </div>
           <LogSearchInput
@@ -167,14 +162,14 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
       </Box>
       <Box pl="xl" pr="md">
         <FlexContainer>
-          {selectedAttempt.attempt.endedAt && (
+          {jobAttempt.attempt.endedAt && (
             <>
               <Text as="span" color="grey" size="sm">
-                <FormattedTimeParts value={selectedAttempt.attempt.createdAt * 1000} hour="numeric" minute="2-digit">
+                <FormattedTimeParts value={jobAttempt.attempt.createdAt * 1000} hour="numeric" minute="2-digit">
                   {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
                 </FormattedTimeParts>
                 <FormattedDate
-                  value={selectedAttempt.attempt.createdAt * 1000}
+                  value={jobAttempt.attempt.createdAt * 1000}
                   month="2-digit"
                   day="2-digit"
                   year="numeric"
@@ -186,7 +181,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
             </>
           )}
           <Text as="span" color="grey" size="sm">
-            {formatBytes(selectedAttempt.attempt.totalStats?.bytesEmitted)}
+            {formatBytes(jobAttempt.attempt.totalStats?.bytesEmitted)}
           </Text>
           <Text as="span" color="grey" size="sm">
             |
@@ -194,7 +189,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countEmittedRecords"
-              values={{ count: selectedAttempt.attempt.totalStats?.recordsEmitted || 0 }}
+              values={{ count: jobAttempt.attempt.totalStats?.recordsEmitted || 0 }}
             />
           </Text>
           <Text as="span" color="grey" size="sm">
@@ -203,12 +198,12 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countCommittedRecords"
-              values={{ count: selectedAttempt.attempt.totalStats?.recordsCommitted || 0 }}
+              values={{ count: jobAttempt.attempt.totalStats?.recordsCommitted || 0 }}
             />
           </Text>
         </FlexContainer>
       </Box>
-      <JobLogsModalFailureMessage failureSummary={debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary} />
+      <JobLogsModalFailureMessage failureSummary={jobAttempt.attempt.failureSummary} />
       <VirtualLogs
         selectedAttempt={selectedAttemptIndex}
         logLines={logLines}
