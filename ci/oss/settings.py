@@ -4,6 +4,8 @@ from aircmd.models.base import GlobalSettings
 from aircmd.models.utils import get_git_revision
 from pydantic import Field
 
+from .actions.utils import extract_engine_versions
+
 
 class OssSettings(GlobalSettings):   
      version: str = Field("dev", env="VERSION")     
@@ -52,5 +54,7 @@ class OssSettings(GlobalSettings):
      basic_auth_password: str = Field("password", env="BASIC_AUTH_PASSWORD")
      basic_auth_updated_password: str = Field("pa55w0rd", env="BASIC_AUTH_UPDATED_PASSWORD")
      basic_auth_proxy_timeout: str = Field(120, env="BASIC_AUTH_PROXY_TIMEOUT")
+     airbyte_webapp_node_version: str = Field(extract_engine_versions("oss/airbyte-webapp/package.json").get("node"), env="AIRBYTE_WEBAPP_NODE_VERSION")
+     airbyte_webapp_pnpm_version: str = Field(extract_engine_versions("oss/airbyte-webapp/package.json").get("pnpm"), env="AIRBYTE_WEBAPP_PNPM_VERSION")
 
      

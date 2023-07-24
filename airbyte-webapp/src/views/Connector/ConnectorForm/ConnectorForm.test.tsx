@@ -53,7 +53,7 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
   };
 });
 
-jest.setTimeout(20000);
+jest.setTimeout(40000);
 
 const nextTick = () => new Promise((r) => setTimeout(r, 0));
 

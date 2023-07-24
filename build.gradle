@@ -149,3 +149,4 @@ tasks.register('generate-docker') {
     dependsOn(':airbyte-keycloak:assemble')
     dependsOn(':airbyte-keycloak-setup:assemble')
 }
+
