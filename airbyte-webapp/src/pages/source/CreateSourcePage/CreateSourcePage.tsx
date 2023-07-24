@@ -59,7 +59,7 @@ export const CreateSourcePage: React.FC = () => {
     const result = await createSource({ values, sourceConnector: connector });
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
-    navigate(`../${result.sourceId}`);
+    navigate(`../${result.sourceId}/${SourcePaths.Connections}`);
   };
 
   const onGoBack = () => {

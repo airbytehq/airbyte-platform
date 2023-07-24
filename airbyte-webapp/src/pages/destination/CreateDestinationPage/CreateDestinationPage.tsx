@@ -47,7 +47,7 @@ export const CreateDestinationPage: React.FC = () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
-    navigate(`../${result.destinationId}`);
+    navigate(`../${result.destinationId}/${DestinationPaths.Connections}`);
   };
 
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}`;
