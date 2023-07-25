@@ -1769,7 +1769,7 @@ class ConnectionManagerWorkflowTest {
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
     @DisplayName("Uses backoff policy if present and from failure.")
-    @ValueSource(longs = {1, 5, 20, 30, 12421, 21})
+    @ValueSource(longs = {1, 5, 20, 30, 1439, 21})
     void usesBackoffPolicyIfPresent(final long minutes) throws Exception {
       final var backoff = Duration.ofMinutes(minutes);
       final var policy = BackoffPolicy.builder()
@@ -1808,6 +1808,58 @@ class ConnectionManagerWorkflowTest {
 
       Assertions.assertThat(events)
           .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .hasSizeGreaterThan(0);
+    }
+
+    @ParameterizedTest
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Jobs can be cancelled during the backoff.")
+    @ValueSource(longs = {1, 5, 20, 30, 1439, 21})
+    void cancelWorksDuringBackoff(final long minutes) throws Exception {
+      final var backoff = Duration.ofMinutes(minutes);
+      final var policy = BackoffPolicy.builder()
+          .minInterval(backoff)
+          .maxInterval(backoff)
+          .build();
+      final var manager = RetryManager.builder()
+          .successiveCompleteFailures(1)
+          .completeFailureBackoffPolicy(policy)
+          .build();
+
+      when(mRetryStatePersistenceActivity.hydrateRetryState(Mockito.any()))
+          .thenReturn(new HydrateOutput(manager));
+
+      when(mConfigFetchActivity.getTimeToWait(Mockito.any()))
+          .thenReturn(new ScheduleRetrieverOutput(Duration.ofDays(1)));
+
+      final TestStateListener testStateListener = new TestStateListener();
+      final var testId = UUID.randomUUID();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+
+      final var jobId = 124198715L;
+      final var attemptNo = 72;
+
+      final var input = testInputBuilder()
+          .jobId(jobId)
+          .attemptNumber(attemptNo)
+          .fromFailure(true)
+          .workflowState(workflowState)
+          .build();
+
+      setupSuccessfulWorkflow(input);
+
+      final Queue<ChangedStateEvent> events = testStateListener.events(testId);
+
+      workflow.cancelJob();
+
+      testEnv.sleep(Duration.ofMinutes(1));
+
+      Mockito.verify(mJobCreationAndStatusUpdateActivity)
+          .jobCancelledWithAttemptNumber(Mockito.argThat(new HasCancellationFailure(jobId, attemptNo - 1))); // input attempt number is 1 based
+
+      Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
     }
 

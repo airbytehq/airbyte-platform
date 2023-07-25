@@ -11,6 +11,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Contains the state of the currently running workflow execution in the connection manager
@@ -25,7 +26,9 @@ public class WorkflowState {
     this.stateChangedListener = stateChangedListener;
   }
 
+  @Setter
   private UUID id;
+  @Setter
   private WorkflowStateChangedListener stateChangedListener;
   private boolean running = false;
   private boolean deleted = false;

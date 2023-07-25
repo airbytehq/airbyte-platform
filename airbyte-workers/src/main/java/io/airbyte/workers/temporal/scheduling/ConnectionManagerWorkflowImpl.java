@@ -122,7 +122,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final int CHECK_RUN_PROGRESS_VERSION = 1;
   private static final int NEW_RETRIES_VERSION = 1;
 
-  private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
+  private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
   private final WorkflowInternalState workflowInternalState = new WorkflowInternalState();
 
@@ -177,6 +177,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
        */
       setConnectionId(connectionUpdaterInput);
 
+      // Copy over data from the input to workflowState early to minimize gaps with signals
+      initializeWorkflowStateFromInput(connectionUpdaterInput);
+
       // Fetch workflow delay first so that it is set if any subsequent activities fail and need to be
       // re-attempted.
       workflowDelay = getWorkflowRestartDelaySeconds();
@@ -197,7 +200,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       if (workflowState.isDeleted()) {
         if (workflowState.isRunning()) {
           log.info("Cancelling the current running job because a connection deletion was requested");
-          // This call is not needed anymore since this will be cancel using the the cancellation state
+          // This call is not needed anymore since this will be cancel using the cancellation state
           reportCancelled(connectionId);
         }
 
@@ -224,11 +227,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @SuppressWarnings("PMD.UnusedLocalVariable")
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
-      // workflow state is only ever set in test cases. for production cases, it will always be null.
-      if (connectionUpdaterInput.getWorkflowState() != null) {
-        workflowState = connectionUpdaterInput.getWorkflowState();
-      }
-
       if (connectionUpdaterInput.isSkipScheduling()) {
         workflowState.setSkipScheduling(true);
       }
@@ -237,8 +235,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       // This catches cases where the temporal workflow was terminated and restarted while a job was
       // actively running, leaving that job in an orphaned and non-terminal state.
       ensureCleanJobState(connectionUpdaterInput);
-
-      hydrateIdsFromPreviousRun(connectionUpdaterInput, workflowInternalState);
 
       // setup retry manager before scheduling to resolve schedule with backoff
       retryManager = hydrateRetryManager();
@@ -267,6 +263,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       if (workflowState.isUpdated()) {
         // Act as a return
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
+      }
+
+      if (workflowState.isCancelled()) {
+        reportCancelledAndContinueWith(false, connectionUpdaterInput);
       }
 
       // re-hydrate retry manager on run-start because FFs may have changed
@@ -663,7 +663,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       return;
     }
     workflowState.setCancelled(true);
-    cancellableSyncWorkflow.cancel();
+    cancelSyncChildWorkflow();
   }
 
   // TODO: Delete when the don't delete in temporal is removed
@@ -689,7 +689,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     // connection
     if (workflowState.isDoneWaiting()) {
       workflowState.setCancelledForReset(true);
-      cancellableSyncWorkflow.cancel();
+      cancelSyncChildWorkflow();
     } else {
       workflowState.setSkipScheduling(true);
     }
@@ -703,7 +703,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     if (workflowState.isDoneWaiting()) {
       workflowState.setCancelledForReset(true);
       workflowState.setSkipSchedulingNextWorkflow(true);
-      cancellableSyncWorkflow.cancel();
+      cancelSyncChildWorkflow();
     } else {
       workflowState.setSkipScheduling(true);
       workflowState.setSkipSchedulingNextWorkflow(true);
@@ -731,7 +731,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * delete
    */
   private Boolean shouldInterruptWaiting() {
-    return workflowState.isSkipScheduling() || workflowState.isDeleted() || workflowState.isUpdated();
+    return workflowState.isSkipScheduling() || workflowState.isDeleted() || workflowState.isUpdated() || workflowState.isCancelled();
   }
 
   private void prepareForNextRunAndContinueAsNew(final ConnectionUpdaterInput connectionUpdaterInput) {
@@ -1226,6 +1226,21 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     state.setJobId(input.getJobId());
   }
 
+  private void initializeWorkflowStateFromInput(final ConnectionUpdaterInput input) {
+    // if our previous attempt was a failure, we are still in a run
+    if (input.isFromFailure()) {
+      workflowState.setRunning(true);
+    }
+    // workflow state is only ever set in test cases. for production cases, it will always be null.
+    if (input.getWorkflowState() != null) {
+      // only copy over state change listener and ID to avoid trampling functionality
+      workflowState.setId(input.getWorkflowState().getId());
+      workflowState.setStateChangedListener(input.getWorkflowState().getStateChangedListener());
+    }
+
+    hydrateIdsFromPreviousRun(input, workflowInternalState);
+  }
+
   /**
    * When you want to run an activity with a fallback value instead of failing the run.
    */
@@ -1244,6 +1259,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     return result;
+  }
+
+  private void cancelSyncChildWorkflow() {
+    if (cancellableSyncWorkflow != null) {
+      cancellableSyncWorkflow.cancel();
+    }
   }
 
 }
