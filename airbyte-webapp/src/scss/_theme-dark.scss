@@ -2,6 +2,10 @@
 .airbyteThemeDark {
   color-scheme: dark;
 
+  // same in light mode and dark mode
+  --color-white: white;
+  --color-black: black;
+
   --color-primary: hsl(240, 7%, 10%);
   --color-secondary: hsl(0, 0%, 100%);
 
@@ -111,6 +115,9 @@
   --box-shadow-raised: 0 10px 19px hsla(0, 0%, 0%, 50%);
   --box-shadow-popup: 0 0 22px hsla(0, 0%, 0%, 50%);
   --box-shadow-sidebar: 0 2px 4px hsla(0, 0%, 0%, 45%);
+  --box-shadow-inset: inset 0 1.5px 3px hsla(241, 51%, 20%, 50%);
+  --box-shadow-menu: 0 8px 10px 0 hsla(0, 0%, 0%, 40%), 0 3px 14px 0 hsla(0, 0%, 0%, 45%),
+    0 5px 5px 0 hsla(0, 0%, 0%, 50%);
 
   .react-select__menu {
     background-color: var(--color-primary);

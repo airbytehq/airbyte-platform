@@ -49,6 +49,7 @@
   width: max-content;
   max-width: 100%;
   padding: variables.$spacing-xs variables.$spacing-sm;
-  background-color: colors.$dark-blue-600;
+  color: colors.$white;
+  background-color: colors.$dark-blue-400;
   border-radius: variables.$border-radius-md;
 }

@@ -2,6 +2,10 @@
 .airbyteThemeLight {
   color-scheme: light;
 
+  // same in light mode and dark mode
+  --color-white: white;
+  --color-black: black;
+
   --color-primary: hsl(0, 0%, 100%);
   --color-secondary: hsl(0, 0%, 0%);
 
@@ -112,4 +116,6 @@
   --box-shadow-popup: 0 0 22px hsla(241, 51%, 20%, 12%);
   --box-shadow-sidebar: 0 2px 4px hsla(241, 51%, 20%, 5%);
   --box-shadow-inset: inset 0 1.5px 3px hsla(241, 51%, 20%, 12%);
+  --box-shadow-menu: 0 8px 10px 0 hsla(0, 0%, 0%, 4%), 0 3px 14px 0 hsla(0, 0%, 0%, 8%),
+    0 5px 5px 0 hsla(0, 0%, 0%, 12%);
 }

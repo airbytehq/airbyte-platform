@@ -10,7 +10,7 @@
   outline: none;
   border-radius: variables.$border-radius-md;
   background-color: colors.$primary;
-  box-shadow: 0 8px 10px 0 rgb(11 10 26 / 4%), 0 3px 14px 0 rgb(11 10 26 / 8%), 0 5px 5px 0 rgb(11 10 26 / 12%);
+  box-shadow: variables.$box-shadow-menu;
 
   &:focus-within {
     outline: none;
