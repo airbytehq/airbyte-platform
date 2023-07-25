@@ -7,7 +7,6 @@ package io.airbyte.bootloader.config;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.init.LocalDefinitionsProvider;
@@ -30,11 +29,6 @@ import java.util.Optional;
 @Factory
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ApplicationBeanFactory {
-
-  @Singleton
-  public AirbyteVersion airbyteVersion(@Value("${airbyte.version}") final String version) {
-    return new AirbyteVersion(version);
-  }
 
   @Singleton
   public AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange(@Value("${airbyte.protocol.target.range.min-version}") final String min,

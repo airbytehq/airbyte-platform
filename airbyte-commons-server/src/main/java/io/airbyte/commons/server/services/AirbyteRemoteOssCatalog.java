@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.services;
 
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
+import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.init.RemoteDefinitionsProvider;
@@ -27,12 +28,12 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteRemoteOssCatalog.class);
 
   public AirbyteRemoteOssCatalog() {
-    this(AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL);
+    this(AirbyteCatalogConstants.REMOTE_REGISTRY_BASE_URL);
   }
 
-  public AirbyteRemoteOssCatalog(final String remoteCatalogUrl) {
-    super(remoteCatalogUrl, TIMEOUT);
-    LOGGER.info("Initializing OSS catalog from {} with timeout {}", AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL, TIMEOUT);
+  public AirbyteRemoteOssCatalog(final String remoteRegistryBaseUrl) {
+    super(remoteRegistryBaseUrl, DeploymentMode.OSS, TIMEOUT);
+    LOGGER.info("Initializing OSS catalog from {} with timeout {}", remoteRegistryBaseUrl, TIMEOUT);
   }
 
   @Override

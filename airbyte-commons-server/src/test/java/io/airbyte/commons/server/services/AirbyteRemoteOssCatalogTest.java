@@ -30,7 +30,7 @@ class AirbyteRemoteOssCatalogTest {
   @BeforeEach
   void setup() throws IOException {
     webServer = new MockWebServer();
-    catalogUrl = webServer.url("json/remote_oss_catalog.json").toString();
+    catalogUrl = webServer.url("/").toString();
 
     final URL testCatalog = Resources.getResource("json/remote_oss_catalog.json");
     final String jsonBody = Resources.toString(testCatalog, Charset.defaultCharset());

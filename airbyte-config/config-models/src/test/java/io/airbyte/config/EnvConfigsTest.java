@@ -10,12 +10,10 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.JobErrorReportingStrategy;
 import io.airbyte.config.Configs.WorkerEnvironment;
-import java.net.URI;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -368,7 +366,7 @@ class EnvConfigsTest {
     assertEquals(List.of(), config.getDDConstantTags());
 
     envMap.put(EnvConfigs.DD_CONSTANT_TAGS, "airbyte_instance:dev,k8s-cluster:eks-dev");
-    List<String> expected = List.of("airbyte_instance:dev", "k8s-cluster:eks-dev");
+    final List<String> expected = List.of("airbyte_instance:dev", "k8s-cluster:eks-dev");
     assertEquals(expected, config.getDDConstantTags());
     assertEquals(2, config.getDDConstantTags().size());
   }
@@ -469,18 +467,6 @@ class EnvConfigsTest {
         "DEPLOYMENT_MODE", "CLOUD",
         "WORKER_ENVIRONMENT", "DOCKER");
     assertEquals(expected, config.getJobDefaultEnvMap());
-  }
-
-  @Test
-  void testRemoteConnectorCatalogUrl() {
-    envMap.put(EnvConfigs.REMOTE_CONNECTOR_CATALOG_URL, null);
-    assertEquals(Optional.empty(), config.getRemoteConnectorCatalogUrl());
-
-    envMap.put(EnvConfigs.REMOTE_CONNECTOR_CATALOG_URL, "");
-    assertEquals(Optional.empty(), config.getRemoteConnectorCatalogUrl());
-
-    envMap.put(EnvConfigs.REMOTE_CONNECTOR_CATALOG_URL, "https://airbyte.com");
-    assertEquals(Optional.of(URI.create("https://airbyte.com")), config.getRemoteConnectorCatalogUrl());
   }
 
 }

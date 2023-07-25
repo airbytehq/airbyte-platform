@@ -8,6 +8,10 @@ micronaut:
     port: 9001
 
 airbyte:
+  connector-registry:
+    remote:
+      base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
+      timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   cron:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
@@ -23,10 +27,6 @@ airbyte:
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}
-  platform:
-    remote-connector-catalog:
-      timeout-ms: ${REMOTE_CONNECTOR_CATALOG_MS:30000}
-      url: ${REMOTE_CONNECTOR_CATALOG_URL:}
   role: ${AIRBYTE_ROLE:}
   temporal:
     worker:
