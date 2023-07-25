@@ -35,3 +35,5 @@ kubernetes:
   - charts/*
   - charts/**/*
 
+area/migration:
+  - airbyte-db/*
