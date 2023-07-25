@@ -15,11 +15,15 @@ import io.airbyte.workers.WorkerConfigs;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,11 +54,8 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
     // Sync related resources
     DESTINATION("destination"),
-    DESTINATION_API("destination-api"),
     ORCHESTRATOR("orchestrator"),
-    ORCHESTRATOR_API("orchestrator-api"),
-    SOURCE("source"),
-    SOURCE_DATABASE("source-database");
+    SOURCE("source");
 
     private final String value;
     private static final Map<String, ResourceType> CONSTANTS = new HashMap<>();
@@ -90,6 +91,51 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   }
 
+  /**
+   * Set of known resource sub types.
+   */
+  public enum ResourceSubType {
+
+    API("api"),
+    CUSTOM("custom"),
+    DATABASE("database"),
+    DEFAULT("default"),
+    FILE("file");
+
+    private final String value;
+    private static final Map<String, ResourceSubType> CONSTANTS = new HashMap<>();
+
+    static {
+      for (final ResourceSubType r : values()) {
+        CONSTANTS.put(r.value, r);
+      }
+    }
+
+    ResourceSubType(final String value) {
+      this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return this.value;
+    }
+
+    /**
+     * Get a ResourceSubType from a string.
+     *
+     * @param value the string
+     * @return the ResourceType
+     */
+    public static ResourceSubType fromValue(final String value) {
+      final ResourceSubType type = CONSTANTS.get(value);
+      if (type == null) {
+        throw new IllegalArgumentException(String.format("Unknown ResourceSubType \"%s\"", value));
+      }
+      return type;
+    }
+
+  }
+
   @Singleton
   record WorkerConfigsDefaults(WorkerEnvironment workerEnvironment,
                                @Named("default") KubeResourceConfig defaultKubeResourceConfig,
@@ -106,38 +152,30 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   }
 
-  private final Map<String, Map<ResourceType, KubeResourceConfig>> kubeResourceConfigsByVariantAndName;
+  private final Pattern kubeResourceKeyPattern;
+  private final Map<String, Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>>> kubeResourceConfigs;
   private final WorkerConfigsDefaults workerConfigsDefaults;
 
+  record KubeResourceKey(String variant, ResourceType type, ResourceSubType subType) {}
+
   public WorkerConfigsProvider(final List<KubeResourceConfig> kubeResourceConfigs, final WorkerConfigsDefaults defaults) {
-    this.kubeResourceConfigsByVariantAndName = new HashMap<>();
+    this.kubeResourceKeyPattern = Pattern.compile(String.format("^((?<variant>[a-z]+)-)?(?<type>%s)(-(?<subtype>%s))?$",
+        String.join("|", Arrays.stream(ResourceType.values()).map(ResourceType::toString).toList()),
+        String.join("|", Arrays.stream(ResourceSubType.values()).map(ResourceSubType::toString).toList())),
+        Pattern.CASE_INSENSITIVE);
+
+    this.kubeResourceConfigs = new HashMap<>();
     for (final var config : kubeResourceConfigs) {
-      final Map.Entry<String, ResourceType> variantAndType = getVariantAndType(config.getName());
-      final Map<ResourceType, KubeResourceConfig> typeToConfigMap =
-          kubeResourceConfigsByVariantAndName.computeIfAbsent(variantAndType.getKey(), k -> new HashMap<>());
-      typeToConfigMap.put(variantAndType.getValue(), config);
+      final KubeResourceKey key = parseKubeResourceKey(config.getName())
+          .orElseThrow(() -> new IllegalArgumentException(
+              "Unsupported config name " + config.getName() + " doesn't match the (<variant>--)?<type>-<subtype> format"));
+      final Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>> typeMap =
+          this.kubeResourceConfigs.computeIfAbsent(key.variant, k -> new HashMap<>());
+      final Map<ResourceSubType, KubeResourceConfig> subTypeMap = typeMap.computeIfAbsent(key.type, k -> new HashMap<>());
+      subTypeMap.put(key.subType, config);
     }
+
     this.workerConfigsDefaults = defaults;
-  }
-
-  private static Map.Entry<String, ResourceType> getVariantAndType(final String value) {
-    try {
-      final ResourceType type = ResourceType.fromValue(value);
-      return Map.entry(DEFAULT_VARIANT, type);
-    } catch (final IllegalArgumentException e) {
-      // See if it's a variant
-      // Note: micronaut normalizes delimiters into a singe '-'
-      final String[] splitValue = value.split("-", 2);
-      final boolean hasVariantDelimiter = splitValue.length != 2;
-      if (hasVariantDelimiter) {
-        // No variant delimiter found, rethrow the initial exception.
-        throw e;
-      }
-
-      final String variant = splitValue[0];
-      final ResourceType type = ResourceType.fromValue(splitValue[1]);
-      return Map.entry(variant, type);
-    }
   }
 
   /**
@@ -147,18 +185,16 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
    * @return the WorkerConfig.
    */
   public WorkerConfigs getConfig(final ResourceType name) {
-    return getConfig(name, DEFAULT_VARIANT);
+    return getConfig(new KubeResourceKey(DEFAULT_VARIANT, name, ResourceSubType.DEFAULT));
   }
 
   /**
    * Get the WorkerConfigs associated to a given task.
    *
-   * @param name of the Task.
-   * @param variant of the Config.
    * @return the WorkerConfig.
    */
-  private WorkerConfigs getConfig(final ResourceType name, final String variant) {
-    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(name, variant).orElseThrow();
+  private WorkerConfigs getConfig(final KubeResourceKey key) {
+    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(key).orElseThrow();
 
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
@@ -197,78 +233,52 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   public ResourceRequirements getResourceRequirements(final ResourceRequirementsType type,
                                                       final Optional<String> subType,
                                                       final String variant) {
-    for (final var kvp : getLookupList(type, subType, variant)) {
-      try {
-        return getConfig(kvp.getValue(), kvp.getKey()).getResourceRequirements();
-      } catch (final Exception e) {
-        // No such config, try the next candidate.
-        continue;
-      }
-    }
-
-    log.info("unable to find resource requirements for ({}, {}, {}), falling back to default", type, subType.orElse(""), variant);
-    return getConfig(ResourceType.DEFAULT).getResourceRequirements();
+    final ResourceSubType typedSubType =
+        subType.map(s -> Objects.requireNonNullElse(ResourceSubType.CONSTANTS.get(s), ResourceSubType.DEFAULT)).orElse(ResourceSubType.DEFAULT);
+    final KubeResourceKey key = new KubeResourceKey(
+        variant,
+        ResourceType.fromValue(type.toString().toLowerCase()),
+        typedSubType);
+    return getConfig(key).getResourceRequirements();
   }
 
-  /**
-   * Build the ordered lookup list for resource requirements.
-   * <p>
-   * List is as follows [(variant, type-subType), (variant, type), (variant, default)]. For a non
-   * default variant, we append [(default, type-subType), (default, type), (default, default)] to that
-   * list. Note that type-subType will only be added if it is a known ResourceRequirementsType.
-   */
-  private List<Map.Entry<String, ResourceType>> getLookupList(final ResourceRequirementsType type,
-                                                              final Optional<String> subType,
-                                                              final String variant) {
-    final List<Map.Entry<String, ResourceType>> lookupList = new ArrayList<>();
-
-    final ResourceType actualType = inferResourceRequirementsType(type, subType);
-    final ResourceType fallbackType = inferResourceRequirementsType(type, Optional.empty());
-
-    lookupList.add(Map.entry(variant, actualType));
-    lookupList.add(Map.entry(variant, fallbackType));
-    lookupList.add(Map.entry(variant, ResourceType.DEFAULT));
-    if (!variant.equals(DEFAULT_VARIANT)) {
-      lookupList.add(Map.entry(DEFAULT_VARIANT, actualType));
-      lookupList.add(Map.entry(DEFAULT_VARIANT, fallbackType));
-      lookupList.add(Map.entry(DEFAULT_VARIANT, ResourceType.DEFAULT));
-    }
-    return lookupList;
-  }
-
-  @SuppressWarnings("PMD.EmptyCatchBlock")
-  private ResourceType inferResourceRequirementsType(final ResourceRequirementsType type, final Optional<String> subType) {
-    final String primaryTypeString = type.toString().toLowerCase();
-    final String subTypeString = subType.map(String::toLowerCase).orElse(null);
-
-    // if we have specific type-subtype ResourceType use it.
-    if (subTypeString != null) {
-      try {
-        return ResourceType.fromValue(String.format("%s-%s", primaryTypeString, subTypeString));
-      } catch (final IllegalArgumentException e) {
-        // PrimaryType-SubType is unknown, safe to ignore since we are checking for existence
-        // of an override
-      }
+  private Optional<KubeResourceConfig> getKubeResourceConfig(final KubeResourceKey key) {
+    final Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>> typeMap = getOrElseGet(kubeResourceConfigs, key.variant, DEFAULT_VARIANT);
+    if (typeMap == null) {
+      return Optional.empty();
     }
 
-    // fallback to primary type if it exists, other use default
-    try {
-      return ResourceType.fromValue(primaryTypeString);
-    } catch (final IllegalArgumentException e) {
-      // primaryType is unknown, falling back to default
-      return ResourceType.DEFAULT;
+    final Map<ResourceSubType, KubeResourceConfig> subTypeMap = getOrElseGet(typeMap, key.type, ResourceType.DEFAULT);
+    if (subTypeMap == null) {
+      return Optional.empty();
     }
-  }
 
-  private Optional<KubeResourceConfig> getKubeResourceConfig(final ResourceType name, final String variant) {
-    final Map<ResourceType, KubeResourceConfig> resourceMap = kubeResourceConfigsByVariantAndName.get(variant);
-    return resourceMap != null ? Optional.ofNullable(resourceMap.get(name)) : Optional.empty();
+    return Optional.ofNullable(getOrElseGet(subTypeMap, key.subType, ResourceSubType.DEFAULT));
   }
 
   private void validateIsolatedPoolConfigInitialization(boolean useCustomNodeSelector, Map<String, String> isolatedNodeSelectors) {
     if (useCustomNodeSelector && isolatedNodeSelectors.isEmpty()) {
       throw new RuntimeException("Isolated Node selectors is empty while useCustomNodeSelector is set to true.");
     }
+  }
+
+  /**
+   * Parses a kubeResourceKey.
+   * <p>
+   * The expected format is defined as follows `variant-type-subtype`. Type is mandatory, missing
+   * variant will be replaced by DEFAULT_VARIANT, missing sub type will be replaced by
+   * ResourceSubType.DEFAULT.
+   */
+  private Optional<KubeResourceKey> parseKubeResourceKey(final String value) {
+    final Matcher matcher = kubeResourceKeyPattern.matcher(value.toLowerCase(Locale.getDefault()));
+    if (matcher.matches()) {
+      final String matchedSubType = matcher.group("subtype");
+      return Optional.of(new KubeResourceKey(
+          Objects.requireNonNullElse(matcher.group("variant"), DEFAULT_VARIANT),
+          ResourceType.fromValue(matcher.group("type")),
+          matchedSubType != null ? ResourceSubType.fromValue(matchedSubType) : ResourceSubType.DEFAULT));
+    }
+    return Optional.empty();
   }
 
   /**
@@ -299,6 +309,16 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
         .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
         .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
+  }
+
+  /**
+   * Helper function to get from a map.
+   * <p>
+   * Returns map.get(key) if key is present else returns map.get(fallbackKey)
+   */
+  private static <KeyT, ValueT> ValueT getOrElseGet(final Map<KeyT, ValueT> map, final KeyT key, final KeyT fallbackKey) {
+    final ValueT lookup1 = map.get(key);
+    return lookup1 != null ? lookup1 : map.get(fallbackKey);
   }
 
   private static String useDefaultIfEmpty(final String value, final String defaultValue) {
