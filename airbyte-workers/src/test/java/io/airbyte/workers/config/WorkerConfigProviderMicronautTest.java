@@ -148,4 +148,22 @@ class WorkerConfigProviderMicronautTest {
     assertEquals("11", orchestratorApi.getCpuRequest());
   }
 
+  @Test
+  void testResourceTypeMapping() {
+    final String variant = "mappingtest";
+
+    assertEquals("101",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, Optional.empty(), variant).getMemoryLimit());
+    assertEquals("102",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, Optional.empty(), variant).getMemoryLimit());
+    assertEquals("103",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, Optional.empty(), variant).getMemoryLimit());
+    assertEquals("104",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, Optional.empty(), variant).getMemoryLimit());
+    assertEquals("105",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, Optional.empty(), variant).getMemoryLimit());
+    assertEquals("106",
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, Optional.empty(), variant).getMemoryLimit());
+  }
+
 }

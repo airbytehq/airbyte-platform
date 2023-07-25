@@ -54,8 +54,14 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
     // Sync related resources
     DESTINATION("destination"),
+    DESTINATION_STDERR("destination-stderr"),
+    DESTINATION_STDIN("destination-stdin"),
+    DESTINATION_STDOUT("destination-stdout"),
+    HEARTBEAT("heartbeat"),
     ORCHESTRATOR("orchestrator"),
-    SOURCE("source");
+    SOURCE("source"),
+    SOURCE_STDERR("source-stderr"),
+    SOURCE_STDOUT("source-stdout");
 
     private final String value;
     private static final Map<String, ResourceType> CONSTANTS = new HashMap<>();
@@ -134,6 +140,27 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
       return type;
     }
 
+  }
+
+  /**
+   * Map used for converting ResourceRequirementsType into ResourceType.
+   * <p>
+   * A mapping is required because we may some slight naming misalignment. Eventually, we should only
+   * have one enum which would remove the need for this map entirely.
+   */
+  private static final Map<ResourceRequirementsType, ResourceType> RSS_REQ_MAPPING;
+
+  static {
+    RSS_REQ_MAPPING = Map.of(
+        ResourceRequirementsType.DESTINATION, ResourceType.DESTINATION,
+        ResourceRequirementsType.DESTINATION_STDERR, ResourceType.DESTINATION_STDERR,
+        ResourceRequirementsType.DESTINATION_STDIN, ResourceType.DESTINATION_STDIN,
+        ResourceRequirementsType.DESTINATION_STDOUT, ResourceType.DESTINATION_STDOUT,
+        ResourceRequirementsType.HEARTBEAT, ResourceType.HEARTBEAT,
+        ResourceRequirementsType.ORCHESTRATOR, ResourceType.ORCHESTRATOR,
+        ResourceRequirementsType.SOURCE, ResourceType.SOURCE,
+        ResourceRequirementsType.SOURCE_STDERR, ResourceType.SOURCE_STDERR,
+        ResourceRequirementsType.SOURCE_STDOUT, ResourceType.SOURCE_STDOUT);
   }
 
   @Singleton
@@ -237,7 +264,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         subType.map(s -> Objects.requireNonNullElse(ResourceSubType.CONSTANTS.get(s), ResourceSubType.DEFAULT)).orElse(ResourceSubType.DEFAULT);
     final KubeResourceKey key = new KubeResourceKey(
         variant,
-        ResourceType.fromValue(type.toString().toLowerCase()),
+        RSS_REQ_MAPPING.get(type),
         typedSubType);
     return getConfig(key).getResourceRequirements();
   }

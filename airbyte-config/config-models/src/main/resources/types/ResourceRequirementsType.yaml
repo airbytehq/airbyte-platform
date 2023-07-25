@@ -5,6 +5,12 @@ title: ResourceRequirementsType
 description: ResourceRequirements types.
 type: string
 enum:
+  - Destination
+  - DestinationStdin
+  - DestinationStderr
+  - DestinationStdout
+  - Heartbeat
   - Orchestrator
   - Source
-  - Destination
+  - SourceStderr
+  - SourceStdout

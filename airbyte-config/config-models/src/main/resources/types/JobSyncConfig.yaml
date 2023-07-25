@@ -58,6 +58,9 @@ properties:
     type: object
     description: optional resource requirements to run sync workers - this is used for containers other than the source/dest containers
     existingJavaType: io.airbyte.config.ResourceRequirements
+  syncResourceRequirements:
+    description: Resource requirements to use for the sync
+    $ref: SyncResourceRequirements.yaml
   isSourceCustomConnector:
     description: determine if the source running image is a custom connector.
     type: boolean

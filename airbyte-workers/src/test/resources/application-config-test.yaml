@@ -30,3 +30,15 @@ airbyte:
         cpu-limit: 5
       micronauttest-source-database:
         cpu-limit: 10
+      mappingtest-source-stderr:
+        memory-limit: 101
+      mappingtest-source-stdout:
+        memory-limit: 102
+      mappingtest-destination-stderr:
+        memory-limit: 103
+      mappingtest-destination-stdin:
+        memory-limit: 104
+      mappingtest-destination-stdout:
+        memory-limit: 105
+      mappingtest-heartbeat:
+        memory-limit: 106

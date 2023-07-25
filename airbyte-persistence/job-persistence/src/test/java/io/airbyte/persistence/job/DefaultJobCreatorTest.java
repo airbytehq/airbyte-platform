@@ -39,6 +39,7 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -205,6 +206,36 @@ class DefaultJobCreatorTest {
         .thenReturn(sourceResourceRequirements);
     when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
+    // More explicit resource requirements to verify data mapping
+    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStderrResourceRequirements);
+    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdinResourceRequirements);
+    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdoutResourceRequirements);
+    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(heartbeatResourceRequirements);
+    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStderrResourceRequirements);
+    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStdoutResourceRequirements);
+
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withDestination(destResourceRequirements)
+        .withDestinationStdErr(destStderrResourceRequirements)
+        .withDestinationStdIn(destStdinResourceRequirements)
+        .withDestinationStdOut(destStdoutResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(heartbeatResourceRequirements)
+        .withSource(sourceResourceRequirements)
+        .withSourceStdErr(srcStderrResourceRequirements)
+        .withSourceStdOut(srcStdoutResourceRequirements);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
@@ -219,6 +250,7 @@ class DefaultJobCreatorTest {
         .withResourceRequirements(workerResourceRequirements)
         .withSourceResourceRequirements(sourceResourceRequirements)
         .withDestinationResourceRequirements(destResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
@@ -308,6 +340,17 @@ class DefaultJobCreatorTest {
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
 
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withDestination(workerResourceRequirements)
+        .withDestinationStdErr(workerResourceRequirements)
+        .withDestinationStdIn(workerResourceRequirements)
+        .withDestinationStdOut(workerResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(workerResourceRequirements)
+        .withSource(workerResourceRequirements)
+        .withSourceStdErr(workerResourceRequirements)
+        .withSourceStdOut(workerResourceRequirements);
+
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -321,6 +364,7 @@ class DefaultJobCreatorTest {
         .withResourceRequirements(workerResourceRequirements)
         .withSourceResourceRequirements(workerResourceRequirements)
         .withDestinationResourceRequirements(workerResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
         .withWorkspaceId(WORKSPACE_ID)
@@ -361,6 +405,17 @@ class DefaultJobCreatorTest {
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
 
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withDestination(standardSyncResourceRequirements)
+        .withDestinationStdErr(workerResourceRequirements)
+        .withDestinationStdIn(workerResourceRequirements)
+        .withDestinationStdOut(workerResourceRequirements)
+        .withOrchestrator(standardSyncResourceRequirements)
+        .withHeartbeat(workerResourceRequirements)
+        .withSource(standardSyncResourceRequirements)
+        .withSourceStdErr(workerResourceRequirements)
+        .withSourceStdOut(workerResourceRequirements);
+
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -374,6 +429,7 @@ class DefaultJobCreatorTest {
         .withResourceRequirements(standardSyncResourceRequirements)
         .withSourceResourceRequirements(standardSyncResourceRequirements)
         .withDestinationResourceRequirements(standardSyncResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
         .withWorkspaceId(WORKSPACE_ID)
@@ -419,6 +475,17 @@ class DefaultJobCreatorTest {
         DESTINATION_DEFINITION_VERSION,
         WORKSPACE_ID);
 
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withDestination(destResourceRequirements)
+        .withDestinationStdErr(workerResourceRequirements)
+        .withDestinationStdIn(workerResourceRequirements)
+        .withDestinationStdOut(workerResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(workerResourceRequirements)
+        .withSource(sourceResourceRequirements)
+        .withSourceStdErr(workerResourceRequirements)
+        .withSourceStdOut(workerResourceRequirements);
+
     final JobSyncConfig expectedJobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -432,6 +499,7 @@ class DefaultJobCreatorTest {
         .withResourceRequirements(workerResourceRequirements)
         .withSourceResourceRequirements(sourceResourceRequirements)
         .withDestinationResourceRequirements(destResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
         .withWorkspaceId(WORKSPACE_ID)

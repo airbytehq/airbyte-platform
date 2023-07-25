@@ -24,6 +24,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -84,18 +85,8 @@ public class DefaultJobCreator implements JobCreator {
                                       final ActorDefinitionVersion destinationDefinitionVersion,
                                       final UUID workspaceId)
       throws IOException {
-    // reusing this isn't going to quite work.
-
-    final String variant = getResourceRequirementsVariant(workspaceId, standardSync, sourceDefinition, destinationDefinition);
-
-    // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
-    // going to be slow. With this in mind, we align the resources given to the orchestrator and the
-    // destination based on the source to avoid oversizing orchestrator and destination when the source
-    // is slow.
-    final Optional<String> sourceType = getSourceType(sourceDefinition);
-    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
-    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
-    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant);
+    final SyncResourceRequirements syncResourceRequirements =
+        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -108,9 +99,10 @@ public class DefaultJobCreator implements JobCreator {
         .withOperationSequence(standardSyncOperations)
         .withWebhookOperationConfigs(webhookOperationConfigs)
         .withConfiguredAirbyteCatalog(standardSync.getCatalog())
-        .withResourceRequirements(mergedOrchestratorResourceReq)
-        .withSourceResourceRequirements(mergedSrcResourceReq)
-        .withDestinationResourceRequirements(mergedDstResourceReq)
+        .withResourceRequirements(syncResourceRequirements.getOrchestrator())
+        .withSourceResourceRequirements(syncResourceRequirements.getSource())
+        .withDestinationResourceRequirements(syncResourceRequirements.getDestination())
+        .withSyncResourceRequirements(syncResourceRequirements)
         .withIsSourceCustomConnector(sourceDefinition.getCustom())
         .withIsDestinationCustomConnector(destinationDefinition.getCustom())
         .withWorkspaceId(workspaceId)
@@ -172,6 +164,33 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.RESET_CONNECTION)
         .withResetConnection(resetConnectionConfig);
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  private SyncResourceRequirements getSyncResourceRequirements(final UUID workspaceId,
+                                                               final StandardSync standardSync,
+                                                               final StandardSourceDefinition sourceDefinition,
+                                                               final StandardDestinationDefinition destinationDefinition) {
+    final String variant = getResourceRequirementsVariant(workspaceId, standardSync, sourceDefinition, destinationDefinition);
+
+    // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
+    // going to be slow. With this in mind, we align the resources given to the orchestrator and the
+    // destination based on the source to avoid oversizing orchestrator and destination when the source
+    // is slow.
+    final Optional<String> sourceType = getSourceType(sourceDefinition);
+    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
+    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
+    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant);
+
+    return new SyncResourceRequirements()
+        .withDestination(mergedDstResourceReq)
+        .withDestinationStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, sourceType, variant))
+        .withDestinationStdIn(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, sourceType, variant))
+        .withDestinationStdOut(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, sourceType, variant))
+        .withHeartbeat(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, sourceType, variant))
+        .withOrchestrator(mergedOrchestratorResourceReq)
+        .withSource(mergedSrcResourceReq)
+        .withSourceStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, sourceType, variant))
+        .withSourceStdOut(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, sourceType, variant));
   }
 
   private String getResourceRequirementsVariant(final UUID workspaceId,
