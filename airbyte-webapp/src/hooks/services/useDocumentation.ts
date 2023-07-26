@@ -1,6 +1,7 @@
 import { UseQueryResult, useQuery } from "@tanstack/react-query";
 
 import { fetchDocumentation } from "core/domain/Documentation";
+import { ReleaseStage } from "core/request/AirbyteClient";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useExperiment } from "./Experiment";
@@ -37,7 +38,7 @@ const AVAILABLE_INAPP_DOCS = [
   "sources/zendesk-support",
 ];
 
-export const useDocumentation = (documentationUrl: string): UseDocumentationResult => {
+export const useDocumentation = (documentationUrl: string, releaseStage?: ReleaseStage): UseDocumentationResult => {
   const shortSetupGuides = useExperiment("connector.shortSetupGuides", false);
   // Get the last two path segments of the documentation URL
   const docName = documentationUrl.substring(
@@ -47,7 +48,7 @@ export const useDocumentation = (documentationUrl: string): UseDocumentationResu
   const url = `${documentationUrl.replace(DOCS_URL, EMBEDDED_DOCS_PATH)}${showShortSetupGuide ? ".inapp.md" : ".md"}`;
   const { trackAction } = useAppMonitoringService();
 
-  return useQuery(documentationKeys.text(documentationUrl), () => fetchDocumentation(url, trackAction), {
+  return useQuery(documentationKeys.text(documentationUrl), () => fetchDocumentation(url, trackAction, releaseStage), {
     enabled: !!documentationUrl,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
