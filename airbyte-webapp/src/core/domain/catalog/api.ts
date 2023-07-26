@@ -1,8 +1,4 @@
-import { JSONSchema7 } from "json-schema";
-
 import { AirbyteCatalog, AirbyteStreamAndConfiguration } from "../../request/AirbyteClient";
-
-export type SchemaFields = JSONSchema7;
 
 export interface SyncSchemaStream extends AirbyteStreamAndConfiguration {
   /**

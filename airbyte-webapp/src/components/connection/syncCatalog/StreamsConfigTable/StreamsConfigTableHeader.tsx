@@ -16,7 +16,6 @@ import { SyncSchemaStream } from "core/domain/catalog";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
@@ -53,7 +52,6 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
@@ -100,45 +98,8 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           <FormattedMessage id="sources.sync" />
         </Text>
       </CellText>
-      {isColumnSelectionEnabled && (
-        <HeaderCell size="fixed" className={styles.fieldsCell}>
-          <FormattedMessage id="form.fields" />
-        </HeaderCell>
-      )}
-      <HeaderCell>
-        <FormattedMessage id="form.namespace" />
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.sourceNamespace.info" />
-        </InfoTooltip>
-      </HeaderCell>
-      <HeaderCell>
-        <FormattedMessage id="form.streamName" />
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.sourceStreamName.info" />
-        </InfoTooltip>
-      </HeaderCell>
-      <HeaderCell size="fixed" className={styles.syncModeCell}>
-        <FormattedMessage id="form.syncMode" />
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.syncType.info" />
-          <TooltipLearnMoreLink url={links.syncModeLink} />
-        </InfoTooltip>
-      </HeaderCell>
-      <HeaderCell>
-        <FormattedMessage id="form.cursorField" />
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.cursor.info" />
-        </InfoTooltip>
-      </HeaderCell>
-      <HeaderCell>
-        <FormattedMessage id="form.primaryKey" />
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.primaryKey.info" />
-        </InfoTooltip>
-      </HeaderCell>
-      <CellText size="fixed" className={styles.arrowCell} />
-      <HeaderCell>
-        <FormattedMessage id="form.namespace" />
+      <HeaderCell size="fixed" className={styles.dataDestinationCell}>
+        <FormattedMessage id="form.dataDestination" />
         <Button
           type="button"
           variant="clear"
@@ -164,7 +125,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         </Button>
       </HeaderCell>
       <HeaderCell>
-        <FormattedMessage id="form.streamName" />
+        <FormattedMessage id="form.stream" />
         <Button
           type="button"
           variant="clear"
@@ -187,6 +148,17 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         >
           <FontAwesomeIcon icon={faGear} />
         </Button>
+      </HeaderCell>
+      <HeaderCell className={styles.syncModeCell}>
+        <FormattedMessage id="form.syncMode" />
+        <InfoTooltip>
+          <FormattedMessage id="connectionForm.syncType.info" />
+          <TooltipLearnMoreLink url={links.syncModeLink} />
+        </InfoTooltip>
+      </HeaderCell>
+      <HeaderCell />
+      <HeaderCell size="fixed" className={styles.fieldsCell}>
+        <FormattedMessage id="form.fields" />
       </HeaderCell>
     </Header>
   );
