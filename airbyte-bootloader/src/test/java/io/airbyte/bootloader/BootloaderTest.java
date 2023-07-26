@@ -61,7 +61,6 @@ class BootloaderTest {
   private PostgreSQLContainer container;
   private DataSource configsDataSource;
   private DataSource jobsDataSource;
-
   private FeatureFlagClient featureFlagClient;
   private static final String DOCKER = "docker";
   private static final String PROTOCOL_VERSION_123 = "1.2.3";
@@ -134,7 +133,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -189,7 +188,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);

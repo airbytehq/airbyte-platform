@@ -61,6 +61,8 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = false)
 
+object IngestBreakingChanges : Temporary<Boolean>(key = "connectors.ingestBreakingChanges", default = true)
+
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)

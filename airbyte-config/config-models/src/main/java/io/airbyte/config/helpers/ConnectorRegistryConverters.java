@@ -5,13 +5,21 @@
 package io.airbyte.config.helpers;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
+import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -100,6 +108,44 @@ public class ConnectorRegistryConverters {
         .withReleaseStage(def.getReleaseStage())
         .withNormalizationConfig(def.getNormalizationConfig())
         .withSupportsDbt(def.getSupportsDbt());
+  }
+
+  /**
+   * Convert the breaking-change-related fields of the ConnectorRegistrySourceDefinition into a list
+   * of ActorDefinitionBreakingChanges.
+   */
+  public static List<ActorDefinitionBreakingChange> toActorDefinitionBreakingChanges(@Nullable final ConnectorRegistrySourceDefinition def) {
+    if (def == null || def.getReleases() == null || def.getReleases().getBreakingChanges() == null) {
+      return Collections.emptyList();
+    }
+
+    final Map<String, VersionBreakingChange> breakingChangeMap = def.getReleases().getBreakingChanges().getAdditionalProperties();
+    return toActorDefinitionBreakingChanges(breakingChangeMap, def.getSourceDefinitionId());
+  }
+
+  /**
+   * Convert the breaking-change-related fields of the ConnectorRegistryDestinationDefinition into a
+   * list of ActorDefinitionBreakingChanges.
+   */
+  public static List<ActorDefinitionBreakingChange> toActorDefinitionBreakingChanges(@Nullable final ConnectorRegistryDestinationDefinition def) {
+    if (def == null || def.getReleases() == null || def.getReleases().getBreakingChanges() == null) {
+      return Collections.emptyList();
+    }
+
+    final Map<String, VersionBreakingChange> breakingChangeMap = def.getReleases().getBreakingChanges().getAdditionalProperties();
+    return toActorDefinitionBreakingChanges(breakingChangeMap, def.getDestinationDefinitionId());
+  }
+
+  private static List<ActorDefinitionBreakingChange> toActorDefinitionBreakingChanges(final Map<String, VersionBreakingChange> breakingChangeMap,
+                                                                                      final UUID actorDefinitionID) {
+    return breakingChangeMap.entrySet().stream()
+        .map(entry -> new ActorDefinitionBreakingChange()
+            .withActorDefinitionId(actorDefinitionID)
+            .withVersion(new Version(entry.getKey()))
+            .withMigrationDocumentationUrl(entry.getValue().getMigrationDocumentationUrl())
+            .withUpgradeDeadline(entry.getValue().getUpgradeDeadline())
+            .withMessage(entry.getValue().getMessage()))
+        .collect(Collectors.toList());
   }
 
   private static SourceType toStandardSourceType(@Nullable final ConnectorRegistrySourceDefinition.SourceType sourceType) {

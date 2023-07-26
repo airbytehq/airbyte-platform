@@ -112,6 +112,7 @@ import org.jooq.Field;
 import org.jooq.InsertSetMoreStep;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
+import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record2;
@@ -3406,14 +3407,21 @@ public class ConfigRepository {
   }
 
   /**
-   * Writes a new actor definition breaking change to the database.
+   * Writes a list of actor definition breaking changes in one transaction. Updates entries if they
+   * already exist.
    *
-   * @param breakingChange - ActorDefinitionBreakingChange entry to write
+   * @param breakingChanges - actor definition breaking changes to write
    * @throws IOException - you never know when you io
    */
-  public void writeActorDefinitionBreakingChange(final ActorDefinitionBreakingChange breakingChange) throws IOException {
+  public void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    database.query(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+    database.query(ctx -> ctx
+        .batch(breakingChanges.stream().map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp)).collect(Collectors.toList()))
+        .execute());
+  }
+
+  private Query upsertBreakingChangeQuery(final DSLContext ctx, final ActorDefinitionBreakingChange breakingChange, final OffsetDateTime timestamp) {
+    return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
@@ -3421,7 +3429,11 @@ public class ConfigRepository {
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
-        .execute());
+        .onConflict(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION).doUpdate()
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
   }
 
   /**

@@ -4,7 +4,9 @@
 
 package io.airbyte.config.init;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,15 +15,24 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.ConnectorReleases;
+import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.IngestBreakingChanges;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,11 +53,15 @@ class ApplyDefinitionsHelperTest {
   private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
+  private FeatureFlagClient featureFlagClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
 
   private static final String PROTOCOL_VERSION = "2.0.0";
 
   protected static final UUID POSTGRES_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
+  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
+      .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
+
   protected static final ConnectorRegistrySourceDefinition SOURCE_POSTGRES = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(POSTGRES_ID)
       .withName("Postgres")
@@ -60,7 +75,9 @@ class ApplyDefinitionsHelperTest {
       .withDockerRepository("airbyte/source-postgres")
       .withDockerImageTag("0.4.0")
       .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres/new")
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
+      .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
+
   protected static final UUID S3_ID = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362");
   protected static final ConnectorRegistryDestinationDefinition DESTINATION_S3 = new ConnectorRegistryDestinationDefinition()
       .withName("S3")
@@ -75,15 +92,19 @@ class ApplyDefinitionsHelperTest {
       .withDockerRepository("airbyte/destination-s3")
       .withDockerImageTag("0.2.0")
       .withDocumentationUrl("https://docs.airbyte.io/integrations/destinations/s3/new")
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION));
+      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION))
+      .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
   @BeforeEach
   void setup() {
     configRepository = mock(ConfigRepository.class);
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
+    featureFlagClient = mock(TestClient.class);
 
-    applyDefinitionsHelper = new ApplyDefinitionsHelper(Optional.of(definitionsProvider), jobPersistence, configRepository);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(Optional.of(definitionsProvider), jobPersistence, configRepository, featureFlagClient);
+
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
 
     // Default calls to empty.
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(Collections.emptyList());
@@ -115,6 +136,7 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES));
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3));
+    verify(configRepository).writeActorDefinitionBreakingChanges(List.of());
 
     verifyNoMoreInteractions(configRepository);
   }
@@ -137,6 +159,7 @@ class ApplyDefinitionsHelperTest {
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
 
     verifyNoMoreInteractions(configRepository);
   }
@@ -160,9 +183,11 @@ class ApplyDefinitionsHelperTest {
       verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
           ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+      verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     } else {
       verify(configRepository).writeStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
       verify(configRepository).writeStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
+      verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     }
     verifyNoMoreInteractions(configRepository);
   }
@@ -195,13 +220,41 @@ class ApplyDefinitionsHelperTest {
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     verifyNoMoreInteractions(configRepository);
   }
 
   @Test
   void testMissingDefinitionsProvider() {
-    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(Optional.empty(), jobPersistence, configRepository);
+    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(Optional.empty(), jobPersistence, configRepository, featureFlagClient);
     assertDoesNotThrow(() -> helper.apply());
+  }
+
+  @Test
+  void testTurnOffIngestBreakingChangesFeatureFlag() throws JsonValidationException, IOException {
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
+
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
+
+    applyDefinitionsHelper.apply(true);
+    verifyConfigRepositoryGetInteractions();
+
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2));
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
+    verify(configRepository, never()).writeActorDefinitionBreakingChanges(any());
+
+    verifyNoMoreInteractions(configRepository);
+  }
+
+  private static List<ActorDefinitionBreakingChange> getExpectedBreakingChanges() {
+    final List<ActorDefinitionBreakingChange> breakingChanges = new ArrayList<>();
+    breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
+    breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    return breakingChanges;
   }
 
 }
