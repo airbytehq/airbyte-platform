@@ -141,8 +141,8 @@ class JobTrackerTest {
       .put("normalization_end_time", 14L)
       .build();
   private static final ImmutableMap<String, Object> SYNC_CONFIG_METADATA = ImmutableMap.<String, Object>builder()
-      .put(JobTracker.CONFIG + ".source.key", JobTracker.SET)
-      .put(JobTracker.CONFIG + ".destination.key", false)
+      .put(JobTracker.CONFIG + ".source", "{\"key\":\"set\"}")
+      .put(JobTracker.CONFIG + ".destination", "{\"key\":false}")
       .put(JobTracker.CATALOG + ".sync_mode.full_refresh", JobTracker.SET)
       .put(JobTracker.CATALOG + ".destination_sync_mode.append", JobTracker.SET)
       .put("namespace_definition", NamespaceDefinitionType.SOURCE)
@@ -228,11 +228,13 @@ class JobTrackerTest {
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
+        ConfigType.CHECK_CONNECTION_SOURCE,
         metadata,
         true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, null, null, jobState, output),
+        ConfigType.CHECK_CONNECTION_SOURCE,
         metadata,
         false);
   }
@@ -262,11 +264,13 @@ class JobTrackerTest {
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, DESTINATION_ID, jobState, output),
+        ConfigType.CHECK_CONNECTION_DESTINATION,
         metadata,
         true);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, null, null)).thenReturn(destinationVersion);
     assertCheckConnCorrectMessageForEachState(
         (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, null, null, jobState, output),
+        ConfigType.CHECK_CONNECTION_DESTINATION,
         metadata,
         false);
   }
@@ -380,7 +384,7 @@ class JobTrackerTest {
     metadata.put("workspace_name", WORKSPACE_NAME);
     metadata.put("connector_destination_definition_id", UUID2);
 
-    verify(trackingClient).track(WORKSPACE_ID, JobTracker.MESSAGE_NAME, metadata);
+    verify(trackingClient).track(WORKSPACE_ID, JobTracker.INTERNAL_FAILURE_SYNC_EVENT, metadata);
   }
 
   @Test
@@ -458,23 +462,23 @@ class JobTrackerTest {
     final JsonNode schema = Jsons.deserialize(schemaJson);
 
     final Map<String, Object> expected = new ImmutableMap.Builder<String, Object>()
-        .put(JobTracker.CONFIG + ".username", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".has_ssl", false)
-        .put(JobTracker.CONFIG + ".password", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".one_of.type_key", "foo")
-        .put(JobTracker.CONFIG + ".one_of.some_key", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".const_object.sub_key", "bar")
-        .put(JobTracker.CONFIG + ".const_object.sub_array", "[1,2,3]")
-        .put(JobTracker.CONFIG + ".const_object.sub_object.sub_sub_key", "baz")
-        .put(JobTracker.CONFIG + ".enum_string", "foo")
-        .put(JobTracker.CONFIG + ".additionalPropertiesUnset.foo", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".additionalPropertiesBoolean.foo", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".additionalPropertiesSchema.foo", JobTracker.SET)
-        .put(JobTracker.CONFIG + ".additionalPropertiesConst.foo", 42)
-        .put(JobTracker.CONFIG + ".additionalPropertiesEnumString", "foo")
+        .put("username", JobTracker.SET)
+        .put("has_ssl", false)
+        .put("password", JobTracker.SET)
+        .put("one_of.type_key", "foo")
+        .put("one_of.some_key", JobTracker.SET)
+        .put("const_object.sub_key", "bar")
+        .put("const_object.sub_array", "[1,2,3]")
+        .put("const_object.sub_object.sub_sub_key", "baz")
+        .put("enum_string", "foo")
+        .put("additionalPropertiesUnset.foo", JobTracker.SET)
+        .put("additionalPropertiesBoolean.foo", JobTracker.SET)
+        .put("additionalPropertiesSchema.foo", JobTracker.SET)
+        .put("additionalPropertiesConst.foo", 42)
+        .put("additionalPropertiesEnumString", "foo")
         .build();
 
-    final Map<String, Object> actual = JobTracker.configToMetadata(JobTracker.CONFIG, config, schema);
+    final Map<String, Object> actual = JobTracker.configToMetadata(config, schema);
 
     assertEquals(expected, actual);
   }
@@ -510,10 +514,10 @@ class JobTrackerTest {
         additionalExpectedMetadata);
 
     jobTracker.trackSync(job, JobState.SUCCEEDED);
-    assertCorrectMessageForSucceededState(manualMetadata);
+    assertCorrectMessageForSucceededState(JobTracker.SYNC_EVENT, manualMetadata);
 
     jobTracker.trackSync(job, JobState.FAILED);
-    assertCorrectMessageForFailedState(manualMetadata);
+    assertCorrectMessageForFailedState(JobTracker.SYNC_EVENT, manualMetadata);
   }
 
   private JsonNode configFailureJson() {
@@ -751,6 +755,7 @@ class JobTrackerTest {
   }
 
   private void assertCheckConnCorrectMessageForEachState(final BiConsumer<JobState, ConnectorJobOutput> jobStateConsumer,
+                                                         final ConfigType configType,
                                                          final Map<String, Object> metadata,
                                                          final boolean workspaceSet) {
     reset(trackingClient);
@@ -780,10 +785,18 @@ class JobTrackerTest {
     final ImmutableMap<String, Object> failedCheckJobMetadata = ImmutableMap.of("failure_reason", configFailureJson().toString());
 
     if (workspaceSet) {
-      assertCorrectMessageForStartedState(metadata);
-      assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnSuccessMetadata));
-      assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnFailureMetadata));
-      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedCheckJobMetadata));
+      assertCorrectMessageForStartedState(
+          configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
+          metadata);
+      assertCorrectMessageForSucceededState(
+          configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
+          MoreMaps.merge(metadata, checkConnSuccessMetadata));
+      assertCorrectMessageForSucceededState(
+          configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
+          MoreMaps.merge(metadata, checkConnFailureMetadata));
+      assertCorrectMessageForFailedState(
+          configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
+          MoreMaps.merge(metadata, failedCheckJobMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }
@@ -809,9 +822,9 @@ class JobTrackerTest {
     final ImmutableMap<String, Object> failedDiscoverMetadata = ImmutableMap.of("failure_reason", systemFailureJson().toString());
 
     if (workspaceSet) {
-      assertCorrectMessageForStartedState(metadata);
-      assertCorrectMessageForSucceededState(metadata);
-      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedDiscoverMetadata));
+      assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, metadata);
+      assertCorrectMessageForSucceededState(JobTracker.DISCOVER_EVENT, metadata);
+      assertCorrectMessageForFailedState(JobTracker.DISCOVER_EVENT, MoreMaps.merge(metadata, failedDiscoverMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }
@@ -827,23 +840,23 @@ class JobTrackerTest {
   private void assertCorrectMessageForEachState(final Consumer<JobState> jobStateConsumer,
                                                 final Map<String, Object> expectedMetadata) {
     jobStateConsumer.accept(JobState.STARTED);
-    assertCorrectMessageForStartedState(expectedMetadata);
+    assertCorrectMessageForStartedState(JobTracker.SYNC_EVENT, expectedMetadata);
     jobStateConsumer.accept(JobState.SUCCEEDED);
-    assertCorrectMessageForSucceededState(expectedMetadata);
+    assertCorrectMessageForSucceededState(JobTracker.SYNC_EVENT, expectedMetadata);
     jobStateConsumer.accept(JobState.FAILED);
-    assertCorrectMessageForFailedState(expectedMetadata);
+    assertCorrectMessageForFailedState(JobTracker.SYNC_EVENT, expectedMetadata);
   }
 
-  private void assertCorrectMessageForStartedState(final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, JobTracker.MESSAGE_NAME, MoreMaps.merge(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
+  private void assertCorrectMessageForStartedState(final String action, final Map<String, Object> metadata) {
+    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
-  private void assertCorrectMessageForSucceededState(final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, JobTracker.MESSAGE_NAME, MoreMaps.merge(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
+  private void assertCorrectMessageForSucceededState(final String action, final Map<String, Object> metadata) {
+    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
-  private void assertCorrectMessageForFailedState(final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, JobTracker.MESSAGE_NAME, MoreMaps.merge(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
+  private void assertCorrectMessageForFailedState(final String action, final Map<String, Object> metadata) {
+    verify(trackingClient).track(WORKSPACE_ID, action, MoreMaps.merge(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private Map<String, Object> mockWorkspaceInfo() {
