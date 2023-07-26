@@ -93,12 +93,14 @@ export const useCreateDestinationDefinition = () => {
     (destinationDefinition) => service.createCustom({ workspaceId, destinationDefinition }),
     {
       onSuccess: (data) => {
-        queryClient.setQueryData(
-          destinationDefinitionKeys.lists(),
-          (oldData: { destinationDefinitions: DestinationDefinitionRead[] } | undefined) => ({
+        queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
+          const newMap = new Map(oldData?.destinationDefinitionMap);
+          newMap.set(data.destinationDefinitionId, data);
+          return {
             destinationDefinitions: [data, ...(oldData?.destinationDefinitions ?? [])],
-          })
-        );
+            destinationDefinitionMap: newMap,
+          };
+        });
       },
     }
   );
@@ -119,15 +121,17 @@ export const useUpdateDestinationDefinition = () => {
     onSuccess: (data) => {
       queryClient.setQueryData(destinationDefinitionKeys.detail(data.destinationDefinitionId), data);
 
-      queryClient.setQueryData(
-        destinationDefinitionKeys.lists(),
-        (oldData: { destinationDefinitions: DestinationDefinitionRead[] } | undefined) => ({
+      queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
+        const newMap = new Map(oldData?.destinationDefinitionMap);
+        newMap.set(data.destinationDefinitionId, data);
+        return {
           destinationDefinitions:
-            oldData?.destinationDefinitions.map((sd) =>
-              sd.destinationDefinitionId === data.destinationDefinitionId ? data : sd
+            oldData?.destinationDefinitions.map((dd) =>
+              dd.destinationDefinitionId === data.destinationDefinitionId ? data : dd
             ) ?? [],
-        })
-      );
+          destinationDefinitionMap: newMap,
+        };
+      });
 
       queryClient.invalidateQueries(connectorDefinitionKeys.count());
     },

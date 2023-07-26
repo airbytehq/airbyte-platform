@@ -108,12 +108,13 @@ interface NewConnectorButtonProps {
   onClick?: () => void;
 }
 
-const NewConnectorButton: React.FC<NewConnectorButtonProps> = ({ onClick }) => {
+const NewConnectorButton = React.forwardRef<HTMLButtonElement, NewConnectorButtonProps>(({ onClick }, ref) => {
   return (
-    <Button size="xs" icon={<FontAwesomeIcon icon={faPlus} />} onClick={onClick}>
+    <Button size="xs" icon={<FontAwesomeIcon icon={faPlus} />} onClick={onClick} ref={ref}>
       <FormattedMessage id="admin.newConnector" />
     </Button>
   );
-};
+});
+NewConnectorButton.displayName = "NewConnectorButton";
 
 export default CreateConnector;
