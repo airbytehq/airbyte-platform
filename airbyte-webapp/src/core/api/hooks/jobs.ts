@@ -99,8 +99,21 @@ export const useCancelJob = () => {
 
 export const useJobInfoWithoutLogs = (id: number) => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery([SCOPE_WORKSPACE, "jobs", "infoWithoutLogs", id], () =>
-    getJobInfoWithoutLogs({ id }, requestOptions)
+  return useSuspenseQuery(
+    [SCOPE_WORKSPACE, "jobs", "infoWithoutLogs", id],
+    () => getJobInfoWithoutLogs({ id }, requestOptions),
+    {
+      refetchInterval: (data) => {
+        // keep refetching data while the job is still running or hasn't ended too long ago.
+        // We need some time after the last attempt has stopped, since logs
+        // keep incoming for some time after the job has already been marked as finished.
+        const lastAttemptEndTimestamp =
+          data?.attempts.length && data?.attempts[data.attempts.length - 1].attempt.endedAt;
+        // While no attempt ended timestamp exists yet (i.e. the job is still running) or it hasn't ended
+        // more than 2 minutes (2 * 60 * 1000ms) ago, keep refetching
+        return lastAttemptEndTimestamp && Date.now() - lastAttemptEndTimestamp * 1000 > 2 * 60 * 1000 ? false : 2500;
+      },
+    }
   );
 };
 
