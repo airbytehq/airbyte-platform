@@ -241,8 +241,9 @@ public class DestinationDefinitionsHandler {
     final UUID id = uuidSupplier.get();
 
     final DestinationDefinitionCreate destinationDefCreate = customDestinationDefinitionCreate.getDestinationDefinition();
-    final ActorDefinitionVersion actorDefinitionVersion = defaultDefinitionVersionFromCreate(destinationDefCreate)
-        .withActorDefinitionId(id);
+    final ActorDefinitionVersion actorDefinitionVersion =
+        defaultDefinitionVersionFromCreate(destinationDefCreate, customDestinationDefinitionCreate.getWorkspaceId())
+            .withActorDefinitionId(id);
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(id)
@@ -270,12 +271,14 @@ public class DestinationDefinitionsHandler {
     return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion);
   }
 
-  private ActorDefinitionVersion defaultDefinitionVersionFromCreate(final DestinationDefinitionCreate destinationDefCreate) throws IOException {
+  private ActorDefinitionVersion defaultDefinitionVersionFromCreate(final DestinationDefinitionCreate destinationDefCreate, final UUID workspaceId)
+      throws IOException {
     final ConnectorSpecification spec = getSpecForImage(
         destinationDefCreate.getDockerRepository(),
         destinationDefCreate.getDockerImageTag(),
         // Only custom connectors can be created via handlers.
-        true);
+        true,
+        workspaceId);
 
     final Version airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.getProtocolVersion());
 
@@ -299,7 +302,7 @@ public class DestinationDefinitionsHandler {
     final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(destinationDefinitionUpdate.getDockerImageTag())
         || ServerConstants.DEV_IMAGE_TAG.equals(destinationDefinitionUpdate.getDockerImageTag());
     final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentVersion.getDockerRepository(), destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom())
+        ? getSpecForImage(currentVersion.getDockerRepository(), destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom(), null)
         : currentVersion.getSpec();
     final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
@@ -354,10 +357,14 @@ public class DestinationDefinitionsHandler {
     configRepository.writeStandardDestinationDefinition(persistedDestinationDefinition);
   }
 
-  private ConnectorSpecification getSpecForImage(final String dockerRepository, final String imageTag, final boolean isCustomConnector)
+  private ConnectorSpecification getSpecForImage(final String dockerRepository,
+                                                 final String imageTag,
+                                                 final boolean isCustomConnector,
+                                                 final UUID workspaceId)
       throws IOException {
     final String imageName = dockerRepository + ":" + imageTag;
-    final SynchronousResponse<ConnectorSpecification> getSpecResponse = schedulerSynchronousClient.createGetSpecJob(imageName, isCustomConnector);
+    final SynchronousResponse<ConnectorSpecification> getSpecResponse =
+        schedulerSynchronousClient.createGetSpecJob(imageName, isCustomConnector, workspaceId);
     return SpecFetcher.getSpecFromJob(getSpecResponse);
   }
 

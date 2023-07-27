@@ -524,7 +524,7 @@ class DestinationDefinitionsHandlerTest {
     final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
 
     when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
         destinationDefinitionVersion.getSpec(),
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -545,7 +545,7 @@ class DestinationDefinitionsHandlerTest {
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
 
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
     verify(configRepository, never()).writeStandardDestinationDefinition(any());
   }
 
@@ -557,7 +557,7 @@ class DestinationDefinitionsHandlerTest {
     final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
 
     when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
         destinationDefinitionVersion.getSpec(),
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -595,7 +595,7 @@ class DestinationDefinitionsHandlerTest {
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate);
 
     assertEquals(expectedRead, actualRead);
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
     verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
         destination
             .withCustom(true)
@@ -618,7 +618,7 @@ class DestinationDefinitionsHandlerTest {
     final UUID organizationId = UUID.randomUUID();
 
     when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(eq(imageName), eq(true), any())).thenReturn(new SynchronousResponse<>(
         destinationDefinitionVersion.getSpec(),
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -636,7 +636,8 @@ class DestinationDefinitionsHandlerTest {
     final CustomDestinationDefinitionCreate customCreateForWorkspace = new CustomDestinationDefinitionCreate()
         .destinationDefinition(create)
         .scopeId(workspaceId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE);
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
+        .workspaceId(workspaceId);
 
     final DestinationDefinitionRead expectedRead = new DestinationDefinitionRead()
         .name(destination.getName())
@@ -657,7 +658,7 @@ class DestinationDefinitionsHandlerTest {
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
 
     assertEquals(expectedRead, actualRead);
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
     verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
         destination
             .withCustom(true)
@@ -700,7 +701,7 @@ class DestinationDefinitionsHandlerTest {
     final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
 
     when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
         destinationDefinitionVersion.getSpec(),
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -721,7 +722,7 @@ class DestinationDefinitionsHandlerTest {
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
 
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
+    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
     verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
   }
 
@@ -744,7 +745,7 @@ class DestinationDefinitionsHandlerTest {
     final ConnectorSpecification newSpec = new ConnectorSpecification()
         .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo2", "bar2")))
         .withProtocolVersion(newProtocolVersion);
-    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false, null)).thenReturn(new SynchronousResponse<>(
         newSpec,
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -757,7 +758,7 @@ class DestinationDefinitionsHandlerTest {
             .dockerImageTag(newDockerImageTag));
 
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
-    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
+    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false, null);
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination, updatedDestinationDefVersion);
   }
 
@@ -780,7 +781,7 @@ class DestinationDefinitionsHandlerTest {
     final ConnectorSpecification newSpec = new ConnectorSpecification()
         .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo2", "bar2")))
         .withProtocolVersion(newProtocolVersion);
-    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false)).thenReturn(new SynchronousResponse<>(
+    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false, null)).thenReturn(new SynchronousResponse<>(
         newSpec,
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
@@ -788,7 +789,7 @@ class DestinationDefinitionsHandlerTest {
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
             .dockerImageTag(newDockerImageTag)));
 
-    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
+    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false, null);
     verify(configRepository, never()).writeStandardDestinationDefinition(any());
   }
 

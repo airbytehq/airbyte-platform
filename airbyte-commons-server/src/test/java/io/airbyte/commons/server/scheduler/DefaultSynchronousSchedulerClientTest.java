@@ -294,9 +294,9 @@ class DefaultSynchronousSchedulerClientTest {
 
       final ConnectorSpecification mockOutput = mock(ConnectorSpecification.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withSpec(mockOutput);
-      when(temporalClient.submitGetSpec(any(UUID.class), eq(0), eq(jobSpecConfig)))
+      when(temporalClient.submitGetSpec(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(jobSpecConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
-      final SynchronousResponse<ConnectorSpecification> response = schedulerClient.createGetSpecJob(DOCKER_IMAGE, false);
+      final SynchronousResponse<ConnectorSpecification> response = schedulerClient.createGetSpecJob(DOCKER_IMAGE, false, WORKSPACE_ID);
       assertEquals(mockOutput, response.getOutput());
       verify(configInjector, never()).injectConfig(any(), any());
     }

@@ -37,6 +37,7 @@ public interface SynchronousSchedulerClient {
                                                     ResourceRequirements actorDefinitionResourceRequirements)
       throws IOException;
 
-  SynchronousResponse<ConnectorSpecification> createGetSpecJob(String dockerImage, boolean isCustomConnector) throws IOException;
+  SynchronousResponse<ConnectorSpecification> createGetSpecJob(String dockerImage, boolean isCustomConnector, final UUID workspaceId)
+      throws IOException;
 
 }

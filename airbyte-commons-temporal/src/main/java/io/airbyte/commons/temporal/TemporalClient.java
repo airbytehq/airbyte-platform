@@ -363,12 +363,16 @@ public class TemporalClient {
    * @param config spec config
    * @return spec output
    */
-  public TemporalResponse<ConnectorJobOutput> submitGetSpec(final UUID jobId, final int attempt, final JobGetSpecConfig config) {
+  public TemporalResponse<ConnectorJobOutput> submitGetSpec(final UUID jobId,
+                                                            final int attempt,
+                                                            final UUID workspaceId,
+                                                            final JobGetSpecConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId((long) attempt)
+        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector());
     return execute(jobRunConfig,

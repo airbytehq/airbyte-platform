@@ -189,7 +189,10 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   }
 
   @Override
-  public SynchronousResponse<ConnectorSpecification> createGetSpecJob(final String dockerImage, final boolean isCustomConnector) throws IOException {
+  public SynchronousResponse<ConnectorSpecification> createGetSpecJob(final String dockerImage,
+                                                                      final boolean isCustomConnector,
+                                                                      final UUID workspaceId)
+      throws IOException {
     final JobGetSpecConfig jobSpecConfig = new JobGetSpecConfig().withDockerImage(dockerImage).withIsCustomConnector(isCustomConnector);
 
     final UUID jobId = UUID.randomUUID();
@@ -199,7 +202,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         ConfigType.GET_SPEC,
         jobReportingContext,
         null,
-        () -> temporalClient.submitGetSpec(jobId, 0, jobSpecConfig),
+        () -> temporalClient.submitGetSpec(jobId, 0, workspaceId, jobSpecConfig),
         ConnectorJobOutput::getSpec,
         null, null);
   }

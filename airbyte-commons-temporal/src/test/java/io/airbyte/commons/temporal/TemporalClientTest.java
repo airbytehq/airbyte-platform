@@ -232,7 +232,7 @@ public class TemporalClientTest {
           .thenReturn(specWorkflow);
       final JobGetSpecConfig getSpecConfig = new JobGetSpecConfig().withDockerImage(IMAGE_NAME1);
 
-      temporalClient.submitGetSpec(JOB_UUID, ATTEMPT_ID, getSpecConfig);
+      temporalClient.submitGetSpec(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, getSpecConfig);
       specWorkflow.run(JOB_RUN_CONFIG, UUID_LAUNCHER_CONFIG);
       verify(workflowClient).newWorkflowStub(SpecWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.GET_SPEC));
     }
