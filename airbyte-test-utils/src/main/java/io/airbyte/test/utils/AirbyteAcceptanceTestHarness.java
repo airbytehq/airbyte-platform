@@ -118,7 +118,6 @@ import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -173,7 +172,6 @@ public class AirbyteAcceptanceTestHarness {
   public static final String AWESOME_PEOPLE_TABLE_NAME = "awesome_people";
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
-  private static final String ECHO_SERVER_IMAGE = "mendhak/http-https-echo:29";
 
   // Used for bypassing SSL modification for db configs
   private static final String IS_TEST = "is_test";
@@ -200,7 +198,6 @@ public class AirbyteAcceptanceTestHarness {
    */
   private PostgreSQLContainer sourcePsql;
   private PostgreSQLContainer destinationPsql;
-  private GenericContainer echoServer;
   private AirbyteTestContainer airbyteTestContainer;
   private AirbyteApiClient apiClient;
   private final UUID defaultWorkspaceId;
@@ -208,11 +205,11 @@ public class AirbyteAcceptanceTestHarness {
 
   private KubernetesClient kubernetesClient;
 
-  private List<UUID> sourceIds;
-  private List<UUID> connectionIds;
-  private List<UUID> destinationIds;
-  private List<UUID> operationIds;
-  private List<UUID> sourceDefinitionIds;
+  private final List<UUID> sourceIds = Lists.newArrayList();
+  private final List<UUID> connectionIds = Lists.newArrayList();
+  private final List<UUID> destinationIds = Lists.newArrayList();
+  private final List<UUID> operationIds = Lists.newArrayList();
+  private final List<UUID> sourceDefinitionIds = Lists.newArrayList();
   private DataSource sourceDataSource;
   private DataSource destinationDataSource;
   private String postgresPassword;
@@ -252,9 +249,6 @@ public class AirbyteAcceptanceTestHarness {
 
       destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
       destinationPsql.start();
-
-      echoServer = new GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080);
-      echoServer.start();
     }
 
     if (isKube && !isGke) {
@@ -299,7 +293,6 @@ public class AirbyteAcceptanceTestHarness {
     } else {
       sourcePsql.stop();
       destinationPsql.stop();
-      echoServer.stop();
     }
 
     if (airbyteTestContainer != null) {
@@ -308,12 +301,6 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void setup() throws SQLException, URISyntaxException, IOException {
-    sourceIds = Lists.newArrayList();
-    connectionIds = Lists.newArrayList();
-    destinationIds = Lists.newArrayList();
-    operationIds = Lists.newArrayList();
-    sourceDefinitionIds = Lists.newArrayList();
-
     if (isGke) {
       // Prepare the database data sources.
       LOGGER.info("postgresPassword: {}", postgresPassword);
@@ -787,8 +774,7 @@ public class AirbyteAcceptanceTestHarness {
   public DestinationRead createDestination(final String name,
                                            final UUID workspaceId,
                                            final UUID destinationDefId,
-                                           final JsonNode destinationConfig)
-      throws ApiException {
+                                           final JsonNode destinationConfig) {
     final DestinationRead destination =
         AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationApi().createDestination(new DestinationCreate()
             .name(name)
@@ -925,16 +911,7 @@ public class AirbyteAcceptanceTestHarness {
     return dbConfig;
   }
 
-  public String getEchoServerUrl() {
-    if (isKube && isGke) {
-      return "http://acceptance-test-echo-server-source-svc.acceptance-tests.svc.cluster.local:8080";
-    } else if (isGke) {
-      return "http://localhost:6000";
-    }
-    return String.format("http://%s:%s/", getHostname(), echoServer.getFirstMappedPort());
-  }
-
-  private String getHostname() {
+  public String getHostname() {
     if (isKube) {
       if (isMinikube) {
         // used with minikube driver=none instance
