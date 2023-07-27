@@ -13,6 +13,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -24,6 +25,7 @@ import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationWorkerImpl;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.UseSyncResourceRequirementsFromInput;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -124,16 +126,23 @@ public class ReplicationWorkerFactory {
     // Enable concurrent stream reads for testing purposes
     maybeEnableConcurrentStreamReads(sourceLauncherConfig, syncInput);
 
+    // Passing syncResourceRequirements here means that we are using the new values, otherwise, we will
+    // use the environment variable defined resource requirements for the non-main containers.
+    final SyncResourceRequirements syncResourceRequirements =
+        featureFlagClient.boolVariation(UseSyncResourceRequirementsFromInput.INSTANCE, getFeatureFlagContext(syncInput))
+            ? syncInput.getSyncResourceRequirements()
+            : null;
+
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = syncInput.getIsReset()
         ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
         : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
-            syncInput.getCatalog(), heartbeatMonitor);
+            syncResourceRequirements, syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        syncInput.getDestinationResourceRequirements(), syncInput.getCatalog());
+        syncInput.getDestinationResourceRequirements(), syncResourceRequirements, syncInput.getCatalog());
 
     // TODO MetricClient should be injectable
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);

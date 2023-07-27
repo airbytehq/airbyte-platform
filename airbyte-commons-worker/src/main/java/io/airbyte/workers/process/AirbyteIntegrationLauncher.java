@@ -17,6 +17,7 @@ import static io.airbyte.workers.process.Metadata.SYNC_JOB;
 import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 import static io.airbyte.workers.process.Metadata.WRITE_STEP;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -28,6 +29,7 @@ import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.WorkerEnvConstants;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
@@ -44,6 +46,22 @@ import java.util.UUID;
  */
 public class AirbyteIntegrationLauncher implements IntegrationLauncher {
 
+  private static final Configs configs = new EnvConfigs();
+
+  private static final ResourceRequirements DEFAULT_SIDECAR_RESOURCES = new ResourceRequirements()
+      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
+      .withCpuLimit(configs.getSidecarKubeCpuLimit()).withCpuRequest(configs.getSidecarKubeCpuRequest());
+  private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
+      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
+      .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+
+  // Stderr channel usually does not require much CPU resources. It's not on critical path nor it will
+  // impact performance.
+  // Thus, we will allocate much less CPU for these containers.
+  private static final ResourceRequirements LOW_SOCAT_RESOURCES = new ResourceRequirements()
+      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
+      .withCpuLimit("2").withCpuRequest("0.25");
+
   private static final String CONFIG = "--config";
 
   private final String jobId;
@@ -53,6 +71,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   private final String imageName;
   private final ProcessFactory processFactory;
   private final ResourceRequirements resourceRequirement;
+  private final SyncResourceRequirements syncResourceRequirements;
   private final FeatureFlags featureFlags;
 
   private final Map<String, String> additionalEnvironmentVariables;
@@ -72,6 +91,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
                                     final String imageName,
                                     final ProcessFactory processFactory,
                                     final ResourceRequirements resourceRequirement,
+                                    final SyncResourceRequirements syncResourceRequirements,
                                     final AllowedHosts allowedHosts,
                                     final boolean useIsolatedPool,
                                     final FeatureFlags featureFlags,
@@ -83,6 +103,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     this.imageName = imageName;
     this.processFactory = processFactory;
     this.resourceRequirement = resourceRequirement;
+    this.syncResourceRequirements = syncResourceRequirements;
     this.allowedHosts = allowedHosts;
     this.featureFlags = featureFlags;
     this.useIsolatedPool = useIsolatedPool;
@@ -106,7 +127,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         false,
         Collections.emptyMap(),
         null,
-        resourceRequirement,
+        buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, SPEC_JOB),
         getWorkerMetadata(),
@@ -132,7 +153,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         false,
         ImmutableMap.of(configFilename, configContents),
         null,
-        resourceRequirement,
+        buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
         getWorkerMetadata(),
@@ -159,7 +180,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         false,
         ImmutableMap.of(configFilename, configContents),
         null,
-        resourceRequirement,
+        buildGenericConnectorResourceRequirements(resourceRequirement),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
         getWorkerMetadata(),
@@ -210,7 +231,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         false,
         files,
         null,
-        resourceRequirement,
+        buildSourceConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
         getWorkerMetadata(),
@@ -245,7 +266,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         true,
         files,
         null,
-        resourceRequirement,
+        buildDestinationConnectorResourceRequirements(resourceRequirement, syncResourceRequirements),
         allowedHosts,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
         getWorkerMetadata(),
@@ -275,6 +296,59 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient())
             .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint())
             .build());
+  }
+
+  private static ConnectorResourceRequirements buildDestinationConnectorResourceRequirements(final ResourceRequirements resourceRequirements,
+                                                                                             final SyncResourceRequirements syncResourceReqs) {
+    if (syncResourceReqs != null) {
+      return new ConnectorResourceRequirements(
+          syncResourceReqs.getDestination(),
+          syncResourceReqs.getHeartbeat(),
+          syncResourceReqs.getDestinationStdErr(),
+          syncResourceReqs.getDestinationStdIn(),
+          syncResourceReqs.getDestinationStdOut());
+    } else {
+      return new ConnectorResourceRequirements(
+          resourceRequirements,
+          DEFAULT_SIDECAR_RESOURCES,
+          LOW_SOCAT_RESOURCES,
+          DEFAULT_SOCAT_RESOURCES,
+          DEFAULT_SOCAT_RESOURCES);
+    }
+  }
+
+  /**
+   * Generate ConnectorResourceRequirements with filled default for side containers.
+   */
+  @VisibleForTesting
+  public static ConnectorResourceRequirements buildGenericConnectorResourceRequirements(final ResourceRequirements resourceRequirements) {
+    return new ConnectorResourceRequirements(
+        resourceRequirements,
+        DEFAULT_SIDECAR_RESOURCES,
+        LOW_SOCAT_RESOURCES,
+        DEFAULT_SOCAT_RESOURCES,
+        DEFAULT_SOCAT_RESOURCES);
+  }
+
+  private static ConnectorResourceRequirements buildSourceConnectorResourceRequirements(final ResourceRequirements resourceRequirements,
+                                                                                        final SyncResourceRequirements syncResourceRequirements) {
+    if (syncResourceRequirements != null) {
+      return new ConnectorResourceRequirements(
+          syncResourceRequirements.getSource(),
+          syncResourceRequirements.getHeartbeat(),
+          syncResourceRequirements.getSourceStdErr(),
+          // Req is null because we do create a StdIn container for sources.
+          // This needs to be updated if we were to add one.
+          null,
+          syncResourceRequirements.getSourceStdOut());
+    } else {
+      return new ConnectorResourceRequirements(
+          resourceRequirements,
+          DEFAULT_SIDECAR_RESOURCES,
+          LOW_SOCAT_RESOURCES,
+          DEFAULT_SOCAT_RESOURCES,
+          DEFAULT_SOCAT_RESOURCES);
+    }
   }
 
 }

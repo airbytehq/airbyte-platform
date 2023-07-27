@@ -23,6 +23,7 @@ import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.normalization.NormalizationRunner;
+import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -128,7 +129,8 @@ public class DbtTransformationRunner implements AutoCloseable {
               false,
               files,
               "/bin/bash",
-              resourceRequirements,
+              // We should use the AirbyteIntegrationLauncher instead
+              AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(resourceRequirements),
               null,
               Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, CUSTOM_STEP),
               Collections.emptyMap(),

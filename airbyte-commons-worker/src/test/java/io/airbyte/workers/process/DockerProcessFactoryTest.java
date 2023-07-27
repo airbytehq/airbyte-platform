@@ -54,6 +54,9 @@ class DockerProcessFactoryTest {
   private static final UUID CONNECTION_ID = null;
   private static final UUID WORKSPACE_ID = null;
 
+  private static final ConnectorResourceRequirements expectedResourceRequirements =
+      AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(new WorkerConfigs(new EnvConfigs()).getResourceRequirements());
+
   /**
    * {@link DockerProcessFactoryTest#testImageExists()} will fail if jq is not installed. The logs get
    * swallowed when run from gradle. This test exists to explicitly fail with a clear error message
@@ -103,7 +106,7 @@ class DockerProcessFactoryTest {
         new DockerProcessFactory(createConfigProviderStub(), workspaceRoot, null, null, null);
     processFactory.create(ResourceType.DEFAULT, "tester", "job_id", 0, CONNECTION_ID, WORKSPACE_ID, jobRoot, BUSYBOX, false, false,
         ImmutableMap.of("config.json", "{\"data\": 2}"),
-        "echo hi", new WorkerConfigs(new EnvConfigs()).getResourceRequirements(), null, Map.of(), Map.of(), Map.of(), Collections.emptyMap());
+        "echo hi", expectedResourceRequirements, null, Map.of(), Map.of(), Map.of(), Collections.emptyMap());
 
     assertEquals(
         Jsons.jsonNode(ImmutableMap.of("data", 2)),
@@ -130,7 +133,7 @@ class DockerProcessFactoryTest {
             null,
             "host");
 
-    waitForDockerToInitialize(processFactory, jobRoot, workerConfigs);
+    waitForDockerToInitialize(processFactory, jobRoot);
 
     final Process process = processFactory.create(
         ResourceType.DEFAULT,
@@ -145,7 +148,7 @@ class DockerProcessFactoryTest {
         false,
         Map.of(),
         "/bin/sh",
-        workerConfigs.getResourceRequirements(),
+        expectedResourceRequirements,
         null,
         Map.of(),
         Map.of(),
@@ -164,7 +167,7 @@ class DockerProcessFactoryTest {
     assertEquals("ENV_VAR_1=ENV_VALUE_1", out.toString(), String.format("Output did not contain the expected string. stdout: %s", out));
   }
 
-  private void waitForDockerToInitialize(final ProcessFactory processFactory, final Path jobRoot, final WorkerConfigs workerConfigs)
+  private void waitForDockerToInitialize(final ProcessFactory processFactory, final Path jobRoot)
       throws InterruptedException, WorkerException {
     final var stopwatch = Stopwatch.createStarted();
 
@@ -182,7 +185,7 @@ class DockerProcessFactoryTest {
           false,
           Map.of(),
           "/bin/sh",
-          workerConfigs.getResourceRequirements(),
+          expectedResourceRequirements,
           null,
           Map.of(),
           Map.of(),

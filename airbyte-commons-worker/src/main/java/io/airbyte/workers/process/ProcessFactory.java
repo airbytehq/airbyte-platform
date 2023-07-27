@@ -6,7 +6,6 @@ package io.airbyte.workers.process;
 
 import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.config.AllowedHosts;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
@@ -40,7 +39,7 @@ public interface ProcessFactory {
    *        prior to execution.
    * @param entrypoint If not null, the default entrypoint program of the docker image can be changed
    *        by this argument.
-   * @param resourceRequirements CPU and RAM to assign to the created process.
+   * @param connectorResourceRequirements CPU and RAM to assign to the created process.
    * @param labels Labels to assign to the created Kube pod, if any. Ignore for docker.
    * @param jobMetadata Job metadata that will be passed to the created process as environment
    *        variables.
@@ -61,7 +60,7 @@ public interface ProcessFactory {
                  final boolean usesStdin,
                  final Map<String, String> files,
                  final String entrypoint,
-                 final ResourceRequirements resourceRequirements,
+                 final ConnectorResourceRequirements connectorResourceRequirements,
                  final AllowedHosts allowedHosts,
                  final Map<String, String> labels,
                  final Map<String, String> jobMetadata,

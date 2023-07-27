@@ -31,6 +31,8 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.process.AirbyteIntegrationLauncher;
+import io.airbyte.workers.process.ConnectorResourceRequirements;
 import io.airbyte.workers.process.ProcessFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -92,9 +94,11 @@ class DefaultNormalizationRunnerTest {
         WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME, Jsons.serialize(catalog));
 
+    final ConnectorResourceRequirements expectedResourceRequirements =
+        AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(new WorkerConfigs(new EnvConfigs()).getResourceRequirements());
     when(processFactory.create(ResourceType.NORMALIZATION, NORMALIZE_STEP, JOB_ID, JOB_ATTEMPT, CONNECTION_ID, WORKSPACE_ID, jobRoot,
         getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), false, false, files, null,
-        workerConfigs.getResourceRequirements(),
+        expectedResourceRequirements,
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, NORMALIZE_STEP),
         Map.of(),

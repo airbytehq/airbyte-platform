@@ -131,6 +131,7 @@ public class SpecActivityImpl implements SpecActivity {
           launcherConfig.getDockerImage(),
           processFactory,
           workerConfigs.getResourceRequirements(),
+          null,
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
           featureFlags,

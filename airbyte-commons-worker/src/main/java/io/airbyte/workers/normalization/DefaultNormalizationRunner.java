@@ -32,6 +32,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -148,7 +149,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
           false,
           false, files,
           null,
-          resourceRequirements,
+          // We should use the AirbyteIntegrationLauncher, but normalization is going away so wontfix.
+          AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(resourceRequirements),
           null,
           Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, NORMALIZE_STEP),
           Collections.emptyMap(),
