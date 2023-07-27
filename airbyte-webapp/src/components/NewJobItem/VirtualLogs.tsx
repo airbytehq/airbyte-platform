@@ -1,9 +1,9 @@
 import Anser from "anser";
 import classNames from "classnames";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { FixedSizeList, ListChildComponentProps } from "react-window";
+import { FixedSizeList, ListChildComponentProps, ListOnScrollProps } from "react-window";
 import sanitize from "sanitize-html";
 
 import { Text } from "components/ui/Text";
@@ -47,14 +47,64 @@ interface RowData {
 }
 
 const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({ logLines, searchTerm, scrollTo, selectedAttempt }) => {
-  const listRef = useRef<FixedSizeList>(null);
+  const listRef = useRef<FixedSizeList<RowData> | null>(null);
   const highlightedRowIndex = scrollTo;
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   useEffect(() => {
     if (scrollTo !== undefined) {
       listRef.current?.scrollToItem(scrollTo);
     }
   }, [scrollTo]);
+
+  const scrollToBottom = useCallback(() => {
+    if (listRef.current === null || !logLines.length) {
+      return;
+    }
+    listRef?.current.scrollToItem(logLines.length);
+  }, [logLines.length]);
+
+  useEffect(() => {
+    if (isAutoScrollEnabled) {
+      scrollToBottom();
+    }
+  }, [isAutoScrollEnabled, logLines, scrollToBottom]);
+
+  const handleScroll = ({ scrollUpdateWasRequested, scrollOffset }: ListOnScrollProps) => {
+    const element = scrollContainerRef.current;
+    if (!element) {
+      return;
+    }
+
+    // check if user is scrolled to bottom
+    const isScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight;
+
+    //  if scrollUpdateWasRequested is false and scrollOffset > 0 - this means user is scrolling, hence we disable auto-scroll if it was turned on before
+    if (!scrollUpdateWasRequested && scrollOffset > 0 && !isScrolledToBottom && isAutoScrollEnabled) {
+      setIsAutoScrollEnabled(false);
+      return;
+    }
+
+    // otherwise - turn on auto scroll if it wasn't enabled before
+    if (isScrolledToBottom && !isAutoScrollEnabled) {
+      setIsAutoScrollEnabled(true);
+    }
+  };
+
+  // since we can't track the listRef change with useEffect, we use a callback ref instead
+  const setListRef = useCallback(
+    (node: InstanceType<typeof FixedSizeList<RowData>>) => {
+      if (listRef.current !== null) {
+        return;
+      }
+      listRef.current = node;
+
+      // scroll to bottom on mount
+      scrollToBottom();
+    },
+    [scrollToBottom]
+  );
 
   return (
     <div className={styles.virtualLogs}>
@@ -74,8 +124,10 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({ logLines, searchTer
                 itemSize={20}
                 itemData={{ logLines, searchTerm, highlightedRowIndex }}
                 width={width}
-                ref={listRef}
                 overscanCount={10}
+                ref={setListRef}
+                outerRef={scrollContainerRef}
+                onScroll={handleScroll}
               >
                 {Row}
               </FixedSizeList>
