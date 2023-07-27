@@ -51,6 +51,7 @@ interface BaseFieldProps {
   pattern?: string;
   adornment?: ReactNode;
   className?: string;
+  omitInterpolationContext?: boolean;
 }
 
 export type BuilderFieldProps = BaseFieldProps &
@@ -129,12 +130,20 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   pattern,
   adornment,
   manifestPath,
+  omitInterpolationContext,
   ...props
 }) => {
   const { field, fieldState } = useController({ name: path });
   const hasError = !!fieldState.error;
 
-  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, path);
+  const { label, tooltip } = getLabelAndTooltip(
+    props.label,
+    props.tooltip,
+    manifestPath,
+    path,
+    false,
+    omitInterpolationContext
+  );
   const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
 
   const elementRef = useRef<HTMLDivElement | null>(null);

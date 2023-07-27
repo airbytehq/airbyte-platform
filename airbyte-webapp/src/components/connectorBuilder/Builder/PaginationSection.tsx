@@ -10,7 +10,7 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
-import { RequestOptionFields } from "./RequestOptionFields";
+import { InjectIntoFields } from "./InjectIntoFields";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { CURSOR_PAGINATION, OFFSET_INCREMENT, PAGE_INCREMENT, StreamPathFn, useBuilderWatch } from "../types";
 
@@ -239,7 +239,7 @@ const PageTokenOption = ({
         field_name: "",
       }}
     >
-      <RequestOptionFields path={streamFieldPath("paginator.pageTokenOption")} descriptor={label} />
+      <InjectIntoFields path={streamFieldPath("paginator.pageTokenOption")} descriptor={label} />
     </ToggleGroupField>
   );
 };
@@ -262,7 +262,11 @@ const PageSizeOption = ({
         field_name: "",
       }}
     >
-      <RequestOptionFields path={streamFieldPath("paginator.pageSizeOption")} descriptor={label} excludePathInjection />
+      <InjectIntoFields
+        path={streamFieldPath("paginator.pageSizeOption")}
+        descriptor={label}
+        excludeValues={["path"]}
+      />
     </ToggleGroupField>
   );
 };

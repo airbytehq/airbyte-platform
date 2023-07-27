@@ -2,6 +2,7 @@ import { Tab } from "@headlessui/react";
 import classNames from "classnames";
 import { useState } from "react";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import styles from "./TabbedDisplay.module.scss";
@@ -23,7 +24,7 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
   const [selectedIndex, setSelectedIndex] = useState(defaultTabIndex);
 
   return (
-    <div className={className}>
+    <FlexContainer className={classNames(className, styles.container)} direction="column">
       <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
         <Tab.List className={styles.tabList}>
           {tabs.map((tab) => (
@@ -49,6 +50,6 @@ export const TabbedDisplay: React.FC<TabbedDisplayProps> = ({ className, tabs, d
           ))}
         </Tab.Panels>
       </Tab.Group>
-    </div>
+    </FlexContainer>
   );
 };

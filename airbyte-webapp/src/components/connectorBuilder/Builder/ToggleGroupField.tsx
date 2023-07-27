@@ -8,7 +8,7 @@ import styles from "./ToggleGroupField.module.scss";
 
 interface ToggleGroupFieldProps<T> {
   label: string;
-  tooltip: string;
+  tooltip?: string;
   fieldPath: string;
   initialValues: T;
 }
@@ -22,7 +22,7 @@ export function ToggleGroupField<T>({
   initialValues,
 }: React.PropsWithChildren<ToggleGroupFieldProps<T>>) {
   const value = useWatch({ name: fieldPath, exact: false }) as T | undefined;
-  const { setValue, unregister } = useFormContext();
+  const { setValue, clearErrors } = useFormContext();
   const enabled = value !== undefined;
 
   const labelComponent = (
@@ -31,7 +31,12 @@ export function ToggleGroupField<T>({
         id={fieldPath}
         checked={enabled}
         onChange={(event) => {
-          event.target.checked ? setValue(fieldPath, initialValues) : unregister(fieldPath);
+          if (event.target.checked) {
+            setValue(fieldPath, initialValues);
+          } else {
+            setValue(fieldPath, undefined);
+            clearErrors(fieldPath);
+          }
         }}
       />
       <ControlLabels label={label} infoTooltipContent={tooltip} htmlFor={fieldPath} />

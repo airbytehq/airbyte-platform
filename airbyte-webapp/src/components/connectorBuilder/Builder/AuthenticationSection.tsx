@@ -1,3 +1,6 @@
+import GroupControls from "components/GroupControls";
+import { ControlLabels } from "components/LabeledControl";
+
 import { OAuthAuthenticatorRefreshTokenUpdater } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
@@ -9,8 +12,11 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
+import { ErrorHandlerSection } from "./ErrorHandlerSection";
+import { InjectIntoFields } from "./InjectIntoFields";
 import { KeyValueListField } from "./KeyValueListField";
-import { RequestOptionFields } from "./RequestOptionFields";
+import { getDescriptionByManifest, getLabelAndTooltip, getOptionsByManifest } from "./manifestHelpers";
+import { RequestOptionSection } from "./RequestOptionSection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
   API_KEY_AUTHENTICATOR,
@@ -21,7 +27,13 @@ import {
   OAUTH_ACCESS_TOKEN_INPUT,
   OAUTH_AUTHENTICATOR,
   OAUTH_TOKEN_EXPIRY_DATE_INPUT,
+  SESSION_TOKEN_AUTHENTICATOR,
   useBuilderWatch,
+  BuilderErrorHandler,
+  LARGE_DURATION_OPTIONS,
+  SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+  SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
+  NO_AUTH,
 } from "../types";
 
 export const AuthenticationSection: React.FC = () => {
@@ -60,7 +72,7 @@ export const AuthenticationSection: React.FC = () => {
             },
             children: (
               <>
-                <RequestOptionFields path="global.authenticator.inject_into" descriptor="token" excludePathInjection />
+                <InjectIntoFields path="global.authenticator.inject_into" descriptor="token" excludeValues={["path"]} />
                 <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
               </>
             ),
@@ -96,6 +108,38 @@ export const AuthenticationSection: React.FC = () => {
               grant_type: "refresh_token",
             },
             children: <OAuthForm />,
+          },
+          {
+            label: "Session Token",
+            typeValue: SESSION_TOKEN_AUTHENTICATOR,
+            default: {
+              login_requester: {
+                url: "",
+                authenticator: {
+                  type: NO_AUTH,
+                },
+                httpMethod: "POST",
+                requestOptions: {
+                  requestParameters: [],
+                  requestHeaders: [],
+                  requestBody: {
+                    type: "json_list",
+                    values: [],
+                  },
+                },
+              },
+              session_token_path: [],
+              expiration_duration: "",
+              request_authentication: {
+                type: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+                inject_into: {
+                  type: "RequestOption",
+                  inject_into: "header",
+                  field_name: "",
+                },
+              },
+            },
+            children: <SessionTokenForm />,
           },
         ]}
       />
@@ -174,6 +218,145 @@ const OAuthForm = () => {
           manifestPath="OAuthAuthenticator.properties.refresh_request_body"
         />
       </BuilderOptional>
+    </>
+  );
+};
+
+const SessionTokenForm = () => {
+  const { label: loginRequesterLabel, tooltip: loginRequesterTooltip } = getLabelAndTooltip(
+    "Session Token Retrieval",
+    undefined,
+    "SessionTokenAuthenticator.properties.login_requester",
+    "global.authenticator.login_requester",
+    true
+  );
+  return (
+    <>
+      <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
+        <BuilderFieldWithInputs
+          type="string"
+          path="global.authenticator.login_requester.url"
+          label="URL"
+          tooltip="The full URL of where to send the request to retrieve the session token"
+        />
+        <BuilderField
+          type="enum"
+          path="global.authenticator.login_requester.httpMethod"
+          options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+          manifestPath="HttpRequester.properties.http_method"
+        />
+        <BuilderOneOf
+          path="global.authenticator.login_requester.authenticator"
+          label="Authentication Method"
+          manifestPath="HttpRequester.properties.authenticator"
+          manifestOptionPaths={["ApiKeyAuthenticator", "BearerAuthenticator", "BasicHttpAuthenticator"]}
+          options={[
+            { label: "No Auth", typeValue: "NoAuth", default: {} },
+            {
+              label: "API Key",
+              typeValue: API_KEY_AUTHENTICATOR,
+              default: {
+                ...inferredAuthValues("ApiKeyAuthenticator"),
+                inject_into: {
+                  type: "RequestOption",
+                  inject_into: "header",
+                  field_name: "",
+                },
+              },
+              children: (
+                <>
+                  <InjectIntoFields
+                    path="global.authenticator.login_requester.authenticator.inject_into"
+                    descriptor="token"
+                    excludeValues={["path"]}
+                  />
+                  <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
+                </>
+              ),
+            },
+            {
+              label: "Bearer",
+              typeValue: BEARER_AUTHENTICATOR,
+              default: {
+                ...inferredAuthValues("BearerAuthenticator"),
+              },
+              children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
+            },
+            {
+              label: "Basic HTTP",
+              typeValue: BASIC_AUTHENTICATOR,
+              default: {
+                ...inferredAuthValues("BasicHttpAuthenticator"),
+              },
+              children: (
+                <>
+                  <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.username" />
+                  <BuilderInputPlaceholder manifestPath="BasicHttpAuthenticator.properties.password" />
+                </>
+              ),
+            },
+          ]}
+        />
+        <RequestOptionSection
+          inline
+          basePath="global.authenticator.login_requester.requestOptions"
+          omitInterpolationContext
+        />
+        <ToggleGroupField<BuilderErrorHandler[]>
+          label="Error Handler"
+          tooltip={getDescriptionByManifest("DefaultErrorHandler")}
+          fieldPath="global.authenticator.login_requester.errorHandler"
+          initialValues={[{ type: "DefaultErrorHandler" }]}
+        >
+          <ErrorHandlerSection inline basePath="global.authenticator.login_requester.errorHandler" />
+        </ToggleGroupField>
+      </GroupControls>
+      <BuilderField
+        type="array"
+        path="global.authenticator.session_token_path"
+        label="Session Token Path"
+        tooltip="The path to the session token in the response body returned from the Session Token Retrieval request"
+        directionalStyle
+      />
+      <BuilderField
+        type="combobox"
+        path="global.authenticator.expiration_duration"
+        options={LARGE_DURATION_OPTIONS}
+        manifestPath="SessionTokenAuthenticator.properties.expiration_duration"
+        optional
+      />
+      <BuilderOneOf
+        path="global.authenticator.request_authentication"
+        manifestPath="SessionTokenAuthenticator.properties.request_authentication"
+        manifestOptionPaths={["SessionTokenRequestApiKeyAuthenticator", "SessionTokenRequestBearerAuthenticator"]}
+        options={[
+          {
+            label: "API Key",
+            typeValue: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+            default: {
+              inject_into: {
+                type: "RequestOption",
+                inject_into: "header",
+                field_name: "",
+              },
+            },
+            children: (
+              <InjectIntoFields
+                path="global.authenticator.request_authentication.inject_into"
+                descriptor="session token"
+                label="Inject Session Token into outgoing HTTP Request"
+                tooltip="Configure how the session token will be sent in requests to the source API"
+                excludeValues={["path", "body_data", "body_json"]}
+              />
+            ),
+          },
+          {
+            label: "Bearer",
+            typeValue: SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
+            default: {},
+          },
+        ]}
+      />
     </>
   );
 };

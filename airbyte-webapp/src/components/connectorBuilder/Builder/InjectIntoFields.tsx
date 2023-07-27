@@ -2,15 +2,23 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { injectIntoOptions } from "../types";
+import { InjectIntoValue, injectIntoOptions } from "../types";
 
-interface RequestOptionFieldsProps {
+interface InjectIntoFieldsProps {
   path: string;
   descriptor: string;
-  excludePathInjection?: boolean;
+  label?: string;
+  tooltip?: string;
+  excludeValues?: InjectIntoValue[];
 }
 
-export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, descriptor, excludePathInjection }) => {
+export const InjectIntoFields: React.FC<InjectIntoFieldsProps> = ({
+  path,
+  descriptor,
+  label,
+  tooltip,
+  excludeValues,
+}) => {
   const value = useWatch({ name: `${path}.inject_into` });
   const { setValue } = useFormContext();
 
@@ -20,15 +28,17 @@ export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, 
         type="enum"
         path={`${path}.inject_into`}
         options={
-          excludePathInjection ? injectIntoOptions.filter((target) => target.value !== "path") : injectIntoOptions
+          excludeValues
+            ? injectIntoOptions.filter((target) => !excludeValues.includes(target.value))
+            : injectIntoOptions
         }
         onChange={(newValue) => {
           if (newValue === "path") {
             setValue(path, { inject_into: newValue });
           }
         }}
-        label="Inject Into"
-        tooltip={`Configures where the ${descriptor} should be set on the HTTP requests`}
+        label={label || "Inject Into"}
+        tooltip={tooltip || `Configures where the ${descriptor} should be set on the HTTP requests`}
       />
       {value !== "path" && (
         <BuilderFieldWithInputs

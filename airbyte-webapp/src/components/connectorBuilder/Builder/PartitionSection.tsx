@@ -8,7 +8,7 @@ import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
-import { RequestOptionFields } from "./RequestOptionFields";
+import { InjectIntoFields } from "./InjectIntoFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER, StreamPathFn, BuilderListPartitionRouter } from "../types";
@@ -78,7 +78,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
               field_name: "",
             }}
           >
-            <RequestOptionFields path={buildPath("request_option")} descriptor="slice value" excludePathInjection />
+            <InjectIntoFields path={buildPath("request_option")} descriptor="slice value" excludeValues={["path"]} />
           </ToggleGroupField>
         </>
       ),

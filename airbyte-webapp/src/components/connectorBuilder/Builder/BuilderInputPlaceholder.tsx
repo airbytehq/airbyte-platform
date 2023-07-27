@@ -20,7 +20,7 @@ export interface BuilderFieldProps {
 
 export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
   const { setTestInputOpen } = useConnectorBuilderFormManagementState();
-  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true);
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true, true);
   return (
     <FlexContainer alignItems="center">
       <FlexItem grow>

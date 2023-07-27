@@ -4,16 +4,24 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { useBuilderWatch } from "../types";
+import { concatPath, useBuilderWatch } from "../types";
 
-interface RequestOptionSectionProps {
-  streamFieldPath: <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
-  currentStreamIndex: number;
-}
-export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
+  | {
+      inline: false;
+      basePath: `streams.${number}.requestOptions`;
+      currentStreamIndex: number;
+    }
+  | {
+      inline: true;
+      basePath: "global.authenticator.login_requester.requestOptions";
+    }
+);
+
+export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
 
-  const bodyValue = useBuilderWatch(streamFieldPath("requestOptions.requestBody"));
+  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
 
   const getBodyOptions = (): OneOfOption[] => [
     {
@@ -24,10 +32,11 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       },
       children: (
         <KeyValueListField
-          path={streamFieldPath("requestOptions.requestBody.values")}
+          path={concatPath(props.basePath, "requestBody.values")}
           key="json_list"
           manifestPath="HttpRequester.properties.request_body_json"
           optional
+          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -39,10 +48,11 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       },
       children: (
         <KeyValueListField
-          path={streamFieldPath("requestOptions.requestBody.values")}
+          path={concatPath(props.basePath, "requestBody.values")}
           key="form_list"
           manifestPath="HttpRequester.properties.request_body_data"
           optional
+          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -55,8 +65,9 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       children: (
         <BuilderField
           type="jsoneditor"
-          path={streamFieldPath("requestOptions.requestBody.value")}
+          path={concatPath(props.basePath, "requestBody.value")}
           manifestPath="HttpRequester.properties.request_body_json"
+          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
@@ -69,38 +80,50 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       children: (
         <BuilderField
           type="textarea"
-          path={streamFieldPath("requestOptions.requestBody.value")}
+          path={concatPath(props.basePath, "requestBody.value")}
           label="Request body as string"
           manifestPath="HttpRequester.properties.request_body_data"
+          omitInterpolationContext={props.omitInterpolationContext}
         />
       ),
     },
   ];
 
-  return (
+  const content = (
+    <>
+      <KeyValueListField
+        path={concatPath(props.basePath, "requestParameters")}
+        manifestPath="HttpRequester.properties.request_parameters"
+        optional
+        omitInterpolationContext={props.omitInterpolationContext}
+      />
+      <KeyValueListField
+        path={concatPath(props.basePath, "requestHeaders")}
+        manifestPath="HttpRequester.properties.request_headers"
+        optional
+        omitInterpolationContext={props.omitInterpolationContext}
+      />
+      <BuilderOneOf
+        path={concatPath(props.basePath, "requestBody")}
+        label="Request Body"
+        options={getBodyOptions()}
+        omitInterpolationContext={props.omitInterpolationContext}
+      />
+    </>
+  );
+
+  return props.inline ? (
+    content
+  ) : (
     <BuilderCard
       copyConfig={{
         path: "requestOptions",
-        currentStreamIndex,
+        currentStreamIndex: props.currentStreamIndex,
         copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
         copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
       }}
     >
-      <KeyValueListField
-        path={streamFieldPath("requestOptions.requestParameters")}
-        manifestPath="HttpRequester.properties.request_parameters"
-        optional
-      />
-      <KeyValueListField
-        path={streamFieldPath("requestOptions.requestHeaders")}
-        manifestPath="HttpRequester.properties.request_headers"
-        optional
-      />
-      <BuilderOneOf
-        path={streamFieldPath("requestOptions.requestBody")}
-        label="Request Body"
-        options={getBodyOptions()}
-      />
+      {content}
     </BuilderCard>
   );
 };

@@ -45,6 +45,7 @@ interface KeyValueListFieldProps {
   tooltip?: ReactNode;
   manifestPath?: string;
   optional?: boolean;
+  omitInterpolationContext?: boolean;
 }
 
 export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
@@ -53,8 +54,16 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
   tooltip,
   manifestPath,
   optional,
+  omitInterpolationContext = false,
 }) => {
-  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
+    label,
+    tooltip,
+    manifestPath,
+    path,
+    false,
+    omitInterpolationContext
+  );
   const { fields: keyValueList, append, remove } = useFieldArray({ name: path });
 
   return (

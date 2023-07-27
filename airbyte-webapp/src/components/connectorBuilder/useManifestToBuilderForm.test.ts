@@ -240,6 +240,51 @@ describe("Conversion throws error when", () => {
       "OAuthAuthenticator access token config path needs to be [oauth_access_token]"
     );
   });
+
+  it("manifest has a SessionTokenAuthenticator with an unsupported login_requester authenticator type", async () => {
+    const convert = () => {
+      const manifest: ConnectorManifest = {
+        ...baseManifest,
+        streams: [
+          merge({}, stream1, {
+            retriever: {
+              requester: {
+                authenticator: {
+                  type: "SessionTokenAuthenticator",
+                  login_requester: {
+                    type: "HttpRequester",
+                    url_base: "https://api.com/",
+                    path: "/session",
+                    authenticator: {
+                      type: "OAuthAuthenticator",
+                    },
+                    http_method: "POST",
+                    request_parameters: {},
+                    request_headers: {},
+                    request_body_json: {},
+                  },
+                  session_token_path: ["id"],
+                  expiration_duration: "P2W",
+                  request_authentication: {
+                    type: "ApiKey",
+                    inject_into: {
+                      type: "RequestOption",
+                      field_name: "X-Session-Token",
+                      inject_into: "header",
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        ],
+      };
+      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    };
+    await expect(convert).rejects.toThrow(
+      "SessionTokenAuthenticator login_requester.authenticator must have one of the following types"
+    );
+  });
 });
 
 describe("Conversion successfully results in", () => {
@@ -658,6 +703,97 @@ describe("Conversion successfully results in", () => {
         access_token_config_path: ["oauth_access_token"],
         refresh_token_config_path: ["client_refresh_token"],
         token_expiry_date_config_path: ["oauth_token_expiry_date"],
+      },
+    });
+  });
+
+  it("SessionTokenAuthenticator with types properly converted to builder form types", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            requester: {
+              authenticator: {
+                type: "SessionTokenAuthenticator",
+                login_requester: {
+                  type: "HttpRequester",
+                  url_base: "https://api.com/",
+                  path: "/session",
+                  authenticator: {
+                    type: "NoAuth",
+                  },
+                  error_handler: {
+                    type: "CompositeErrorHandler",
+                    error_handlers: [
+                      {
+                        type: "DefaultErrorHandler",
+                        backoff_strategies: [
+                          {
+                            type: "ConstantBackoffStrategy",
+                            backoff_time_in_seconds: 5,
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  http_method: "POST",
+                  request_parameters: {},
+                  request_headers: {},
+                  request_body_json: {},
+                },
+                session_token_path: ["id"],
+                expiration_duration: "P2W",
+                request_authentication: {
+                  type: "ApiKey",
+                  inject_into: {
+                    type: "RequestOption",
+                    field_name: "X-Session-Token",
+                    inject_into: "header",
+                  },
+                },
+              },
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.global.authenticator).toEqual({
+      type: "SessionTokenAuthenticator",
+      login_requester: {
+        url: "https://api.com/session",
+        authenticator: {
+          type: "NoAuth",
+        },
+        httpMethod: "POST",
+        requestOptions: {
+          requestParameters: [],
+          requestHeaders: [],
+          requestBody: {
+            type: "json_list",
+            values: [],
+          },
+        },
+        errorHandler: [
+          {
+            type: "DefaultErrorHandler",
+            backoff_strategy: {
+              type: "ConstantBackoffStrategy",
+              backoff_time_in_seconds: 5,
+            },
+          },
+        ],
+      },
+      session_token_path: ["id"],
+      expiration_duration: "P2W",
+      request_authentication: {
+        type: "ApiKey",
+        inject_into: {
+          type: "RequestOption",
+          field_name: "X-Session-Token",
+          inject_into: "header",
+        },
       },
     });
   });

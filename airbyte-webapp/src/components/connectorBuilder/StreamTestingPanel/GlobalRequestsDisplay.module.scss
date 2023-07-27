@@ -3,6 +3,8 @@
 
 .container {
   padding: variables.$spacing-sm;
+  height: 100%;
+  overflow: auto;
 }
 
 .description {

@@ -12,14 +12,19 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { StreamPathFn } from "../types";
 
-interface PartitionSectionProps {
-  streamFieldPath: StreamPathFn;
-  currentStreamIndex: number;
-}
+type ErrorHandlerSectionProps =
+  | {
+      inline: false;
+      basePath: `streams.${number}.errorHandler`;
+      currentStreamIndex: number;
+    }
+  | {
+      inline: true;
+      basePath: "global.authenticator.login_requester.errorHandler";
+    };
 
-export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) => {
   const { formatMessage } = useIntl();
 
   const getBackoffOptions = (buildPath: (path: string) => string): OneOfOption[] => [
@@ -107,29 +112,12 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     },
   ];
 
-  return (
-    <BuilderCard
-      docLink={links.connectorBuilderErrorHandler}
-      label="Error Handler"
-      tooltip={getDescriptionByManifest("DefaultErrorHandler")}
-      toggleConfig={{
-        path: streamFieldPath("errorHandler"),
-        defaultValue: [
-          {
-            type: "DefaultErrorHandler",
-          },
-        ],
-      }}
-      copyConfig={{
-        path: "errorHandler",
-        currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromErrorHandlerTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyToErrorHandlerTitle" }),
-      }}
-    >
+  const content = (
+    <>
       <Message type="warning" text={<FormattedMessage id="connectorBuilder.errorHandlerWarning" />} />
       <BuilderList
-        basePath={streamFieldPath("errorHandler")}
+        // cast to strings necessary to avoid a "type union that is too complex to represent"
+        basePath={props.basePath}
         emptyItem={{
           type: "DefaultErrorHandler",
           response_filters: [],
@@ -207,6 +195,34 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
           </FlexContainer>
         )}
       </BuilderList>
+    </>
+  );
+
+  return props.inline ? (
+    <FlexContainer direction="column" gap="xl">
+      {content}
+    </FlexContainer>
+  ) : (
+    <BuilderCard
+      docLink={links.connectorBuilderErrorHandler}
+      label="Error Handler"
+      tooltip={getDescriptionByManifest("DefaultErrorHandler")}
+      toggleConfig={{
+        path: props.basePath,
+        defaultValue: [
+          {
+            type: "DefaultErrorHandler",
+          },
+        ],
+      }}
+      copyConfig={{
+        path: "errorHandler",
+        currentStreamIndex: props.currentStreamIndex,
+        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromErrorHandlerTitle" }),
+        copyToLabel: formatMessage({ id: "connectorBuilder.copyToErrorHandlerTitle" }),
+      }}
+    >
+      {content}
     </BuilderCard>
   );
 };

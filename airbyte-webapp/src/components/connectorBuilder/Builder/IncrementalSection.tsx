@@ -16,7 +16,7 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
-import { RequestOptionFields } from "./RequestOptionFields";
+import { InjectIntoFields } from "./InjectIntoFields";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
   BuilderIncrementalSync,
@@ -219,10 +219,10 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             field_name: "",
           }}
         >
-          <RequestOptionFields
+          <InjectIntoFields
             path={streamFieldPath("incrementalSync.start_time_option")}
             descriptor="start datetime"
-            excludePathInjection
+            excludeValues={["path"]}
           />
         </ToggleGroupField>
       )}
@@ -237,10 +237,10 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             field_name: "",
           }}
         >
-          <RequestOptionFields
+          <InjectIntoFields
             path={streamFieldPath("incrementalSync.end_time_option")}
             descriptor="end datetime"
-            excludePathInjection
+            excludeValues={["path"]}
           />
         </ToggleGroupField>
       )}

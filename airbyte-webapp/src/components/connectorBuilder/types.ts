@@ -3,6 +3,7 @@ import merge from "lodash/merge";
 import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
+import { MixedSchema } from "yup/lib/mixed";
 
 import {
   ConnectorManifest,
@@ -40,6 +41,12 @@ import {
   HttpResponseFilter,
   DefaultPaginator,
   DeclarativeComponentSchemaMetadata,
+  SessionTokenAuthenticator,
+  SessionTokenAuthenticatorType,
+  SessionTokenRequestApiKeyAuthenticatorType,
+  SessionTokenRequestBearerAuthenticatorType,
+  RequestOptionInjectInto,
+  NoAuthType,
 } from "core/api/types/ConnectorManifest";
 import { naturalComparator } from "core/utils/objects";
 
@@ -57,6 +64,24 @@ export interface BuilderFormInput {
   as_config_path?: boolean;
 }
 
+type BuilderHttpMethod = "GET" | "POST";
+
+interface BuilderRequestOptions {
+  requestParameters: Array<[string, string]>;
+  requestHeaders: Array<[string, string]>;
+  requestBody: BuilderRequestBody;
+}
+
+export type BuilderSessionTokenAuthenticator = Omit<SessionTokenAuthenticator, "login_requester"> & {
+  login_requester: {
+    url: string;
+    authenticator: NoAuth | ApiKeyAuthenticator | BearerAuthenticator | BasicHttpAuthenticator;
+    httpMethod: BuilderHttpMethod;
+    requestOptions: BuilderRequestOptions;
+    errorHandler?: BuilderErrorHandler[];
+  };
+};
+
 export type BuilderFormAuthenticator = (
   | NoAuth
   | (Omit<OAuthAuthenticator, "refresh_request_body"> & {
@@ -65,6 +90,7 @@ export type BuilderFormAuthenticator = (
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
+  | BuilderSessionTokenAuthenticator
 ) & { type: string };
 
 export interface BuilderFormValues {
@@ -128,7 +154,7 @@ interface BuilderResponseFilter extends Omit<HttpResponseFilter, "http_codes"> {
   http_codes?: string[];
 }
 
-interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
+export interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
   backoff_strategy?: DefaultErrorHandlerBackoffStrategiesItem;
   response_filter?: BuilderResponseFilter;
 }
@@ -182,12 +208,8 @@ export interface BuilderStream {
   urlPath: string;
   fieldPointer: string[];
   primaryKey: string[];
-  httpMethod: "GET" | "POST";
-  requestOptions: {
-    requestParameters: Array<[string, string]>;
-    requestHeaders: Array<[string, string]>;
-    requestBody: BuilderRequestBody;
-  };
+  httpMethod: BuilderHttpMethod;
+  requestOptions: BuilderRequestOptions;
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
   incrementalSync?: BuilderIncrementalSync;
@@ -280,10 +302,14 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
 export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "SubstreamPartitionRouter";
 
+export const NO_AUTH: NoAuthType = "NoAuth";
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
 export const BEARER_AUTHENTICATOR: BearerAuthenticatorType = "BearerAuthenticator";
 export const BASIC_AUTHENTICATOR: BasicHttpAuthenticatorType = "BasicHttpAuthenticator";
 export const OAUTH_AUTHENTICATOR: OAuthAuthenticatorType = "OAuthAuthenticator";
+export const SESSION_TOKEN_AUTHENTICATOR: SessionTokenAuthenticatorType = "SessionTokenAuthenticator";
+export const SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR: SessionTokenRequestApiKeyAuthenticatorType = "ApiKey";
+export const SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR: SessionTokenRequestBearerAuthenticatorType = "Bearer";
 
 export const CURSOR_PAGINATION: CursorPaginationType = "CursorPagination";
 export const OFFSET_INCREMENT: OffsetIncrementType = "OffsetIncrement";
@@ -431,6 +457,11 @@ export const authTypeToKeyToInferredInput = (
         }
       }
       return baseInputs;
+    case SESSION_TOKEN_AUTHENTICATOR:
+      if ("login_requester" in authenticator && "type" in authenticator.login_requester.authenticator) {
+        return authTypeToKeyToInferredInput(authenticator.login_requester.authenticator);
+      }
+      return {};
   }
 };
 
@@ -467,7 +498,14 @@ export function getInferredInputList(
   const inputs = authKeys.flatMap((authKey) => {
     if (
       authKeyToInferredInput[authKey].as_config_path ||
-      extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
+      extractInterpolatedConfigKey(
+        Reflect.get(
+          global.authenticator.type === "SessionTokenAuthenticator"
+            ? global.authenticator.login_requester.authenticator
+            : global.authenticator,
+          authKey
+        )
+      ) === authKeyToInferredInput[authKey].key
     ) {
       return [authKeyToInferredInput[authKey]];
     }
@@ -526,7 +564,8 @@ export function extractInterpolatedConfigKey(str: string | undefined): string | 
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
 
-export const injectIntoOptions = [
+export type InjectIntoValue = RequestOptionInjectInto | "path";
+export const injectIntoOptions: Array<{ label: string; value: InjectIntoValue; fieldLabel?: string }> = [
   { label: "Query Parameter", value: "request_parameter", fieldLabel: "Parameter Name" },
   { label: "Header", value: "header", fieldLabel: "Header Name" },
   { label: "Path", value: "path" },
@@ -534,16 +573,19 @@ export const injectIntoOptions = [
   { label: "Body JSON payload", value: "body_json", fieldLabel: "Key Name" },
 ];
 
+const REQUIRED_ERROR = "form.empty.error";
+const strip = (schema: MixedSchema) => schema.strip();
+
 const nonPathRequestOptionSchema = yup
   .object()
   .shape({
     inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required("form.empty.error"),
+    field_name: yup.string().required(REQUIRED_ERROR),
   })
   .notRequired()
   .default(undefined);
 
-const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
+const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required(REQUIRED_ERROR)));
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
@@ -574,20 +616,96 @@ const jsonString = yup.string().test({
   message: "connectorBuilder.invalidJSON",
 });
 
+const errorHandlerSchema = yup
+  .array(
+    yup.object().shape({
+      max_retries: yupNumberOrEmptyString,
+      backoff_strategy: yup
+        .object()
+        .shape({
+          backoff_time_in_seconds: yup.mixed().when("type", {
+            is: (val: string) => val === "ConstantBackoffStrategy",
+            then: yupNumberOrEmptyString.required(REQUIRED_ERROR),
+            otherwise: strip,
+          }),
+          factor: yup.mixed().when("type", {
+            is: (val: string) => val === "ExponentialBackoffStrategy",
+            then: yupNumberOrEmptyString,
+            otherwise: strip,
+          }),
+          header: yup.mixed().when("type", {
+            is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+            then: yup.string().required(REQUIRED_ERROR),
+            otherwise: strip,
+          }),
+          regex: yup.mixed().when("type", {
+            is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+            then: yup.string(),
+            otherwise: strip,
+          }),
+          min_wait: yup.mixed().when("type", {
+            is: (val: string) => val === "WaitUntilTimeFromHeader",
+            then: yup.string(),
+            otherwise: strip,
+          }),
+        })
+        .notRequired()
+        .default(undefined),
+      response_filter: yup
+        .object()
+        .shape({
+          error_message_contains: yup.string(),
+          predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+          http_codes: yup.array(yup.string()).notRequired().default(undefined),
+          error_message: yup.string(),
+        })
+        .notRequired()
+        .default(undefined),
+    })
+  )
+  .notRequired()
+  .default(undefined);
+
+const apiKeyInjectIntoSchema = yup.mixed().when("type", {
+  is: API_KEY_AUTHENTICATOR,
+  then: nonPathRequestOptionSchema,
+  otherwise: strip,
+});
+
+const httpMethodSchema = yup.mixed().oneOf(["GET", "POST"]);
+
+const requestOptionsSchema = yup.object().shape({
+  requestParameters: keyValueListSchema,
+  requestHeaders: keyValueListSchema,
+  requestBody: yup.object().shape({
+    values: yup.mixed().when("type", {
+      is: (val: string) => val === "form_list" || val === "json_list",
+      then: keyValueListSchema,
+      otherwise: strip,
+    }),
+    value: yup
+      .mixed()
+      .when("type", {
+        is: (val: string) => val === "json_freeform",
+        then: jsonString,
+      })
+      .when("type", {
+        is: (val: string) => val === "string_freeform",
+        then: yup.string(),
+      }),
+  }),
+});
+
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
-    connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
-    urlBase: yup.string().required("form.empty.error"),
+    connectorName: yup.string().required(REQUIRED_ERROR).max(256, "connectorBuilder.maxLength"),
+    urlBase: yup.string().required(REQUIRED_ERROR),
     authenticator: yup.object({
-      inject_into: yup.mixed().when("type", {
-        is: (type: string) => type === API_KEY_AUTHENTICATOR,
-        then: nonPathRequestOptionSchema,
-        otherwise: (schema) => schema.strip(),
-      }),
+      inject_into: apiKeyInjectIntoSchema,
       token_refresh_endpoint: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
-        otherwise: (schema) => schema.strip(),
+        then: yup.string().required(REQUIRED_ERROR),
+        otherwise: strip,
       }),
       refresh_token_updater: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
@@ -597,12 +715,46 @@ export const builderFormValidationSchema = yup.object().shape({
             refresh_token_name: yup.string(),
           })
           .default(undefined),
-        otherwise: (schema) => schema.strip(),
+        otherwise: strip,
       }),
       refresh_request_body: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
         then: keyValueListSchema,
-        otherwise: (schema) => schema.strip(),
+        otherwise: strip,
+      }),
+      login_requester: yup.mixed().when("type", {
+        is: SESSION_TOKEN_AUTHENTICATOR,
+        then: yup.object().shape({
+          url: yup.string().required(REQUIRED_ERROR),
+          authenticator: yup.object({
+            inject_into: apiKeyInjectIntoSchema,
+          }),
+          errorHandler: errorHandlerSchema,
+          httpMethod: httpMethodSchema,
+          requestOptions: requestOptionsSchema,
+        }),
+        otherwise: strip,
+      }),
+      session_token_path: yup.mixed().when("type", {
+        is: SESSION_TOKEN_AUTHENTICATOR,
+        then: yup.array().of(yup.string()).min(1).required(REQUIRED_ERROR),
+        otherwise: strip,
+      }),
+      expiration_duration: yup.mixed().when("type", {
+        is: SESSION_TOKEN_AUTHENTICATOR,
+        then: yup.string(),
+        otherwise: strip,
+      }),
+      request_authentication: yup.mixed().when("type", {
+        is: SESSION_TOKEN_AUTHENTICATOR,
+        then: yup.object().shape({
+          inject_into: yup.mixed().when("type", {
+            is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+            then: nonPathRequestOptionSchema,
+            otherwise: strip,
+          }),
+        }),
+        otherwise: strip,
       }),
     }),
   }),
@@ -611,32 +763,12 @@ export const builderFormValidationSchema = yup.object().shape({
     .min(1)
     .of(
       yup.object().shape({
-        name: yup.string().required("form.empty.error"),
-        urlPath: yup.string().required("form.empty.error"),
+        name: yup.string().required(REQUIRED_ERROR),
+        urlPath: yup.string().required(REQUIRED_ERROR),
         fieldPointer: yup.array().of(yup.string()),
         primaryKey: yup.array().of(yup.string()),
-        httpMethod: yup.mixed().oneOf(["GET", "POST"]),
-        requestOptions: yup.object().shape({
-          requestParameters: keyValueListSchema,
-          requestHeaders: keyValueListSchema,
-          requestBody: yup.object().shape({
-            values: yup.mixed().when("type", {
-              is: (val: string) => val === "form_list" || val === "json_list",
-              then: keyValueListSchema,
-              otherwise: (schema) => schema.strip(),
-            }),
-            value: yup
-              .mixed()
-              .when("type", {
-                is: (val: string) => val === "json_freeform",
-                then: jsonString,
-              })
-              .when("type", {
-                is: (val: string) => val === "string_freeform",
-                then: yup.string(),
-              }),
-          }),
-        }),
+        httpMethod: httpMethodSchema,
+        requestOptions: requestOptionsSchema,
         schema: jsonString,
         paginator: yup
           .object()
@@ -644,7 +776,7 @@ export const builderFormValidationSchema = yup.object().shape({
             pageSizeOption: yup.mixed().when("strategy.page_size", {
               is: (val: number) => Boolean(val),
               then: nonPathRequestOptionSchema,
-              otherwise: (schema) => schema.strip(),
+              otherwise: strip,
             }),
             pageTokenOption: yup
               .object()
@@ -652,8 +784,8 @@ export const builderFormValidationSchema = yup.object().shape({
                 inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
                 field_name: yup.mixed().when("inject_into", {
                   is: "path",
-                  then: (schema) => schema.strip(),
-                  otherwise: yup.string().required("form.empty.error"),
+                  then: strip,
+                  otherwise: yup.string().required(REQUIRED_ERROR),
                 }),
               })
               .notRequired()
@@ -667,26 +799,26 @@ export const builderFormValidationSchema = yup.object().shape({
                   then: yup.object().shape({
                     cursor_value: yup.mixed().when("type", {
                       is: "custom",
-                      then: yup.string().required("form.empty.error"),
-                      otherwise: (schema) => schema.strip(),
+                      then: yup.string().required(REQUIRED_ERROR),
+                      otherwise: strip,
                     }),
                     stop_condition: yup.mixed().when("type", {
                       is: "custom",
                       then: yup.string(),
-                      otherwise: (schema) => schema.strip(),
+                      otherwise: strip,
                     }),
                     path: yup.mixed().when("type", {
                       is: (val: string) => val !== "custom",
-                      then: yup.array().of(yup.string()).min(1, "form.empty.error"),
-                      otherwise: (schema) => schema.strip(),
+                      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                      otherwise: strip,
                     }),
                   }),
-                  otherwise: (schema) => schema.strip(),
+                  otherwise: strip,
                 }),
                 start_from_page: yup.mixed().when("type", {
                   is: PAGE_INCREMENT,
                   then: yupNumberOrEmptyString,
-                  otherwise: (schema) => schema.strip(),
+                  otherwise: strip,
                 }),
               })
               .notRequired()
@@ -699,38 +831,35 @@ export const builderFormValidationSchema = yup.object().shape({
             yup.object().shape({
               cursor_field: yup.mixed().when("type", {
                 is: (val: string) => val === LIST_PARTITION_ROUTER,
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
               values: yup.mixed().when("type", {
                 is: LIST_PARTITION_ROUTER,
                 then: yup.object().shape({
                   value: yup.mixed().when("type", {
                     is: "list",
-                    then: yup.array().of(yup.string()).min(1, "form.empty.error"),
-                    otherwise: yup
-                      .string()
-                      .required("form.empty.error")
-                      .matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+                    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                    otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
                   }),
                 }),
-                otherwise: (schema) => schema.strip(),
+                otherwise: strip,
               }),
               request_option: nonPathRequestOptionSchema,
               parent_key: yup.mixed().when("type", {
                 is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
               parentStreamReference: yup.mixed().when("type", {
                 is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
               partition_field: yup.mixed().when("type", {
                 is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
             })
           )
@@ -739,95 +868,47 @@ export const builderFormValidationSchema = yup.object().shape({
         transformations: yup
           .array(
             yup.object().shape({
-              path: yup.array(yup.string()).min(1, "form.empty.error"),
+              path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "add",
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
             })
           )
           .notRequired()
           .default(undefined),
-        errorHandler: yup
-          .array(
-            yup.object().shape({
-              max_retries: yupNumberOrEmptyString,
-              backoff_strategy: yup
-                .object()
-                .shape({
-                  backoff_time_in_seconds: yup.mixed().when("type", {
-                    is: (val: string) => val === "ConstantBackoffStrategy",
-                    then: yupNumberOrEmptyString.required("form.empty.error"),
-                    otherwise: (schema) => schema.strip(),
-                  }),
-                  factor: yup.mixed().when("type", {
-                    is: (val: string) => val === "ExponentialBackoffStrategy",
-                    then: yupNumberOrEmptyString,
-                    otherwise: (schema) => schema.strip(),
-                  }),
-                  header: yup.mixed().when("type", {
-                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
-                    then: yup.string().required("form.empty.error"),
-                    otherwise: (schema) => schema.strip(),
-                  }),
-                  regex: yup.mixed().when("type", {
-                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
-                    then: yup.string(),
-                    otherwise: (schema) => schema.strip(),
-                  }),
-                  min_wait: yup.mixed().when("type", {
-                    is: (val: string) => val === "WaitUntilTimeFromHeader",
-                    then: yup.string(),
-                    otherwise: (schema) => schema.strip(),
-                  }),
-                })
-                .notRequired()
-                .default(undefined),
-              response_filter: yup
-                .object()
-                .shape({
-                  error_message_contains: yup.string(),
-                  predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-                  http_codes: yup.array(yup.string()).notRequired().default(undefined),
-                  error_message: yup.string(),
-                })
-                .notRequired()
-                .default(undefined),
-            })
-          )
-          .notRequired()
-          .default(undefined),
+        errorHandler: errorHandlerSchema,
         incrementalSync: yup
           .object()
           .shape({
-            cursor_field: yup.string().required("form.empty.error"),
+            cursor_field: yup.string().required(REQUIRED_ERROR),
             slicer: schemaIfNotDataFeed(
               yup
                 .object()
                 .shape({
-                  cursor_granularity: yup.string().required("form.empty.error"),
-                  step: yup.string().required("form.empty.error"),
+                  cursor_granularity: yup.string().required(REQUIRED_ERROR),
+                  step: yup.string().required(REQUIRED_ERROR),
                 })
                 .default(undefined)
             ),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
-                then: yup.string().required("form.empty.error"),
-                otherwise: (schema) => schema.strip(),
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
               }),
             }),
             end_datetime: schemaIfRangeFilter(
               yup.object().shape({
                 value: yup.mixed().when("type", {
                   is: (val: string) => val === "custom",
-                  then: yup.string().required("form.empty.error"),
-                  otherwise: (schema) => schema.strip(),
+                  then: yup.string().required(REQUIRED_ERROR),
+                  otherwise: strip,
                 }),
               })
             ),
-            datetime_format: yup.string().required("form.empty.error"),
+            datetime_format: yup.string().required(REQUIRED_ERROR),
             start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
             end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
             stream_state_field_start: yup.string(),
@@ -859,6 +940,23 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
     return {
       ...globalSettings.authenticator,
       header: undefined,
+    };
+  }
+  if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
+    const builderLoginRequester = globalSettings.authenticator.login_requester;
+    return {
+      ...globalSettings.authenticator,
+      login_requester: {
+        type: "HttpRequester",
+        url_base: builderLoginRequester.url,
+        path: "",
+        authenticator: builderLoginRequester.authenticator,
+        error_handler: buildCompositeErrorHandler(builderLoginRequester.errorHandler),
+        http_method: builderLoginRequester.httpMethod,
+        request_parameters: Object.fromEntries(builderLoginRequester.requestOptions.requestParameters),
+        request_headers: Object.fromEntries(builderLoginRequester.requestOptions.requestHeaders),
+        ...builderRequestBodyToStreamRequestBody(builderLoginRequester.requestOptions.requestBody),
+      },
     };
   }
   return globalSettings.authenticator as HttpRequesterAuthenticator;
@@ -1075,20 +1173,20 @@ function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
   }
 }
 
-function builderRequestBodyToStreamRequestBody(stream: BuilderStream) {
+function builderRequestBodyToStreamRequestBody(builderRequestBody: BuilderRequestBody) {
   try {
     return {
       request_body_json:
-        stream.requestOptions.requestBody.type === "json_list"
-          ? Object.fromEntries(stream.requestOptions.requestBody.values)
-          : stream.requestOptions.requestBody.type === "json_freeform"
-          ? JSON.parse(stream.requestOptions.requestBody.value)
+        builderRequestBody.type === "json_list"
+          ? Object.fromEntries(builderRequestBody.values)
+          : builderRequestBody.type === "json_freeform"
+          ? JSON.parse(builderRequestBody.value)
           : undefined,
       request_body_data:
-        stream.requestOptions.requestBody.type === "form_list"
-          ? Object.fromEntries(stream.requestOptions.requestBody.values)
-          : stream.requestOptions.requestBody.type === "string_freeform"
-          ? stream.requestOptions.requestBody.value
+        builderRequestBody.type === "form_list"
+          ? Object.fromEntries(builderRequestBody.values)
+          : builderRequestBody.type === "string_freeform"
+          ? builderRequestBody.value
           : undefined,
     };
   } catch {
@@ -1117,7 +1215,7 @@ function builderStreamToDeclarativeSteam(
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
         authenticator: builderAuthenticatorToManifest(values.global),
         error_handler: buildCompositeErrorHandler(stream.errorHandler),
-        ...builderRequestBodyToStreamRequestBody(stream),
+        ...builderRequestBodyToStreamRequestBody(stream.requestOptions.requestBody),
       },
       record_selector: {
         type: "RecordSelector",
@@ -1244,4 +1342,9 @@ export const useBuilderWatch = <TPath extends FieldPath<BuilderFormValues>>(
   options?: { exact: boolean }
 ) => useWatch<BuilderFormValues, TPath>({ name: path, ...options });
 
+export type BuilderPathFn = <TPath extends FieldPath<BuilderFormValues>>(fieldPath: string) => TPath;
+
 export type StreamPathFn = <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
+
+export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
+  `${base}.${path}` as const;

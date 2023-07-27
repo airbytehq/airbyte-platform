@@ -26,15 +26,20 @@ import {
   DefaultPaginator,
   CursorPagination,
   DeclarativeComponentSchemaMetadata,
+  HttpRequesterErrorHandler,
 } from "core/api/types/ConnectorManifest";
 import { removeEmptyProperties } from "core/utils/form";
 
 import {
+  API_KEY_AUTHENTICATOR,
   authTypeToKeyToInferredInput,
+  BASIC_AUTHENTICATOR,
+  BEARER_AUTHENTICATOR,
   BuilderFormAuthenticator,
   BuilderFormValues,
   BuilderIncrementalSync,
   BuilderPaginator,
+  BuilderRequestBody,
   BuilderStream,
   BuilderTransformation,
   DEFAULT_BUILDER_FORM_VALUES,
@@ -44,6 +49,7 @@ import {
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   incrementalSyncInferredInputs,
   isInterpolatedConfigKey,
+  NO_AUTH,
   OAUTH_ACCESS_TOKEN_INPUT,
   OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   RequestOptionOrPathInject,
@@ -171,7 +177,7 @@ const manifestStreamToBuilder = (
     id: index.toString(),
     name: stream.name ?? "",
     urlPath: requester.path,
-    httpMethod: (requester.http_method as "GET" | "POST" | undefined) ?? "GET",
+    httpMethod: requester.http_method === "POST" ? "POST" : "GET",
     fieldPointer: retriever.record_selector.extractor.field_path as string[],
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
@@ -183,7 +189,7 @@ const manifestStreamToBuilder = (
     incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
     partitionRouter: manifestPartitionRouterToBuilder(retriever.partition_router, serializedStreamToIndex, stream.name),
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
-    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester),
+    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester.error_handler),
     transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
     unsupportedFields: {
       retriever: {
@@ -196,7 +202,7 @@ const manifestStreamToBuilder = (
   };
 };
 
-function requesterToRequestBody(requester: HttpRequester): BuilderStream["requestOptions"]["requestBody"] {
+function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (requester.request_body_data && typeof requester.request_body_data === "object") {
     return { type: "form_list", values: Object.entries(requester.request_body_data) };
   }
@@ -291,15 +297,12 @@ function manifestPartitionRouterToBuilder(
 
 function manifestErrorHandlerToBuilder(
   streamName: string | undefined,
-  requester: HttpRequester
+  errorHandler: HttpRequesterErrorHandler | undefined
 ): BuilderStream["errorHandler"] {
-  if (!requester.error_handler) {
+  if (!errorHandler) {
     return undefined;
   }
-  const handlers =
-    requester.error_handler.type === "CompositeErrorHandler"
-      ? requester.error_handler.error_handlers
-      : [requester.error_handler];
+  const handlers = errorHandler.type === "CompositeErrorHandler" ? errorHandler.error_handlers : [errorHandler];
   if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
     throw new ManifestCompatibilityError(streamName, "custom error handler used");
   }
@@ -561,6 +564,14 @@ function manifestSchemaLoaderToBuilderSchema(
   return undefined;
 }
 
+function removeLeadingSlashes(path: string) {
+  return path.replace(/^\/+/, "");
+}
+
+function removeTrailingSlashes(path: string) {
+  return path.replace(/\/+$/, "");
+}
+
 function manifestAuthenticatorToBuilder(
   manifestAuthenticator: HttpRequesterAuthenticator | undefined,
   streamName?: string
@@ -576,8 +587,6 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
   } else if (manifestAuthenticator.type === "LegacySessionTokenAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a LegacySessionTokenAuthenticator");
-  } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
-    throw new ManifestCompatibilityError(streamName, "uses a SessionTokenAuthenticator");
   } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
     builderAuthenticator = {
       ...manifestAuthenticator,
@@ -635,6 +644,37 @@ function manifestAuthenticatorToBuilder(
       ...manifestAuthenticator,
       refresh_request_body: Object.entries(manifestAuthenticator.refresh_request_body ?? {}),
       grant_type: manifestAuthenticator.grant_type ?? "refresh_token",
+    };
+  } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
+    const manifestLoginRequester = manifestAuthenticator.login_requester;
+    if (
+      manifestLoginRequester.authenticator &&
+      manifestLoginRequester.authenticator?.type !== NO_AUTH &&
+      manifestLoginRequester.authenticator?.type !== API_KEY_AUTHENTICATOR &&
+      manifestLoginRequester.authenticator?.type !== BEARER_AUTHENTICATOR &&
+      manifestLoginRequester.authenticator?.type !== BASIC_AUTHENTICATOR
+    ) {
+      throw new ManifestCompatibilityError(
+        streamName,
+        `SessionTokenAuthenticator login_requester.authenticator must have one of the following types: ${NO_AUTH}, ${API_KEY_AUTHENTICATOR}, ${BEARER_AUTHENTICATOR}, ${BASIC_AUTHENTICATOR}`
+      );
+    }
+    builderAuthenticator = {
+      ...manifestAuthenticator,
+      login_requester: {
+        // Remove leading slashes to treat path as relative, preserving base URL's path when combining
+        url: `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
+          manifestLoginRequester.path
+        )}`,
+        authenticator: manifestLoginRequester.authenticator ?? { type: NO_AUTH },
+        httpMethod: manifestLoginRequester.http_method === "GET" ? "GET" : "POST",
+        requestOptions: {
+          requestParameters: Object.entries(manifestLoginRequester.request_parameters ?? {}),
+          requestHeaders: Object.entries(manifestLoginRequester.request_headers ?? {}),
+          requestBody: requesterToRequestBody(manifestLoginRequester),
+        },
+        errorHandler: manifestErrorHandlerToBuilder(undefined, manifestLoginRequester.error_handler),
+      },
     };
   } else {
     builderAuthenticator = manifestAuthenticator;

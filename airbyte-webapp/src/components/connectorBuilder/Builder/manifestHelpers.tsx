@@ -42,7 +42,8 @@ export function getLabelAndTooltip(
   tooltip: React.ReactNode | undefined,
   manifestPath: string | undefined,
   path: string,
-  omitExamplesAndInterpolationContext = false,
+  omitExamples = false,
+  omitInterpolationContext = false,
   manifestOptionPaths?: string[]
 ): { label: string; tooltip: React.ReactNode | undefined } {
   const manifestDescriptor = manifestPath ? getDescriptor(manifestPath) : undefined;
@@ -50,7 +51,7 @@ export function getLabelAndTooltip(
   let finalDescription: ReactNode = manifestDescriptor?.description ? (
     <ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>
   ) : undefined;
-  if (!omitExamplesAndInterpolationContext && manifestDescriptor?.interpolation_context) {
+  if (!omitInterpolationContext && manifestDescriptor?.interpolation_context) {
     finalDescription = (
       <>
         {finalDescription}
@@ -99,7 +100,7 @@ export function getLabelAndTooltip(
       tooltip || finalDescription || options ? (
         <LabelInfo
           label={finalLabel}
-          examples={!omitExamplesAndInterpolationContext ? manifestDescriptor?.examples : undefined}
+          examples={!omitExamples ? manifestDescriptor?.examples : undefined}
           description={tooltip || finalDescription}
           options={options}
         />
