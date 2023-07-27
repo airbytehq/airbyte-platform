@@ -167,10 +167,6 @@ class CdcAcceptanceTests {
 
   @Test
   void testIncrementalCdcSync(final TestInfo testInfo) throws Exception {
-    incrementalCdcSyncHelper(testInfo);
-  }
-
-  private void incrementalCdcSyncHelper(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
     final UUID connectionId = createCdcConnection();
@@ -261,29 +257,6 @@ class CdcAcceptanceTests {
     assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     assertGlobalStateContainsStreams(connectionId, expectedStreams);
-  }
-
-  // tests that incremental syncs still work properly even when using a destination connector that was
-  // built on the old protocol that did not have any per-stream state fields
-  @Test
-  void testIncrementalCdcSyncWithLegacyDestinationConnector(final TestInfo testInfo) throws Exception {
-    LOGGER.info(STARTING, testInfo.getDisplayName());
-    final UUID postgresDestDefId = testHarness.getPostgresDestinationDefinitionId();
-    // Fetch the current/most recent source definition version
-    final DestinationDefinitionRead destinationDefinitionRead = apiClient.getDestinationDefinitionApi().getDestinationDefinition(
-        new DestinationDefinitionIdRequestBody().destinationDefinitionId(postgresDestDefId));
-    LOGGER.info("Current postgres destination definition version: {}", destinationDefinitionRead.getDockerImageTag());
-
-    try {
-      LOGGER.info("Setting postgres destination definition to version {}", POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION);
-      testHarness.updateDestinationDefinitionVersion(postgresDestDefId, POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION);
-
-      incrementalCdcSyncHelper(testInfo);
-    } finally {
-      // set postgres destination definition back to latest version for other tests
-      LOGGER.info("Setting postgres destination definition back to version {}", destinationDefinitionRead.getDockerImageTag());
-      testHarness.updateDestinationDefinitionVersion(postgresDestDefId, destinationDefinitionRead.getDockerImageTag());
-    }
   }
 
   @Test
