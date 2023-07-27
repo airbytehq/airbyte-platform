@@ -121,6 +121,18 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     }
   }
 
+  /**
+   * Compute the exit value.
+   * <p>
+   * Exit codes are as follows:
+   * <ul>
+   * <li>1: orchestrator pod reported a failure</li>
+   * <li>2: pod is gone or the k8s API is unable to answer</li>
+   * <li>3: pod ended without reporting status</li>
+   * </ul>
+   *
+   * @return exit code 0 on success, a value > 1 means error.
+   */
   private int computeExitValue() {
     final AsyncKubePodStatus docStoreStatus = getDocStoreStatus();
 
@@ -145,7 +157,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     // async pod status.
     if (pod == null) {
       log.info("State Store missing status. Orchestrator pod {} non-existent. Assume failure.", getInfo().name());
-      return 1;
+      return 2;
     }
 
     // If the pod does exist, it may be in a terminal (error or completed) state.
@@ -165,7 +177,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         // otherwise, the actual pod is terminal when the doc store says it shouldn't be.
         log.info("The current non terminal state is {}", secondDocStoreStatus);
         log.warn("State Store missing status, however orchestrator pod {} in terminal. Assume failure.", getInfo().name());
-        return 1;
+        return 3;
       }
     }
 
