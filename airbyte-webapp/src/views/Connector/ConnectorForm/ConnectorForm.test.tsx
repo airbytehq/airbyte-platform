@@ -853,412 +853,231 @@ describe("Connector form", () => {
   });
 
   describe("oauth flow", () => {
-    describe("new oauth flow", () => {
-      const oauthSchema = {
-        ...schema,
-        properties: {
-          start_date: {
-            type: "string",
-          },
-          credentials: {
-            type: "object",
-            group: "auth",
-            oneOf: [
-              {
+    const oauthSchema = {
+      ...schema,
+      properties: {
+        start_date: {
+          type: "string",
+        },
+        credentials: {
+          type: "object",
+          group: "auth",
+          oneOf: [
+            {
+              type: "object",
+              title: "OAuth",
+              required: ["access_token"],
+              properties: {
+                access_token: {
+                  type: "string",
+                  title: "Access Token",
+                  description: "OAuth access token",
+                  airbyte_secret: true,
+                },
+                option_title: {
+                  type: "string",
+                  const: "OAuth Credentials",
+                  order: 0,
+                },
+              },
+            },
+            {
+              type: "object",
+              title: "Personal Access Token",
+              required: ["personal_access_token"],
+              properties: {
+                option_title: {
+                  type: "string",
+                  const: "PAT Credentials",
+                  order: 0,
+                },
+                personal_access_token: {
+                  type: "string",
+                  airbyte_secret: true,
+                },
+              },
+            },
+          ],
+          title: "Authentication",
+          description: "Choose how to authenticate to GitHub",
+        },
+      },
+    };
+    async function renderNewOAuthForm(
+      props: {
+        disableOAuth?: boolean;
+        formValuesOverride?: Record<string, unknown>;
+        specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+      } = {}
+    ) {
+      return renderForm({
+        ...props,
+        specificationOverride: {
+          connectionSpecification: oauthSchema,
+          advancedAuth: {
+            authFlowType: "oauth2.0",
+            predicateKey: ["credentials", "option_title"],
+            predicateValue: "OAuth Credentials",
+            oauthConfigSpecification: {
+              completeOAuthOutputSpecification: {
                 type: "object",
-                title: "OAuth",
-                required: ["access_token"],
                 properties: {
                   access_token: {
                     type: "string",
-                    title: "Access Token",
-                    description: "OAuth access token",
-                    airbyte_secret: true,
-                  },
-                  option_title: {
-                    type: "string",
-                    const: "OAuth Credentials",
-                    order: 0,
+                    path_in_connector_config: ["credentials", "access_token"],
                   },
                 },
+                additionalProperties: false,
               },
-              {
+              completeOAuthServerInputSpecification: {
                 type: "object",
-                title: "Personal Access Token",
-                required: ["personal_access_token"],
                 properties: {
-                  option_title: {
-                    type: "string",
-                    const: "PAT Credentials",
-                    order: 0,
-                  },
-                  personal_access_token: {
-                    type: "string",
-                    airbyte_secret: true,
-                  },
-                },
-              },
-            ],
-            title: "Authentication",
-            description: "Choose how to authenticate to GitHub",
-          },
-        },
-      };
-      async function renderNewOAuthForm(
-        props: {
-          disableOAuth?: boolean;
-          formValuesOverride?: Record<string, unknown>;
-          specificationOverride?: Partial<ConnectorDefinitionSpecification>;
-        } = {}
-      ) {
-        return renderForm({
-          ...props,
-          specificationOverride: {
-            connectionSpecification: oauthSchema,
-            advancedAuth: {
-              authFlowType: "oauth2.0",
-              predicateKey: ["credentials", "option_title"],
-              predicateValue: "OAuth Credentials",
-              oauthConfigSpecification: {
-                completeOAuthOutputSpecification: {
-                  type: "object",
-                  properties: {
-                    access_token: {
-                      type: "string",
-                      path_in_connector_config: ["credentials", "access_token"],
-                    },
-                  },
-                  additionalProperties: false,
-                },
-                completeOAuthServerInputSpecification: {
-                  type: "object",
-                  properties: {
-                    client_id: {
-                      type: "string",
-                    },
-                    client_secret: {
-                      type: "string",
-                    },
-                  },
-                  additionalProperties: false,
-                },
-                completeOAuthServerOutputSpecification: {
-                  type: "object",
-                  properties: {
-                    client_id: {
-                      type: "string",
-                      path_in_connector_config: ["credentials", "client_id"],
-                    },
-                    client_secret: {
-                      type: "string",
-                      path_in_connector_config: ["credentials", "client_secret"],
-                    },
-                  },
-                  additionalProperties: false,
-                },
-              },
-            },
-            ...props.specificationOverride,
-          },
-        });
-      }
-      it("should render regular inputs for auth fields", async () => {
-        const container = await renderNewOAuthForm({ disableOAuth: true });
-        expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
-        expect(getOAuthButton(container)).not.toBeInTheDocument();
-      });
-
-      it("should render the oauth button", async () => {
-        const container = await renderNewOAuthForm();
-        expect(getOAuthButton(container)).toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).not.toBeInTheDocument();
-      });
-
-      it("should insert values correctly and submit them", async () => {
-        const container = await renderNewOAuthForm();
-        (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
-          request_succeeded: true,
-          auth_payload: {
-            access_token: "mytoken",
-          },
-        };
-
-        await executeOAuthFlow(container);
-
-        const submit = getSubmitButton(container);
-        await waitFor(() => userEvent.click(submit!));
-
-        expect(result?.connectionConfiguration).toEqual({
-          credentials: { access_token: "mytoken", option_title: "OAuth Credentials" },
-        });
-      });
-
-      it("should render reauthenticate message if there are form values already", async () => {
-        const container = await renderNewOAuthForm({
-          formValuesOverride: {
-            credentials: { option_title: "OAuth Credentials", access_token: "xyz" },
-          },
-        });
-        expect(getOAuthButton(container)).toBeInTheDocument();
-        expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
-      });
-
-      it("should hide the oauth button when switching auth strategy", async () => {
-        const container = await renderNewOAuthForm();
-        const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
-
-        await waitFor(() =>
-          selectEvent.select(selectContainer, "Personal Access Token", {
-            container: document.body,
-          })
-        );
-        expect(getOAuthButton(container)).not.toBeInTheDocument();
-        expect(
-          getInputByName(container, "connectionConfiguration.credentials.personal_access_token")
-        ).toBeInTheDocument();
-      });
-
-      it("should render the oauth button on the top level", async () => {
-        const container = await renderNewOAuthForm({
-          specificationOverride: {
-            connectionSpecification: {
-              ...schema,
-              properties: {
-                ...schema.properties,
-                access_token: {
-                  type: "string",
-                  airbyte_secret: true,
-                },
-              },
-              row_batch_size: {
-                type: "integer",
-                default: 200,
-              },
-            },
-            advancedAuth: {
-              authFlowType: "oauth2.0",
-              oauthConfigSpecification: {
-                completeOAuthOutputSpecification: {
-                  type: "object",
-                  properties: {
-                    access_token: {
-                      type: "string",
-                      path_in_connector_config: ["access_token"],
-                    },
-                  },
-                  additionalProperties: false,
-                },
-                completeOAuthServerInputSpecification: {
-                  type: "object",
-                  properties: {
-                    client_id: {
-                      type: "string",
-                    },
-                    client_secret: {
-                      type: "string",
-                    },
-                  },
-                  additionalProperties: false,
-                },
-                completeOAuthServerOutputSpecification: {
-                  type: "object",
-                  properties: {
-                    client_id: {
-                      type: "string",
-                      path_in_connector_config: ["client_id"],
-                    },
-                    client_secret: {
-                      type: "string",
-                      path_in_connector_config: ["client_secret"],
-                    },
-                  },
-                  additionalProperties: false,
-                },
-              },
-            },
-          },
-        });
-        expect(getOAuthButton(container)).toBeInTheDocument();
-      });
-    });
-
-    describe("legacy oauth flow", () => {
-      const oauthSchema = {
-        ...schema,
-        properties: {
-          credentials: {
-            type: "object",
-            oneOf: [
-              {
-                type: "object",
-                title: "oauth",
-                required: ["auth_type", "client_id", "client_secret", "refresh_token"],
-                properties: {
-                  auth_type: {
-                    type: "string",
-                    const: "Client",
-                  },
                   client_id: {
                     type: "string",
-                    airbyte_secret: true,
                   },
                   client_secret: {
                     type: "string",
-                    airbyte_secret: true,
-                  },
-                  refresh_token: {
-                    type: "string",
-                    airbyte_secret: true,
                   },
                 },
+                additionalProperties: false,
               },
-              {
+              completeOAuthServerOutputSpecification: {
                 type: "object",
-                title: "service",
-                required: ["auth_type", "service_account_info"],
                 properties: {
-                  auth_type: {
+                  client_id: {
                     type: "string",
-                    const: "Service",
+                    path_in_connector_config: ["credentials", "client_id"],
                   },
-                  service_account_info: {
+                  client_secret: {
                     type: "string",
-                    airbyte_secret: true,
+                    path_in_connector_config: ["credentials", "client_secret"],
                   },
                 },
+                additionalProperties: false,
               },
-            ],
+            },
           },
-          row_batch_size: {
-            type: "integer",
-            default: 200,
-          },
+          ...props.specificationOverride,
+        },
+      });
+    }
+    it("should render regular inputs for auth fields", async () => {
+      const container = await renderNewOAuthForm({ disableOAuth: true });
+      expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
+      expect(getOAuthButton(container)).not.toBeInTheDocument();
+    });
+
+    it("should render the oauth button", async () => {
+      const container = await renderNewOAuthForm();
+      expect(getOAuthButton(container)).toBeInTheDocument();
+      expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).not.toBeInTheDocument();
+    });
+
+    it("should insert values correctly and submit them", async () => {
+      const container = await renderNewOAuthForm();
+      (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
+        request_succeeded: true,
+        auth_payload: {
+          access_token: "mytoken",
         },
       };
-      async function renderLegacyOAuthForm(
-        props: {
-          disableOAuth?: boolean;
-          formValuesOverride?: Record<string, unknown>;
-          specificationOverride?: Partial<ConnectorDefinitionSpecification>;
-        } = {}
-      ) {
-        return renderForm({
-          ...props,
-          specificationOverride: {
-            connectionSpecification: oauthSchema,
-            authSpecification: {
-              auth_type: "oauth2.0",
-              oauth2Specification: {
-                rootObject: ["credentials", "0"],
-                oauthFlowInitParameters: [["client_id"], ["client_secret"]],
-                oauthFlowOutputParameters: [["refresh_token"]],
+
+      await executeOAuthFlow(container);
+
+      const submit = getSubmitButton(container);
+      await waitFor(() => userEvent.click(submit!));
+
+      expect(result?.connectionConfiguration).toEqual({
+        credentials: { access_token: "mytoken", option_title: "OAuth Credentials" },
+      });
+    });
+
+    it("should render reauthenticate message if there are form values already", async () => {
+      const container = await renderNewOAuthForm({
+        formValuesOverride: {
+          credentials: { option_title: "OAuth Credentials", access_token: "xyz" },
+        },
+      });
+      expect(getOAuthButton(container)).toBeInTheDocument();
+      expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
+    });
+
+    it("should hide the oauth button when switching auth strategy", async () => {
+      const container = await renderNewOAuthForm();
+      const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
+
+      await waitFor(() =>
+        selectEvent.select(selectContainer, "Personal Access Token", {
+          container: document.body,
+        })
+      );
+      expect(getOAuthButton(container)).not.toBeInTheDocument();
+      expect(
+        getInputByName(container, "connectionConfiguration.credentials.personal_access_token")
+      ).toBeInTheDocument();
+    });
+
+    it("should render the oauth button on the top level", async () => {
+      const container = await renderNewOAuthForm({
+        specificationOverride: {
+          connectionSpecification: {
+            ...schema,
+            properties: {
+              ...schema.properties,
+              access_token: {
+                type: "string",
+                airbyte_secret: true,
               },
             },
-            ...props.specificationOverride,
-          },
-        });
-      }
-      it("should render regular inputs for auth fields", async () => {
-        const container = await renderLegacyOAuthForm({ disableOAuth: true });
-        expect(getInputByName(container, "connectionConfiguration.credentials.client_id")).toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.client_secret")).toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.refresh_token")).toBeInTheDocument();
-        expect(getOAuthButton(container)).not.toBeInTheDocument();
-      });
-
-      it("should render the oauth button", async () => {
-        const container = await renderLegacyOAuthForm();
-        expect(getOAuthButton(container)).toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.client_id")).not.toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.client_secret")).not.toBeInTheDocument();
-        expect(getInputByName(container, "connectionConfiguration.credentials.refresh_token")).not.toBeInTheDocument();
-      });
-
-      it("should render reauthenticate message if there are form values already", async () => {
-        const container = await renderLegacyOAuthForm({
-          formValuesOverride: {
-            credentials: { auth_type: "Client", client_secret: "abc", client_id: "def", refresh_token: "xyz" },
-          },
-        });
-        expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
-      });
-
-      it("should hide the oauth button when switching auth strategy", async () => {
-        const container = await renderLegacyOAuthForm();
-        const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
-
-        await waitFor(() =>
-          selectEvent.select(selectContainer, "service", {
-            container: document.body,
-          })
-        );
-        expect(getOAuthButton(container)).not.toBeInTheDocument();
-        expect(
-          getInputByName(container, "connectionConfiguration.credentials.service_account_info")
-        ).toBeInTheDocument();
-      });
-
-      it("should insert values correctly and submit them", async () => {
-        const container = await renderLegacyOAuthForm();
-        (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
-          request_succeeded: true,
-          auth_payload: {
-            credentials: {
-              client_secret: "mysecret",
-              client_id: "myid",
-              refresh_token: "mytoken",
+            row_batch_size: {
+              type: "integer",
+              default: 200,
             },
           },
-        };
-
-        await executeOAuthFlow(container);
-        const submit = getSubmitButton(container);
-        await waitFor(() => userEvent.click(submit!));
-
-        expect(result?.connectionConfiguration).toEqual({
-          credentials: {
-            auth_type: "Client",
-            client_id: "myid",
-            client_secret: "mysecret",
-            refresh_token: "mytoken",
-          },
-          row_batch_size: 200,
-        });
-      });
-
-      it("should render the oauth button on the top level", async () => {
-        const container = await renderLegacyOAuthForm({
-          specificationOverride: {
-            connectionSpecification: {
-              ...schema,
-              properties: {
-                ...schema.properties,
-                oauth_secret: {
-                  type: "string",
-                  airbyte_secret: true,
+          advancedAuth: {
+            authFlowType: "oauth2.0",
+            oauthConfigSpecification: {
+              completeOAuthOutputSpecification: {
+                type: "object",
+                properties: {
+                  access_token: {
+                    type: "string",
+                    path_in_connector_config: ["access_token"],
+                  },
                 },
-                access_token: {
-                  type: "string",
-                  airbyte_secret: true,
+                additionalProperties: false,
+              },
+              completeOAuthServerInputSpecification: {
+                type: "object",
+                properties: {
+                  client_id: {
+                    type: "string",
+                  },
+                  client_secret: {
+                    type: "string",
+                  },
                 },
+                additionalProperties: false,
               },
-              row_batch_size: {
-                type: "integer",
-                default: 200,
-              },
-            },
-            authSpecification: {
-              auth_type: "oauth2.0",
-              oauth2Specification: {
-                rootObject: [],
-                oauthFlowInitParameters: [["oauth_secret"]],
-                oauthFlowOutputParameters: [["access_token"]],
+              completeOAuthServerOutputSpecification: {
+                type: "object",
+                properties: {
+                  client_id: {
+                    type: "string",
+                    path_in_connector_config: ["client_id"],
+                  },
+                  client_secret: {
+                    type: "string",
+                    path_in_connector_config: ["client_secret"],
+                  },
+                },
+                additionalProperties: false,
               },
             },
           },
-        });
-        expect(getOAuthButton(container)).toBeInTheDocument();
+        },
       });
+      expect(getOAuthButton(container)).toBeInTheDocument();
     });
   });
 });

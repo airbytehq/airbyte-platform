@@ -1,4 +1,3 @@
-import { JSONSchema7 } from "json-schema";
 import get from "lodash/get";
 import { useCallback, useMemo } from "react";
 import { FieldPath, useFormContext } from "react-hook-form";
@@ -10,27 +9,7 @@ import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { ConnectorFormValues } from "./types";
-import {
-  authPredicateMatchesPath,
-  isNumerical,
-  makeConnectionConfigurationPath,
-  Path,
-  serverProvidedOauthPaths,
-  stripNumericalEntries,
-} from "./utils";
-
-/**
- * Takes a list of paths in an array representation as well as a root path in array representation, concats
- * them as well as prefix them with the `connectionConfiguration` prefix that Formik uses for all connector
- * parameter values, and joins them to string paths.
- */
-const convertAndPrefixPaths = (paths?: Path[], rootPath: Path = []): string[] => {
-  return (
-    paths?.map((pathParts) => {
-      return makeConnectionConfigurationPath([...stripNumericalEntries(rootPath), ...stripNumericalEntries(pathParts)]);
-    }) ?? []
-  );
-};
+import { authPredicateMatchesPath, makeConnectionConfigurationPath, serverProvidedOauthPaths } from "./utils";
 
 /**
  * Returns true if the auth button should be shown for an advancedAuth specification.
@@ -47,58 +26,6 @@ const shouldShowButtonForAdvancedAuth = (
     predicateKey.length === 0 ||
     predicateValue === get(values, makeConnectionConfigurationPath(predicateKey))
   );
-};
-
-/**
- * Returns true if the auth button should be shown for an authSpecification connector.
- */
-const shouldShowButtonForLegacyAuth = (
-  spec: JSONSchema7,
-  rootPath: Path,
-  values: ConnectorFormValues<unknown>
-): boolean => {
-  if (!rootPath.some((p) => isNumerical(p))) {
-    // If the root path of the auth parameters (which is also the place the button will be rendered)
-    // is not inside a conditional, i.e. none of the root path is a numerical value, we will always
-    // show the button.
-    return true;
-  }
-
-  // If the spec had a root path inside a conditional, e.g. `credentials.0`, we need to figure
-  // out if that conditional is currently on the correct selected option. Unlike `advancedAuth`
-  // which has a `predicateValue`, the legacy auth configuration doesn't have the value for the conditional,
-  // so we need to find that ourselves first.
-
-  // To find the path inside the connector spec that matches the `rootPath` we'll need to insert `properties`
-  // and `oneOf`, since they'll appear in the JSONSchema, e.g. this turns `credentials.0` to `properties.credentials.oneOf.0`
-  const specPath = rootPath.flatMap((path) =>
-    isNumerical(path) ? ["oneOf", String(path)] : ["properties", String(path)]
-  );
-  // Get the part of the spec that `rootPath` point to
-  const credentialsSpecRoot = get(spec, specPath) as JSONSchema7 | undefined;
-
-  if (!credentialsSpecRoot?.properties) {
-    // if the path doesn't exist in the spec (which should not happen) we just show the auth button always.
-    return true;
-  }
-
-  // To find the value we're expecting, we run through all properties inside that matching spec inside the conditional
-  // to find the one that has a `const` value in it, since this is the actual value that will be written into the conditional
-  // field itself once it's selected.
-  const constProperty = Object.entries(credentialsSpecRoot.properties)
-    .map(([key, prop]) => [key, typeof prop !== "boolean" ? prop.const : undefined] as const)
-    .find(([, constValue]) => !!constValue);
-
-  // If none of the conditional properties is a const value, we'll also show the auth button always (should not happen)
-  if (!constProperty) {
-    return true;
-  }
-
-  // Check if the value in the form matches the found `const` value from the spec. If so we know the conditional
-  // is on the right option.
-  const [key, constValue] = constProperty;
-  const value = get(values, makeConnectionConfigurationPath(stripNumericalEntries([...rootPath, key])));
-  return value === constValue;
 };
 
 interface AuthenticationHook {
@@ -138,9 +65,6 @@ export const useAuthentication = (): AuthenticationHook => {
   const allowOAuthConnector = useFeature(FeatureItem.AllowOAuthConnector);
 
   const advancedAuth = connectorSpec?.advancedAuth;
-  const legacyOauthSpec = connectorSpec?.authSpecification?.oauth2Specification;
-
-  const spec = connectorSpec?.connectionSpecification as JSONSchema7;
 
   const getValuesSafe = useCallback(
     (values: ConnectorFormValues<unknown>) => {
@@ -167,33 +91,25 @@ export const useAuthentication = (): AuthenticationHook => {
 
   const valuesWithDefaults = useMemo(() => getValuesSafe(values), [getValuesSafe, values]);
 
-  const isAuthButtonVisible = useMemo(() => {
-    const shouldShowAdvancedAuth =
-      advancedAuth &&
-      shouldShowButtonForAdvancedAuth(advancedAuth.predicateKey, advancedAuth.predicateValue, valuesWithDefaults);
-    const shouldShowLegacyAuth =
-      legacyOauthSpec && shouldShowButtonForLegacyAuth(spec, legacyOauthSpec.rootObject as Path, valuesWithDefaults);
-    return Boolean(allowOAuthConnector && (shouldShowAdvancedAuth || shouldShowLegacyAuth));
-  }, [advancedAuth, valuesWithDefaults, legacyOauthSpec, spec, allowOAuthConnector]);
+  const isAuthButtonVisible = useMemo(
+    () =>
+      Boolean(
+        allowOAuthConnector &&
+          advancedAuth &&
+          shouldShowButtonForAdvancedAuth(advancedAuth.predicateKey, advancedAuth.predicateValue, valuesWithDefaults)
+      ),
+    [advancedAuth, valuesWithDefaults, allowOAuthConnector]
+  );
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(
-    () => [
-      // Fields from `advancedAuth` connectors
-      ...(advancedAuth && !isSourceDefinitionSpecificationDraft(connectorSpec)
+    () =>
+      advancedAuth && !isSourceDefinitionSpecificationDraft(connectorSpec)
         ? Object.values(serverProvidedOauthPaths(connectorSpec)).map((f) =>
             makeConnectionConfigurationPath(f.path_in_connector_config)
           )
-        : []),
-      // Fields from legacy `authSpecification` connectors
-      ...(legacyOauthSpec
-        ? [
-            ...convertAndPrefixPaths(legacyOauthSpec.oauthFlowInitParameters, legacyOauthSpec.rootObject as Path),
-            ...convertAndPrefixPaths(legacyOauthSpec.oauthFlowOutputParameters, legacyOauthSpec.rootObject as Path),
-          ]
-        : []),
-    ],
-    [advancedAuth, legacyOauthSpec, connectorSpec]
+        : [],
+    [advancedAuth, connectorSpec]
   );
 
   const isHiddenAuthField = useCallback(

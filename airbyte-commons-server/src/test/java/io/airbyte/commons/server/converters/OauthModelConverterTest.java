@@ -6,9 +6,13 @@ package io.airbyte.commons.server.converters;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import io.airbyte.protocol.models.AuthSpecification;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.api.model.generated.AdvancedAuth.AuthFlowTypeEnum;
+import io.airbyte.commons.json.Jsons;
+import io.airbyte.protocol.models.AdvancedAuth;
+import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.OAuth2Specification;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -20,50 +24,66 @@ class OauthModelConverterTest {
 
   private static Stream<Arguments> testProvider() {
     return Stream.of(
-        // all fields filled out with nesting
+        // oauth 1.0 with non-nested fields
         Arguments.of(
-            List.of(List.of("init1"), List.of("init2-1", "init2-2")),
-            List.of(List.of("output1"), List.of("output2-1", "output2-2")),
-            List.of("path", "nestedPath", 1)),
-        // init params only
+            AuthFlowType.OAUTH_1_0,
+            List.of("auth_type"),
+            "OAuth",
+            Jsons.deserialize("{\"app_id\": {\"type\": \"string\", \"path_in_connector_config\": [\"app_id\"]}}"),
+            Jsons.deserialize("{\"refresh_token\": {\"type\": \"string\", \"path_in_connector_config\": [\"refresh_token\"]}}"),
+            Jsons.deserialize("{\"client_id\": {\"type\": \"string\"}, \"client_secret\": {\"type\": \"string\"}}"),
+            Jsons.deserialize("{\"client_id\": {\"type\": \"string\", \"path_in_connector_config\": [\"client_id\"]},"
+                + "\"client_secret\": {\"type\": \"string\", \"path_in_connector_config\": [\"client_secret\"]}}")),
+        // oauth 2.0 with nested fields
         Arguments.of(
-            List.of(List.of("init1"), List.of("init2-1", "init2-2")),
-            List.of(List.of()),
-            List.of()),
-        // output params only
-        Arguments.of(
-            List.of(List.of()),
-            List.of(List.of("output1"), List.of("output2-1", "output2-2")),
-            List.of()),
-        // rootObject only
-        Arguments.of(
-            List.of(List.of()),
-            List.of(List.of()),
-            List.of("path", "nestedPath", 1)));
+            AuthFlowType.OAUTH_2_0,
+            List.of("credentials", "auth_type"),
+            "OAuth",
+            Jsons.deserialize("{\"app_id\": {\"type\": \"string\", \"path_in_connector_config\": [\"credentials\", \"app_id\"]}}"),
+            Jsons.deserialize("{\"refresh_token\": {\"type\": \"string\", \"path_in_connector_config\": [\"credentials\", \"refresh_token\"]}}"),
+            Jsons.deserialize("{\"client_id\": {\"type\": \"string\"}, \"client_secret\": {\"type\": \"string\"}}"),
+            Jsons.deserialize("{\"client_id\": {\"type\": \"string\", \"path_in_connector_config\": [\"credentials\", \"client_id\"]},"
+                + "\"client_secret\": {\"type\": \"string\", \"path_in_connector_config\": [\"credentials\", \"client_secret\"]}}")));
   }
 
   @ParameterizedTest
   @MethodSource("testProvider")
-  void testIt(final List<List<String>> initParams, final List<List<String>> outputParams, final List<Object> rootObject) {
-    final ConnectorSpecification input = new ConnectorSpecification().withAuthSpecification(
-        new AuthSpecification()
-            .withAuthType(AuthSpecification.AuthType.OAUTH_2_0)
-            .withOauth2Specification(new OAuth2Specification()
-                .withOauthFlowInitParameters(initParams)
-                .withOauthFlowOutputParameters(outputParams)
-                .withRootObject(rootObject)));
+  void testIt(AuthFlowType authFlowType,
+              List<String> predicateKey,
+              String predicateValue,
+              JsonNode oauthUserInputFromConnectorConfigSpecification,
+              JsonNode completeOauthOutputSpecification,
+              JsonNode completeOauthServerInputSpecification,
+              JsonNode completeOauthServerOutputSpecification) {
+    final ConnectorSpecification input = new ConnectorSpecification().withAdvancedAuth(
+        new AdvancedAuth()
+            .withAuthFlowType(authFlowType)
+            .withPredicateKey(predicateKey)
+            .withPredicateValue(predicateValue)
+            .withOauthConfigSpecification(
+                new OAuthConfigSpecification()
+                    .withOauthUserInputFromConnectorConfigSpecification(oauthUserInputFromConnectorConfigSpecification)
+                    .withCompleteOauthOutputSpecification(completeOauthOutputSpecification)
+                    .withCompleteOauthServerInputSpecification(completeOauthServerInputSpecification)
+                    .withCompleteOauthServerOutputSpecification(completeOauthServerOutputSpecification)));
 
-    final io.airbyte.api.model.generated.AuthSpecification expected = new io.airbyte.api.model.generated.AuthSpecification()
-        .authType(io.airbyte.api.model.generated.AuthSpecification.AuthTypeEnum.OAUTH2_0)
-        .oauth2Specification(
-            new io.airbyte.api.model.generated.OAuth2Specification()
-                .oauthFlowInitParameters(initParams)
-                .oauthFlowOutputParameters(outputParams)
-                .rootObject(rootObject));
+    final AuthFlowTypeEnum expectedAuthFlowTypeEnum =
+        authFlowType.equals(AuthFlowType.OAUTH_1_0) ? AuthFlowTypeEnum.OAUTH1_0 : AuthFlowTypeEnum.OAUTH2_0;
 
-    final Optional<io.airbyte.api.model.generated.AuthSpecification> authSpec = OauthModelConverter.getAuthSpec(input);
-    assertTrue(authSpec.isPresent());
-    assertEquals(expected, authSpec.get());
+    final io.airbyte.api.model.generated.AdvancedAuth expected = new io.airbyte.api.model.generated.AdvancedAuth()
+        .authFlowType(expectedAuthFlowTypeEnum)
+        .predicateKey(predicateKey)
+        .predicateValue(predicateValue)
+        .oauthConfigSpecification(
+            new io.airbyte.api.model.generated.OAuthConfigSpecification()
+                .oauthUserInputFromConnectorConfigSpecification(oauthUserInputFromConnectorConfigSpecification)
+                .completeOAuthOutputSpecification(completeOauthOutputSpecification)
+                .completeOAuthServerInputSpecification(completeOauthServerInputSpecification)
+                .completeOAuthServerOutputSpecification(completeOauthServerOutputSpecification));
+
+    final Optional<io.airbyte.api.model.generated.AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(input);
+    assertTrue(advancedAuth.isPresent());
+    assertEquals(expected, advancedAuth.get());
   }
 
 }

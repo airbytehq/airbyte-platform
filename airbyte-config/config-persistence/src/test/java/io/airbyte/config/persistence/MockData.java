@@ -47,9 +47,9 @@ import io.airbyte.config.State;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.protocol.models.AdvancedAuth;
+import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.AuthSpecification;
-import io.airbyte.protocol.models.AuthSpecification.AuthType;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -277,10 +277,9 @@ public class MockData {
 
   public static ConnectorSpecification connectorSpecification() {
     return new ConnectorSpecification()
-        .withAuthSpecification(new AuthSpecification().withAuthType(AuthType.OAUTH_2_0))
         .withConnectionSpecification(Jsons.jsonNode(CONNECTION_SPECIFICATION))
         .withDocumentationUrl(URI.create("whatever"))
-        .withAdvancedAuth(null)
+        .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0))
         .withChangelogUrl(URI.create("whatever"))
         .withSupportedDestinationSyncModes(Arrays.asList(DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND_DEDUP))
         .withSupportsDBT(true)

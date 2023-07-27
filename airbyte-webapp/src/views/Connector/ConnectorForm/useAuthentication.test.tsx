@@ -21,7 +21,7 @@ const mockConnectorForm = useConnectorForm as unknown as jest.Mock<Partial<Retur
 const mockFormContext = useFormContext as unknown as jest.Mock<Partial<ReturnType<typeof useFormContext>>>;
 
 interface MockParams {
-  connector: Pick<SourceDefinitionSpecificationRead, "advancedAuth" | "authSpecification" | "connectionSpecification">;
+  connector: Pick<SourceDefinitionSpecificationRead, "advancedAuth" | "connectionSpecification">;
   values: unknown;
   submitCount?: number;
   fieldMeta?: Record<string, { error?: FieldError }>;

@@ -15,7 +15,6 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.api.model.generated.AdvancedAuth;
-import io.airbyte.api.model.generated.AuthSpecification;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
@@ -544,9 +543,6 @@ public class SchedulerHandler {
       specRead.documentationUrl(spec.getDocumentationUrl().toString());
     }
 
-    final Optional<AuthSpecification> authSpec = OauthModelConverter.getAuthSpec(spec);
-    authSpec.ifPresent(specRead::setAuthSpecification);
-
     final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
     advancedAuth.ifPresent(specRead::setAdvancedAuth);
 
@@ -586,9 +582,6 @@ public class SchedulerHandler {
         .connectionSpecification(spec.getConnectionSpecification())
         .documentationUrl(spec.getDocumentationUrl().toString())
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
-
-    final Optional<AuthSpecification> authSpec = OauthModelConverter.getAuthSpec(spec);
-    authSpec.ifPresent(specRead::setAuthSpecification);
 
     final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
     advancedAuth.ifPresent(specRead::setAdvancedAuth);

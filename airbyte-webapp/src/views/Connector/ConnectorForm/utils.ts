@@ -1,7 +1,7 @@
 import toLower from "lodash/toLower";
 
 import { FormBaseItem, FormBlock } from "core/form/types";
-import { AdvancedAuth, SourceAuthSpecification } from "core/request/AirbyteClient";
+import { AdvancedAuth } from "core/request/AirbyteClient";
 import { naturalComparator } from "core/utils/objects";
 
 import { ConnectorDefinitionSpecification } from "../../../core/domain/connector";
@@ -10,36 +10,15 @@ export function makeConnectionConfigurationPath(path: string[] = []): string {
   return ["connectionConfiguration", ...path].join(".");
 }
 
-export type Path = Array<string | number>;
-
-export const isNumerical = (input: string | number): boolean => {
-  return typeof input === "number" || /^\d+$/.test(input);
-};
-
-/**
- * Takes an array of strings or numbers and remove all elements from it that are either
- * a number or a string that just contains a number. This will be used to remove index
- * accessors into oneOf from paths, since they are not part of the field path later.
- */
-export const stripNumericalEntries = (paths: Path): string[] => {
-  return paths.filter((p): p is string => !isNumerical(p));
-};
-
-export function authPredicateMatchesPath(
-  path: string,
-  spec?: { authSpecification?: SourceAuthSpecification; advancedAuth?: AdvancedAuth }
-) {
+export function authPredicateMatchesPath(path: string, spec?: { advancedAuth?: AdvancedAuth }) {
   const advancedAuth = spec?.advancedAuth;
-  const legacyOauthSpec = spec?.authSpecification?.oauth2Specification;
 
   // If OAuth is not configured at all for this spec, then there is no predicate to match on
-  if (!advancedAuth && !legacyOauthSpec) {
+  if (!advancedAuth) {
     return false;
   }
 
-  const authPredicate = advancedAuth
-    ? advancedAuth.predicateKey && makeConnectionConfigurationPath(advancedAuth.predicateKey)
-    : legacyOauthSpec && makeConnectionConfigurationPath(stripNumericalEntries(legacyOauthSpec.rootObject as Path));
+  const authPredicate = advancedAuth.predicateKey && makeConnectionConfigurationPath(advancedAuth.predicateKey);
 
   return path === (authPredicate ?? makeConnectionConfigurationPath());
 }

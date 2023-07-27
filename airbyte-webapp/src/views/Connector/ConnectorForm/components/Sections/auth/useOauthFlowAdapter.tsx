@@ -1,6 +1,5 @@
 import get from "lodash/get";
 import isEmpty from "lodash/isEmpty";
-import merge from "lodash/merge";
 import pick from "lodash/pick";
 import set from "lodash/set";
 import { useState } from "react";
@@ -8,7 +7,7 @@ import { FieldPath, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { AuthSpecification, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
+import { AdvancedAuth, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -18,7 +17,7 @@ import { ConnectorFormValues } from "../../../types";
 import { makeConnectionConfigurationPath, serverProvidedOauthPaths } from "../../../utils";
 
 interface Credentials {
-  credentials: AuthSpecification;
+  credentials: AdvancedAuth;
 }
 
 function useFormOauthAdapter(
@@ -39,21 +38,13 @@ function useFormOauthAdapter(
   const OAUTH_SUCCESS_ID = "connectorForm.authenticate.succeeded";
 
   const onDone = (authPayload: CompleteOAuthResponseAuthPayload) => {
-    let newValues: ConnectorFormValues<Credentials>;
+    const oauthPaths = serverProvidedOauthPaths(connector);
 
-    if (connector.advancedAuth) {
-      const oauthPaths = serverProvidedOauthPaths(connector);
-
-      newValues = Object.entries(oauthPaths).reduce(
-        (acc, [key, { path_in_connector_config }]) =>
-          set(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
-        getRawValues()
-      );
-    } else {
-      newValues = merge({}, getRawValues(), {
-        connectionConfiguration: authPayload,
-      });
-    }
+    const newValues = Object.entries(oauthPaths).reduce(
+      (acc, [key, { path_in_connector_config }]) =>
+        set(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
+      getRawValues()
+    );
 
     Object.entries(newValues).forEach(([key, value]) => {
       setValue(key as keyof ConnectorFormValues<Credentials>, value, {

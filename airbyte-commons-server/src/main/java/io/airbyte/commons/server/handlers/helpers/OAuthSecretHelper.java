@@ -14,7 +14,6 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,61 +76,6 @@ public class OAuthSecretHelper {
     }
   }
 
-  private static Map<String, List<String>> getLegacyOAuthConfigPaths(ConnectorSpecification spec, boolean includeOutputPaths) {
-    if (!includeOutputPaths) {
-      return getLegacyOAuthConfigPathsImpl(spec, false);
-    } else {
-      return getLegacyOAuthConfigPathsImpl(spec, true);
-    }
-  }
-
-  /**
-   * Get the OAuth input paths from the legacy OAuth specifications.
-   *
-   * @param spec - a connector spec with legacy OAuth data
-   *
-   * @return Map where the key = the property and the value = the path to the property in list form.
-   */
-  private static Map<String, List<String>> getLegacyOAuthConfigPathsImpl(ConnectorSpecification spec, boolean includeOutputPaths) {
-
-    final List<String> pathList = new java.util.ArrayList<>();
-
-    if (spec.getAuthSpecification().getOauth2Specification().getRootObject().size() > 0) {
-      // If rootObject isn't empty, we need the first value which is the key where we'll need to set our
-      // OAuth constants.
-      // i.e. rootObject = ["credentials", 0], we know our OAuth creds will go in
-      // connectionConfiguration.credentials
-      pathList.add(spec.getAuthSpecification().getOauth2Specification().getRootObject().get(0).toString());
-    }
-
-    final Map<String, List<String>> keyToPaths = new HashMap<>(Collections.emptyMap());
-
-    // Aggregate all parameters we need
-    List<List<String>> oauthFlowParameters = spec.getAuthSpecification().getOauth2Specification().getOauthFlowInitParameters();
-    if (includeOutputPaths) {
-      oauthFlowParameters.addAll(spec.getAuthSpecification().getOauth2Specification().getOauthFlowOutputParameters());
-    }
-
-    for (List<String> pathKeys : oauthFlowParameters) {
-      // For a given auth specification, we can have multiple path keys i.e.
-      // oauthFlowInitParameters:
-      // - ["client_id"]
-      // - ["client_secret"]
-      // For each, we should add them to the pathList so we can validate they aren't set in the config.
-      log.debug("PATH_KEYS: {}", pathKeys);
-      List<String> copiedPathList = new java.util.ArrayList<>(pathList);
-      copiedPathList.addAll(pathKeys);
-      log.debug("COPIED_PATHS: {}", copiedPathList);
-
-      // I don't know if there are specs where this could be true, but no point in setting those anyway
-      // so doing this for safety.
-      if (!copiedPathList.isEmpty()) {
-        keyToPaths.put(copiedPathList.get(copiedPathList.size() - 1), copiedPathList);
-      }
-    }
-    return keyToPaths;
-  }
-
   /**
    * Standardizes out the return format for getting config paths whether it's a legacy OAuth spec or
    * an advanced_auth one. Returns all output paths, used for setting secrets.
@@ -142,8 +86,6 @@ public class OAuthSecretHelper {
   public static Map<String, List<String>> getOAuthConfigPaths(ConnectorSpecification spec) throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, true);
-    } else if (OAuthConfigSupplier.hasLegacyOAuthConfigSpecification(spec)) {
-      return getLegacyOAuthConfigPaths(spec, true);
     } else {
       throw new IllegalStateException("No OAuth data in specification");
     }
@@ -159,8 +101,6 @@ public class OAuthSecretHelper {
   public static Map<String, List<String>> getOAuthInputPaths(ConnectorSpecification spec) throws JsonValidationException {
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, false);
-    } else if (OAuthConfigSupplier.hasLegacyOAuthConfigSpecification(spec)) {
-      return getLegacyOAuthConfigPaths(spec, false);
     } else {
       throw new IllegalStateException("No OAuth data in specification");
     }
@@ -253,7 +193,7 @@ public class OAuthSecretHelper {
   public static void validateNoSecretsInConfiguration(final ConnectorSpecification spec,
                                                       final JsonNode connectionConfiguration)
       throws JsonValidationException {
-    if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec) || OAuthConfigSupplier.hasLegacyOAuthConfigSpecification((spec))) {
+    if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       Map<String, List<String>> oauthPaths = getOAuthInputPaths(spec);
       for (final Entry<String, List<String>> entry : oauthPaths.entrySet()) {
         final String key = entry.getKey();

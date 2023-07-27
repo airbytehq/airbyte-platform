@@ -11,11 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -51,17 +49,6 @@ class OAuthSecretHelperTest {
   }
 
   @Test
-  void testGetOAuthConfigPathsForLegacy() throws IOException, JsonValidationException {
-    final ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
-    final Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
-    final Map<String, List<String>> expected = Map.of(
-        REFRESH_TOKEN, List.of(CREDENTIALS, REFRESH_TOKEN),
-        CLIENT_ID, List.of(CREDENTIALS, CLIENT_ID),
-        CLIENT_SECRET, List.of(CREDENTIALS, CLIENT_SECRET));
-    assertEquals(expected, result);
-  }
-
-  @Test
   void testGetOAuthInputPathsForNestedAdvancedAuth() throws IOException, JsonValidationException {
     final ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateNestedAdvancedAuthConnectorSpecification();
     final Map<String, List<String>> result = OAuthSecretHelper.getOAuthInputPaths(connectorSpecification);
@@ -78,16 +65,6 @@ class OAuthSecretHelperTest {
     final Map<String, List<String>> expected = Map.of(
         CLIENT_ID, List.of(CLIENT_ID),
         CLIENT_SECRET, List.of(CLIENT_SECRET));
-    assertEquals(expected, result);
-  }
-
-  @Test
-  void testGetOAuthInputPathsForLegacy() throws IOException, JsonValidationException {
-    final ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
-    final Map<String, List<String>> result = OAuthSecretHelper.getOAuthInputPaths(connectorSpecification);
-    final Map<String, List<String>> expected = Map.of(
-        CLIENT_ID, List.of(CREDENTIALS, CLIENT_ID),
-        CLIENT_SECRET, List.of(CREDENTIALS, CLIENT_SECRET));
     assertEquals(expected, result);
   }
 
@@ -119,33 +96,6 @@ class OAuthSecretHelperTest {
         OAuthSecretHelper.setSecretsInConnectionConfiguration(connectorSpecification, hydratedSecret, connectionConfiguration);
 
     assertEquals(replacementConnectionConfiguration, expectedConnectionConfiguration);
-  }
-
-  @Test
-  void testSetSecretsInConnectionConfigurationForAuthSpecification() throws IOException, JsonValidationException, ConfigNotFoundException {
-    final ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
-    final ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
-    final JsonNode hydratedSecret = Jsons.jsonNode(Map.of(CREDENTIALS, Map.of(
-        REFRESH_TOKEN, EXAMPLE_REFRESH_TOKEN,
-        CLIENT_ID, EXAMPLE_CLIENT_ID,
-        CLIENT_SECRET, EXAMPLE_CLIENT_SECRET)));
-    final JsonNode newConnectionConfiguration =
-        OAuthSecretHelper.setSecretsInConnectionConfiguration(connectorSpecification, hydratedSecret, connectionConfiguration);
-
-    // Test hydrating empty object
-    assertEquals(newConnectionConfiguration, hydratedSecret);
-
-    // Test overwriting in case users put gibberish values in
-    final ObjectNode credentials = JsonNodeFactory.instance.objectNode();
-    credentials.set(REFRESH_TOKEN, TextNode.valueOf(EXAMPLE_BAD_REFRESH_TOKEN));
-    credentials.set(CLIENT_ID, TextNode.valueOf(EXAMPLE_BAD_CLIENT_ID));
-    credentials.set(CLIENT_SECRET, TextNode.valueOf(EXAMPLE_BAD_CLIENT_SECRET));
-    connectionConfiguration.set(CREDENTIALS, credentials);
-
-    final JsonNode replacementConnectionConfiguration =
-        OAuthSecretHelper.setSecretsInConnectionConfiguration(connectorSpecification, hydratedSecret, connectionConfiguration);
-
-    assertEquals(replacementConnectionConfiguration, hydratedSecret);
   }
 
   @Test

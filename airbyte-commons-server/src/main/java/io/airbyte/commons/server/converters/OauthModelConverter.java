@@ -6,8 +6,6 @@ package io.airbyte.commons.server.converters;
 
 import io.airbyte.api.model.generated.AdvancedAuth;
 import io.airbyte.api.model.generated.AdvancedAuth.AuthFlowTypeEnum;
-import io.airbyte.api.model.generated.AuthSpecification;
-import io.airbyte.api.model.generated.OAuth2Specification;
 import io.airbyte.api.model.generated.OAuthConfigSpecification;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.util.List;
@@ -17,29 +15,6 @@ import java.util.Optional;
  * Extract OAuth models from connector specs.
  */
 public class OauthModelConverter {
-
-  /**
-   * Get advanced (old) auth from a connector spec.
-   *
-   * @param spec connector spec
-   * @return basic auth if present.
-   */
-  public static Optional<AuthSpecification> getAuthSpec(final ConnectorSpecification spec) {
-    if (spec.getAuthSpecification() == null) {
-      return Optional.empty();
-    }
-    final io.airbyte.protocol.models.AuthSpecification incomingAuthSpec = spec.getAuthSpecification();
-
-    final AuthSpecification authSpecification = new AuthSpecification();
-    if (incomingAuthSpec.getAuthType() == io.airbyte.protocol.models.AuthSpecification.AuthType.OAUTH_2_0) {
-      authSpecification.authType(AuthSpecification.AuthTypeEnum.OAUTH2_0)
-          .oauth2Specification(new OAuth2Specification()
-              .rootObject(incomingAuthSpec.getOauth2Specification().getRootObject())
-              .oauthFlowInitParameters(incomingAuthSpec.getOauth2Specification().getOauthFlowInitParameters())
-              .oauthFlowOutputParameters(incomingAuthSpec.getOauth2Specification().getOauthFlowOutputParameters()));
-    }
-    return Optional.of(authSpecification);
-  }
 
   /**
    * Get advanced (new and preferred) auth from a connector spec.

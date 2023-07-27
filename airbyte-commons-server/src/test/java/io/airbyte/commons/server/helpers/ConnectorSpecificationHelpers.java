@@ -6,7 +6,6 @@ package io.airbyte.commons.server.helpers;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.AdvancedAuth;
-import io.airbyte.protocol.models.AuthSpecification;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.net.URI;
@@ -47,23 +46,6 @@ public class ConnectorSpecificationHelpers {
           .withDocumentationUrl(new URI(DOCUMENTATION_URL))
           .withConnectionSpecification(Jsons.deserialize(Files.readString(oAuthSpecificationPath)))
           .withAdvancedAuth(advancedAuth)
-          .withSupportsDBT(false)
-          .withSupportsNormalization(false);
-    } catch (final URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public static ConnectorSpecification generateAuthSpecificationConnectorSpecification() throws IOException {
-    final Path authSpecificationPath = Paths.get(
-        ConnectorSpecificationHelpers.class.getClassLoader().getResource("json/TestAuthSpecification.json").getPath());
-    AuthSpecification authSpecification = Jsons.deserialize(Files.readString(authSpecificationPath), AuthSpecification.class);
-
-    try {
-      return new ConnectorSpecification()
-          .withDocumentationUrl(new URI(DOCUMENTATION_URL))
-          .withConnectionSpecification(Jsons.deserialize(Files.readString(oAuthSpecificationPath)))
-          .withAuthSpecification(authSpecification)
           .withSupportsDBT(false)
           .withSupportsNormalization(false);
     } catch (final URISyntaxException e) {
