@@ -11,8 +11,8 @@ $sm-size: 14px;
   padding: variables.$border-thin 0;
   border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-2xs;
-  color: colors.$primary;
-  background-color: colors.$primary;
+  color: colors.$foreground;
+  background-color: colors.$foreground;
   cursor: pointer;
 
   input {

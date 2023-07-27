@@ -9,7 +9,7 @@
   border-radius: variables.$border-radius-xs;
 
   &.light {
-    background-color: colors.$primary;
+    background-color: colors.$foreground;
     border: variables.$border-thin solid colors.$grey-100;
   }
 
@@ -26,7 +26,7 @@
     border-color: colors.$grey-100;
 
     &.light {
-      background-color: colors.$primary;
+      background-color: colors.$foreground;
     }
 
     &.error {
@@ -38,7 +38,7 @@
     border-color: colors.$blue;
 
     &.light {
-      background-color: colors.$primary;
+      background-color: colors.$foreground;
     }
   }
 }

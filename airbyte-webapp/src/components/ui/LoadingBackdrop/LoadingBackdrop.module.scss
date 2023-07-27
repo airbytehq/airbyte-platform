@@ -17,7 +17,7 @@
     @extend %cover;
 
     position: absolute;
-    background-color: colors.$primary;
+    background-color: colors.$foreground;
     opacity: 0.6;
     z-index: 1;
   }

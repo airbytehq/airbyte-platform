@@ -7,7 +7,7 @@
   list-style: none;
 
   &__item {
-    background: colors.$primary;
+    background: colors.$foreground;
     border-bottom: variables.$border-thin solid colors.$grey-50;
 
     &:first-child {

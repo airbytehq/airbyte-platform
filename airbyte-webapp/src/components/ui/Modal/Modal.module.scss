@@ -38,7 +38,7 @@
 
 .card {
   position: relative;
-  background: colors.$primary;
+  background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
   max-width: calc(100vw - #{variables.$width-size-menu} - #{variables.$spacing-lg} * 2);
   display: flex;

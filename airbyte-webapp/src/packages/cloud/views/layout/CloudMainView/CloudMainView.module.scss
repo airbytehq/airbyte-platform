@@ -47,7 +47,7 @@ $sidebar-workspace-font-weight: 400;
   outline: none;
 
   &:focus-visible {
-    outline: 1px solid colors.$primary;
+    outline: 1px solid colors.$foreground;
   }
 }
 

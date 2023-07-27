@@ -65,7 +65,7 @@
   border: none;
   padding: 18px;
   cursor: pointer;
-  background: colors.$primary;
+  background: colors.$foreground;
   border-radius: variables.$border-radius-2xl;
   transition: box-shadow variables.$transition ease;
 
@@ -108,5 +108,5 @@
 }
 
 .illustration {
-  color: colors.$primary;
+  color: colors.$foreground;
 }

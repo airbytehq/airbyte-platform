@@ -9,7 +9,7 @@
   padding: variables.$spacing-sm;
   outline: none;
   border-radius: variables.$border-radius-md;
-  background-color: colors.$primary;
+  background-color: colors.$foreground;
   box-shadow: variables.$box-shadow-menu;
 
   &:focus-within {

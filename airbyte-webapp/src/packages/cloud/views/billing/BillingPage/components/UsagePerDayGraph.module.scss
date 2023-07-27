@@ -11,14 +11,14 @@
 }
 
 .tooltipWrapper {
-  background-color: colors.$primary !important;
+  background-color: colors.$foreground !important;
   color: colors.$dark-blue span {
     color: colors.$dark-blue;
   }
 }
 
 :export {
-  white: colors.$primary;
+  white: colors.$foreground;
   green: colors.$green;
   grey: colors.$grey-500;
   grey100: colors.$grey-100;

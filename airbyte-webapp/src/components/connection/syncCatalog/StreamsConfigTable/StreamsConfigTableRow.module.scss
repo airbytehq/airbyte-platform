@@ -28,7 +28,7 @@
 }
 
 .streamHeaderContent {
-  @include header-background(colors.$primary, colors.$grey-30);
+  @include header-background(colors.$foreground, colors.$grey-30);
 
   border-bottom: 1px solid colors.$grey-50;
   padding: 0 variables.$spacing-xl 0 variables.$spacing-md;

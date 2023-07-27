@@ -75,8 +75,11 @@ export const theme = {
   red900: scss.red900,
   red: scss.red,
 
-  black: scss.secondary,
-  white: scss.primary,
+  black: scss.black,
+  white: scss.white,
+
+  foreground: scss.foreground,
+  inverse: scss.inverse,
 
   yellow50: scss.yellow50,
   yellow100: scss.yellow100,
@@ -124,8 +127,8 @@ export const theme = {
   greyColor10: scss.grey100,
   greyColor0: scss.grey50,
 
-  whiteColor: scss.primary,
-  blackColor: scss.secondary,
+  whiteColor: scss.foreground,
+  blackColor: scss.inverse,
   borderTableColor: scss.grey100,
   lightTableColor: scss.grey50,
   darkGreyColor: scss.grey400,

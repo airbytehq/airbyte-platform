@@ -19,7 +19,7 @@ $container-right-space: variables.$spacing-xl * 2;
   height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
-  background: colors.$primary;
+  background: colors.$foreground;
   border-radius: variables.$border-radius-2xl variables.$border-radius-2xl 0 0;
   box-shadow: variables.$box-shadow-popup;
 }

@@ -21,11 +21,11 @@ $iconClassname: "icon";
   vertical-align: -6%;
 
   &.#{$iconClassname}--withBackground {
-    color: colors.$primary;
+    color: colors.$foreground;
     box-sizing: content-box;
     border-radius: variables.$border-radius-pill;
     padding: 4px;
-    background-color: colors.$secondary; // default if color isn't specified
+    background-color: colors.$inverse; // default if color isn't specified
   }
 
   @each $name, $color in $colorMap {

@@ -7,7 +7,7 @@
 .inputField {
   display: inline-block;
   position: relative;
-  background: colors.$primary;
+  background: colors.$foreground;
 
   .inputContainer {
     padding-bottom: 0; // overwrite default FormControl style

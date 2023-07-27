@@ -27,7 +27,7 @@
   @include mixins.shadow;
 
   width: auto;
-  background: colors.$primary;
+  background: colors.$foreground;
   border-radius: variables.$border-radius-lg;
 
   &.fullWidth {
@@ -50,5 +50,5 @@
 }
 
 .infoTooltip {
-  color: colors.$primary;
+  color: colors.$foreground;
 }

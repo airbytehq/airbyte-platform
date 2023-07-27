@@ -29,10 +29,10 @@
 
 .selected {
   background-color: transparent;
-  color: colors.$primary;
+  color: colors.$foreground;
 }
 
 .unselected {
-  background-color: colors.$primary;
+  background-color: colors.$foreground;
   color: colors.$dark-blue;
 }

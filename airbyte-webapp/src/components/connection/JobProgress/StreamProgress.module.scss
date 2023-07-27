@@ -29,7 +29,7 @@
   display: flex;
 
   .check {
-    fill: colors.$primary;
+    fill: colors.$foreground;
     display: none;
   }
 
@@ -38,7 +38,7 @@
   }
 
   .bg {
-    fill: colors.$primary;
+    fill: colors.$foreground;
   }
 
   &.done {

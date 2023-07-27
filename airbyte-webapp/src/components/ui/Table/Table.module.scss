@@ -51,12 +51,12 @@ $border-radius: variables.$border-radius-lg;
   }
 
   &--white {
-    background-color: colors.$primary;
+    background-color: colors.$foreground;
   }
 
   &--inBlock {
     text-transform: none;
-    background-color: colors.$primary;
+    background-color: colors.$foreground;
     font-size: variables.$font-size-sm;
     font-weight: normal;
     border-bottom: variables.$border-thin solid colors.$grey-50;
@@ -78,7 +78,7 @@ $border-radius: variables.$border-radius-lg;
 
 // --------- <tr/> ---------
 .tr {
-  background-color: colors.$primary;
+  background-color: colors.$foreground;
   cursor: auto;
 
   &--clickable {

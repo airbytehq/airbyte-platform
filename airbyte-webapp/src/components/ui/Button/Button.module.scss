@@ -57,7 +57,7 @@
 
     &.typePrimary,
     &.typeDanger {
-      color: colors.$primary;
+      color: colors.$foreground;
     }
 
     &.typeSecondary,
@@ -188,7 +188,7 @@
 
   &.typeDanger {
     background-color: colors.$red-300;
-    color: colors.$primary;
+    color: colors.$foreground;
 
     &:hover {
       background-color: colors.$red-400;
@@ -216,16 +216,16 @@
 
   &.typeDark {
     background-color: colors.$dark-blue;
-    color: colors.$primary;
+    color: colors.$foreground;
 
     &:hover {
       background-color: colors.$dark-blue-800;
-      color: colors.$primary;
+      color: colors.$foreground;
     }
 
     &:active {
       background-color: colors.$dark-blue-1000;
-      color: colors.$primary;
+      color: colors.$foreground;
     }
   }
 

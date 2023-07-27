@@ -4,9 +4,9 @@
 .container {
   height: 18px;
   width: 18px;
-  background: colors.$primary;
+  background: colors.$foreground;
   border: 1px solid colors.$grey-200;
-  color: colors.$primary;
+  color: colors.$foreground;
   text-align: center;
   border-radius: 50%;
   display: inline-block;
@@ -31,7 +31,7 @@
   background: colors.$grey-200;
 
   &.checked {
-    background: colors.$primary;
+    background: colors.$foreground;
   }
 }
 
