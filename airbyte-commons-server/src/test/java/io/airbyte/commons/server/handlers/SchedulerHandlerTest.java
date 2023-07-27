@@ -48,8 +48,10 @@ import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.FieldAdd;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobConfigType;
+import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
@@ -80,6 +82,7 @@ import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -100,14 +103,20 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.persistence.job.JobCreator;
+import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
+import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
+import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
+import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -125,12 +134,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 @SuppressWarnings("unchecked")
 class SchedulerHandlerTest {
@@ -148,11 +160,21 @@ class SchedulerHandlerTest {
   private static final String SKU = "sku";
   private static final String CONNECTION_URL = "connection_url";
 
-  private static final UUID JOB_ID = UUID.randomUUID();
+  private static final long JOB_ID = 123L;
+  private static final UUID SYNC_JOB_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+  private static final String DOCKER_REPOSITORY = "docker-repo";
+  private static final String DOCKER_IMAGE_TAG = "0.0.1";
+  private static final String DOCKER_IMAGE_NAME = DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG;
+  private static final StreamDescriptor STREAM_DESCRIPTOR1 = new StreamDescriptor().withName("stream 1").withNamespace("namespace 1");
+  private static final StreamDescriptor STREAM_DESCRIPTOR2 = new StreamDescriptor().withName("stream 2").withNamespace("namespace 2");
   private static final long CREATED_AT = System.currentTimeMillis() / 1000;
   private static final boolean CONNECTOR_CONFIG_UPDATED = false;
   private static final Path LOG_PATH = Path.of("log_path");
   private static final Optional<UUID> CONFIG_ID = Optional.of(UUID.randomUUID());
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final String FAILURE_ORIGIN = "source";
   private static final String FAILURE_TYPE = "system_error";
   private static final boolean RETRYABLE = true;
@@ -196,7 +218,7 @@ class SchedulerHandlerTest {
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
   private SecretsRepositoryWriter secretsRepositoryWriter;
-  private Job completedJob;
+  private Job job;
   private SynchronousSchedulerClient synchronousSchedulerClient;
   private SynchronousResponse<?> jobResponse;
   private ConfigurationUpdate configurationUpdate;
@@ -209,10 +231,16 @@ class SchedulerHandlerTest {
   private WebUrlHelper webUrlHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private FeatureFlagClient featureFlagClient;
+  private StreamResetPersistence streamResetPersistence;
+  private OAuthConfigSupplier oAuthConfigSupplier;
+  private JobCreator jobCreator;
+  private SyncJobFactory jobFactory;
+  private JobNotifier jobNotifier;
+  private JobTracker jobTracker;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
-    completedJob = mock(Job.class, RETURNS_DEEP_STUBS);
+    job = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
     when(synchronousJobMetadata.getConfigType())
@@ -221,9 +249,10 @@ class SchedulerHandlerTest {
         .thenReturn(synchronousJobMetadata);
     configurationUpdate = mock(ConfigurationUpdate.class);
     jsonSchemaValidator = mock(JsonSchemaValidator.class);
-    when(completedJob.getStatus()).thenReturn(JobStatus.SUCCEEDED);
-    when(completedJob.getConfig().getConfigType()).thenReturn(ConfigType.SYNC);
-    when(completedJob.getScope()).thenReturn("sync:123");
+    when(job.getStatus()).thenReturn(JobStatus.SUCCEEDED);
+    when(job.getConfig().getConfigType()).thenReturn(ConfigType.SYNC);
+    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
+    when(job.getScope()).thenReturn("sync:123");
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
@@ -235,6 +264,12 @@ class SchedulerHandlerTest {
     envVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     webUrlHelper = mock(WebUrlHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    streamResetPersistence = mock(StreamResetPersistence.class);
+    oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    jobCreator = mock(JobCreator.class);
+    jobFactory = mock(SyncJobFactory.class);
+    jobNotifier = mock(JobNotifier.class);
+    jobTracker = mock(JobTracker.class);
 
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
@@ -253,7 +288,66 @@ class SchedulerHandlerTest {
         envVariableFeatureFlags,
         webUrlHelper,
         actorDefinitionVersionHelper,
-        featureFlagClient);
+        featureFlagClient,
+        streamResetPersistence, oAuthConfigSupplier, jobCreator, jobFactory, jobNotifier, jobTracker);
+  }
+
+  @Test
+  @DisplayName("Test job creation")
+  void createJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+    Mockito.when(jobFactory.create(CONNECTION_ID))
+        .thenReturn(JOB_ID);
+    Mockito.when(configRepository.getStandardSync(CONNECTION_ID))
+        .thenReturn(Mockito.mock(StandardSync.class));
+    Mockito.when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(job);
+    Mockito.when(jobConverter.getJobInfoRead(job))
+        .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+
+    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
+  }
+
+  @Test
+  @DisplayName("Test reset job creation")
+  void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardSync standardSync = new StandardSync().withDestinationId(DESTINATION_ID);
+    Mockito.when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+    final DestinationConnection destination = new DestinationConnection()
+        .withDestinationId(DESTINATION_ID)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+    Mockito.when(configRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition();
+    final Version destinationVersion = new Version(DESTINATION_PROTOCOL_VERSION);
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withProtocolVersion(destinationVersion.serialize());
+    Mockito.when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
+        .thenReturn(actorDefinitionVersion);
+    Mockito.when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
+    final List<StreamDescriptor> streamsToReset = List.of(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2);
+    Mockito.when(streamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);
+
+    Mockito
+        .when(jobCreator.createResetConnectionJob(destination, standardSync, actorDefinitionVersion, DOCKER_IMAGE_NAME, destinationVersion,
+            false, List.of(),
+            streamsToReset))
+        .thenReturn(Optional.of(JOB_ID));
+
+    Mockito.when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(job);
+    Mockito.when(jobConverter.getJobInfoRead(job))
+        .thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+
+    final JobInfoRead output = schedulerHandler.createJob(new JobCreate().connectionId(CONNECTION_ID));
+
+    Mockito.verify(oAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any());
+    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID);
+
+    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID);
   }
 
   @Test
@@ -593,7 +687,7 @@ class SchedulerHandlerTest {
     // return a new base every time this method is called so that we are not updating
     // fields on the existing one in subsequent tests
     return new SynchronousJobRead()
-        .id(JOB_ID)
+        .id(SYNC_JOB_ID)
         .configId(String.valueOf(CONFIG_ID))
         .configType(JobConfigType.CHECK_CONNECTION_SOURCE)
         .createdAt(CREATED_AT)
@@ -680,7 +774,7 @@ class SchedulerHandlerTest {
     // it declares the job a failure.
     final boolean jobSucceeded = !exceptionWouldBeThrown && connectorJobOutput.getFailureReason() == null;
     final JobMetadata jobMetadata = new JobMetadata(jobSucceeded, LOG_PATH);
-    final SynchronousJobMetadata synchronousJobMetadata = SynchronousJobMetadata.fromJobMetadata(jobMetadata, connectorJobOutput, JOB_ID,
+    final SynchronousJobMetadata synchronousJobMetadata = SynchronousJobMetadata.fromJobMetadata(jobMetadata, connectorJobOutput, SYNC_JOB_ID,
         ConfigType.CHECK_CONNECTION_SOURCE, CONFIG_ID.get(), CREATED_AT, CREATED_AT);
 
     final SynchronousResponse<StandardCheckConnectionOutput> checkResponse = new SynchronousResponse<>(checkConnectionOutput, synchronousJobMetadata);
@@ -868,8 +962,8 @@ class SchedulerHandlerTest {
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
         .thenReturn((SynchronousResponse<UUID>) jobResponse);
-    when(completedJob.getSuccessOutput()).thenReturn(Optional.empty());
-    when(completedJob.getStatus()).thenReturn(JobStatus.FAILED);
+    when(job.getSuccessOutput()).thenReturn(Optional.empty());
+    when(job.getStatus()).thenReturn(JobStatus.FAILED);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
@@ -1463,8 +1557,8 @@ class SchedulerHandlerTest {
     when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
-    when(completedJob.getSuccessOutput()).thenReturn(Optional.empty());
-    when(completedJob.getStatus()).thenReturn(JobStatus.FAILED);
+    when(job.getSuccessOutput()).thenReturn(Optional.empty());
+    when(job.getStatus()).thenReturn(JobStatus.FAILED);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig);
 

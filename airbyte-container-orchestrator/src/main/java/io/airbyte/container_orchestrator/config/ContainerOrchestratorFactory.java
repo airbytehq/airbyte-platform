@@ -7,6 +7,7 @@ package io.airbyte.container_orchestrator.config;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
@@ -15,7 +16,6 @@ import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrat
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;

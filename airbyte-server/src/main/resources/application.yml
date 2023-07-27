@@ -96,11 +96,101 @@ airbyte:
   role: ${AIRBYTE_ROLE:dev}
   tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
   worker:
+    kube-job-configs:
+      default:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      source:
+        cpu-limit: ${SOURCE_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SOURCE_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${SOURCE_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SOURCE_CONTAINER_MEMORY_REQUEST:}
+      lowrss--heartbeat:
+        cpu-limit: 0.5
+        cpu-request: 0.05
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--destination-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--source-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--source-api:
+        cpu-limit: 0.5
+        cpu-request: 0.2
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      lowrss--source-stdout-api:
+        cpu-limit: 0.5
+        cpu-request: 0.2
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--orchestrator-api:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 2Gi
+        memory-request: 2Gi
+      lowrss--destination-api:
+        cpu-limit: 1
+        cpu-request: 0.2
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      lowrss--destination-stdin-api:
+        cpu-limit: 0.5
+        cpu-request: 0.2
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--destination-stdout-api:
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      verylowrss--source:
+        cpu-limit: 1
+        cpu-request: 0.1
+        memory-limit: 1Gi
+        memory-request: 0.5Gi
+      verylowrss--orchestrator-api:
+        cpu-limit: 1
+        cpu-request: 0.2
+        memory-limit: 2Gi
+        memory-request: 1.5Gi
+      verylowrss--destination-api:
+        cpu-limit: 1
+        cpu-request: 0.1
+        memory-limit: 1Gi
+        memory-request: 0.5Gi
     job:
       error-reporting:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
+      kube:
+        images:
+          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
+          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
+          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        main:
+          container:
+            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
+        sidecar:
+          container:
+            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        tolerations: ${JOB_KUBE_TOLERATIONS:}
+    isolated:
+      kube:
+        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
+        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
     connection:
       disable:

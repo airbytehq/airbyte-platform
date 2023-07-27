@@ -12,17 +12,25 @@ import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
+import io.airbyte.persistence.job.factory.DefaultSyncJobFactory;
+import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
+import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
@@ -78,6 +86,34 @@ public class ApplicationBeanFactory {
         configRepository,
         workspaceHelper,
         trackingClient,
+        actorDefinitionVersionHelper);
+  }
+
+  @Singleton
+  public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
+                                             final WorkerConfigsProvider workerConfigsProvider,
+                                             final FeatureFlagClient featureFlagClient) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
+  }
+
+  @SuppressWarnings({"ParameterName", "MissingJavadocMethod"})
+  @Singleton
+  public SyncJobFactory jobFactory(
+                                   final ConfigRepository configRepository,
+                                   final JobPersistence jobPersistence,
+                                   @Property(name = "airbyte.connector.specific-resource-defaults-enabled",
+                                             defaultValue = "false") final boolean connectorSpecificResourceDefaultsEnabled,
+                                   final DefaultJobCreator jobCreator,
+                                   final OAuthConfigSupplier oAuthConfigSupplier,
+                                   final ConfigInjector configInjector,
+                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new DefaultSyncJobFactory(
+        connectorSpecificResourceDefaultsEnabled,
+        jobCreator,
+        configRepository,
+        oAuthConfigSupplier,
+        configInjector,
+        new WorkspaceHelper(configRepository, jobPersistence),
         actorDefinitionVersionHelper);
   }
 

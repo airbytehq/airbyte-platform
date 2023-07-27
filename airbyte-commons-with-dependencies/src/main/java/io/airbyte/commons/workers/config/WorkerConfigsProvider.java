@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.config;
+package io.airbyte.commons.workers.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -11,7 +11,6 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
-import io.airbyte.workers.WorkerConfigs;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -283,7 +282,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     return Optional.ofNullable(getOrElseGet(subTypeMap, key.subType, ResourceSubType.DEFAULT));
   }
 
-  private void validateIsolatedPoolConfigInitialization(boolean useCustomNodeSelector, Map<String, String> isolatedNodeSelectors) {
+  private void validateIsolatedPoolConfigInitialization(final boolean useCustomNodeSelector, final Map<String, String> isolatedNodeSelectors) {
     if (useCustomNodeSelector && isolatedNodeSelectors.isEmpty()) {
       throw new RuntimeException("Isolated Node selectors is empty while useCustomNodeSelector is set to true.");
     }

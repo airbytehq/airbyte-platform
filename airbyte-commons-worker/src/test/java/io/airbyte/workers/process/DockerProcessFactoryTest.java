@@ -17,11 +17,11 @@ import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.workers.config.WorkerConfigs;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.EnvConfigs;
-import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.config.WorkerConfigsProvider;
-import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -207,7 +207,7 @@ class DockerProcessFactoryTest {
   static class DebuggingOptionsTestArgumentsProvider implements ArgumentsProvider {
 
     @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
+    public Stream<? extends Arguments> provideArguments(final ExtensionContext extensionContext) {
       final String options = "OPTIONS";
       final String postgresLatest = "repo/project/destination-postgres:latest";
       final String destinationPostgres5005 = "destination-postgres:5005";
@@ -245,7 +245,7 @@ class DockerProcessFactoryTest {
                                  final String debugContainerEnvVar,
                                  final String javaOptions,
                                  final List<String> expected) {
-    List<String> actual = DockerProcessFactory.localDebuggingOptions(containerName, debugContainerEnvVar, javaOptions);
+    final List<String> actual = DockerProcessFactory.localDebuggingOptions(containerName, debugContainerEnvVar, javaOptions);
     Assertions.assertEquals(actual, expected);
   }
 

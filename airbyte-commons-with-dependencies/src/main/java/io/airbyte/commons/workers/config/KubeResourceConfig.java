@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.config;
+package io.airbyte.commons.workers.config;
 
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
@@ -13,7 +13,7 @@ import io.micronaut.context.annotation.Parameter;
  * implemented here.
  */
 @EachProperty("airbyte.worker.kube-job-configs")
-final class KubeResourceConfig {
+public final class KubeResourceConfig {
 
   private final String name;
   private String annotations;
@@ -55,27 +55,27 @@ final class KubeResourceConfig {
     return memoryRequest;
   }
 
-  public void setAnnotations(String annotations) {
+  public void setAnnotations(final String annotations) {
     this.annotations = annotations;
   }
 
-  public void setNodeSelectors(String nodeSelectors) {
+  public void setNodeSelectors(final String nodeSelectors) {
     this.nodeSelectors = nodeSelectors;
   }
 
-  public void setCpuLimit(String cpuLimit) {
+  public void setCpuLimit(final String cpuLimit) {
     this.cpuLimit = cpuLimit;
   }
 
-  public void setCpuRequest(String cpuRequest) {
+  public void setCpuRequest(final String cpuRequest) {
     this.cpuRequest = cpuRequest;
   }
 
-  public void setMemoryLimit(String memoryLimit) {
+  public void setMemoryLimit(final String memoryLimit) {
     this.memoryLimit = memoryLimit;
   }
 
-  public void setMemoryRequest(String memoryRequest) {
+  public void setMemoryRequest(final String memoryRequest) {
     this.memoryRequest = memoryRequest;
   }
 
