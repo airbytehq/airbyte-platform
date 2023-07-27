@@ -70,11 +70,6 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
-  console.log("isError", isError);
-  console.log("error", error);
-  console.log("errorMessage", errorMessage);
-  console.log("streamReadData.logs", streamReadData?.logs);
-
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
       streamReadData
