@@ -3,8 +3,6 @@
 
 .container {
   padding: variables.$spacing-sm;
-  display: flex;
-  flex-direction: column;
   overflow-y: auto;
 }
 

@@ -70,6 +70,11 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
+  console.log("isError", isError);
+  console.log("error", error);
+  console.log("errorMessage", errorMessage);
+  console.log("streamReadData.logs", streamReadData?.logs);
+
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
       streamReadData
@@ -201,10 +206,10 @@ export const StreamTester: React.FC<{
               ),
               minWidth: 40,
             },
-            ...(streamReadData?.logs && streamReadData.logs.length > 0
+            ...(errorMessage || (streamReadData?.logs && streamReadData.logs.length > 0)
               ? [
                   {
-                    children: <LogsDisplay logs={streamReadData.logs} error={errorMessage} />,
+                    children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
                     minWidth: 0,
                     flex: logsFlex,
                     splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,

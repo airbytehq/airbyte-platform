@@ -2,7 +2,6 @@ import classNames from "classnames";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Pre } from "components/ui/Pre";
-import { Text } from "components/ui/Text";
 
 import { StreamReadLogsItem } from "core/api/types/ConnectorBuilderClient";
 
@@ -34,17 +33,13 @@ const Log: React.FC<{
 };
 
 export const LogsDisplay: React.FC<LogsDisplayProps> = ({ logs, error }) => {
+  const finalLogs = [...(error ? [{ level: "ERROR", message: error }] : []), ...logs];
+
   return (
-    <div className={styles.container}>
-      {error !== undefined ? (
-        <Text className={styles.error}>{error}</Text>
-      ) : (
-        <FlexContainer direction="column">
-          {logs.map((log, index) => (
-            <Log logMessage={log} key={index} />
-          ))}
-        </FlexContainer>
-      )}
-    </div>
+    <FlexContainer className={styles.container} direction="column">
+      {finalLogs.map((log, index) => (
+        <Log logMessage={log} key={index} />
+      ))}
+    </FlexContainer>
   );
 };
