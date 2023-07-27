@@ -8,18 +8,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.ConnectorReleases;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -39,8 +45,17 @@ class ConnectorRegistryConvertersTest {
   private static final ActorDefinitionResourceRequirements RESOURCE_REQUIREMENTS =
       new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2"));
 
+  private static final BreakingChanges registryBreakingChanges = new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange()
+      .withMessage("Sample message").withUpgradeDeadline("2023-07-20").withMigrationDocumentationUrl("https://example.com"));
+  private static final List<ActorDefinitionBreakingChange> expectedBreakingChanges = List.of(new ActorDefinitionBreakingChange()
+      .withActorDefinitionId(DEF_ID)
+      .withVersion(new Version("1.0.0"))
+      .withMigrationDocumentationUrl("https://example.com")
+      .withUpgradeDeadline("2023-07-20")
+      .withMessage("Sample message"));
+
   @Test
-  void testConvertRegistrySourceToStandardSourceDef() {
+  void testConvertRegistrySourceToInternalTypes() {
     final SuggestedStreams suggestedStreams = new SuggestedStreams().withStreams(List.of("stream1", "stream2"));
 
     final ConnectorRegistrySourceDefinition registrySourceDef = new ConnectorRegistrySourceDefinition()
@@ -59,7 +74,8 @@ class ConnectorRegistryConvertersTest {
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withSuggestedStreams(suggestedStreams)
-        .withMaxSecondsBetweenMessages(10L);
+        .withMaxSecondsBetweenMessages(10L)
+        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final StandardSourceDefinition stdSourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(DEF_ID)
@@ -84,10 +100,11 @@ class ConnectorRegistryConvertersTest {
 
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
+    assertEquals(expectedBreakingChanges, ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef));
   }
 
   @Test
-  void testConvertRegistryDestinationToStandardDestinationDef() {
+  void testConvertRegistryDestinationToInternalTypes() {
     final NormalizationDestinationDefinitionConfig normalizationConfig = new NormalizationDestinationDefinitionConfig()
         .withNormalizationRepository("normalization")
         .withNormalizationTag("0.1.0")
@@ -109,7 +126,8 @@ class ConnectorRegistryConvertersTest {
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true);
+        .withSupportsDbt(true)
+        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
@@ -134,6 +152,32 @@ class ConnectorRegistryConvertersTest {
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
+    assertEquals(expectedBreakingChanges, ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef));
+  }
+
+  @Test
+  void testParseSourceDefinitionWithNoBreakingChangesReturnsEmptyList() {
+    ConnectorRegistrySourceDefinition registrySourceDef = new ConnectorRegistrySourceDefinition();
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef), Collections.emptyList());
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition().withReleases(new ConnectorReleases());
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef), Collections.emptyList());
+
+    registrySourceDef = new ConnectorRegistrySourceDefinition().withReleases(new ConnectorReleases().withBreakingChanges(new BreakingChanges()));
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef), Collections.emptyList());
+  }
+
+  @Test
+  void testParseDestinationDefinitionWithNoBreakingChangesReturnsEmptyList() {
+    ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition();
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
+
+    registryDestinationDef = new ConnectorRegistryDestinationDefinition().withReleases(new ConnectorReleases());
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
+
+    registryDestinationDef =
+        new ConnectorRegistryDestinationDefinition().withReleases(new ConnectorReleases().withBreakingChanges(new BreakingChanges()));
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
   }
 
 }

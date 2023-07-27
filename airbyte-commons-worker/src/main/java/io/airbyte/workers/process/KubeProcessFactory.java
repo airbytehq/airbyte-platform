@@ -9,7 +9,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.AllowedHosts;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
@@ -105,7 +104,7 @@ public class KubeProcessFactory implements ProcessFactory {
                         final boolean usesStdin,
                         final Map<String, String> files,
                         final String entrypoint,
-                        final ResourceRequirements resourceRequirements,
+                        final ConnectorResourceRequirements resourceRequirements,
                         final AllowedHosts allowedHosts,
                         final Map<String, String> customLabels,
                         final Map<String, String> jobMetadata,

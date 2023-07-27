@@ -107,7 +107,7 @@ public class DockerProcessFactory implements ProcessFactory {
                         final boolean usesStdin,
                         final Map<String, String> files,
                         final String entrypoint,
-                        final ResourceRequirements resourceRequirements,
+                        final ConnectorResourceRequirements connectorResourceRequirements,
                         final AllowedHosts allowedHosts,
                         final Map<String, String> labels,
                         final Map<String, String> jobMetadata,
@@ -139,6 +139,7 @@ public class DockerProcessFactory implements ProcessFactory {
           "--log-driver",
           "none");
       final String containerName = ProcessFactory.createProcessName(imageName, jobType, jobId, attempt, DOCKER_NAME_LEN_LIMIT);
+      final ResourceRequirements resourceRequirements = connectorResourceRequirements.main();
       LOGGER.info("Creating docker container = {} with resources {} and allowedHosts {}", containerName, resourceRequirements, allowedHosts);
       cmd.add("--name");
       cmd.add(containerName);

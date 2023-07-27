@@ -1,0 +1,22 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ConnectorReleaseBreakingChange.yaml
+title: ConnectorReleaseBreakingChange
+description: Contains information about a breaking change, including the deadline to upgrade, a link to the migration documentation, and a message detailing the change.
+type: object
+additionalProperties: true
+required:
+  - upgradeDeadline
+  - message
+  - migrationDocumentationUrl
+properties:
+  upgradeDeadline:
+    description: The deadline by which to upgrade before the breaking change takes effect.
+    type: string
+    format: date
+  message:
+    description: Descriptive message detailing the breaking change.
+    type: string
+  migrationDocumentationUrl:
+    description: (Header-specific) URL to documentation on how to migrate to this version.
+    type: string

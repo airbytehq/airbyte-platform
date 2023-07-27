@@ -223,6 +223,7 @@ public class JobInputHandler {
           .withResourceRequirements(config.getResourceRequirements())
           .withSourceResourceRequirements(config.getSourceResourceRequirements())
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
+          .withSyncResourceRequirements(config.getSyncResourceRequirements())
           .withConnectionId(connectionId)
           .withWorkspaceId(config.getWorkspaceId())
           .withNormalizeInDestinationContainer(shouldNormalizeInDestination)

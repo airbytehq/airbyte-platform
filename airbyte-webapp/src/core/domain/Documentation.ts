@@ -1,12 +1,21 @@
+import { ReleaseStage } from "core/request/AirbyteClient";
 import { AppActionCodes, TrackActionFn } from "hooks/services/AppMonitoringService";
 
-export const fetchDocumentation = async (url: string, trackAction: TrackActionFn): Promise<string> => {
+export const fetchDocumentation = async (
+  url: string,
+  trackAction: TrackActionFn,
+  releaseStage?: ReleaseStage
+): Promise<string> => {
   const response = await fetch(url, {
     method: "GET",
   });
 
   if (!response.ok) {
-    trackAction(AppActionCodes.CONNECTOR_DOCUMENTATION_FETCH_ERROR, { url, status: response.status });
+    if (releaseStage === ReleaseStage.custom) {
+      console.error(`Failed to fetch documentation from ${url} with status ${response.status}`);
+    } else {
+      trackAction(AppActionCodes.CONNECTOR_DOCUMENTATION_FETCH_ERROR, { url, status: response.status });
+    }
   }
   const contentType = response.headers.get("content-type");
 

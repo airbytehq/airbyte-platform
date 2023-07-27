@@ -4,8 +4,11 @@
 
 package io.airbyte.config.init;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -13,11 +16,15 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.IngestBreakingChanges;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,16 +47,19 @@ public class ApplyDefinitionsHelper {
   private final Optional<DefinitionsProvider> definitionsProviderOptional;
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
+  private final FeatureFlagClient featureFlagClient;
   private int newConnectorCount;
   private int changedConnectorCount;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
 
   public ApplyDefinitionsHelper(final Optional<DefinitionsProvider> definitionsProviderOptional,
                                 final JobPersistence jobPersistence,
-                                final ConfigRepository configRepository) {
+                                final ConfigRepository configRepository,
+                                final FeatureFlagClient featureFlagClient) {
     this.definitionsProviderOptional = definitionsProviderOptional;
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public void apply() throws JsonValidationException, IOException {
@@ -81,14 +91,22 @@ public class ApplyDefinitionsHelper {
     final Map<UUID, ActorDefinitionVersion> actorDefinitionIdsToDefaultVersionsMap = configRepository.getActorDefinitionIdsToDefaultVersionsMap();
     final Set<UUID> actorDefinitionIdsInUse = configRepository.getActorDefinitionIdsInUse();
 
+    final List<ActorDefinitionBreakingChange> breakingChanges = new ArrayList<>();
+
     newConnectorCount = 0;
     changedConnectorCount = 0;
     for (final ConnectorRegistrySourceDefinition def : protocolCompatibleSourceDefinitions) {
       applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
+      breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(def));
     }
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
+      breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(def));
     }
+    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
+      configRepository.writeActorDefinitionBreakingChanges(breakingChanges);
+    }
+
     LOGGER.info("New connectors added: {}", newConnectorCount);
     LOGGER.info("Version changes applied: {}", changedConnectorCount);
   }

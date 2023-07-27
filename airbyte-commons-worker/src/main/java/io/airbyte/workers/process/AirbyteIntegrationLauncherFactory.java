@@ -10,6 +10,7 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -52,10 +53,12 @@ public class AirbyteIntegrationLauncherFactory {
    *
    * @param launcherConfig the configuration of the integration.
    * @param resourceRequirements the resource requirements for the integration.
+   * @param syncResourceRequirements the resource requirements for the integration.
    * @return an AirbyteIntegrationLauncher.
    */
   public IntegrationLauncher createIntegrationLauncher(final IntegrationLauncherConfig launcherConfig,
-                                                       final ResourceRequirements resourceRequirements) {
+                                                       final ResourceRequirements resourceRequirements,
+                                                       final SyncResourceRequirements syncResourceRequirements) {
     return new AirbyteIntegrationLauncher(
         launcherConfig.getJobId(),
         Math.toIntExact(launcherConfig.getAttemptId()),
@@ -64,6 +67,7 @@ public class AirbyteIntegrationLauncherFactory {
         launcherConfig.getDockerImage(),
         processFactory,
         resourceRequirements,
+        syncResourceRequirements,
         launcherConfig.getAllowedHosts(),
         // At this moment, if either source or destination is from custom connector image, we will put all
         // jobs into isolated pool to run.
@@ -84,9 +88,10 @@ public class AirbyteIntegrationLauncherFactory {
    */
   public AirbyteSource createAirbyteSource(final IntegrationLauncherConfig sourceLauncherConfig,
                                            final ResourceRequirements resourceRequirements,
+                                           final SyncResourceRequirements syncResourceRequirements,
                                            final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                            final HeartbeatMonitor heartbeatMonitor) {
-    final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, resourceRequirements);
+    final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, resourceRequirements, syncResourceRequirements);
 
     return new DefaultAirbyteSource(sourceLauncher,
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
@@ -105,8 +110,10 @@ public class AirbyteIntegrationLauncherFactory {
    */
   public AirbyteDestination createAirbyteDestination(final IntegrationLauncherConfig destinationLauncherConfig,
                                                      final ResourceRequirements resourceRequirements,
+                                                     final SyncResourceRequirements syncResourceRequirements,
                                                      final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
-    final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, resourceRequirements);
+    final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, resourceRequirements,
+        syncResourceRequirements);
     return new DefaultAirbyteDestination(destinationLauncher,
         getStreamFactory(destinationLauncherConfig, configuredAirbyteCatalog, DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),

@@ -114,19 +114,6 @@ public class KubePodProcess implements KubePod {
   public static final String MAIN_CONTAINER_NAME = "main";
   public static final String INIT_CONTAINER_NAME = "init";
 
-  private static final ResourceRequirements DEFAULT_SIDECAR_RESOURCES = new ResourceRequirements()
-      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
-      .withCpuLimit(configs.getSidecarKubeCpuLimit()).withCpuRequest(configs.getSidecarKubeCpuRequest());
-  private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
-      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
-      .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
-
-  // Stderr channel usually does not require much CPU resources. It's not on critical path nor it will
-  // impact performance.
-  // Thus, we will allocate much less CPU for these containers.
-  private static final ResourceRequirements LOW_SOCAT_RESOURCES = new ResourceRequirements()
-      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
-      .withCpuLimit("2").withCpuRequest("0.25");
   private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
 
   private static final String PIPES_DIR = "/pipes";
@@ -193,7 +180,8 @@ public class KubePodProcess implements KubePod {
 
   private static Container getInit(final boolean usesStdin,
                                    final List<VolumeMount> mainVolumeMounts,
-                                   final String busyboxImage)
+                                   final String busyboxImage,
+                                   final ResourceRequirements resourceRequirements)
       throws IOException {
 
     final var initCommand = MoreResources.readResource("entrypoints/sync/init.sh")
@@ -210,7 +198,7 @@ public class KubePodProcess implements KubePod {
         .withImage(busyboxImage)
         .withWorkingDir(CONFIG_DIR)
         .withCommand("sh", "-c", initCommand)
-        .withResources(getResourceRequirementsBuilder(DEFAULT_SIDECAR_RESOURCES).build())
+        .withResources(getResourceRequirementsBuilder(resourceRequirements).build())
         .withVolumeMounts(mainVolumeMounts)
         .build();
   }
@@ -415,7 +403,7 @@ public class KubePodProcess implements KubePod {
                         final boolean usesStdin,
                         final Map<String, String> files,
                         final String entrypointOverride,
-                        final ResourceRequirements resourceRequirements,
+                        final ConnectorResourceRequirements podResourceRequirements,
                         final List<String> imagePullSecrets,
                         final List<TolerationPOJO> tolerations,
                         final Map<String, String> nodeSelectors,
@@ -486,14 +474,19 @@ public class KubePodProcess implements KubePod {
           .withMountPath(TMP_DIR)
           .build();
 
-      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage);
+      // Note that we pass the resource requirements of the main container for the init.
+      // The pod's effective resource requirements is going to be the sum of all final running pods. We
+      // could pass that for the init, but it's
+      // probably not worth the extra logic to sum everything. Passing what should be the largest
+      // requirements should do.
+      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
       final Container main = getMain(
           image,
           imagePullPolicy,
           usesStdin,
           entrypointOverride,
           List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
-          resourceRequirements,
+          podResourceRequirements.main(),
           internalToExternalPorts,
           envMap,
           args);
@@ -501,20 +494,12 @@ public class KubePodProcess implements KubePod {
       // Printing socat notice logs with socat -d -d
       // To print info logs as well use socat -d -d -d
       // more info: https://linux.die.net/man/1/socat
-      final io.fabric8.kubernetes.api.model.ResourceRequirements heartbeatSidecarResources =
-          getResourceRequirementsBuilder(DEFAULT_SIDECAR_RESOURCES).build();
-      final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarResources =
-          getResourceRequirementsBuilder(DEFAULT_SOCAT_RESOURCES).build();
-
-      final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarLowCpuResources =
-          getResourceRequirementsBuilder(LOW_SOCAT_RESOURCES).build();
-
       final Container remoteStdin = new ContainerBuilder()
           .withName("remote-stdin")
           .withImage(socatImage)
           .withCommand("sh", "-c", "socat -d -d TCP-L:9001 STDOUT > " + STDIN_PIPE_FILE)
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-          .withResources(socatSidecarResources)
+          .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdIn()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
@@ -523,7 +508,7 @@ public class KubePodProcess implements KubePod {
           .withImage(socatImage)
           .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-          .withResources(socatSidecarResources)
+          .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdOut()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
@@ -532,7 +517,7 @@ public class KubePodProcess implements KubePod {
           .withImage(socatImage)
           .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-          .withResources(socatSidecarLowCpuResources)
+          .withResources(getResourceRequirementsBuilder(podResourceRequirements.stdErr()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
@@ -549,7 +534,7 @@ public class KubePodProcess implements KubePod {
           .withCommand("sh")
           .withArgs("-c", heartbeatCommand)
           .withVolumeMounts(terminationVolumeMount)
-          .withResources(heartbeatSidecarResources)
+          .withResources(getResourceRequirementsBuilder(podResourceRequirements.heartbeat()).build())
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 

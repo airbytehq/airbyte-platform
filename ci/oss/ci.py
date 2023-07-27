@@ -25,10 +25,12 @@ pass_pipeline_context = make_pass_decorator(PipelineContext, ensure=True)
 pass_global_settings = make_pass_decorator(OssSettings, ensure=True)
 
 oss_group = ClickGroup(group_name="oss", group_help="Commands for developing Airbyte OSS")
+backend_group = ClickGroup(group_name="backend", group_help="Commands for developing Airbyte OSS backend")
+frontend_group = ClickGroup(group_name="frontend", group_help="Commands for developing Airbyte OSS frontend")
 
 class CICommand(ClickCommandMetadata):
     command_name: str = "ci"
-    command_help: str = "Runs CI for Airbyte OSS"
+    command_help: str = "frontend && backend build and test no helm, acceptance or e2e"
     flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
                                         type = ParameterType.BOOL, 
                                         help = "Enables gradle scanning",
@@ -36,15 +38,37 @@ class CICommand(ClickCommandMetadata):
 
 class BuildCommand(ClickCommandMetadata):
     command_name: str = "build"
-    command_help: str = "Builds Airbyte OSS"
+    command_help: str = "gradlew assemble && pnpm build and test and storybook:build"
     flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
                                         type = ParameterType.BOOL,
                                         help = "Enables gradle scanning", 
                                         default = False)]
 
+class BackendBuildCommand(ClickCommandMetadata):
+    command_name: str = "build"
+    command_help: str = "gradlew assemble"
+    flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
+                                        type = ParameterType.BOOL,
+                                        help = "Enables gradle scanning", 
+                                        default = False)]
+    
+
+class BackendTestCommand(ClickCommandMetadata):
+    command_name: str = "test"
+    command_help: str = "gradlew assemble and gradlew test"
+    flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
+                                        type = ParameterType.BOOL,
+                                        help = "Enables gradle scanning", 
+                                        default = False)]
+
+class FrontendBuildCommand(ClickCommandMetadata):
+    command_name: str = "build"
+    command_help: str = "pnpm build and storybook build and test"
+
+
 class TestCommand(ClickCommandMetadata):
     command_name: str = "test"
-    command_help: str = "Tests Airbyte OSS"
+    command_help: str = "gradlew assemble, test && pnpm build, test, storybook build"
     flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
                                         type = ParameterType.BOOL,
                                         help = "Enables gradle scanning", 
@@ -59,6 +83,7 @@ async def build(settings: OssSettings, ctx: PipelineContext, client: Optional[Cl
     results = await gather(backend_build, frontend_build, args=[(), ()], kwargs=[{'scan': scan}, {}])
     return results
 
+@backend_group.command(BackendBuildCommand())
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Backend Build")
@@ -67,7 +92,7 @@ async def backend_build(settings: OssSettings, ctx: PipelineContext, client: Opt
     backend_build_result = await build_oss_backend_task.submit(settings, ctx, backend_build_client, scan)
     return [backend_build_result]
 
-
+@frontend_group.command(FrontendBuildCommand())
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Frontend Build")
@@ -75,6 +100,9 @@ async def frontend_build(settings: OssSettings, ctx: PipelineContext, client: Op
     frontend_build_client = client.pipeline("OSS Frontend Build") if client else ctx.get_dagger_client().pipeline("OSS Frontend Build") 
     frontend_storybook_result = await build_storybook_oss_frontend_task.submit(settings, ctx, frontend_build_client)
     frontend_build_result = await build_oss_frontend_task.submit(settings, ctx, frontend_build_client)
+    # note that we technically are running tests during the build phase here, which doesn't make immediate sense
+    # but they run on the source code rather than the built artifacts and are faster than the build so it makes more sense to run them in parallel
+    # with the build than to run them after the build
     frontend_test_result = await test_oss_frontend_task.submit(settings, ctx, frontend_build_client)
     return [frontend_storybook_result, frontend_build_result, frontend_test_result]
 
@@ -86,7 +114,19 @@ async def test(settings: OssSettings, ctx: PipelineContext, client: Optional[Cli
     test_client = client.pipeline(TestCommand().command_name) if client else ctx.get_dagger_client().pipeline(TestCommand().command_name) 
     build_results = await build(scan=scan)
     test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
+    # TODO: add cypress E2E tests here
     return [test_results]
+
+@backend_group.command(BackendTestCommand())
+@pass_global_settings
+@pass_pipeline_context
+@flow(validate_parameters=False, name="OSS Backend Test")
+async def backend_test(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Awaitable[Container]]:
+    test_client = client.pipeline(TestCommand().command_name) if client else ctx.get_dagger_client().pipeline(TestCommand().command_name) 
+    build_results = await build(scan=scan)
+    test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
+    return [test_results]
+
 
 # this is a hook
 async def print_results(flow:Flow, flow_run: FlowRun, state: State[Any]) -> None:
@@ -105,7 +145,8 @@ async def ci(settings: OssSettings, ctx: PipelineContext, client: Optional[Clien
 
 oss_ci_plugin = DeveloperPlugin(name = "oss_ci", base_dirs=["oss", "airbyte-platform-internal"])
 oss_ci_plugin.add_group(oss_group)
-
+oss_group.add_group(backend_group)
+oss_group.add_group(frontend_group)
 
 
 

@@ -7,6 +7,7 @@ package io.airbyte.persistence.job.tracker;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -63,7 +64,11 @@ public class JobTracker {
     FAILED
   }
 
-  public static final String MESSAGE_NAME = "Connector Jobs";
+  public static final String SYNC_EVENT = "Sync Jobs";
+  public static final String CHECK_CONNECTION_SOURCE_EVENT = "Check Connection Source Jobs";
+  public static final String CHECK_CONNECTION_DESTINATION_EVENT = "Check Connection Destination Jobs";
+  public static final String DISCOVER_EVENT = "Discover Jobs";
+  public static final String INTERNAL_FAILURE_SYNC_EVENT = "Sync Jobs Internal Failure";
   public static final String CONFIG = "config";
   public static final String CATALOG = "catalog";
   public static final String OPERATION = "operation.";
@@ -123,7 +128,8 @@ public class JobTracker {
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, CHECK_CONNECTION_SOURCE_EVENT,
+          MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -153,7 +159,8 @@ public class JobTracker {
       final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
+      track(workspaceId, CHECK_CONNECTION_DESTINATION_EVENT,
+          MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
     });
   }
 
@@ -180,7 +187,7 @@ public class JobTracker {
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -222,6 +229,7 @@ public class JobTracker {
           destinationVersion.getSpec().getConnectionSpecification());
 
       track(workspaceId,
+          SYNC_EVENT,
           MoreMaps.merge(
               jobMetadata,
               jobAttemptMetadata,
@@ -267,6 +275,7 @@ public class JobTracker {
           "internal_error_type", e.getClass().getName());
 
       track(workspaceId,
+          INTERNAL_FAILURE_SYNC_EVENT,
           MoreMaps.merge(
               jobMetadata,
               jobAttemptMetadata,
@@ -290,11 +299,11 @@ public class JobTracker {
         final JsonNode sourceConfiguration = attemptSyncConfig.getSourceConfiguration();
         final JsonNode destinationConfiguration = attemptSyncConfig.getDestinationConfiguration();
 
-        final Map<String, Object> sourceMetadata = configToMetadata(CONFIG + ".source", sourceConfiguration, sourceConfigSchema);
-        final Map<String, Object> destinationMetadata = configToMetadata(CONFIG + ".destination", destinationConfiguration, destinationConfigSchema);
+        actorConfigMetadata.put(CONFIG + ".source",
+            mapToJsonString(configToMetadata(sourceConfiguration, sourceConfigSchema)));
 
-        actorConfigMetadata.putAll(sourceMetadata);
-        actorConfigMetadata.putAll(destinationMetadata);
+        actorConfigMetadata.put(CONFIG + ".destination",
+            mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema)));
       }
 
       final Map<String, Object> catalogMetadata = getCatalogMetadata(config.getSync().getConfiguredAirbyteCatalog());
@@ -315,25 +324,12 @@ public class JobTracker {
     return output;
   }
 
-  /**
-   * Flattens a config into a map. Uses the schema to determine which fields are const (i.e.
-   * non-sensitive). Non-const, non-boolean values are replaced with {@link #SET} to avoid leaking
-   * potentially-sensitive information.
-   * <p>
-   * anyOf/allOf schemas are treated as non-const values. These aren't (currently) used in config
-   * schemas anyway.
-   *
-   * @param jsonPath A prefix to add to all the keys in the returned map, with a period (`.`)
-   *        separator
-   * @param schema The JSON schema that {@code config} conforms to
-   */
-  protected static Map<String, Object> configToMetadata(final String jsonPath, final JsonNode config, final JsonNode schema) {
-    final Map<String, Object> metadata = configToMetadata(config, schema);
-    // Prepend all the keys with the root jsonPath
-    // But leave the values unchanged
-    final Map<String, Object> output = new HashMap<>();
-    Jsons.mergeMaps(output, jsonPath, metadata);
-    return output;
+  private static String mapToJsonString(final Map<String, Object> map) {
+    try {
+      return OBJECT_MAPPER.writeValueAsString(map);
+    } catch (JsonProcessingException e) {
+      return "<failed to convert to JSON>";
+    }
   }
 
   /**
@@ -342,7 +338,7 @@ public class JobTracker {
    * array) then returns a map of {null: toMetadataValue(config)}.
    */
   @SuppressWarnings("PMD.ForLoopCanBeForeach")
-  private static Map<String, Object> configToMetadata(final JsonNode config, final JsonNode schema) {
+  protected static Map<String, Object> configToMetadata(final JsonNode config, final JsonNode schema) {
     if (schema.hasNonNull("const") || schema.hasNonNull("enum")) {
       // If this schema is a const or an enum, then just dump it into a map:
       // * If it's an object, flatten it
@@ -512,7 +508,7 @@ public class JobTracker {
     }
   }
 
-  private void track(final @Nullable UUID workspaceId, final Map<String, Object> metadata)
+  private void track(final @Nullable UUID workspaceId, final String action, final Map<String, Object> metadata)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     // unfortunate but in the case of jobs that cannot be linked to a workspace there not a sensible way
     // track it.
@@ -523,7 +519,7 @@ public class JobTracker {
             "workspace_id", workspaceId,
             "workspace_name", standardWorkspace.getName());
 
-        trackingClient.track(workspaceId, MESSAGE_NAME, MoreMaps.merge(metadata, standardTrackingMetadata));
+        trackingClient.track(workspaceId, action, MoreMaps.merge(metadata, standardTrackingMetadata));
       }
     }
   }

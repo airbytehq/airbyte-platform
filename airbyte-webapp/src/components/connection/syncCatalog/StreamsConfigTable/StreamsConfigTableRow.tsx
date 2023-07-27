@@ -2,14 +2,13 @@ import classNames from "classnames";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
+import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
-import { TextWithOverflowTooltip } from "components/ui/Text";
+import { Text, TextWithOverflowTooltip } from "components/ui/Text";
 
 import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
 import styles from "./StreamsConfigTableRow.module.scss";
@@ -17,8 +16,8 @@ import { StreamsConfigTableRowStatus } from "./StreamsConfigTableRowStatus";
 import { useRedirectedReplicationStream } from "./useRedirectedReplicationStream";
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 import { CellText } from "../CellText";
-import { IndexerType, StreamPathSelect } from "../StreamPathSelect";
 import { SyncModeOption, SyncModeSelect } from "../SyncModeSelect";
+import { FieldPathType } from "../utils";
 
 interface StreamsConfigTableRowProps {
   stream: SyncSchemaStream;
@@ -28,9 +27,9 @@ interface StreamsConfigTableRowProps {
   onSelectSyncMode: (selectedMode: DropDownOptionDataItem) => void;
   onSelectStream: () => void;
   primitiveFields: SyncSchemaField[];
-  pkType: IndexerType;
+  pkType: FieldPathType;
   onPrimaryKeyChange: (pkPath: Path[]) => void;
-  cursorType: IndexerType;
+  cursorType: FieldPathType;
   onCursorChange: (cursorPath: Path) => void;
   fields: SyncSchemaField[];
   openStreamDetailsPanel: () => void;
@@ -47,18 +46,53 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   onSelectStream,
   availableSyncModes,
   pkType,
-  onPrimaryKeyChange,
-  onCursorChange,
-  primitiveFields,
   cursorType,
   fields,
   openStreamDetailsPanel,
   disabled,
   configErrors,
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
+
+  const pathDisplayName = (path: Path): string => path.join(".");
+
   const { defaultCursorField } = stream.stream ?? {};
+
+  const isCursorUndefined = useMemo(() => {
+    if (cursorType === "sourceDefined" && defaultCursorField?.length) {
+      return false;
+    } else if (cursorType === "required" && cursorField?.length) {
+      return false;
+    }
+    return true;
+  }, [cursorField?.length, cursorType, defaultCursorField?.length]);
+
+  const isPrimaryKeyUndefined = useMemo(() => {
+    if (!primaryKey?.length) {
+      return true;
+    }
+    return false;
+  }, [primaryKey?.length]);
+
+  const cursorFieldString = useMemo(() => {
+    if (cursorType === "sourceDefined") {
+      if (defaultCursorField?.length) {
+        return pathDisplayName(defaultCursorField);
+      }
+      return <FormattedMessage id="connection.catalogTree.sourceDefined" />;
+    } else if (cursorType === "required" && cursorField?.length) {
+      return pathDisplayName(cursorField);
+    }
+    return <FormattedMessage id="form.error.missing" />;
+  }, [cursorType, cursorField, defaultCursorField]);
+
+  const primaryKeyString = useMemo(() => {
+    if (!primaryKey?.length) {
+      return <FormattedMessage id="form.error.missing" />;
+    }
+    return primaryKey.map(pathDisplayName).join(", ");
+  }, [primaryKey]);
+
   const syncSchema = useMemo(
     () => ({
       syncMode,
@@ -67,7 +101,6 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     [syncMode, destinationSyncMode]
   );
 
-  const paths = useMemo(() => primitiveFields.map((field) => field.path), [primitiveFields]);
   const fieldCount = fields?.length ?? 0;
   const selectedFieldCount = selectedFields?.length ?? fieldCount;
   const onRowClick: React.MouseEventHandler<HTMLElement> | undefined =
@@ -118,7 +151,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       window.clearTimeout(highlightTimeout);
       window.clearTimeout(openTimeout);
     };
-  }, [stream, rowRef, redirectionAction, doesStreamExist]);
+  }, [rowRef, redirectionAction, doesStreamExist]);
 
   return (
     <Row
@@ -137,24 +170,15 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
         />
         <StreamsConfigTableRowStatus stream={stream} />
       </CellText>
-      {isColumnSelectionEnabled && (
-        <CellText size="fixed" className={styles.fieldsCell}>
-          <FieldSelectionStatus
-            selectedFieldCount={selectedFieldCount}
-            totalFieldCount={fieldCount}
-            variant={pillButtonVariant as FieldSelectionStatusVariant}
-          />
-        </CellText>
-      )}
-      <CellText data-testid="source-namespace-cell">
-        <TextWithOverflowTooltip size="md">
-          {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
+      <CellText size="fixed" className={styles.dataDestinationCell} data-testid="destination-namespace-cell">
+        <TextWithOverflowTooltip size="md" color="grey600">
+          {destNamespace}
         </TextWithOverflowTooltip>
       </CellText>
-      <CellText data-testid="source-stream-name-cell">
-        <TextWithOverflowTooltip size="md">{stream.stream?.name}</TextWithOverflowTooltip>
+      <CellText data-testid="destination-stream-name-cell">
+        <TextWithOverflowTooltip size="md">{destName}</TextWithOverflowTooltip>
       </CellText>
-      <CellText size="fixed" className={styles.syncModeCell}>
+      <CellText className={styles.syncModeCell}>
         <SyncModeSelect
           options={availableSyncModes}
           onChange={onSelectSyncMode}
@@ -164,40 +188,47 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
         />
       </CellText>
       <CellText>
-        {cursorType && (
-          <StreamPathSelect
-            type="cursor"
-            pathType={cursorType}
-            paths={paths}
-            path={cursorType === "sourceDefined" ? defaultCursorField : cursorField}
-            onPathChange={onCursorChange}
-            variant={pillButtonVariant}
-            hasError={!!configErrors?.cursorField}
-          />
+        {(cursorType || pkType) && (
+          <FlexContainer direction="column" gap="xs">
+            {cursorType && (
+              <FlexContainer direction="row" gap="xs" alignItems="baseline" data-testid="cursor-field-cell">
+                <Text as="span" color={!!configErrors?.cursorField ? "red" : "grey"}>
+                  <FormattedMessage id="form.cursorField" />
+                </Text>
+                <TextWithOverflowTooltip
+                  color={!!configErrors?.cursorField ? "red" : "grey600"}
+                  className={classNames({
+                    [styles.undefinedField]: isCursorUndefined,
+                  })}
+                >
+                  {cursorFieldString}
+                </TextWithOverflowTooltip>
+              </FlexContainer>
+            )}
+            {pkType && (
+              <FlexContainer direction="row" gap="xs" alignItems="baseline" data-testid="primary-key-cell">
+                <Text as="span" color={!!configErrors?.primaryKey ? "red" : "grey"}>
+                  <FormattedMessage id="form.primaryKey" />
+                </Text>
+                <TextWithOverflowTooltip
+                  color={!!configErrors?.primaryKey ? "red" : "grey600"}
+                  className={classNames({
+                    [styles.undefinedField]: isPrimaryKeyUndefined,
+                  })}
+                >
+                  {primaryKeyString}
+                </TextWithOverflowTooltip>
+              </FlexContainer>
+            )}
+          </FlexContainer>
         )}
       </CellText>
-      <CellText>
-        {pkType && (
-          <StreamPathSelect
-            type="primary-key"
-            pathType={pkType}
-            paths={paths}
-            path={primaryKey}
-            isMulti
-            onPathChange={onPrimaryKeyChange}
-            variant={pillButtonVariant}
-            hasError={!!configErrors?.primaryKey}
-          />
-        )}
-      </CellText>
-      <CellText size="fixed" className={styles.arrowCell}>
-        <ArrowRightIcon />
-      </CellText>
-      <CellText data-testid="destination-namespace-cell">
-        <TextWithOverflowTooltip size="md">{destNamespace}</TextWithOverflowTooltip>
-      </CellText>
-      <CellText data-testid="destination-stream-name-cell">
-        <TextWithOverflowTooltip size="md">{destName}</TextWithOverflowTooltip>
+      <CellText size="fixed" className={styles.fieldsCell}>
+        <FieldSelectionStatus
+          selectedFieldCount={selectedFieldCount}
+          totalFieldCount={fieldCount}
+          variant={pillButtonVariant as FieldSelectionStatusVariant}
+        />
       </CellText>
     </Row>
   );

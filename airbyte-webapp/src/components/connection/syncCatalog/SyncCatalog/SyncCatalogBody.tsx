@@ -5,14 +5,11 @@ import { FormikConnectionFormValues } from "components/connection/ConnectionForm
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./SyncCatalogBody.module.scss";
 import { SyncCatalogEmpty } from "./SyncCatalogEmpty";
 import { SyncCatalogRow } from "./SyncCatalogRow";
 import { StreamsConfigTableHeader } from "../StreamsConfigTable";
-import { NextStreamsConfigTableHeader } from "../StreamsConfigTable/NextStreamsConfigTableHeader";
-import { StreamsConfigTableConnectorHeader } from "../StreamsConfigTable/StreamsConfigTableConnectorHeader";
 
 interface SyncCatalogBodyProps {
   streams: SyncSchemaStream[];
@@ -27,7 +24,6 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   onStreamChanged,
   isFilterApplied = false,
 }) => {
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
   const onUpdateStream = useCallback(
     (id: string | undefined, newConfig: Partial<AirbyteStreamConfiguration>) => {
       const streamNode = streams.find((streamNode) => streamNode.id === id);
@@ -49,20 +45,11 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   return (
     <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
-        {!isSimplifiedCatalogRowEnabled && <StreamsConfigTableConnectorHeader />}
-        {isSimplifiedCatalogRowEnabled ? (
-          <NextStreamsConfigTableHeader
-            streams={streams}
-            onStreamsChanged={onStreamsChanged}
-            syncSwitchDisabled={isFilterApplied}
-          />
-        ) : (
-          <StreamsConfigTableHeader
-            streams={streams}
-            onStreamsChanged={onStreamsChanged}
-            syncSwitchDisabled={isFilterApplied}
-          />
-        )}
+        <StreamsConfigTableHeader
+          streams={streams}
+          onStreamsChanged={onStreamsChanged}
+          syncSwitchDisabled={isFilterApplied}
+        />
       </div>
       {streams.length ? (
         streams.map((streamNode) => (

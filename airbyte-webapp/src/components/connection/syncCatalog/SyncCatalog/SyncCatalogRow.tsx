@@ -16,7 +16,6 @@ import {
 import { naturalComparatorBy } from "core/utils/objects";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import {
   updatePrimaryKey,
@@ -28,7 +27,6 @@ import {
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
 import { StreamsConfigTableRow } from "../StreamsConfigTable";
-import { NextStreamsConfigTableRow } from "../StreamsConfigTable/NextStreamsConfigTableRow";
 import { SyncModeValue } from "../SyncModeSelect";
 import { flattenSyncSchemaFields, getFieldPathType } from "../utils";
 
@@ -50,7 +48,6 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   errors,
 }) => {
   const { stream, config } = streamNode;
-  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", true);
 
   const fields = useMemo(() => {
     const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);
@@ -189,45 +186,25 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
 
   return (
     <>
-      {isSimplifiedCatalogRowEnabled ? (
-        <NextStreamsConfigTableRow
-          stream={streamNode}
-          destNamespace={destNamespace}
-          destName={destName}
-          availableSyncModes={availableSyncModes}
-          onSelectStream={onSelectStream}
-          onSelectSyncMode={onSelectSyncMode}
-          primitiveFields={primitiveFields}
-          pkType={pkType}
-          onPrimaryKeyChange={onPkUpdate}
-          cursorType={cursorType}
-          onCursorChange={onCursorSelect}
-          fields={fields}
-          openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
-          hasError={hasError}
-          configErrors={configErrors}
-          disabled={disabled}
-        />
-      ) : (
-        <StreamsConfigTableRow
-          stream={streamNode}
-          destNamespace={destNamespace}
-          destName={destName}
-          availableSyncModes={availableSyncModes}
-          onSelectStream={onSelectStream}
-          onSelectSyncMode={onSelectSyncMode}
-          primitiveFields={primitiveFields}
-          pkType={pkType}
-          onPrimaryKeyChange={onPkUpdate}
-          cursorType={cursorType}
-          onCursorChange={onCursorSelect}
-          fields={fields}
-          openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
-          hasError={hasError}
-          configErrors={configErrors}
-          disabled={disabled}
-        />
-      )}
+      <StreamsConfigTableRow
+        stream={streamNode}
+        destNamespace={destNamespace}
+        destName={destName}
+        availableSyncModes={availableSyncModes}
+        onSelectStream={onSelectStream}
+        onSelectSyncMode={onSelectSyncMode}
+        primitiveFields={primitiveFields}
+        pkType={pkType}
+        onPrimaryKeyChange={onPkUpdate}
+        cursorType={cursorType}
+        onCursorChange={onCursorSelect}
+        fields={fields}
+        openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
+        hasError={hasError}
+        configErrors={configErrors}
+        disabled={disabled}
+      />
+
       {isStreamDetailsPanelOpened && hasFields && (
         <StreamDetailsPanel
           config={config}

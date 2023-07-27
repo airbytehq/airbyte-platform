@@ -107,12 +107,14 @@ export const useCreateSourceDefinition = () => {
     (sourceDefinition) => service.createCustom({ workspaceId, sourceDefinition }),
     {
       onSuccess: (data) => {
-        queryClient.setQueryData(
-          sourceDefinitionKeys.lists(),
-          (oldData: { sourceDefinitions: SourceDefinitionRead[] } | undefined) => ({
+        queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
+          const newMap = new Map(oldData?.sourceDefinitionMap);
+          newMap.set(data.sourceDefinitionId, data);
+          return {
             sourceDefinitions: [data, ...(oldData?.sourceDefinitions ?? [])],
-          })
-        );
+            sourceDefinitionMap: newMap,
+          };
+        });
       },
     }
   );
@@ -133,14 +135,16 @@ export const useUpdateSourceDefinition = () => {
     onSuccess: (data) => {
       queryClient.setQueryData(sourceDefinitionKeys.detail(data.sourceDefinitionId), data);
 
-      queryClient.setQueryData(
-        sourceDefinitionKeys.lists(),
-        (oldData: { sourceDefinitions: SourceDefinitionRead[] } | undefined) => ({
+      queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
+        const newMap = new Map(oldData?.sourceDefinitionMap);
+        newMap.set(data.sourceDefinitionId, data);
+        return {
           sourceDefinitions:
             oldData?.sourceDefinitions.map((sd) => (sd.sourceDefinitionId === data.sourceDefinitionId ? data : sd)) ??
             [],
-        })
-      );
+          sourceDefinitionMap: newMap,
+        };
+      });
 
       queryClient.invalidateQueries(connectorDefinitionKeys.count());
     },
