@@ -10,6 +10,7 @@ dependencies {
 
     implementation project(':airbyte-commons')
     implementation 'commons-cli:commons-cli:1.4'
+    implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-featureflag')
@@ -18,11 +19,9 @@ dependencies {
     implementation project(':airbyte-json-validation')
     compileOnly libs.lombok
     annotationProcessor libs.lombok
-    implementation libs.micronaut.cache.caffeine
     implementation libs.guava
 
     testImplementation project(':airbyte-test-utils')
-    testImplementation 'com.squareup.okhttp3:mockwebserver:4.9.1'
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core
@@ -32,9 +31,6 @@ dependencies {
 }
 
 airbyte {
-    spotless {
-        excludes = ["src/main/resources/seed/oss_registry.json"]
-    }
     docker {
         imageName = "init"
     }

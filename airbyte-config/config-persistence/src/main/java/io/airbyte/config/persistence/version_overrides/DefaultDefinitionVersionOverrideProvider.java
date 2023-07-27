@@ -4,13 +4,15 @@
 
 package io.airbyte.config.persistence.version_overrides;
 
-import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.specs.GcsBucketSpecFetcher;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.ConnectorVersionOverride;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -20,7 +22,6 @@ import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
@@ -42,18 +43,18 @@ public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersi
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
   private final ConfigRepository configRepository;
-  private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
+  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final FeatureFlagClient featureFlagClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
 
   public DefaultDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
-                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher,
+                                                  final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                                   final FeatureFlagClient featureFlagClient,
                                                   final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
-    this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
     this.featureFlagClient = featureFlagClient;
     this.protocolVersionRange = protocolVersionRange;
+    this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     LOGGER.info("Initialized feature flag definition version overrides");
   }
 
@@ -87,14 +88,42 @@ public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersi
     return contexts;
   }
 
+  private Optional<ActorDefinitionVersion> fetchRemoteActorDefinitionVersion(final ActorType actorType,
+                                                                             final String connectorRepository,
+                                                                             final String dockerImageTag) {
+    final Optional<ActorDefinitionVersion> actorDefinitionVersion;
+    switch (actorType) {
+      case SOURCE -> {
+        final Optional<ConnectorRegistrySourceDefinition> registryDef =
+            remoteDefinitionsProvider.getSourceDefinitionByVersion(connectorRepository, dockerImageTag);
+        actorDefinitionVersion = registryDef.map(ConnectorRegistryConverters::toActorDefinitionVersion);
+      }
+      case DESTINATION -> {
+        final Optional<ConnectorRegistryDestinationDefinition> registryDef =
+            remoteDefinitionsProvider.getDestinationDefinitionByVersion(connectorRepository, dockerImageTag);
+        actorDefinitionVersion = registryDef.map(ConnectorRegistryConverters::toActorDefinitionVersion);
+      }
+      default -> throw new IllegalArgumentException("Actor type not supported: " + actorType);
+    }
+
+    if (actorDefinitionVersion.isEmpty()) {
+      LOGGER.error("Failed to fetch registry entry for version override {}:{}", connectorRepository, dockerImageTag);
+      return Optional.empty();
+    }
+
+    LOGGER.info("Fetched registry entry for {}:{}.", connectorRepository, dockerImageTag);
+    return actorDefinitionVersion;
+  }
+
   /**
    * Resolves an ActorDefinitionVersion from the database for a given docker image tag. If the version
-   * is not found in the database, it will attempt to fetch the spec from the remote cache and create
-   * a new ADV.
+   * is not found in the database, it will attempt to fetch the registry entry from the
+   * DefinitionsProvider and create a new ADV.
    *
    * @return ActorDefinitionVersion if the version was resolved, otherwise empty optional
    */
   private Optional<ActorDefinitionVersion> resolveVersionForTag(final UUID actorDefinitionId,
+                                                                final ActorType actorType,
                                                                 final String dockerImageTag,
                                                                 final ActorDefinitionVersion defaultVersion) {
     if (StringUtils.isEmpty(dockerImageTag)) {
@@ -108,31 +137,13 @@ public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersi
         return existingVersion;
       }
 
-      final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
-          .withActorDefinitionId(actorDefinitionId)
-          .withDockerImageTag(dockerImageTag)
-          .withDockerRepository(defaultVersion.getDockerRepository())
-          .withAllowedHosts(defaultVersion.getAllowedHosts())
-          .withDocumentationUrl(defaultVersion.getDocumentationUrl())
-          .withNormalizationConfig(defaultVersion.getNormalizationConfig())
-          .withReleaseDate(defaultVersion.getReleaseDate())
-          .withReleaseStage(defaultVersion.getReleaseStage())
-          .withSuggestedStreams(defaultVersion.getSuggestedStreams())
-          .withSupportsDbt(defaultVersion.getSupportsDbt());
-
-      final Optional<ConnectorSpecification> spec = gcsBucketSpecFetcher.attemptFetch(
-          String.format("%s:%s", newVersion.getDockerRepository(), newVersion.getDockerImageTag()));
-
-      if (spec.isPresent()) {
-        LOGGER.info("Fetched spec from remote cache for {}:{}.", newVersion.getDockerRepository(), newVersion.getDockerImageTag());
-        newVersion.setSpec(spec.get());
-        newVersion.setProtocolVersion(AirbyteProtocolVersion.getWithDefault(spec.get().getProtocolVersion()).serialize());
-      } else {
-        LOGGER.error("Failed to fetch spec from remote cache for version override {}:{}", newVersion.getDockerRepository(),
-            newVersion.getDockerImageTag());
+      final Optional<ActorDefinitionVersion> registryDefinitionVersion =
+          fetchRemoteActorDefinitionVersion(actorType, defaultVersion.getDockerRepository(), dockerImageTag);
+      if (registryDefinitionVersion.isEmpty()) {
         return Optional.empty();
       }
 
+      final ActorDefinitionVersion newVersion = registryDefinitionVersion.get().withActorDefinitionId(actorDefinitionId);
       final ActorDefinitionVersion persistedADV = configRepository.writeActorDefinitionVersion(newVersion);
       LOGGER.info("Persisted new version {} for definition {} with tag {}", persistedADV.getVersionId(), actorDefinitionId, dockerImageTag);
 
@@ -152,7 +163,7 @@ public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersi
                                                       final ActorDefinitionVersion defaultVersion) {
     final List<Context> contexts = getContexts(actorType, actorDefinitionId, workspaceId, actorId);
     final String overrideTag = featureFlagClient.stringVariation(ConnectorVersionOverride.INSTANCE, new Multi(contexts));
-    final Optional<ActorDefinitionVersion> version = resolveVersionForTag(actorDefinitionId, overrideTag, defaultVersion);
+    final Optional<ActorDefinitionVersion> version = resolveVersionForTag(actorDefinitionId, actorType, overrideTag, defaultVersion);
     if (version.isPresent()) {
       final Version protocolVersion = new Version(version.get().getProtocolVersion());
       if (!protocolVersionRange.isSupported(protocolVersion)) {

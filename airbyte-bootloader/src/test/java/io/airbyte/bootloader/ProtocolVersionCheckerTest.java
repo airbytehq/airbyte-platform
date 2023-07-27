@@ -14,8 +14,8 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
@@ -55,7 +55,7 @@ class ProtocolVersionCheckerTest {
     final AirbyteProtocolVersionRange expectedRange = new AirbyteProtocolVersionRange(V0_0_0, V1_0_0);
     when(jobPersistence.getVersion()).thenReturn(Optional.empty());
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, definitionsProvider);
     final Optional<AirbyteProtocolVersionRange> supportedRange = protocolVersionChecker.validate(supportAutoUpgrade);
     assertTrue(supportedRange.isPresent());
     assertEquals(expectedRange.max(), supportedRange.get().max());
@@ -66,7 +66,7 @@ class ProtocolVersionCheckerTest {
   void testGetTargetRange() throws IOException {
     final AirbyteProtocolVersionRange expectedRange = new AirbyteProtocolVersionRange(V1_0_0, V2_0_0);
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, definitionsProvider);
     assertEquals(expectedRange.max(), protocolVersionChecker.getTargetProtocolVersionRange().max());
     assertEquals(expectedRange.min(), protocolVersionChecker.getTargetProtocolVersionRange().min());
   }
@@ -90,7 +90,7 @@ class ProtocolVersionCheckerTest {
     when(configRepository.getActorDefinitionToProtocolVersionMap()).thenReturn(initialActorDefinitions);
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, definitionsProvider);
     final Map<ActorType, Set<UUID>> conflicts = protocolVersionChecker.getConflictingActorDefinitions(targetRange);
 
     final Map<ActorType, Set<UUID>> expectedConflicts = Map.of(
@@ -112,7 +112,7 @@ class ProtocolVersionCheckerTest {
     when(configRepository.getActorDefinitionToProtocolVersionMap()).thenReturn(initialActorDefinitions);
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, definitionsProvider);
     final Map<ActorType, Set<UUID>> conflicts = protocolVersionChecker.getConflictingActorDefinitions(targetRange);
 
     assertEquals(Map.of(), conflicts);
@@ -134,7 +134,7 @@ class ProtocolVersionCheckerTest {
         Map.entry(notChangedSource, V0_0_0)));
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, definitionsProvider);
     final Set<UUID> actualConflicts =
         protocolVersionChecker.projectRemainingConflictsAfterConnectorUpgrades(targetRange, initialConflicts, ActorType.SOURCE);
 
@@ -157,7 +157,7 @@ class ProtocolVersionCheckerTest {
         Map.entry(dest3, V2_0_0)));
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, targetRange, configRepository, definitionsProvider);
     final Set<UUID> actualConflicts =
         protocolVersionChecker.projectRemainingConflictsAfterConnectorUpgrades(targetRange, initialConflicts, ActorType.DESTINATION);
 
@@ -171,7 +171,7 @@ class ProtocolVersionCheckerTest {
     final AirbyteProtocolVersionRange expectedRange = new AirbyteProtocolVersionRange(V0_0_0, V2_0_0);
     setCurrentProtocolRangeRange(expectedRange.min(), expectedRange.max());
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedRange, configRepository, definitionsProvider);
 
     final Optional<AirbyteProtocolVersionRange> supportedRange = protocolVersionChecker.validate(supportAutoUpgrade);
     assertTrue(supportedRange.isPresent());
@@ -214,7 +214,7 @@ class ProtocolVersionCheckerTest {
         Map.entry(dest3, V2_0_0)));
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, definitionsProvider);
     final Optional<AirbyteProtocolVersionRange> actualRange = protocolVersionChecker.validate(supportAutoUpgrade);
 
     // Without auto upgrade, we will fail the validation because it would require connector automatic
@@ -255,7 +255,7 @@ class ProtocolVersionCheckerTest {
         Map.entry(dest2, V1_0_0)));
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, definitionsProvider);
     final Optional<AirbyteProtocolVersionRange> actualRange = protocolVersionChecker.validate(supportAutoUpgrade);
     assertEquals(Optional.empty(), actualRange);
   }
@@ -286,51 +286,9 @@ class ProtocolVersionCheckerTest {
         Map.entry(dest2, V0_0_0)));
 
     final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, Optional.of(definitionsProvider));
+        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, definitionsProvider);
     final Optional<AirbyteProtocolVersionRange> actualRange = protocolVersionChecker.validate(supportAutoUpgrade);
     assertEquals(Optional.empty(), actualRange);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testValidateFailsOnProtocolRangeChangeWithoutDefinitionsProvider(final boolean supportAutoUpgrade) throws Exception {
-    final AirbyteProtocolVersionRange expectedTargetVersionRange = new AirbyteProtocolVersionRange(V1_0_0, V2_0_0);
-    setCurrentProtocolRangeRange(V0_0_0, V1_0_0);
-    final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, Optional.empty());
-
-    final UUID source1 = UUID.randomUUID();
-    final UUID dest1 = UUID.randomUUID();
-
-    final Map<UUID, Entry<ActorType, Version>> initialActorDefinitions = Map.of(
-        source1, Map.entry(ActorType.SOURCE, V0_0_0),
-        dest1, Map.entry(ActorType.DESTINATION, V0_0_0));
-    when(configRepository.getActorDefinitionToProtocolVersionMap()).thenReturn(initialActorDefinitions);
-
-    final Optional<AirbyteProtocolVersionRange> actualRange = protocolVersionChecker.validate(supportAutoUpgrade);
-    assertEquals(Optional.empty(), actualRange);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testValidateSucceedsWhenNoProtocolRangeChangeWithoutDefinitionsProvider(final boolean supportAutoUpgrade) throws Exception {
-    final AirbyteProtocolVersionRange expectedTargetVersionRange = new AirbyteProtocolVersionRange(V0_0_0, V2_0_0);
-    setCurrentProtocolRangeRange(V0_0_0, V2_0_0);
-    final ProtocolVersionChecker protocolVersionChecker =
-        new ProtocolVersionChecker(jobPersistence, expectedTargetVersionRange, configRepository, Optional.empty());
-
-    final UUID source1 = UUID.randomUUID();
-    final UUID dest1 = UUID.randomUUID();
-
-    final Map<UUID, Entry<ActorType, Version>> initialActorDefinitions = Map.of(
-        source1, Map.entry(ActorType.SOURCE, V0_0_0),
-        dest1, Map.entry(ActorType.DESTINATION, V0_0_0));
-    when(configRepository.getActorDefinitionToProtocolVersionMap()).thenReturn(initialActorDefinitions);
-
-    final Optional<AirbyteProtocolVersionRange> actualRange = protocolVersionChecker.validate(supportAutoUpgrade);
-    assertTrue(actualRange.isPresent());
-    assertEquals(expectedTargetVersionRange.max(), actualRange.get().max());
-    assertEquals(expectedTargetVersionRange.min(), actualRange.get().min());
   }
 
   private void setCurrentProtocolRangeRange(final Version min, final Version max) throws IOException {

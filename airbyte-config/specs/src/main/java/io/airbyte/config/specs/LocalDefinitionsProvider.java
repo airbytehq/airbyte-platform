@@ -2,16 +2,16 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.init;
+package io.airbyte.config.specs;
 
 import com.google.common.io.Resources;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.CatalogDefinitionsConfig;
 import io.airbyte.config.ConnectorRegistry;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -81,10 +81,10 @@ public final class LocalDefinitionsProvider implements DefinitionsProvider {
   }
 
   @Override
-  public ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
+  public ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException {
     final ConnectorRegistrySourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("local_registry:source_def", definitionId.toString());
+      throw new RegistryDefinitionNotFoundException(ActorType.SOURCE, definitionId);
     }
     return definition;
   }
@@ -95,10 +95,10 @@ public final class LocalDefinitionsProvider implements DefinitionsProvider {
   }
 
   @Override
-  public ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
+  public ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException {
     final ConnectorRegistryDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("local_registry:destination_def", definitionId.toString());
+      throw new RegistryDefinitionNotFoundException(ActorType.SOURCE, definitionId);
     }
     return definition;
   }

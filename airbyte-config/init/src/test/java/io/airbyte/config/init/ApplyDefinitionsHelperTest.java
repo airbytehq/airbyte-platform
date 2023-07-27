@@ -5,7 +5,6 @@
 package io.airbyte.config.init;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -24,6 +23,7 @@ import io.airbyte.config.ConnectorReleases;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.TestClient;
@@ -102,7 +102,7 @@ class ApplyDefinitionsHelperTest {
     jobPersistence = mock(JobPersistence.class);
     featureFlagClient = mock(TestClient.class);
 
-    applyDefinitionsHelper = new ApplyDefinitionsHelper(Optional.of(definitionsProvider), jobPersistence, configRepository, featureFlagClient);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient);
 
     when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
 
@@ -222,12 +222,6 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
     verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     verifyNoMoreInteractions(configRepository);
-  }
-
-  @Test
-  void testMissingDefinitionsProvider() {
-    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(Optional.empty(), jobPersistence, configRepository, featureFlagClient);
-    assertDoesNotThrow(() -> helper.apply());
   }
 
   @Test

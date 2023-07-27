@@ -5,11 +5,13 @@
 package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
+import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,14 +35,14 @@ public class WebBackendCheckUpdatesHandler {
 
   final SourceDefinitionsHandler sourceDefinitionsHandler;
   final DestinationDefinitionsHandler destinationDefinitionsHandler;
-  final AirbyteRemoteOssCatalog remoteOssCatalog;
+  final RemoteDefinitionsProvider remoteDefinitionsProvider;
 
   public WebBackendCheckUpdatesHandler(final SourceDefinitionsHandler sourceDefinitionsHandler,
                                        final DestinationDefinitionsHandler destinationDefinitionsHandler,
-                                       final AirbyteRemoteOssCatalog remoteOssCatalog) {
+                                       final RemoteDefinitionsProvider remoteDefinitionsProvider) {
     this.sourceDefinitionsHandler = sourceDefinitionsHandler;
     this.destinationDefinitionsHandler = destinationDefinitionsHandler;
-    this.remoteOssCatalog = remoteOssCatalog;
+    this.remoteDefinitionsProvider = remoteDefinitionsProvider;
   }
 
   public WebBackendCheckUpdatesRead checkUpdates() {
@@ -67,8 +69,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
-        .stream()
+    final List<ConnectorRegistryDestinationDefinition> latestDestinationDefinitions =
+        Exceptions.swallowWithDefault(remoteDefinitionsProvider::getDestinationDefinitions, Collections.emptyList());
+    newActorDefToDockerImageTag = latestDestinationDefinitions.stream()
         .collect(Collectors.toMap(ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
             ConnectorRegistryDestinationDefinition::getDockerImageTag));
 
@@ -89,8 +92,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
-        .stream()
+    final List<ConnectorRegistrySourceDefinition> latestSourceDefinitions =
+        Exceptions.swallowWithDefault(remoteDefinitionsProvider::getSourceDefinitions, Collections.emptyList());
+    newActorDefToDockerImageTag = latestSourceDefinitions.stream()
         .collect(Collectors.toMap(ConnectorRegistrySourceDefinition::getSourceDefinitionId, ConnectorRegistrySourceDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);

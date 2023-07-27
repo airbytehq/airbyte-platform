@@ -38,9 +38,6 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      specs:
-        gcs:
-          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -59,6 +56,10 @@ airbyte:
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
     datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
+  connector-registry:
+    remote:
+      base-url: ${CONNECTOR_REGISTRY_BASE_URL:`https://connectors.airbyte.com/`}
+      timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   container:
     orchestrator:
       enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}

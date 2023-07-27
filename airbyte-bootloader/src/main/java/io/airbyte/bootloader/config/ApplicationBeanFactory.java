@@ -8,8 +8,6 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.init.DefinitionsProvider;
-import io.airbyte.config.init.LocalDefinitionsProvider;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
@@ -20,7 +18,6 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -34,11 +31,6 @@ public class ApplicationBeanFactory {
   public AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange(@Value("${airbyte.protocol.target.range.min-version}") final String min,
                                                                        @Value("${airbyte.protocol.target.range.max-version}") final String max) {
     return new AirbyteProtocolVersionRange(new Version(min), new Version(max));
-  }
-
-  @Singleton
-  public DefinitionsProvider localDefinitionsProvider() throws IOException {
-    return new LocalDefinitionsProvider();
   }
 
   @Singleton

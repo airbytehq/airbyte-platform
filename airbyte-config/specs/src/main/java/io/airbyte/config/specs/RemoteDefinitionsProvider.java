@@ -2,21 +2,20 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.init;
+package io.airbyte.config.specs;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.api.client.http.HttpStatusCodes;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistry;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.micronaut.cache.annotation.CacheConfig;
 import io.micronaut.cache.annotation.Cacheable;
-import io.micronaut.context.annotation.Primary;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -39,16 +38,12 @@ import org.slf4j.LoggerFactory;
  * This provider pulls the definitions from a remotely hosted connector registry.
  */
 @Singleton
-@Primary
-@Requires(property = "airbyte.connector-registry.remote.base-url",
-          notEquals = "")
 @CacheConfig("remote-definitions-provider")
 public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteDefinitionsProvider.class);
 
   private static final HttpClient httpClient = HttpClient.newHttpClient();
-  private static final int STATUS_CODE_NOT_FOUND = 404;
   private final URI remoteRegistryBaseUrl;
   private final DeploymentMode deploymentMode;
   private final Duration timeout;
@@ -88,10 +83,10 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   @Override
-  public ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
+  public ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException {
     final ConnectorRegistrySourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("remote_registry:source_def", definitionId.toString());
+      throw new RegistryDefinitionNotFoundException(ActorType.SOURCE, definitionId);
     }
     return definition;
   }
@@ -111,10 +106,10 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   @Override
-  public ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
+  public ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException {
     final ConnectorRegistryDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("remote_registry:destination_def", definitionId.toString());
+      throw new RegistryDefinitionNotFoundException(ActorType.DESTINATION, definitionId);
     }
     return definition;
   }
@@ -180,7 +175,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       final HttpRequest request = HttpRequest.newBuilder(registryEntryPath).timeout(timeout).header("accept", "application/json").build();
 
       final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() == STATUS_CODE_NOT_FOUND) {
+      if (response.statusCode() == HttpStatusCodes.STATUS_CODE_NOT_FOUND) {
         // 404s mean we don't have a registry entry for this connector version
         return Optional.empty();
       } else if (errorStatusCode(response)) {

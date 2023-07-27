@@ -39,7 +39,6 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
@@ -54,6 +53,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -90,7 +90,7 @@ class DestinationDefinitionsHandlerTest {
   private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private Supplier<UUID> uuidSupplier;
   private SynchronousSchedulerClient schedulerSynchronousClient;
-  private AirbyteRemoteOssCatalog remoteOssCatalog;
+  private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private DestinationHandler destinationHandler;
   private UUID workspaceId;
   private UUID organizationId;
@@ -107,7 +107,7 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionVersion = generateVersionFromDestinationDefinition(destinationDefinition);
     destinationDefinitionVersionWithNormalization = generateDestinationDefinitionVersionWithNormalization(destinationDefinitionWithNormalization);
     schedulerSynchronousClient = spy(SynchronousSchedulerClient.class);
-    remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
+    remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     destinationHandler = mock(DestinationHandler.class);
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
@@ -117,7 +117,7 @@ class DestinationDefinitionsHandlerTest {
         configRepository,
         uuidSupplier,
         schedulerSynchronousClient,
-        remoteOssCatalog,
+        remoteDefinitionsProvider,
         destinationHandler,
         protocolVersionRange,
         featureFlagClient);
@@ -927,7 +927,7 @@ class DestinationDefinitionsHandlerTest {
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
           .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-      when(remoteOssCatalog.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
+      when(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
 
       final var destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions();
       assertEquals(1, destinationDefinitionReadList.size());
@@ -941,6 +941,7 @@ class DestinationDefinitionsHandlerTest {
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
     void testHttpTimeout() {
+      when(remoteDefinitionsProvider.getDestinationDefinitions()).thenThrow(new RuntimeException());
       assertEquals(0, destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions().size());
     }
 

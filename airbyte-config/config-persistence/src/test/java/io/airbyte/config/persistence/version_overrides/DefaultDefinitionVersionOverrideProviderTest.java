@@ -21,11 +21,13 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.specs.GcsBucketSpecFetcher;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.ConnectorVersionOverride;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -52,7 +54,6 @@ class DefaultDefinitionVersionOverrideProviderTest {
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
   private static final String DOCKER_IMAGE_TAG = "0.1.0";
   private static final String DOCKER_IMAGE_TAG_2 = "2.0.2";
-  private static final String DOCKER_IMG_FORMAT = "%s:%s";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withProtocolVersion("0.2.0")
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
@@ -96,17 +97,17 @@ class DefaultDefinitionVersionOverrideProviderTest {
       new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
 
   private DefaultDefinitionVersionOverrideProvider overrideProvider;
-  private GcsBucketSpecFetcher mGcsBucketSpecFetcher;
+  private RemoteDefinitionsProvider mRemoteDefinitionsProvider;
   private ConfigRepository mConfigRepository;
   private FeatureFlagClient mFeatureFlagClient;
 
   @BeforeEach
   void setup() {
-    mGcsBucketSpecFetcher = mock(GcsBucketSpecFetcher.class);
+    mRemoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     mConfigRepository = mock(ConfigRepository.class);
     mFeatureFlagClient = mock(TestClient.class);
     overrideProvider =
-        new DefaultDefinitionVersionOverrideProvider(mConfigRepository, mGcsBucketSpecFetcher, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
+        new DefaultDefinitionVersionOverrideProvider(mConfigRepository, mRemoteDefinitionsProvider, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn("");
   }
 
@@ -115,7 +116,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
-    verifyNoInteractions(mGcsBucketSpecFetcher);
+    verifyNoInteractions(mRemoteDefinitionsProvider);
     verifyNoInteractions(mConfigRepository);
   }
 
@@ -128,39 +129,44 @@ class DefaultDefinitionVersionOverrideProviderTest {
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
 
     assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
-    verifyNoInteractions(mGcsBucketSpecFetcher);
+    verifyNoInteractions(mRemoteDefinitionsProvider);
     verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
     verifyNoMoreInteractions(mConfigRepository);
   }
 
   @Test
   void testGetVersionWithOverrideNotInDb() throws IOException {
-    final ActorDefinitionVersion persistedADV = new ActorDefinitionVersion()
-        .withVersionId(UUID.randomUUID())
-        .withSpec(SPEC)
-        .withProtocolVersion(SPEC.getProtocolVersion())
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withActorDefinitionId(ACTOR_DEFINITION_ID);
+    final ConnectorRegistrySourceDefinition registryDef = new ConnectorRegistrySourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerRepository(OVERRIDE_VERSION.getDockerRepository())
+        .withDockerImageTag(OVERRIDE_VERSION.getDockerImageTag())
+        .withSpec(OVERRIDE_VERSION.getSpec())
+        .withProtocolVersion(OVERRIDE_VERSION.getProtocolVersion())
+        .withDocumentationUrl(OVERRIDE_VERSION.getDocumentationUrl())
+        .withReleaseStage(OVERRIDE_VERSION.getReleaseStage())
+        .withSuggestedStreams(OVERRIDE_VERSION.getSuggestedStreams())
+        .withAllowedHosts(OVERRIDE_VERSION.getAllowedHosts());
 
-    when(mGcsBucketSpecFetcher.attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))).thenReturn(Optional.of(SPEC_2));
+    final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+    final ActorDefinitionVersion persistedAdv = Jsons.clone(actorDefinitionVersion).withVersionId(UUID.randomUUID());
+
+    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.of(registryDef));
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
     when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
-    when(mConfigRepository.writeActorDefinitionVersion(OVERRIDE_VERSION)).thenReturn(persistedADV);
+    when(mConfigRepository.writeActorDefinitionVersion(actorDefinitionVersion)).thenReturn(persistedAdv);
 
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
 
     assertTrue(optResult.isPresent());
-    assertEquals(persistedADV, optResult.get());
-    verify(mConfigRepository).writeActorDefinitionVersion(OVERRIDE_VERSION);
-    verify(mGcsBucketSpecFetcher).attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2));
+    assertEquals(persistedAdv, optResult.get());
+    verify(mConfigRepository).writeActorDefinitionVersion(actorDefinitionVersion);
+    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
   }
 
   @Test
-  void testGetVersionWithFailedSpecFetch() throws IOException {
-    when(mGcsBucketSpecFetcher.attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)))
-        .thenReturn(Optional.empty());
+  void testGetVersionWithMissingRegistryEntryFetch() throws IOException {
+    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
 
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
     when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
@@ -169,7 +175,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
 
     assertTrue(optResult.isEmpty());
-    verify(mGcsBucketSpecFetcher).attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2));
+    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
     verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
     verifyNoMoreInteractions(mConfigRepository);
   }
@@ -229,7 +235,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     assertThrows(RuntimeException.class,
         () -> overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION));
 
-    verifyNoInteractions(mGcsBucketSpecFetcher);
+    verifyNoInteractions(mRemoteDefinitionsProvider);
     verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
     verifyNoMoreInteractions(mConfigRepository);
   }

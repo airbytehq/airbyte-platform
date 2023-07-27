@@ -2,11 +2,10 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.init;
+package io.airbyte.config.specs;
 
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,11 +14,11 @@ import java.util.UUID;
  */
 public interface DefinitionsProvider {
 
-  ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException;
+  ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException;
 
   List<ConnectorRegistrySourceDefinition> getSourceDefinitions();
 
-  ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException;
+  ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws RegistryDefinitionNotFoundException;
 
   List<ConnectorRegistryDestinationDefinition> getDestinationDefinitions();
 

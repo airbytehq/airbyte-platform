@@ -13,9 +13,9 @@ import io.airbyte.api.model.generated.DestinationDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
 import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -28,15 +28,16 @@ class WebBackendCheckUpdatesHandlerTest {
 
   SourceDefinitionsHandler sourceDefinitionsHandler;
   DestinationDefinitionsHandler destinationDefinitionsHandler;
-  AirbyteRemoteOssCatalog remoteOssCatalog;
+  RemoteDefinitionsProvider remoteDefinitionsProvider;
   WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
 
   @BeforeEach
   void beforeEach() {
     sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
-    remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
-    webBackendCheckUpdatesHandler = new WebBackendCheckUpdatesHandler(sourceDefinitionsHandler, destinationDefinitionsHandler, remoteOssCatalog);
+    remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
+    webBackendCheckUpdatesHandler =
+        new WebBackendCheckUpdatesHandler(sourceDefinitionsHandler, destinationDefinitionsHandler, remoteDefinitionsProvider);
   }
 
   @Test
@@ -149,13 +150,13 @@ class WebBackendCheckUpdatesHandlerTest {
       throws IOException, InterruptedException {
     when(sourceDefinitionsHandler.listSourceDefinitions())
         .thenReturn(new SourceDefinitionReadList().sourceDefinitions(currentSources.stream().map(this::createSourceDef).toList()));
-    when(remoteOssCatalog.getSourceDefinitions())
+    when(remoteDefinitionsProvider.getSourceDefinitions())
         .thenReturn(latestSources.stream().map(this::createRegistrySourceDef).toList());
 
     when(destinationDefinitionsHandler.listDestinationDefinitions())
         .thenReturn(
             new DestinationDefinitionReadList().destinationDefinitions(currentDestinations.stream().map(this::createDestinationDef).toList()));
-    when(remoteOssCatalog.getDestinationDefinitions())
+    when(remoteDefinitionsProvider.getDestinationDefinitions())
         .thenReturn(latestDestinations.stream().map(this::createRegistryDestinationDef).toList());
   }
 

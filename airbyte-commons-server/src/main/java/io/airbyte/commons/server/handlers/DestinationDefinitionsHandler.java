@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.ServerConstants;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -26,20 +27,18 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
-import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -51,6 +50,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,7 +71,7 @@ public class DestinationDefinitionsHandler {
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
   private final SynchronousSchedulerClient schedulerSynchronousClient;
-  private final AirbyteRemoteOssCatalog remoteOssCatalog;
+  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final DestinationHandler destinationHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
   private final FeatureFlagClient featureFlagClient;
@@ -80,33 +80,17 @@ public class DestinationDefinitionsHandler {
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
                                        final Supplier<UUID> uuidSupplier,
                                        final SynchronousSchedulerClient schedulerSynchronousClient,
-                                       final AirbyteRemoteOssCatalog remoteOssCatalog,
+                                       final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,
                                        final AirbyteProtocolVersionRange protocolVersionRange,
                                        final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.remoteOssCatalog = remoteOssCatalog;
+    this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.destinationHandler = destinationHandler;
     this.protocolVersionRange = protocolVersionRange;
     this.featureFlagClient = featureFlagClient;
-  }
-
-  // This should be deleted when cloud is migrated to micronaut
-  @Deprecated(forRemoval = true)
-  public DestinationDefinitionsHandler(final ConfigRepository configRepository,
-                                       final SynchronousSchedulerClient schedulerSynchronousClient,
-                                       final DestinationHandler destinationHandler,
-                                       final FeatureFlagClient featureFlagClient) {
-    this.configRepository = configRepository;
-    this.uuidSupplier = UUID::randomUUID;
-    this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.remoteOssCatalog = new AirbyteRemoteOssCatalog();
-    this.destinationHandler = destinationHandler;
-    this.featureFlagClient = featureFlagClient;
-    final Configs configs = new EnvConfigs();
-    this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
   }
 
   @VisibleForTesting
@@ -157,7 +141,9 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionReadList listLatestDestinationDefinitions() {
-    final List<ConnectorRegistryDestinationDefinition> latestDestinations = remoteOssCatalog.getDestinationDefinitions();
+    // Swallow exceptions when fetching registry, so we don't hard-fail for airgapped deployments.
+    final List<ConnectorRegistryDestinationDefinition> latestDestinations =
+        Exceptions.swallowWithDefault(remoteDefinitionsProvider::getDestinationDefinitions, Collections.emptyList());
     final List<StandardDestinationDefinition> destinationDefs =
         latestDestinations.stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
     final Map<UUID, ActorDefinitionVersion> destinationDefVersions =

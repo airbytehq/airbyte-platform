@@ -12,9 +12,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.persistence.job.JobPersistence;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.HashSet;
@@ -37,7 +38,7 @@ public class ProtocolVersionChecker {
   private final JobPersistence jobPersistence;
   private final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange;
   private final ConfigRepository configRepository;
-  private final Optional<DefinitionsProvider> definitionsProvider;
+  private final DefinitionsProvider definitionsProvider;
 
   /**
    * Constructs a new protocol version checker that verifies all connectors are within the provided
@@ -45,14 +46,13 @@ public class ProtocolVersionChecker {
    *
    * @param jobPersistence A {@link JobPersistence} instance.
    * @param airbyteProtocolTargetVersionRange The target Airbyte protocol version range.
-   * @param configRepository A {@link ConfigRepository} instance
-   * @param definitionsProvider An {@link Optional} that may contain a {@link DefinitionsProvider}
-   *        instance.
+   * @param configRepository A {@link ConfigRepository} instance.
+   * @param definitionsProvider The {@link DefinitionsProvider} used for seeding.
    */
   public ProtocolVersionChecker(final JobPersistence jobPersistence,
                                 final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange,
                                 final ConfigRepository configRepository,
-                                final Optional<DefinitionsProvider> definitionsProvider) {
+                                @Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider) {
     this.jobPersistence = jobPersistence;
     this.airbyteProtocolTargetVersionRange = airbyteProtocolTargetVersionRange;
     this.configRepository = configRepository;
@@ -172,22 +172,18 @@ public class ProtocolVersionChecker {
   }
 
   protected Stream<Entry<UUID, Version>> getProtocolVersionsForActorDefinitions(final ActorType actorType) {
-    if (definitionsProvider.isEmpty()) {
-      return Stream.empty();
-    }
-
     return getActorVersions(actorType);
   }
 
   private Stream<Entry<UUID, Version>> getActorVersions(final ActorType actorType) {
     switch (actorType) {
       case SOURCE:
-        return definitionsProvider.get().getSourceDefinitions()
+        return definitionsProvider.getSourceDefinitions()
             .stream()
             .map(def -> Map.entry(def.getSourceDefinitionId(), AirbyteProtocolVersion.getWithDefault(def.getSpec().getProtocolVersion())));
       case DESTINATION:
       default:
-        return definitionsProvider.get().getDestinationDefinitions()
+        return definitionsProvider.getDestinationDefinitions()
             .stream()
             .map(def -> Map.entry(def.getDestinationDefinitionId(), AirbyteProtocolVersion.getWithDefault(def.getSpec().getProtocolVersion())));
     }

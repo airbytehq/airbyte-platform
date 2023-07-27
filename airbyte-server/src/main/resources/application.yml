@@ -48,9 +48,6 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      specs:
-        gcs:
-          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -66,6 +63,10 @@ airbyte:
           bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
           region: ${STATE_STORAGE_S3_REGION:}
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+  connector-registry:
+    remote:
+      base-url: ${CONNECTOR_REGISTRY_BASE_URL:`https://connectors.airbyte.com/`}
+      timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}

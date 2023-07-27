@@ -4,9 +4,6 @@
 
 package io.airbyte.server.config;
 
-import com.google.cloud.storage.StorageOptions;
-import io.airbyte.config.Configs.DeploymentMode;
-import io.airbyte.config.specs.GcsBucketSpecFetcher;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs.GcsConfig;
 import io.airbyte.config.storage.CloudStorageConfigs.MinioConfig;
@@ -90,12 +87,6 @@ public class CloudStorageBeanFactory {
                                                          @Value("${airbyte.cloud.storage.state.s3.secret-access-key}") final String secretAcessKey,
                                                          @Value("${airbyte.cloud.storage.state.s3.region}") final String s3Region) {
     return CloudStorageConfigs.s3(new S3Config(bucketName, awsAccessKey, secretAcessKey, s3Region));
-  }
-
-  @Singleton
-  public GcsBucketSpecFetcher gcsBucketSpecFetcher(@Value("${airbyte.cloud.storage.specs.gcs.bucket}") final String gcsBucketName,
-                                                   final DeploymentMode deploymentMode) {
-    return new GcsBucketSpecFetcher(StorageOptions.getDefaultInstance().getService(), gcsBucketName, deploymentMode);
   }
 
 }

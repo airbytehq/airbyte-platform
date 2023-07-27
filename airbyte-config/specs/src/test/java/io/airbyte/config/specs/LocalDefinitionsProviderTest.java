@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.init;
+package io.airbyte.config.specs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -63,10 +62,10 @@ class LocalDefinitionsProviderTest {
     final UUID invalidDefinitionId = UUID.fromString("1a7c360c-1289-4b96-a171-2ac1c86fb7ca");
 
     assertThrows(
-        ConfigNotFoundException.class,
+        RegistryDefinitionNotFoundException.class,
         () -> localDefinitionsProvider.getSourceDefinition(invalidDefinitionId));
     assertThrows(
-        ConfigNotFoundException.class,
+        RegistryDefinitionNotFoundException.class,
         () -> localDefinitionsProvider.getDestinationDefinition(invalidDefinitionId));
   }
 

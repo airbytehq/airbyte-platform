@@ -16,12 +16,14 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,7 +46,7 @@ import org.slf4j.LoggerFactory;
 @Slf4j
 public class ApplyDefinitionsHelper {
 
-  private final Optional<DefinitionsProvider> definitionsProviderOptional;
+  private final DefinitionsProvider definitionsProvider;
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
   private final FeatureFlagClient featureFlagClient;
@@ -52,11 +54,11 @@ public class ApplyDefinitionsHelper {
   private int changedConnectorCount;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
 
-  public ApplyDefinitionsHelper(final Optional<DefinitionsProvider> definitionsProviderOptional,
+  public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
                                 final JobPersistence jobPersistence,
                                 final ConfigRepository configRepository,
                                 final FeatureFlagClient featureFlagClient) {
-    this.definitionsProviderOptional = definitionsProviderOptional;
+    this.definitionsProvider = definitionsProvider;
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.featureFlagClient = featureFlagClient;
@@ -74,11 +76,6 @@ public class ApplyDefinitionsHelper {
    *        version.
    */
   public void apply(final boolean updateAll) throws JsonValidationException, IOException {
-    if (definitionsProviderOptional.isEmpty()) {
-      LOGGER.warn("Skipping application of latest definitions.  Definitions provider not configured.");
-      return;
-    }
-    final DefinitionsProvider definitionsProvider = definitionsProviderOptional.get();
     final List<ConnectorRegistrySourceDefinition> latestSourceDefinitions = definitionsProvider.getSourceDefinitions();
     final List<ConnectorRegistryDestinationDefinition> latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions();
 

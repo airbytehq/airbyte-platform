@@ -11,7 +11,6 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.db.init.DatabaseInitializationException;
@@ -46,7 +45,6 @@ public class Bootloader {
   private final DatabaseMigrator configsDatabaseMigrator;
   private final DatabaseInitializer configsDatabaseInitializer;
   private final AirbyteVersion currentAirbyteVersion;
-  private final Optional<DefinitionsProvider> definitionsProvider;
   private final FeatureFlags featureFlags;
   private final DatabaseInitializer jobsDatabaseInitializer;
   private final DatabaseMigrator jobsDatabaseMigrator;
@@ -61,7 +59,6 @@ public class Bootloader {
                     @Named("configsDatabaseInitializer") final DatabaseInitializer configsDatabaseInitializer,
                     @Named("configsDatabaseMigrator") final DatabaseMigrator configsDatabaseMigrator,
                     final AirbyteVersion currentAirbyteVersion,
-                    final Optional<DefinitionsProvider> definitionsProvider,
                     final FeatureFlags featureFlags,
                     @Named("jobsDatabaseInitializer") final DatabaseInitializer jobsDatabaseInitializer,
                     @Named("jobsDatabaseMigrator") final DatabaseMigrator jobsDatabaseMigrator,
@@ -74,7 +71,6 @@ public class Bootloader {
     this.configsDatabaseInitializer = configsDatabaseInitializer;
     this.configsDatabaseMigrator = configsDatabaseMigrator;
     this.currentAirbyteVersion = currentAirbyteVersion;
-    this.definitionsProvider = definitionsProvider;
     this.featureFlags = featureFlags;
     this.jobsDatabaseInitializer = jobsDatabaseInitializer;
     this.jobsDatabaseMigrator = jobsDatabaseMigrator;
