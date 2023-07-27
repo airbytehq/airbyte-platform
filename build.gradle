@@ -24,11 +24,11 @@ buildscript {
 
 plugins {
     id "base"
-    id "io.airbyte.gradle.jvm" version "0.13.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.13.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.13.0" apply false
-    id "io.airbyte.gradle.docker" version "0.13.0" apply false
-    id "io.airbyte.gradle.publish" version "0.13.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.14.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.14.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.14.0" apply false
+    id "io.airbyte.gradle.docker" version "0.14.0" apply false
+    id "io.airbyte.gradle.publish" version "0.14.0" apply false
 }
 
 repositories {

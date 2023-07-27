@@ -409,21 +409,21 @@ class InjectTest {
   @Test
   fun `ConfigFileClient loads if no client property defined`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = "")
   @Test
   fun `ConfigFileClient loads if client property is empty`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = "not-launchdarkly")
   @Test
   fun `ConfigFileClient loads if client property is not ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
@@ -432,7 +432,7 @@ class InjectTest {
     every { ldClient.boolVariation(flag.key, any<LDContext>(), flag.default) } returns flag.default
 
     assertTrue { featureFlagClient is LaunchDarklyClient }
-    assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
   }
 }
 
