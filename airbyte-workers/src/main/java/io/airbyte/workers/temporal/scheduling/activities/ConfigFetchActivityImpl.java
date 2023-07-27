@@ -120,7 +120,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       if (featureFlagClient.boolVariation(AddSchedulingJitter.INSTANCE, new Multi(List.of(
           new Workspace(workspaceId),
           new Connection(connectionId))))) {
-        return scheduleJitterHelper.addJitterBasedOnWaitTime(timeToWait);
+        return scheduleJitterHelper.addJitterBasedOnWaitTime(timeToWait, scheduleType);
       } else {
         return addSchedulingNoiseForAllowListedWorkspace(timeToWait, scheduleType, workspaceId);
       }

@@ -7,6 +7,7 @@ package io.airbyte.workers.helpers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -67,47 +68,81 @@ class ScheduleJitterHelperMicronautTest {
   @Test
   void testNoJitterCutoffMinutes() {
     final Duration waitTime = Duration.ofMinutes(noJitterCutoffMinutes - 1);
-    final Duration jitteredWaitTime = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime);
 
-    assertEquals(waitTime, jitteredWaitTime);
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    final Duration jitteredWaitTimeForBasic = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC);
+    final Duration jitteredWaitTimeForCron = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON);
+
+    assertEquals(waitTime, jitteredWaitTimeForBasic);
+    assertEquals(waitTime, jitteredWaitTimeForCron);
   }
 
   @RepeatedTest(50) // repeat a bunch because randomness is involved
   void testHighFreqBucket() {
     final Duration waitTime = Duration.ofMinutes(highFrequencyThresholdMinutes - 1);
-    final Duration jitteredWaitTime = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime);
 
-    assertJitterBetween(waitTime, jitteredWaitTime, highFrequencyJitterAmountMinutes);
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    final Duration jitteredWaitTimeForBasic = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC);
+    final Duration jitteredWaitTimeForCron = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON);
+
+    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, highFrequencyJitterAmountMinutes, true);
+    assertJitterBetween(waitTime, jitteredWaitTimeForCron, highFrequencyJitterAmountMinutes, false);
   }
 
   @RepeatedTest(50) // repeat a bunch because randomness is involved
   void testMediumFreqBucket() {
     final Duration waitTime = Duration.ofMinutes(mediumFrequencyThresholdMinutes - 1);
-    final Duration jitteredWaitTime = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime);
 
-    assertJitterBetween(waitTime, jitteredWaitTime, mediumFrequencyJitterAmountMinutes);
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    final Duration jitteredWaitTimeForBasic = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC);
+    final Duration jitteredWaitTimeForCron = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON);
+
+    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, mediumFrequencyJitterAmountMinutes, true);
+    assertJitterBetween(waitTime, jitteredWaitTimeForCron, mediumFrequencyJitterAmountMinutes, false);
   }
 
   @RepeatedTest(50) // repeat a bunch because randomness is involved
   void testLowFreqBucket() {
     final Duration waitTime = Duration.ofMinutes(lowFrequencyThresholdMinutes - 1);
-    final Duration jitteredWaitTime = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime);
 
-    assertJitterBetween(waitTime, jitteredWaitTime, lowFrequencyJitterAmountMinutes);
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    final Duration jitteredWaitTimeForBasic = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC);
+    final Duration jitteredWaitTimeForCron = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON);
+
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, lowFrequencyJitterAmountMinutes, true);
+    assertJitterBetween(waitTime, jitteredWaitTimeForCron, lowFrequencyJitterAmountMinutes, false);
   }
 
   @RepeatedTest(50) // repeat a bunch because randomness is involved
   void testVeryLowFreqBucket() {
     final Duration waitTime = Duration.ofMinutes(lowFrequencyThresholdMinutes + 1);
-    final Duration jitteredWaitTime = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime);
 
-    assertJitterBetween(waitTime, jitteredWaitTime, veryLowFrequencyJitterAmountMinutes);
+    // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
+    final Duration jitteredWaitTimeForBasic = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC);
+    final Duration jitteredWaitTimeForCron = scheduleJitterHelper.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON);
+
+    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, veryLowFrequencyJitterAmountMinutes, true);
+    assertJitterBetween(waitTime, jitteredWaitTimeForCron, veryLowFrequencyJitterAmountMinutes, false);
   }
 
-  private void assertJitterBetween(final Duration originalWaitTime, final Duration jitteredWaitTime, final int jitterAmountMinutes) {
-    // assert that the jittered wait time falls within the expected range
-    final Duration minExpectedWaitTime = originalWaitTime.plusMinutes(jitterAmountMinutes * -1);
-    final Duration maxExpectedWaitTime = originalWaitTime.plusMinutes(jitterAmountMinutes);
+  private void assertJitterBetween(final Duration originalWaitTime,
+                                   final Duration jitteredWaitTime,
+                                   final int jitterAmountMinutes,
+                                   final boolean includeNegativeJitter) {
+
+    final Duration minExpectedWaitTime;
+    final Duration maxExpectedWaitTime;
+    final int jitterAmountSeconds = jitterAmountMinutes * 60;
+
+    if (includeNegativeJitter) {
+      minExpectedWaitTime = originalWaitTime.minusSeconds(jitterAmountSeconds / 2);
+      maxExpectedWaitTime = originalWaitTime.plusSeconds(jitterAmountSeconds / 2);
+    } else {
+      minExpectedWaitTime = originalWaitTime; // no negative jitter
+      maxExpectedWaitTime = originalWaitTime.plusSeconds(jitterAmountSeconds);
+    }
+
     assertTrue(jitteredWaitTime.compareTo(minExpectedWaitTime) >= 0);
     assertTrue(jitteredWaitTime.compareTo(maxExpectedWaitTime) <= 0);
   }
