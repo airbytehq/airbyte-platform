@@ -16,10 +16,12 @@ import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.micronaut.config.AirbyteConfigurationBeanFactory;
+import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
@@ -68,6 +70,13 @@ public class ApplicationBeanFactory {
   @Named("currentSecondsSupplier")
   public Supplier<Long> currentSecondsSupplier() {
     return () -> Instant.now().getEpochSecond();
+  }
+
+  @Singleton
+  public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
+                                             final WorkerConfigsProvider workerConfigsProvider,
+                                             final FeatureFlagClient featureFlagClient) {
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
   }
 
   @Singleton

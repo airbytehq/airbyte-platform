@@ -6,8 +6,6 @@ airbyte:
     kube-job-configs:
       default:
         cpu-limit: default cpu limit
-        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       check:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:check annotations}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:check node-selectors}
@@ -44,21 +42,3 @@ airbyte:
         memory-limit: 105
       mappingtest-heartbeat:
         memory-limit: 106
-    job:
-      kube:
-        images:
-          busybox: ${UNUSED_VALUE:}
-          curl: ${UNUSED_VALUE:}
-          socat: ${UNUSED_VALUE:}
-        main:
-          container:
-            image-pull-policy: ${UNUSED_VALUE:}
-            image-pull-secret: ${UNUSED_VALUE:}
-        sidecar:
-          container:
-            image-pull-policy: ${UNUSED_VALUE:}
-        tolerations: ${UNUSED_VALUE:}
-    isolated:
-      kube:
-        use-custom-node-selector: ${UNUSED_VALUE:}
-        node-selectors: ${UNUSED_VALUE:}

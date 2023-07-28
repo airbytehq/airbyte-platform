@@ -26,20 +26,6 @@ import org.mockito.Mockito;
 class JobsApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateJob() throws IOException, JsonValidationException, ConfigNotFoundException {
-    Mockito.when(schedulerHandler.createJob(Mockito.any()))
-        .thenReturn(new JobInfoRead())
-        .thenThrow(new ConfigNotFoundException("", ""));
-    final String path = "/api/v1/jobs/create";
-    testEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
-        HttpStatus.OK);
-    testErrorEndpointStatus(
-        HttpRequest.POST(path, Jsons.serialize(new JobIdRequestBody())),
-        HttpStatus.NOT_FOUND);
-  }
-
-  @Test
   void testCancelJob() throws IOException {
     Mockito.when(schedulerHandler.cancelJob(Mockito.any()))
         .thenReturn(new JobInfoRead());

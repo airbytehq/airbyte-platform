@@ -5,8 +5,8 @@
 package io.airbyte.workers.process;
 
 import io.airbyte.commons.helper.DockerImageNameHelper;
-import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 import java.util.Map;

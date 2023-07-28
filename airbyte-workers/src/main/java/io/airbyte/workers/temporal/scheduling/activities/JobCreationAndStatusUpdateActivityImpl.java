@@ -7,36 +7,49 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.model.generated.JobCreate;
-import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.StandardSync;
+import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
+import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
+import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
@@ -54,38 +67,53 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * JobCreationAndStatusUpdateActivityImpl.
  */
+@SuppressWarnings("ParameterName")
 @Slf4j
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
+  private final SyncJobFactory jobFactory;
   private final JobPersistence jobPersistence;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
+  private final ConfigRepository configRepository;
+  private final JobCreator jobCreator;
+  private final StreamResetPersistence streamResetPersistence;
   private final JobErrorReporter jobErrorReporter;
+  private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
-  private final JobsApi jobsApi;
 
-  public JobCreationAndStatusUpdateActivityImpl(final JobPersistence jobPersistence,
+  public JobCreationAndStatusUpdateActivityImpl(final SyncJobFactory jobFactory,
+                                                final JobPersistence jobPersistence,
                                                 @Named("workspaceRoot") final Path workspaceRoot,
                                                 final WorkerEnvironment workerEnvironment,
                                                 final LogConfigs logConfigs,
                                                 final JobNotifier jobNotifier,
                                                 final JobTracker jobTracker,
                                                 final ConfigRepository configRepository,
+                                                final JobCreator jobCreator,
+                                                final StreamResetPersistence streamResetPersistence,
                                                 final JobErrorReporter jobErrorReporter,
-                                                final JobsApi jobsApi) {
+                                                final OAuthConfigSupplier oAuthConfigSupplier,
+                                                final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    this.jobFactory = jobFactory;
     this.jobPersistence = jobPersistence;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
+    this.configRepository = configRepository;
+    this.jobCreator = jobCreator;
+    this.streamResetPersistence = streamResetPersistence;
     this.jobErrorReporter = jobErrorReporter;
-    this.jobsApi = jobsApi;
+    this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -97,11 +125,66 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Override
   public JobCreationOutput createNewJob(final JobCreationInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
+
     try {
-      final JobInfoRead jobInfoRead = jobsApi.createJob(new JobCreate().connectionId(input.getConnectionId()));
-      return new JobCreationOutput(jobInfoRead.getJob().getId());
-    } catch (final Exception e) {
-      log.error("Unable to create job for connection {}", input.getConnectionId(), e);
+      // Fail non-terminal jobs first to prevent this activity from repeatedly trying to create a new job
+      // and failing, potentially resulting in the workflow ending up in a quarantined state.
+      // Another non-terminal job is not expected to exist at this point in the normal case, but this
+      // could happen in special edge cases for example when migrating to this from the old scheduler.
+      jobCreationAndStatusUpdateHelper.failNonTerminalJobs(input.getConnectionId());
+
+      final StandardSync standardSync = configRepository.getStandardSync(input.getConnectionId());
+      final List<StreamDescriptor> streamsToReset = streamResetPersistence.getStreamResets(input.getConnectionId());
+      log.info("Found the following streams to reset for connection {}: {}", input.getConnectionId(), streamsToReset);
+
+      if (!streamsToReset.isEmpty()) {
+        final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
+
+        final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
+            destination.getDestinationDefinitionId(),
+            destination.getDestinationId(),
+            destination.getWorkspaceId(),
+            destination.getConfiguration());
+        destination.setConfiguration(destinationConfiguration);
+
+        final StandardDestinationDefinition destinationDef =
+            configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+        final ActorDefinitionVersion destinationVersion =
+            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
+        final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
+
+        final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
+        for (final var operationId : standardSync.getOperationIds()) {
+          final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
+          standardSyncOperations.add(standardSyncOperation);
+        }
+
+        final Optional<Long> jobIdOptional =
+            jobCreator.createResetConnectionJob(
+                destination,
+                standardSync,
+                destinationVersion,
+                destinationImageName,
+                new Version(destinationVersion.getProtocolVersion()),
+                destinationDef.getCustom(),
+                standardSyncOperations, streamsToReset);
+
+        final long jobId = jobIdOptional.isEmpty()
+            ? jobPersistence.getLastReplicationJob(standardSync.getConnectionId()).orElseThrow(() -> new RuntimeException("No job available")).getId()
+            : jobIdOptional.get();
+
+        return new JobCreationOutput(jobId);
+      } else {
+        final long jobId = jobFactory.create(input.getConnectionId());
+
+        log.info("New job created, with id: " + jobId);
+        final Job job = jobPersistence.getJob(jobId);
+        jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job);
+
+        return new JobCreationOutput(jobId);
+      }
+    } catch (final JsonValidationException | ConfigNotFoundException | IOException e) {
+      log.error("createNewJob for connection {} failed with exception: {}", input.getConnectionId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }

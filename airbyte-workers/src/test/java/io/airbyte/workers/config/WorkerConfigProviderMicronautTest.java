@@ -2,25 +2,24 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.workers.config;
+package io.airbyte.workers.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ResourceRequirementsType;
-import io.airbyte.config.TolerationPOJO;
+import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+// We are overriding the default config with application-config-test.yaml for consistency of the
+// values we are checking.
 @MicronautTest(environments = {"config-test"})
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class WorkerConfigProviderMicronautTest {
@@ -39,17 +38,6 @@ class WorkerConfigProviderMicronautTest {
 
   @Inject
   WorkerConfigsProvider workerConfigsProvider;
-
-  @MockBean(List.class)
-  public List<TolerationPOJO> mmJobKubeTolerations() {
-    return List.of();
-  }
-
-  @Named("jobDefaultEnvMap")
-  @MockBean(Map.class)
-  public Map<String, String> jobDefaultEnvMap() {
-    return Map.of();
-  }
 
   @Test
   void verifyTestConfigIsLoaded() {

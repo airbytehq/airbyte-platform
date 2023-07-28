@@ -2455,32 +2455,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebBackendGeographiesListResult"
-  /v1/jobs/create:
-    post:
-      tags:
-        - jobs
-        - internal
-      summary:
-        Creates a new job for a given connection. If a job is already running for the connection, it will be
-        stopped and a new job will be created.
-      operationId: createJob
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JobCreate"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JobInfoRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/list:
     post:
       tags:
@@ -5062,13 +5036,6 @@ components:
         - get_spec
         - sync
         - reset_connection
-    JobCreate:
-      type: object
-      required:
-        - connectionId
-      properties:
-        connectionId:
-          $ref: "#/components/schemas/ConnectionId"
     JobListRequestBody:
       type: object
       required:

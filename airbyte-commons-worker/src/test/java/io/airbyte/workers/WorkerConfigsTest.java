@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.workers.config;
+package io.airbyte.workers;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
