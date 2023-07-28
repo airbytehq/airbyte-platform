@@ -97,15 +97,24 @@ class SchemaManagementTests {
         .primaryKey(List.of(List.of("id")))
         .cursorField(List.of("id")));
     createdConnection =
-        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL, null);
+        testHarness.createConnection(name,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            discoverResult.getCatalogId(),
+            ConnectionScheduleType.MANUAL,
+            null);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
     createdConnectionWithSameSource = testHarness.createConnection("test-connection-with-shared-source" + UUID.randomUUID(),
-        createdConnection.getSourceId(), createdConnection.getDestinationId(), createdConnection.getOperationIds(),
+        createdConnection.getSourceId(),
+        createdConnection.getDestinationId(),
+        createdConnection.getOperationIds(),
         createdConnection.getSyncCatalog(),
         createdConnection.getSourceCatalogId(),
-        createdConnection.getScheduleType(), createdConnection.getScheduleData());
+        createdConnection.getScheduleType(),
+        createdConnection.getScheduleData());
   }
 
   @BeforeAll

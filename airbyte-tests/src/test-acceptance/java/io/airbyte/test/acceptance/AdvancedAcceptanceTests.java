@@ -143,7 +143,13 @@ class AdvancedAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
@@ -191,7 +197,13 @@ class AdvancedAcceptanceTests {
         .selected(true)
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            Collections.emptyList(),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -251,7 +263,13 @@ class AdvancedAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            Collections.emptyList(),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));

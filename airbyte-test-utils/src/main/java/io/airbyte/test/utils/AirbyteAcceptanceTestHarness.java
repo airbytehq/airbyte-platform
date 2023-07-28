@@ -449,11 +449,11 @@ public class AirbyteAcceptanceTestHarness {
     connectionIds.remove(connectionId);
   }
 
-  public AirbyteCatalog discoverSourceSchema(final UUID sourceId) throws ApiException {
+  public AirbyteCatalog discoverSourceSchema(final UUID sourceId) {
     return discoverSourceSchemaWithId(sourceId).getCatalog();
   }
 
-  public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) throws ApiException {
+  public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) {
     return AirbyteApiClient.retryWithJitter(
         () -> {
           final var result = apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId));
@@ -470,20 +470,19 @@ public class AirbyteAcceptanceTestHarness {
     apiClient.getSourceApi().checkConnectionToSource(new SourceIdRequestBody().sourceId(sourceId));
   }
 
-  public AirbyteCatalog discoverSourceSchemaWithoutCache(final UUID sourceId) throws ApiException {
+  public AirbyteCatalog discoverSourceSchemaWithoutCache(final UUID sourceId) {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceApi().discoverSchemaForSource(
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true)).getCatalog(), "discover source schema no cache", 10, 60, 3);
   }
 
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId)
-      throws ApiException {
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId) {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
             new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId)),
         "get destination definition spec", 10, 60, 3);
   }
 
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(final UUID sourceDefinitionId) throws ApiException {
+  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(final UUID sourceDefinitionId) {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionSpecificationApi()
         .getSourceDefinitionSpecification(
             new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(UUID.randomUUID())),
@@ -717,8 +716,7 @@ public class AirbyteAcceptanceTestHarness {
   public void updateConnectionSchedule(
                                        final UUID connectionId,
                                        final ConnectionScheduleType newScheduleType,
-                                       final ConnectionScheduleData newScheduleData)
-      throws ApiException {
+                                       final ConnectionScheduleData newScheduleData) {
     AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
@@ -727,7 +725,7 @@ public class AirbyteAcceptanceTestHarness {
         "update connection", 10, 60, 3);
   }
 
-  public void updateConnectionCatalog(final UUID connectionId, final AirbyteCatalog catalog) throws ApiException {
+  public void updateConnectionCatalog(final UUID connectionId, final AirbyteCatalog catalog) {
     AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
         new ConnectionUpdate()
             .connectionId(connectionId)
@@ -759,7 +757,7 @@ public class AirbyteAcceptanceTestHarness {
     }, "delete connection", 10, 60, 3);
   }
 
-  public DestinationRead createPostgresDestination(final boolean isLegacy) throws ApiException {
+  public DestinationRead createPostgresDestination(final boolean isLegacy) {
     return createDestination(
         "AccTestDestination-" + UUID.randomUUID(),
         defaultWorkspaceId,
@@ -791,11 +789,11 @@ public class AirbyteAcceptanceTestHarness {
         .getStatus(), "check connection", 10, 60, 3);
   }
 
-  public OperationRead createOperation() throws ApiException {
+  public OperationRead createOperation() {
     return createOperation(defaultWorkspaceId);
   }
 
-  public OperationRead createOperation(final UUID workspaceId) throws ApiException {
+  public OperationRead createOperation(final UUID workspaceId) {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
@@ -881,8 +879,7 @@ public class AirbyteAcceptanceTestHarness {
   private Map<Object, Object> localConfig(final PostgreSQLContainer psql,
                                           final boolean hiddenPassword,
                                           final boolean withSchema,
-                                          final boolean isLegacy)
-      throws UnknownHostException {
+                                          final boolean isLegacy) {
     final Map<Object, Object> dbConfig = new HashMap<>();
     // don't use psql.getHost() directly since the ip we need differs depending on environment
     dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
@@ -939,7 +936,7 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  public SourceDefinitionRead createE2eSourceDefinition(final UUID workspaceId) throws ApiException {
+  public SourceDefinitionRead createE2eSourceDefinition(final UUID workspaceId) {
     final var sourceDefinitionRead = AirbyteApiClient.retryWithJitter(
         () -> apiClient.getSourceDefinitionApi().createCustomSourceDefinition(new CustomSourceDefinitionCreate()
             .workspaceId(workspaceId)
@@ -963,7 +960,7 @@ public class AirbyteAcceptanceTestHarness {
             .documentationUrl(URI.create("https://example.com"))));
   }
 
-  public SourceRead createPostgresSource(final boolean isLegacy) throws ApiException {
+  public SourceRead createPostgresSource(final boolean isLegacy) {
     return createSource(
         "acceptanceTestDb-" + UUID.randomUUID(),
         defaultWorkspaceId,
@@ -975,8 +972,7 @@ public class AirbyteAcceptanceTestHarness {
     return createPostgresSource(false);
   }
 
-  public SourceRead createSource(final String name, final UUID workspaceId, final UUID sourceDefId, final JsonNode sourceConfig)
-      throws ApiException {
+  public SourceRead createSource(final String name, final UUID workspaceId, final UUID sourceDefId, final JsonNode sourceConfig) {
     final SourceRead source = AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceApi().createSource(new SourceCreate()
         .name(name)
         .sourceDefinitionId(sourceDefId)
@@ -991,7 +987,7 @@ public class AirbyteAcceptanceTestHarness {
         "check source", 10, 60, 3);
   }
 
-  public UUID getPostgresSourceDefinitionId() throws ApiException {
+  public UUID getPostgresSourceDefinitionId() {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionApi().listSourceDefinitions().getSourceDefinitions()
         .stream()
         .filter(sourceRead -> "postgres".equalsIgnoreCase(sourceRead.getName()))
@@ -1000,7 +996,7 @@ public class AirbyteAcceptanceTestHarness {
         .getSourceDefinitionId(), "get postgres definition", 10, 60, 3);
   }
 
-  public UUID getPostgresDestinationDefinitionId() throws ApiException {
+  public UUID getPostgresDestinationDefinitionId() {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionApi().listDestinationDefinitions().getDestinationDefinitions()
         .stream()
         .filter(destRead -> "postgres".equalsIgnoreCase(destRead.getName()))
@@ -1043,21 +1039,21 @@ public class AirbyteAcceptanceTestHarness {
     apiClient.getConnectionApi().updateConnection(connectionUpdate);
   }
 
-  private void deleteSource(final UUID sourceId) throws ApiException {
+  private void deleteSource(final UUID sourceId) {
     AirbyteApiClient.retryWithJitter(() -> {
       apiClient.getSourceApi().deleteSource(new SourceIdRequestBody().sourceId(sourceId));
       return null; // Note: the retryWithJitter needs a return.
     }, "delete source", 10, 60, 3);
   }
 
-  private void deleteDestination(final UUID destinationId) throws ApiException {
+  private void deleteDestination(final UUID destinationId) {
     AirbyteApiClient.retryWithJitter(() -> {
       apiClient.getDestinationApi().deleteDestination(new DestinationIdRequestBody().destinationId(destinationId));
       return null; // Note: the retryWithJitter needs a return.
     }, "delete destination", 10, 60, 3);
   }
 
-  private void deleteOperation(final UUID destinationId) throws ApiException {
+  private void deleteOperation(final UUID destinationId) {
     AirbyteApiClient.retryWithJitter(() -> {
       apiClient.getOperationApi().deleteOperation(new OperationIdRequestBody().operationId(destinationId));
       return null;

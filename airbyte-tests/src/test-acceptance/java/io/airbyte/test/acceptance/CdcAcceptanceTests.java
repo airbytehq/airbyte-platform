@@ -470,7 +470,13 @@ class CdcAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(CONNECTION_NAME, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(CONNECTION_NAME,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     return connectionId;
   }

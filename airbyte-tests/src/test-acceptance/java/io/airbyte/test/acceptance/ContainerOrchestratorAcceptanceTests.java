@@ -123,7 +123,13 @@ class ContainerOrchestratorAcceptanceTests {
 
     LOGGER.info("Creating connection...");
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, List.of(), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            List.of(),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     LOGGER.info("Run manual sync...");
@@ -157,7 +163,13 @@ class ContainerOrchestratorAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -183,7 +195,13 @@ class ContainerOrchestratorAcceptanceTests {
 
     LOGGER.info("Creating connection...");
     final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(connectionName,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     LOGGER.info("Waiting for connection to be available in Temporal...");

@@ -47,7 +47,6 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
-import io.airbyte.api.client.model.generated.DataType;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
@@ -96,7 +95,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -120,7 +118,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
  * This class tests for api functionality and basic sync functionality.
@@ -132,8 +129,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * <p>
  * We order tests such that earlier tests test more basic behavior relied upon in later tests. e.g.
  * We test that we can create a destination before we test whether we can sync data to it.
+ * <p>
+ * Suppressing DataFlowIssue to remove linting of NPEs. It removes a ton of noise and in the case of
+ * these tests, the assert statement we would need to put in to check nullability is just as good as
+ * throwing the NPE as they will be effectively the same at run time.
  */
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection"})
 @DisabledIfEnvironmentVariable(named = "SKIP_BASIC_ACCEPTANCE_TESTS",
                                matches = "true")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -149,6 +150,8 @@ class BasicAcceptanceTests {
   // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
   private static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   private static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
+  private static final UUID POSTGRES_SOURCE_DEF_ID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750");
+  private static final UUID POSTGRES_DEST_DEF_ID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503");
   public static final String IS_GKE = "IS_GKE";
   public static final String TRUE = "true";
   private static final String SLOW_TEST_IN_GKE =
@@ -165,8 +168,6 @@ class BasicAcceptanceTests {
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
   private static UUID workspaceId;
-  private static PostgreSQLContainer sourcePsql;
-
   private static final String TYPE = "type";
   private static final String PUBLIC = "public";
   private static final String E2E_TEST_SOURCE = "E2E Test Source -";
@@ -198,9 +199,7 @@ class BasicAcceptanceTests {
         .setPort(8001)
         .setBasePath("/api");
     if (isGke) {
-      underlyingApiClient.setRequestInterceptor(builder -> {
-        builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER);
-      });
+      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
     apiClient = new AirbyteApiClient(underlyingApiClient);
 
@@ -210,9 +209,7 @@ class BasicAcceptanceTests {
         .setPort(8001)
         .setBasePath("/api");
     if (isGke) {
-      underlyingWebBackendApiClient.setRequestInterceptor(builder -> {
-        builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER);
-      });
+      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
     webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 
@@ -222,7 +219,7 @@ class BasicAcceptanceTests {
     // NOTE: the API client can't create workspaces in GKE deployments, so we need to provide a
     // workspace ID in that environment.
     workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
-        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString()))
+        .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
     LOGGER.info("workspaceId = " + workspaceId);
@@ -230,19 +227,18 @@ class BasicAcceptanceTests {
     // log which connectors are being used.
     final SourceDefinitionRead sourceDef = AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionApi()
         .getSourceDefinition(new SourceDefinitionIdRequestBody()
-            .sourceDefinitionId(UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750"))),
+            .sourceDefinitionId(POSTGRES_SOURCE_DEF_ID)),
         "get source definition",
         JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     final DestinationDefinitionRead destinationDef = AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionApi()
         .getDestinationDefinition(new DestinationDefinitionIdRequestBody()
-            .destinationDefinitionId(UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503"))),
+            .destinationDefinitionId(POSTGRES_DEST_DEF_ID)),
         "get destination definition",
         JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
     testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
-    sourcePsql = testHarness.getSourcePsql();
 
     testHarness.ensureCleanSlate();
   }
@@ -267,7 +263,7 @@ class BasicAcceptanceTests {
 
   @Test
   @Order(-2)
-  void testGetDestinationSpec() throws ApiException {
+  void testGetDestinationSpec() {
     final UUID destinationDefinitionId = testHarness.getPostgresDestinationDefinitionId();
     final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId, workspaceId);
     assertEquals(destinationDefinitionId, spec.getDestinationDefinitionId());
@@ -288,7 +284,7 @@ class BasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testGetSourceSpec() throws ApiException {
+  void testGetSourceSpec() {
     final UUID sourceDefId = testHarness.getPostgresSourceDefinitionId();
     final SourceDefinitionSpecificationRead spec = testHarness.getSourceDefinitionSpec(sourceDefId);
     assertNotNull(spec.getConnectionSpecification());
@@ -299,7 +295,7 @@ class BasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testCreateDestination() throws ApiException {
+  void testCreateDestination() {
     final UUID destinationDefId = testHarness.getPostgresDestinationDefinitionId();
     final JsonNode destinationConfig = testHarness.getDestinationDbConfig();
     final String name = "AccTestDestinationDb-" + UUID.randomUUID();
@@ -331,7 +327,7 @@ class BasicAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
-  void testCreateSource() throws ApiException {
+  void testCreateSource() {
     final String dbName = "acc-test-db";
     final UUID postgresSourceDefinitionId = testHarness.getPostgresSourceDefinitionId();
     final JsonNode sourceDbConfig = testHarness.getSourceDbConfig();
@@ -377,22 +373,29 @@ class BasicAcceptanceTests {
 
     final AirbyteCatalog actual = testHarness.discoverSourceSchema(sourceId);
 
-    final Map<String, Map<String, String>> fields = ImmutableMap.of(
-        COLUMN_ID, ImmutableMap.of(TYPE, DataType.NUMBER.getValue(), "airbyte_type", "integer"),
-        COLUMN_NAME, ImmutableMap.of(TYPE, DataType.STRING.getValue()));
-    final JsonNode jsonSchema = Jsons.jsonNode(ImmutableMap.builder()
-        .put(TYPE, "object")
-        .put("properties", fields)
-        .build());
-    final AirbyteStream stream = new AirbyteStream()
+    final JsonNode expectedSchema = Jsons.deserialize("""
+                                                      {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "%s": {
+                                                            "type": "number",
+                                                            "airbyte_type": "integer"
+                                                          },
+                                                          "%s": {
+                                                            "type": "string"
+                                                          }
+                                                        }
+                                                      }
+                                                      """.formatted(COLUMN_ID, COLUMN_NAME));
+    final AirbyteStream expectedStream = new AirbyteStream()
         .name(STREAM_NAME)
         .namespace(PUBLIC)
-        .jsonSchema(jsonSchema)
+        .jsonSchema(expectedSchema)
         .sourceDefinedCursor(null)
         .defaultCursorField(Collections.emptyList())
         .sourceDefinedPrimaryKey(Collections.emptyList())
         .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
-    final AirbyteStreamConfiguration streamConfig = new AirbyteStreamConfiguration()
+    final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration()
         .syncMode(SyncMode.FULL_REFRESH)
         .cursorField(Collections.emptyList())
         .destinationSyncMode(DestinationSyncMode.APPEND)
@@ -402,8 +405,8 @@ class BasicAcceptanceTests {
         .suggested(true);
     final AirbyteCatalog expected = new AirbyteCatalog()
         .streams(Lists.newArrayList(new AirbyteStreamAndConfiguration()
-            .stream(stream)
-            .config(streamConfig)));
+            .stream(expectedStream)
+            .config(expectedStreamConfig)));
 
     assertEquals(expected, actual);
   }
@@ -419,13 +422,21 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final String name = "test-connection-" + UUID.randomUUID();
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true).suggested(true)
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).destinationSyncMode(dstSyncMode)
+        .selected(true)
+        // todo (cgardens) - i'm confused why this starts true but becomes null.
+        .suggested(null)
         .setFieldSelectionEnabled(false));
     final ConnectionRead createdConnection =
-        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC, BASIC_SCHEDULE_DATA);
-    createdConnection.getSyncCatalog().getStreams().forEach(s -> s.getConfig().setSuggested(true));
+        testHarness.createConnection(name,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.BASIC,
+            BASIC_SCHEDULE_DATA);
 
     assertEquals(sourceId, createdConnection.getSourceId());
     assertEquals(destinationId, createdConnection.getDestinationId());
@@ -456,11 +467,17 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
 
@@ -488,13 +505,17 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final var connectionName = randomConnectionName();
 
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().selected(true).syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true).syncMode(srcSyncMode).destinationSyncMode(dstSyncMode));
 
-    final UUID connectionId =
-        testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC,
-            BASIC_SCHEDULE_DATA).getConnectionId();
+    final UUID connectionId = testHarness.createConnection(connectionName,
+        sourceId,
+        destinationId,
+        List.of(operationId),
+        catalog,
+        ConnectionScheduleType.BASIC,
+        BASIC_SCHEDULE_DATA).getConnectionId();
 
     final var jobRead = testHarness.getMostRecentSyncForConnection(connectionId);
     final var jobInfoRead = testHarness.getJobInfoRead(jobRead.getId());
@@ -516,12 +537,17 @@ class BasicAcceptanceTests {
     // NOTE: this cron should run once every two minutes.
     final ConnectionScheduleData connectionScheduleData = new ConnectionScheduleData().cron(
         new ConnectionScheduleDataCron().cronExpression("* */2 * * * ?").cronTimeZone("UTC"));
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
 
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.CRON,
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.CRON,
             connectionScheduleData).getConnectionId();
 
     final var jobRead = testHarness.getMostRecentSyncForConnection(connectionId);
@@ -557,11 +583,17 @@ class BasicAcceptanceTests {
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
     final UUID connectionId = testHarness
-        .createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        .createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
         .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
@@ -583,11 +615,17 @@ class BasicAcceptanceTests {
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -607,16 +645,22 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(syncMode)
+        .syncMode(srcSyncMode)
         .selected(true)
         .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(destinationSyncMode)
+        .destinationSyncMode(dstSyncMode)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     // sync from start
@@ -663,15 +707,21 @@ class BasicAcceptanceTests {
     assertTrue(stream.getDefaultCursorField().isEmpty());
     assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
 
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
     catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(syncMode)
+        .syncMode(srcSyncMode)
         .selected(true)
         .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(destinationSyncMode));
+        .destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
@@ -744,17 +794,23 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(syncMode)
+        .syncMode(srcSyncMode)
         .selected(true)
         .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(destinationSyncMode)
+        .destinationSyncMode(dstSyncMode)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
 
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
@@ -777,7 +833,13 @@ class BasicAcceptanceTests {
       // test deletion of connection when temporal workflow is in a bad state
       LOGGER.info("Testing connection deletion when temporal is in a terminal state");
       final var anotherConnectionId =
-          testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+          testHarness.createConnection(TEST_CONNECTION,
+              sourceId,
+              destinationId,
+              List.of(operationId),
+              catalog,
+              ConnectionScheduleType.MANUAL,
+              null)
               .getConnectionId();
 
       testHarness.terminateTemporalWorkflow(anotherConnectionId);
@@ -816,7 +878,13 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing connection update when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     testHarness.terminateTemporalWorkflow(connectionId);
@@ -865,7 +933,13 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing manual sync when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     LOGGER.info("Starting first manual sync");
@@ -909,7 +983,13 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Testing reset connection when temporal is in a terminal state");
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     testHarness.terminateTemporalWorkflow(connectionId);
@@ -937,11 +1017,17 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
 
@@ -991,12 +1077,17 @@ class BasicAcceptanceTests {
     // NOTE: this is a normalization operation.
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
     final UUID connectionId =
         testHarness.createConnection(
-            TEST_CONNECTION, sourceId, destinationId, List.of(operationId, operationRead.getOperationId()), catalog, ConnectionScheduleType.MANUAL,
+            TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId, operationRead.getOperationId()),
+            catalog,
+            ConnectionScheduleType.MANUAL,
             null)
             .getConnectionId();
     // run the sync
@@ -1039,7 +1130,13 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
 
@@ -1094,13 +1191,13 @@ class BasicAcceptanceTests {
     final String expectedState =
         """
           {
-          \"cursor\":\"6\",
-          \"version\":2,
-          \"state_type\":\"cursor_based\",
-          \"stream_name\":\"id_and_name\",
-          \"cursor_field\":[\"id\"],
-          \"stream_namespace\":\"public\",
-          \"cursor_record_count\":1}"
+          "cursor":"6",
+          "version":2,
+          "state_type":"cursor_based",
+          "stream_name":"id_and_name",
+          "cursor_field":["id"],
+          "stream_namespace":"public",
+          "cursor_record_count":1}"
         """;
     LOGGER.info("Starting {} sync 3", testInfo.getDisplayName());
     final JobInfoRead connectionSyncRead3 =
@@ -1147,7 +1244,13 @@ class BasicAcceptanceTests {
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     LOGGER.info("Beginning {} sync 1", testInfo.getDisplayName());
 
@@ -1171,8 +1274,7 @@ class BasicAcceptanceTests {
 
     final JobInfoRead syncJob = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(connectionSyncRead2.getJob().getId()));
     final Optional<AttemptInfoRead> result = syncJob.getAttempts().stream()
-        .sorted((a, b) -> Long.compare(b.getAttempt().getEndedAt(), a.getAttempt().getEndedAt()))
-        .findFirst();
+        .min((a, b) -> Long.compare(b.getAttempt().getEndedAt(), a.getAttempt().getEndedAt()));
 
     assertTrue(result.isPresent());
     assertEquals(0, result.get().getAttempt().getRecordsSynced());
@@ -1229,7 +1331,12 @@ class BasicAcceptanceTests {
       LOGGER.info("Discovered catalog: {}", catalog);
 
       final ConnectionRead connection =
-          testHarness.createConnection(name, sourceId, destinationId, List.of(operation.getOperationId()), catalog, ConnectionScheduleType.MANUAL,
+          testHarness.createConnection(name,
+              sourceId,
+              destinationId,
+              List.of(operation.getOperationId()),
+              catalog,
+              ConnectionScheduleType.MANUAL,
               null);
       LOGGER.info("Created Connection: {}", connection);
 
@@ -1354,15 +1461,21 @@ class BasicAcceptanceTests {
       assertTrue(stream.getSourceDefinedPrimaryKey().isEmpty());
     }
 
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND;
     catalog.getStreams().forEach(s -> s.getConfig()
-        .syncMode(syncMode)
+        .syncMode(srcSyncMode)
         .selected(true)
         .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(destinationSyncMode));
+        .destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
@@ -1451,11 +1564,17 @@ class BasicAcceptanceTests {
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
-    final SyncMode syncMode = SyncMode.FULL_REFRESH;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
+    final SyncMode srcSyncMode = SyncMode.FULL_REFRESH;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.OVERWRITE;
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(srcSyncMode).selected(true).destinationSyncMode(dstSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
@@ -1495,7 +1614,13 @@ class BasicAcceptanceTests {
     testHarness.setIncrementalAppendSyncMode(catalog, List.of(COLUMN_ID));
 
     final ConnectionRead connection =
-        testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null);
+        testHarness.createConnection(name,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null);
 
     // Run initial sync
     final JobInfoRead syncRead =
@@ -1606,16 +1731,21 @@ class BasicAcceptanceTests {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
-    final SyncMode syncMode = SyncMode.INCREMENTAL;
-    final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
+    final SyncMode srcSyncMode = SyncMode.INCREMENTAL;
+    final DestinationSyncMode dstSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
         .selected(true)
-        .syncMode(syncMode)
+        .syncMode(srcSyncMode)
         .cursorField(List.of(COLUMN_ID))
-        .destinationSyncMode(destinationSyncMode)
+        .destinationSyncMode(dstSyncMode)
         .primaryKey(List.of(List.of(COLUMN_ID))));
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL,
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            List.of(operationId),
+            catalog,
+            ConnectionScheduleType.MANUAL,
             null).getConnectionId();
 
     // sync from start
@@ -1668,6 +1798,7 @@ class BasicAcceptanceTests {
         .stream().findFirst().map(JobWithAttemptsRead::getJob).orElseThrow();
   }
 
+  @SuppressWarnings("BusyWait")
   private JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {
     final JobRead lastJob = getMostRecentSyncJobId(connectionId);
     if (lastJob.getStatus() != JobStatus.SUCCEEDED) {
@@ -1741,7 +1872,13 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
 
     final UUID connectionId =
-        testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
+        testHarness.createConnection(TEST_CONNECTION,
+            sourceId,
+            destinationId,
+            Collections.emptyList(),
+            catalog,
+            ConnectionScheduleType.MANUAL,
+            null)
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
