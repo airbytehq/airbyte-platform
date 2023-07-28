@@ -34,6 +34,7 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
@@ -453,7 +454,8 @@ class CdcAcceptanceTests {
 
     operationRead = testHarness.createOperation();
     final UUID operationId = operationRead.getOperationId();
-    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
+    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final AirbyteStream stream = catalog.getStreams().get(0).getStream();
     LOGGER.info("stream: {}", stream);
 
@@ -475,6 +477,7 @@ class CdcAcceptanceTests {
             destinationId,
             List.of(operationId),
             catalog,
+            discoverResult.getCatalogId(),
             ConnectionScheduleType.MANUAL,
             null)
             .getConnectionId();

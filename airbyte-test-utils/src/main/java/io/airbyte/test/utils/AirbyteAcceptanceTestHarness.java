@@ -637,42 +637,25 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  @Deprecated() // prefer to include the catalog id below
   public ConnectionRead createConnection(final String name,
                                          final UUID sourceId,
                                          final UUID destinationId,
                                          final List<UUID> operationIds,
                                          final AirbyteCatalog catalog,
+                                         final UUID catalogId,
                                          final ConnectionScheduleType scheduleType,
                                          final ConnectionScheduleData scheduleData)
       throws Exception {
-    return createConnectionWithGeography(name, sourceId, destinationId, operationIds, catalog, scheduleType, scheduleData, Geography.AUTO);
-  }
-
-  public ConnectionRead createConnection(String name,
-                                         UUID sourceId,
-                                         UUID destinationId,
-                                         List<UUID> operationIds,
-                                         AirbyteCatalog catalog,
-                                         UUID catalogId,
-                                         ConnectionScheduleType scheduleType,
-                                         ConnectionScheduleData scheduleData)
-      throws Exception {
-    return createConnectionFromRequest(
-        new ConnectionCreate()
-            .status(ConnectionStatus.ACTIVE)
-            .sourceId(sourceId)
-            .destinationId(destinationId)
-            .syncCatalog(catalog)
-            .sourceCatalogId(catalogId)
-            .scheduleType(scheduleType)
-            .scheduleData(scheduleData)
-            .operationIds(operationIds)
-            .name(name)
-            .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
-            .namespaceFormat(OUTPUT_NAMESPACE)
-            .prefix(OUTPUT_STREAM_PREFIX)
-            .geography(Geography.AUTO));
+    return createConnectionWithGeography(
+        name,
+        sourceId,
+        destinationId,
+        operationIds,
+        catalog,
+        catalogId,
+        scheduleType,
+        scheduleData,
+        Geography.AUTO);
   }
 
   public ConnectionRead createConnectionWithGeography(final String name,
@@ -680,6 +663,7 @@ public class AirbyteAcceptanceTestHarness {
                                                       final UUID destinationId,
                                                       final List<UUID> operationIds,
                                                       final AirbyteCatalog catalog,
+                                                      final UUID catalogId,
                                                       final ConnectionScheduleType scheduleType,
                                                       final ConnectionScheduleData scheduleData,
                                                       final Geography geography)
@@ -690,6 +674,7 @@ public class AirbyteAcceptanceTestHarness {
             .sourceId(sourceId)
             .destinationId(destinationId)
             .syncCatalog(catalog)
+            .sourceCatalogId(catalogId)
             .scheduleType(scheduleType)
             .scheduleData(scheduleData)
             .operationIds(operationIds)

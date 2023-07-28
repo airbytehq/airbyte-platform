@@ -34,6 +34,7 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamStatusJobType;
 import io.airbyte.api.client.model.generated.StreamStatusRunState;
@@ -138,7 +139,8 @@ class AdvancedAcceptanceTests {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final UUID operationId = testHarness.createOperation().getOperationId();
-    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
+    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
@@ -148,6 +150,7 @@ class AdvancedAcceptanceTests {
             destinationId,
             List.of(operationId),
             catalog,
+            discoverResult.getCatalogId(),
             ConnectionScheduleType.MANUAL,
             null)
             .getConnectionId();
@@ -181,7 +184,8 @@ class AdvancedAcceptanceTests {
     final String connectionName = "test-connection";
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
-    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
+    final AirbyteCatalog catalog = discoverResult.getCatalog();
     final AirbyteStream stream = catalog.getStreams().get(0).getStream();
 
     assertEquals(
@@ -202,6 +206,7 @@ class AdvancedAcceptanceTests {
             destinationId,
             Collections.emptyList(),
             catalog,
+            discoverResult.getCatalogId(),
             ConnectionScheduleType.MANUAL,
             null)
             .getConnectionId();
@@ -259,7 +264,8 @@ class AdvancedAcceptanceTests {
     final String connectionName = "test-connection";
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
-    final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
+    final AirbyteCatalog catalog = discoverResult.getCatalog();
     catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
@@ -268,6 +274,7 @@ class AdvancedAcceptanceTests {
             destinationId,
             Collections.emptyList(),
             catalog,
+            discoverResult.getCatalogId(),
             ConnectionScheduleType.MANUAL,
             null)
             .getConnectionId();
