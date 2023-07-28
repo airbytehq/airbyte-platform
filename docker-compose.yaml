@@ -303,7 +303,7 @@ services:
     pid: host
     environment:
       - DD_API_KEY=$DD_API_KEY
-      - DD_SITE=datad0g.com
+      - DD_SITE=datadoghq.com
       - DD_HOSTNAME=ik-airbyte
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
