@@ -133,6 +133,14 @@ class WorkerConfigProviderMicronautTest {
     final ResourceRequirements sourceDatabase = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
         Optional.of("database"));
     assertEquals(sourceDatabase, unknownVariantSourceDatabase);
+
+    // This is a corner case where the variant exists but not the type. We want to make sure
+    // it falls back to the default
+    final ResourceRequirements defaultOrchestratorApiReq =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.of("api"));
+    final ResourceRequirements unknownTypeInVariant =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.of("api"), "incompletevariant");
+    assertEquals(defaultOrchestratorApiReq, unknownTypeInVariant);
   }
 
   @Test

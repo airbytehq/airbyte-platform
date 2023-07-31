@@ -26,6 +26,8 @@ airbyte:
         cpu-request: 11
       destination-api:
         cpu-request: 12
+      incompletevariant-source-api:
+        cpu-request: 42
       micronauttest-source:
         cpu-limit: 5
       micronauttest-source-database:
