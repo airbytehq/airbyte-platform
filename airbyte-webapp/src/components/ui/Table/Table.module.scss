@@ -98,9 +98,7 @@ $border-radius: variables.$border-radius-lg;
   line-height: 1.2;
   font-weight: normal;
   color: colors.$dark-blue;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-wrap: break-word;
   border-bottom: variables.$border-thin solid colors.$grey-50;
   width: auto;
 

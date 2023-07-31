@@ -39,6 +39,20 @@ describe("Source main actions", () => {
     cy.get("input[value='rattata']").should("exist");
   });
 
+  it("Can edit source again without leaving the page", () => {
+    createPokeApiSourceViaApi().then((pokeApiSource) => {
+      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "rattata");
+    });
+
+    cy.get("div[data-id='success-result']").should("exist");
+    cy.get("input[value='rattata']").should("exist");
+    cy.get("button[type=submit]").should("be.disabled");
+
+    cy.get("input[name='connectionConfiguration.pokemon_name']").clear();
+    cy.get("input[name='connectionConfiguration.pokemon_name']").type("ditto");
+    cy.get("button[type=submit]").should("be.enabled");
+  });
+
   it("Delete source", () => {
     createPostgresSourceViaApi().then((postgresSource) => {
       deleteSource(postgresSource.sourceName);

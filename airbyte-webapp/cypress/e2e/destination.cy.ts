@@ -29,6 +29,21 @@ describe("Destination main actions", () => {
     });
   });
 
+  it("Can edit source again without leaving the page", () => {
+    createJsonDestinationViaApi().then((jsonDestination) => {
+      updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
+
+      cy.get("div[data-id='success-result']").should("exist");
+      cy.get("input[value='/local/my-json']").should("exist");
+    });
+
+    cy.get("button[type=submit]").should("be.disabled");
+
+    cy.get("input[name='connectionConfiguration.destination_path']").clear();
+    cy.get("input[name='connectionConfiguration.destination_path']").type("/local/my-json2");
+    cy.get("button[type=submit]").should("be.enabled");
+  });
+
   it("Delete destination", () => {
     createJsonDestinationViaApi().then((jsonDestination) => {
       deleteDestination(jsonDestination.name);

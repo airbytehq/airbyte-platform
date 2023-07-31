@@ -172,6 +172,9 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
           </SortableTableHeader>
         ),
         cell: (props) => <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />,
+        meta: {
+          thClassName: styles.width10,
+        },
       }),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
