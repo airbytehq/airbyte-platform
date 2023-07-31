@@ -7,8 +7,13 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 airbyte_yml_file_path="$script_dir/../../airbyte.yml"
 airbyte_pro_values_yml_file_path="$script_dir/../../charts/airbyte/airbyte-pro-values.yaml"
 
-# Define the helm release name for this installation of Airbyte Pro. Change this to your liking.
-airbyte_pro_release_name="airbyte-pro"
+# Define the helm release name for this installation of Airbyte Pro.
+if [ ! -z RELEASE_NAME ]; then
+  airbyte_pro_release_name="$RELEASE_NAME"
+else
+  # Default release name. Change this to your liking.
+  airbyte_pro_release_name="airbyte-pro"
+fi
 
 # run this script with DEV=true to install using images tagged with 'dev' instead of an official Airbyte release tag.
 # This is helpful for installing a locally-built instance of Airbyte.
@@ -28,14 +33,16 @@ if [ "$LOCAL" == "true" ]; then
 
   # additional arguments to this script are appended at the end of the command, so that further customization can be done
   helm upgrade --install "$airbyte_pro_release_name" . $set_dev_image_tag_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" "$@"
-
   popd
 else
   airbyte_chart="airbyte/airbyte"
 
   # additional arguments to this script are appended at the end of the command, so that further customization can be done
-  helm install "$airbyte_pro_release_name" "$airbyte_chart" $set_dev_image_tag_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" "$@"
+  helm upgrade --install "$airbyte_pro_release_name" "$airbyte_chart" $set_dev_image_tag_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" "$@"
 fi
 
+echo "Airbyte Pro installation complete!"
 
-
+echo "Restarting webapp deployment to pick up new configuration..."
+kubectl rollout restart "deployment/$airbyte_pro_release_name-webapp"
+echo "Webapp deployment restarted! Once all pods are running, your Airbyte Pro instance will be ready to use."
