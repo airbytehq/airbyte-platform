@@ -73,6 +73,9 @@ readinessProbe:
   failureThreshold: 3
   successThreshold: 1
 
+##  webapp.containerHTTPPort HTTP port of the webapp container
+containerHTTPPort: 80
+
 ##  webapp.service.type The service type to use for the webapp service
 ##  webapp.service.port The service port to expose the webapp on
 ##  webapp.service.annotations Annotations for the webapp service resource
