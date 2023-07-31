@@ -71,6 +71,7 @@ import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.SimpleAirbyteDestination;
+import io.airbyte.workers.internal.SimpleAirbyteSource;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
@@ -106,7 +107,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -137,6 +137,7 @@ abstract class ReplicationWorkerTest {
   protected static final String INDUCED_EXCEPTION = "induced exception";
 
   protected Path jobRoot;
+  protected SimpleAirbyteSource sourceStub;
   protected AirbyteSource source;
   protected NamespacingMapper mapper;
   protected AirbyteDestination destination;
@@ -175,7 +176,10 @@ abstract class ReplicationWorkerTest {
     sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
     destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
 
-    source = mock(AirbyteSource.class);
+    sourceStub = new SimpleAirbyteSource();
+    sourceStub.setMessages(RECORD_MESSAGE1, RECORD_MESSAGE2);
+    source = spy(sourceStub);
+
     mapper = mock(NamespacingMapper.class);
     destination = spy(new SimpleAirbyteDestination());
     messageTracker = mock(AirbyteMessageTracker.class);
@@ -193,8 +197,6 @@ abstract class ReplicationWorkerTest {
     featureFlagClient = mock(TestClient.class);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
-    when(source.isFinished()).thenReturn(false, false, false, true);
-    when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.empty(), Optional.of(RECORD_MESSAGE2));
 
     when(mapper.mapCatalog(destinationConfig.getCatalog())).thenReturn(destinationConfig.getCatalog());
     when(mapper.mapMessage(RECORD_MESSAGE1)).thenReturn(RECORD_MESSAGE1);
@@ -395,7 +397,7 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testInvalidSchema() throws Exception {
-    when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(RECORD_MESSAGE2), Optional.of(RECORD_MESSAGE3));
+    sourceStub.setMessages(RECORD_MESSAGE1, RECORD_MESSAGE2, RECORD_MESSAGE3);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -485,7 +487,7 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testReplicationRunnableSourceUpdateConfig() throws Exception {
-    when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(CONFIG_MESSAGE), Optional.empty());
+    sourceStub.setMessages(RECORD_MESSAGE1, CONFIG_MESSAGE);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -499,8 +501,7 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testSourceConfigPersistError() throws Exception {
-    when(source.attemptRead()).thenReturn(Optional.of(CONFIG_MESSAGE));
-    when(source.isFinished()).thenReturn(false, true);
+    sourceStub.setMessages(CONFIG_MESSAGE);
 
     final String persistErrorMessage = "there was a problem persisting the new config";
     doThrow(new RuntimeException(persistErrorMessage))
@@ -595,9 +596,7 @@ abstract class ReplicationWorkerTest {
     final AirbyteMessage traceMessage = AirbyteMessageUtils.createErrorMessage("a trace message", 123456.0);
     when(mapper.mapMessage(logMessage)).thenReturn(logMessage);
     when(mapper.mapMessage(traceMessage)).thenReturn(traceMessage);
-    when(source.isFinished()).thenReturn(false, false, false, false, true);
-    when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(logMessage), Optional.of(traceMessage),
-        Optional.of(RECORD_MESSAGE2));
+    sourceStub.setMessages(RECORD_MESSAGE1, logMessage, traceMessage, RECORD_MESSAGE2);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -617,8 +616,7 @@ abstract class ReplicationWorkerTest {
     final AirbyteMessage recordWithExtraFields = Jsons.clone(RECORD_MESSAGE1);
     ((ObjectNode) recordWithExtraFields.getRecord().getData()).put("AnUnexpectedField", "SomeValue");
     when(mapper.mapMessage(recordWithExtraFields)).thenReturn(recordWithExtraFields);
-    when(source.attemptRead()).thenReturn(Optional.of(recordWithExtraFields));
-    when(source.isFinished()).thenReturn(false, true);
+    sourceStub.setMessages(recordWithExtraFields);
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
@@ -639,8 +637,7 @@ abstract class ReplicationWorkerTest {
     final AirbyteMessage recordWithExtraFields = Jsons.clone(RECORD_MESSAGE1);
     ((ObjectNode) recordWithExtraFields.getRecord().getData()).put("AnUnexpectedField", "SomeValue");
     when(mapper.mapMessage(recordWithExtraFields)).thenReturn(recordWithExtraFields);
-    when(source.attemptRead()).thenReturn(Optional.of(recordWithExtraFields));
-    when(source.isFinished()).thenReturn(false, true);
+    sourceStub.setMessages(recordWithExtraFields);
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
@@ -740,7 +737,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testCancellation() throws InterruptedException {
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
-    when(source.isFinished()).thenReturn(false);
+    sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1, STATE_MESSAGE);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -931,12 +928,7 @@ abstract class ReplicationWorkerTest {
     heartbeatTimeoutChaperone =
         new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
             connectionId, mMetricClient);
-    source = mock(AirbyteSource.class);
-    when(source.isFinished()).thenReturn(false);
-    when(source.attemptRead()).thenAnswer((Answer<Optional<AirbyteMessage>>) invocation -> {
-      sleep(100);
-      return Optional.of(RECORD_MESSAGE1);
-    });
+    sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
