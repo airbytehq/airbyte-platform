@@ -32,6 +32,9 @@ export default {
   title: "Forms",
   component: Form,
   parameters: { actions: { argTypesRegex: "^on.*" } },
+  argTypes: {
+    disabled: { control: "boolean" },
+  },
 } as StoryObj<typeof Form>;
 
 const defaultValues: MyFormValues = {

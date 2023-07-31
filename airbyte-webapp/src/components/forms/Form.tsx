@@ -5,6 +5,7 @@ import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 
+import styles from "./Form.module.scss";
 import { FormDevTools } from "./FormDevTools";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,6 +27,10 @@ interface FormProps<T extends FormValues> {
    * Reinitialize form values when defaultValues changes. This will only work if the form is not dirty. Defaults to false.
    */
   reinitializeDefaultValues?: boolean;
+  /**
+   * Disable all form controls including submission buttons. Defaults to false.
+   */
+  disabled?: boolean;
 }
 
 const HookFormDirtyTracker = () => {
@@ -42,6 +47,7 @@ export const Form = <T extends FormValues>({
   schema,
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
+  disabled = false,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
@@ -78,7 +84,11 @@ export const Form = <T extends FormValues>({
     <FormProvider {...methods}>
       <FormDevTools />
       {trackDirtyChanges && <HookFormDirtyTracker />}
-      <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>{children}</form>
+      <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>
+        <fieldset disabled={disabled} className={styles.fieldset}>
+          {children}
+        </fieldset>
+      </form>
     </FormProvider>
   );
 };
