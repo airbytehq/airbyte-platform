@@ -67,6 +67,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       clearFormChange(formId);
       // do not reset form values to avoid casting oddities
       return {
+        resetValues: valuesToSend,
         keepStateOptions: {
           keepValues: true,
         },
