@@ -2,6 +2,18 @@
 set -e
 
 CWD=$(pwd)
+if [[ ! -d git_repo ]]
+then
+  echo "Preparing environment to build dbt profile...\n"
+  echo "Instaling jq lib..."
+  apt update && apt install jq tree -y
+  echo "Cloning data in pod..."
+  cat dbt_config.json | jq '"git clone --depth 5 -b " + (.gitRepoBranch) + " --single-branch " + (.gitRepoUrl) + " git_repo"' | xargs /bin/bash -c
+  echo "Generating profiles.yaml ..."
+  python generate_profile.py
+  echo "Listing folders ... tree -L 2"
+  tree -L 2
+fi
 # change directory to be inside git_repo that was just cloned
 cd git_repo
 echo "Running from $(pwd)"
