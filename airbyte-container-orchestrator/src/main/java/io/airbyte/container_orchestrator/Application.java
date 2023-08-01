@@ -75,7 +75,6 @@ public class Application {
         .build()) {
 
       asyncStateManager.write(AsyncKubePodStatus.INITIALIZING);
-      asyncStateManager.write(AsyncKubePodStatus.RUNNING);
       asyncStateManager.write(AsyncKubePodStatus.SUCCEEDED, jobOrchestrator.runJob().orElse(""));
     } catch (final Throwable t) {
       log.error("Killing orchestrator because of an Exception", t);

@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
@@ -156,6 +157,8 @@ abstract class ReplicationWorkerTest {
   protected FeatureFlagClient featureFlagClient;
   protected AirbyteMessageDataExtractor airbyteMessageDataExtractor;
 
+  protected VoidCallable onReplicationRunning;
+
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
   }
@@ -190,6 +193,7 @@ abstract class ReplicationWorkerTest {
     metricClient = MetricClientFactory.getMetricClient();
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
     airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
+    onReplicationRunning = mock(VoidCallable.class);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
     heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
@@ -219,6 +223,7 @@ abstract class ReplicationWorkerTest {
 
     verify(source).start(sourceConfig, jobRoot);
     verify(destination).start(destinationConfig, jobRoot);
+    verify(onReplicationRunning).call();
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();

@@ -40,7 +40,7 @@ class DefaultReplicationWorkerPerformanceTest extends ReplicationWorkerPerforman
                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
     return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
         fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-        messageEventPublishingHelper);
+        messageEventPublishingHelper, /* we don't care about the onReplicationRunning callback here */ () -> {});
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

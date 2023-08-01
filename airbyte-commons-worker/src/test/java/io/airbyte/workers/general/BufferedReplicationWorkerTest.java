@@ -36,7 +36,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper);
+        replicationAirbyteMessageEventPublishingHelper,
+        onReplicationRunning);
   }
 
   // BufferedReplicationWorkerTests.

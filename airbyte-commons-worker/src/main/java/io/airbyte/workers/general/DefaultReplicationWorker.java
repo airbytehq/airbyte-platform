@@ -7,6 +7,7 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
@@ -90,11 +91,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
+                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
+                                  final VoidCallable onReplicationRunning) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
@@ -161,6 +163,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
       replicationWorkerHelper.startDestination(destination, syncInput, jobRoot);
       replicationWorkerHelper.startSource(source, syncInput, jobRoot);
+
+      replicationWorkerHelper.markReplicationRunning();
 
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown

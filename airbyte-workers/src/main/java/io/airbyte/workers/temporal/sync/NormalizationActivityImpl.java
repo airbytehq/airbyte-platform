@@ -251,7 +251,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
             processFactory,
             destinationLauncherConfig.getNormalizationDockerImage(),
             destinationLauncherConfig.getNormalizationIntegrationType()),
-        workerEnvironment);
+        workerEnvironment, () -> {});
   }
 
   @SuppressWarnings("LineLength")
