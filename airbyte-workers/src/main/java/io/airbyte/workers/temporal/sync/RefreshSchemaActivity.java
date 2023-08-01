@@ -17,6 +17,6 @@ public interface RefreshSchemaActivity {
   @ActivityMethod
   boolean shouldRefreshSchema(UUID sourceCatalogId);
 
-  public void refreshSchema(UUID sourceCatalogId, UUID connectionId);
+  public void refreshSchema(UUID sourceCatalogId, UUID connectionId) throws Exception;
 
 }

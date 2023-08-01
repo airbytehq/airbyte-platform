@@ -225,7 +225,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testSuccess() {
+  void testSuccess() throws Exception {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
@@ -251,7 +251,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testReplicationFailure() {
+  void testReplicationFailure() throws Exception {
     doThrow(new IllegalArgumentException("induced exception")).when(replicationActivity).replicate(
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
@@ -268,7 +268,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testReplicationFailedGracefully() {
+  void testReplicationFailedGracefully() throws Exception {
     doReturn(replicationFailOutput).when(replicationActivity).replicate(
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
@@ -294,7 +294,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testNormalizationFailure() {
+  void testNormalizationFailure() throws Exception {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
@@ -316,7 +316,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testCancelDuringReplication() {
+  void testCancelDuringReplication() throws Exception {
     doAnswer(ignored -> {
       cancelWorkflow();
       return replicationSuccessOutput;
@@ -336,7 +336,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testCancelDuringNormalization() {
+  void testCancelDuringNormalization() throws Exception {
     doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
@@ -362,7 +362,7 @@ class SyncWorkflowTest {
 
   @Test
   @Disabled("This behavior has been disabled temporarily (OC Issue #741)")
-  void testSkipNormalization() {
+  void testSkipNormalization() throws Exception {
     final SyncStats syncStats = new SyncStats().withRecordsCommitted(0L);
     final StandardSyncSummary standardSyncSummary = new StandardSyncSummary().withTotalStats(syncStats);
     final StandardSyncOutput replicationSuccessOutputNoRecordsCommitted =
@@ -405,7 +405,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testSkipReplicationAfterRefreshSchema() {
+  void testSkipReplicationAfterRefreshSchema() throws Exception {
     when(configFetchActivity.getStatus(any())).thenReturn(Optional.of(ConnectionStatus.INACTIVE));
     final StandardSyncOutput output = execute();
     verifyShouldRefreshSchema(refreshSchemaActivity);
@@ -416,7 +416,7 @@ class SyncWorkflowTest {
   }
 
   @Test
-  void testGetProperFailureIfRefreshFails() {
+  void testGetProperFailureIfRefreshFails() throws Exception {
     when(refreshSchemaActivity.shouldRefreshSchema(any())).thenReturn(true);
     doThrow(new RuntimeException())
         .when(refreshSchemaActivity).refreshSchema(any(), any());
@@ -473,7 +473,7 @@ class SyncWorkflowTest {
     verify(refreshSchemaActivity).shouldRefreshSchema(SOURCE_ID);
   }
 
-  private static void verifyRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity, final StandardSync sync) {
+  private static void verifyRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity, final StandardSync sync) throws Exception {
     verify(refreshSchemaActivity).refreshSchema(SOURCE_ID, sync.getConnectionId());
   }
 

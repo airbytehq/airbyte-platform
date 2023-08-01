@@ -73,13 +73,13 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  public void refreshSchema(final UUID sourceId, final UUID connectionId) {
+  public void refreshSchema(final UUID sourceId, final UUID connectionId) throws Exception {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
       return;
     }
 
     final UUID sourceDefinitionId =
-        AirbyteApiClient.retryWithJitter(() -> sourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId)).getSourceDefinitionId(),
+        AirbyteApiClient.retryWithJitterThrows(() -> sourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId)).getSourceDefinitionId(),
             "Get the source definition id by source id");
 
     final List<Context> featureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
@@ -93,31 +93,13 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     final SourceDiscoverSchemaRequestBody requestBody =
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
 
-    final SourceDiscoverSchemaRead sourceDiscoverSchemaRead;
+    final SourceDiscoverSchemaRead sourceDiscoverSchemaRead = AirbyteApiClient.retryWithJitterThrows(
+        () -> sourceApi.discoverSchemaForSource(requestBody),
+        "Trigger discover schema");
 
-    try {
-      sourceDiscoverSchemaRead = AirbyteApiClient.retryWithJitter(
-          () -> sourceApi.discoverSchemaForSource(requestBody),
-          "Trigger discover schema");
-    } catch (final Exception e) {
-      ApmTraceUtils.addExceptionToTrace(e);
-      // catching this exception because we don't want to block replication due to a failed schema refresh
-      log.error("Attempted schema refresh, but failed with error: ", e);
-      return;
-    }
-
-    final UUID workspaceId;
-
-    try {
-      workspaceId = AirbyteApiClient.retryWithJitter(
-          () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId(),
-          "Get the workspace by connection Id");
-    } catch (final Exception e) {
-      ApmTraceUtils.addExceptionToTrace(e);
-      // catching this exception because we don't want to block replication due to a failed schema refresh
-      log.error("Attempted fetching workspace by connection id, but failed with error: ", e);
-      return;
-    }
+    final UUID workspaceId = AirbyteApiClient.retryWithJitterThrows(
+        () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId(),
+        "Get the workspace by connection Id");
 
     final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
 
@@ -128,18 +110,12 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
           .workspaceId(workspaceId)
           .catalogId(sourceDiscoverSchemaRead.getCatalogId());
 
-      try {
-        AirbyteApiClient.retryWithJitter(
-            () -> {
-              sourceApi.applySchemaChangeForSource(sourceAutoPropagateChange);
-              return null;
-            },
-            "Auto propagate the schema change");
-      } catch (final Exception e) {
-        ApmTraceUtils.addExceptionToTrace(e);
-        // catching this exception because we don't want to block replication due to a failed schema refresh
-        log.error("Attempted schema propagation, but failed with error: ", e);
-      }
+      AirbyteApiClient.retryWithJitterThrows(
+          () -> {
+            sourceApi.applySchemaChangeForSource(sourceAutoPropagateChange);
+            return null;
+          },
+          "Auto propagate the schema change");
     }
   }
 
