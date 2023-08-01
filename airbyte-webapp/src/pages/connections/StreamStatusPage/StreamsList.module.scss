@@ -28,7 +28,11 @@
   }
 
   .statusHeader {
-    width: 0; // makes the column width dynamic, matching the widest content in this column
+    width: 0;
+  }
+
+  .statusCell {
+    white-space: nowrap;
   }
 
   .actionsHeader {
