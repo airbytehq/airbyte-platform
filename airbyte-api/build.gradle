@@ -8,6 +8,7 @@ plugins {
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
 def airbyteApiSpecFile = "$projectDir/src/main/openapi/api.yaml"
+def airbyteApiSpecTemplateDirApi = "$projectDir/src/main/resources/templates/jaxrs-spec-api"
 
 def genApiServer = tasks.register("generateApiServer", GenerateTask) {
     def serverOutputDir = "$buildDir/generated/api/server"
@@ -131,6 +132,7 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
     generatorName = "jaxrs-spec"
     inputSpec = airbyteApiSpecFile
     outputDir = serverOutputDir
+    templateDir = airbyteApiSpecTemplateDirApi
 
     apiPackage = "io.airbyte.airbyte-api.generated"
     invokerPackage = "io.airbyte.airbyte-api.invoker.generated"

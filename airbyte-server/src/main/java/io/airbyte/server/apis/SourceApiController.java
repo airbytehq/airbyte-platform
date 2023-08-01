@@ -12,6 +12,7 @@ import io.airbyte.api.generated.SourceApi;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialSourceUpdate;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
@@ -30,6 +31,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
@@ -143,6 +145,15 @@ public class SourceApiController implements SourceApi {
   @Override
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody));
+  }
+
+  @Post(uri = "/list_paginated")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public SourceReadList listSourcesForWorkspacePaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
+    return ApiHelper.execute(() -> sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody));
   }
 
   @Post("/search")
