@@ -166,17 +166,95 @@ airbyte:
         cpu-request: ${SOURCE_DATABASE_CONTAINER_CPU_REQUEST:1}
         memory-limit: ${SOURCE_DATABASE_CONTAINER_MEMORY_LIMIT:}
         memory-request: ${SOURCE_DATABASE_CONTAINER_MEMORY_REQUEST:}
-      lowrss--heartbeat:
-        cpu-limit: 0.5
-        cpu-request: 0.05
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      lowrss--destination-stderr:
+
+      # base is the proposed default syncs values
+      # Generally low resource containers
+      base--destination-stderr:
         cpu-limit: 0.5
         cpu-request: 0.1
         memory-limit: 50Mi
         memory-request: 25Mi
-      lowrss--source-stderr:
+      base--destination-stdout:
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      base--heartbeat:
+        cpu-limit: 0.2
+        cpu-request: 0.05
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      base--source-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      # Default base sync values
+      base--destination:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      base--destination-stdin:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      base--orchestrator:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 2Gi
+        memory-request: 2Gi
+      base--source:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      base--source-stdout:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 50Mi
+        memory-request: 25Mi
+
+      # Database syncs resource override
+      base--source-database:
+        cpu-limit: 2
+        cpu-request: 1
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      base--source-stdout-database:
+        cpu-limit: 1
+        cpu-request: 0.5
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      base--orchestrator-database:
+        cpu-limit: 2
+        cpu-request: 1
+        memory-limit: 2Gi
+        memory-request: 2Gi
+      base--destination-database:
+        cpu-limit: 2
+        cpu-request: 1
+        memory-limit: 2Gi
+        memory-request: 1Gi
+      base--destination-stdin-database:
+        cpu-limit: 2
+        cpu-request: 0.5
+        memory-limit: 50Mi
+        memory-request: 25Mi
+
+      # Currently in testing for APIs
+      lowrss--heartbeat: # delete once base becomes the default
+        cpu-limit: 0.5
+        cpu-request: 0.05
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--destination-stderr: # delete once base becomes the default
+        cpu-limit: 0.5
+        cpu-request: 0.1
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--source-stderr: # delete once base becomes the default
         cpu-limit: 0.5
         cpu-request: 0.1
         memory-limit: 50Mi
@@ -206,7 +284,7 @@ airbyte:
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
-      lowrss--destination-stdout-api:
+      lowrss--destination-stdout-api: # delete once base becomes the default
         cpu-limit: 0.5
         cpu-request: 0.1
         memory-limit: 50Mi
