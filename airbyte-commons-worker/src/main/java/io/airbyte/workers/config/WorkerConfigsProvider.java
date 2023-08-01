@@ -187,7 +187,10 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   record KubeResourceKey(String variant, ResourceType type, ResourceSubType subType) {}
 
   public WorkerConfigsProvider(final List<KubeResourceConfig> kubeResourceConfigs, final WorkerConfigsDefaults defaults) {
-    this.kubeResourceKeyPattern = Pattern.compile(String.format("^((?<variant>[a-z]+)-)?(?<type>%s)(-(?<subtype>%s))?$",
+    // In the variant name, we do not support uppercase. This is because micronaut normalizes uppercases
+    // with dashes (CamelCase becomes camel-case) which is confusing because the variant name no longer
+    // matches the config file.
+    this.kubeResourceKeyPattern = Pattern.compile(String.format("^((?<variant>[a-z0-9]+)-)?(?<type>%s)(-(?<subtype>%s))?$",
         String.join("|", Arrays.stream(ResourceType.values()).map(ResourceType::toString).toList()),
         String.join("|", Arrays.stream(ResourceSubType.values()).map(ResourceSubType::toString).toList())),
         Pattern.CASE_INSENSITIVE);
