@@ -16,9 +16,15 @@ interface AttemptDetailsProps {
   attempt: AttemptRead;
   hasMultipleAttempts?: boolean;
   jobId: string;
+  isPartialSuccess?: boolean;
 }
 
-export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, hasMultipleAttempts, jobId }) => {
+export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
+  attempt,
+  hasMultipleAttempts,
+  jobId,
+  isPartialSuccess,
+}) => {
   const { formatMessage } = useIntl();
 
   if (attempt.status !== AttemptStatus.succeeded && attempt.status !== AttemptStatus.failed) {
@@ -56,7 +62,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, hasMult
       {!isCancelled && (
         <FlexContainer gap="xs">
           {hasMultipleAttempts && (
-            <Text color={isFailed ? "red" : "darkBlue"} bold as="span" size="sm">
+            <Text color={isFailed && !isPartialSuccess ? "red" : "darkBlue"} bold as="span" size="sm">
               <FormattedMessage id="sources.lastAttempt" />
             </Text>
           )}
@@ -98,7 +104,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, hasMult
         </FlexContainer>
       )}
       {isFailed && (
-        <Text color="red" size="sm" className={styles.failedMessage}>
+        <Text color={isPartialSuccess ? "grey" : "red"} size="sm" className={styles.failedMessage}>
           {formatMessage(
             {
               id: "ui.keyValuePairV3",

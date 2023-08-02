@@ -20,7 +20,9 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
   const jobConfigType = jobWithAttempts.job.configType;
 
   let status = "";
-  if (jobStatus === JobStatus.failed) {
+  if (jobIsPartialSuccess) {
+    status = "partialSuccess";
+  } else if (jobStatus === JobStatus.failed) {
     status = "failed";
   } else if (jobStatus === JobStatus.cancelled) {
     status = "cancelled";
@@ -28,8 +30,6 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
     status = "running";
   } else if (jobStatus === JobStatus.succeeded) {
     status = "succeeded";
-  } else if (jobIsPartialSuccess) {
-    status = "partialSuccess";
   } else {
     return <FormattedMessage id="jobs.jobStatus.unknown" />;
   }

@@ -28,6 +28,7 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { isPartialSuccess } from "./isPartialSuccess";
 import { JobLogsModalContent } from "./JobLogsModalContent";
 import { JobStatusIcon } from "./JobStatusIcon";
 import { JobStatusLabel } from "./JobStatusLabel";
@@ -179,6 +180,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
                 attempt={attempts[attempts.length - 1]}
                 hasMultipleAttempts={attempts.length > 1}
                 jobId={String(jobWithAttempts.job.id)}
+                isPartialSuccess={isPartialSuccess(jobWithAttempts.attempts)}
               />
             )
           )}
