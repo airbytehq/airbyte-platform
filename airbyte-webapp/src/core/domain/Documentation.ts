@@ -11,12 +11,10 @@ export const fetchDocumentation = async (
   });
 
   if (!response.ok) {
-    if (releaseStage === ReleaseStage.custom) {
-      console.error(`Failed to fetch documentation from ${url} with status ${response.status}`);
-    } else {
-      trackAction(AppActionCodes.CONNECTOR_DOCUMENTATION_FETCH_ERROR, { url, status: response.status });
-    }
+    trackAction(AppActionCodes.CONNECTOR_DOCUMENTATION_FETCH_ERROR, { url, status: response.status, releaseStage });
+    throw new Error(`Request to fetch documentation from ${url} failed with status ${response.status}`);
   }
+
   const contentType = response.headers.get("content-type");
 
   if (contentType?.toLowerCase().includes("text/html")) {
