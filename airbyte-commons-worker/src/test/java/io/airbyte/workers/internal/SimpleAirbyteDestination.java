@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Simple in memory implemenation of an AirbyteDestination for testing purpose.
+ * Simple in memory implementation of an AirbyteDestination for testing purpose.
  */
 public class SimpleAirbyteDestination implements AirbyteDestination {
 
@@ -36,7 +36,7 @@ public class SimpleAirbyteDestination implements AirbyteDestination {
 
   @Override
   public boolean isFinished() {
-    return isFinished;
+    return isFinished && messages.isEmpty();
   }
 
   @Override

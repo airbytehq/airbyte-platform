@@ -173,7 +173,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         ),
         cell: (props) => <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />,
         meta: {
-          thClassName: styles.width10,
+          thClassName: styles.width20,
         },
       }),
       columnHelper.accessor("enabled", {

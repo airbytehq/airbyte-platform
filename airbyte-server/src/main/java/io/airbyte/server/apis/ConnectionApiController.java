@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
@@ -87,6 +88,17 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList listConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody));
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post(uri = "/list_paginated")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectionReadList listConnectionsForWorkspacesPaginated(
+                                                                  @Body final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody));
   }
 
   @Override

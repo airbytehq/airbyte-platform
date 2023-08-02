@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
@@ -72,6 +73,7 @@ class ReplicationWorkerHelper {
   private final SyncPersistence syncPersistence;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
+  private final VoidCallable onReplicationRunning;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
@@ -91,7 +93,8 @@ class ReplicationWorkerHelper {
                                  final MessageTracker messageTracker,
                                  final SyncPersistence syncPersistence,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                 final ThreadedTimeTracker timeTracker) {
+                                 final ThreadedTimeTracker timeTracker,
+                                 final VoidCallable onReplicationRunning) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.fieldSelector = fieldSelector;
     this.mapper = mapper;
@@ -99,6 +102,7 @@ class ReplicationWorkerHelper {
     this.syncPersistence = syncPersistence;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
     this.timeTracker = timeTracker;
+    this.onReplicationRunning = onReplicationRunning;
 
     this.recordsRead = 0L;
   }
@@ -138,6 +142,11 @@ class ReplicationWorkerHelper {
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public void markReplicationRunning() throws Exception {
+    // Calls the onReplicationRunning callback, which should mark the replication as running.
+    onReplicationRunning.call();
   }
 
   public void endOfReplication() {

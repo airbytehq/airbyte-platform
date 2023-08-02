@@ -10,6 +10,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.WorkspaceApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
@@ -84,6 +85,15 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Override
   public WorkspaceReadList listWorkspaces() {
     return ApiHelper.execute(workspacesHandler::listWorkspaces);
+  }
+
+  @Post(uri = "/list_paginated")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceReadList listWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
+    return ApiHelper.execute(() -> workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody));
   }
 
   @Post("/update")

@@ -12,6 +12,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.OperatorDbtInput;
+import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -21,6 +22,7 @@ import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
+import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
@@ -41,15 +43,19 @@ public class DbtJobOrchestrator implements JobOrchestrator<OperatorDbtInput> {
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final JobRunConfig jobRunConfig;
+  // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
+  private final AsyncStateManager asyncStateManager;
 
   public DbtJobOrchestrator(final Configs configs,
                             final WorkerConfigsProvider workerConfigsProvider,
                             final ProcessFactory processFactory,
-                            final JobRunConfig jobRunConfig) {
+                            final JobRunConfig jobRunConfig,
+                            final AsyncStateManager asyncStateManager) {
     this.configs = configs;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.jobRunConfig = jobRunConfig;
+    this.asyncStateManager = asyncStateManager;
   }
 
   @Override
@@ -86,7 +92,8 @@ public class DbtJobOrchestrator implements JobOrchestrator<OperatorDbtInput> {
             processFactory, new DefaultNormalizationRunner(
                 processFactory,
                 destinationLauncherConfig.getNormalizationDockerImage(),
-                destinationLauncherConfig.getNormalizationIntegrationType())));
+                destinationLauncherConfig.getNormalizationIntegrationType())),
+        this::markJobRunning);
 
     log.info("Running dbt worker...");
     final Path jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
@@ -94,6 +101,10 @@ public class DbtJobOrchestrator implements JobOrchestrator<OperatorDbtInput> {
     worker.run(dbtInput, jobRoot);
 
     return Optional.empty();
+  }
+
+  private void markJobRunning() {
+    asyncStateManager.write(AsyncKubePodStatus.RUNNING);
   }
 
 }

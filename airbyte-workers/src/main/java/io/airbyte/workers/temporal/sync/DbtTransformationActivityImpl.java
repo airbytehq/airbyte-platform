@@ -158,7 +158,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
             processFactory, new DefaultNormalizationRunner(
                 processFactory,
                 destinationLauncherConfig.getNormalizationDockerImage(),
-                destinationLauncherConfig.getNormalizationIntegrationType())));
+                destinationLauncherConfig.getNormalizationIntegrationType())),
+        () -> {});
   }
 
   @SuppressWarnings("LineLength")

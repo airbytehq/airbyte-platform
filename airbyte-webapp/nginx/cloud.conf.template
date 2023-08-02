@@ -11,6 +11,11 @@ server {
     
     location / {
         root   /usr/share/nginx/html;
+        
+        location ~ ^/docs/.* {
+            try_files $uri $uri/ =404;
+        }
+
         location ~ ^/(?!(assets/.*)) {
             try_files $uri $uri/ /index.html;
         }

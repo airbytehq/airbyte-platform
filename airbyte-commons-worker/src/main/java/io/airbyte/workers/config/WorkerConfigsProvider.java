@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -186,7 +187,10 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
   record KubeResourceKey(String variant, ResourceType type, ResourceSubType subType) {}
 
   public WorkerConfigsProvider(final List<KubeResourceConfig> kubeResourceConfigs, final WorkerConfigsDefaults defaults) {
-    this.kubeResourceKeyPattern = Pattern.compile(String.format("^((?<variant>[a-z]+)-)?(?<type>%s)(-(?<subtype>%s))?$",
+    // In the variant name, we do not support uppercase. This is because micronaut normalizes uppercases
+    // with dashes (CamelCase becomes camel-case) which is confusing because the variant name no longer
+    // matches the config file.
+    this.kubeResourceKeyPattern = Pattern.compile(String.format("^((?<variant>[a-z0-9]+)-)?(?<type>%s)(-(?<subtype>%s))?$",
         String.join("|", Arrays.stream(ResourceType.values()).map(ResourceType::toString).toList()),
         String.join("|", Arrays.stream(ResourceSubType.values()).map(ResourceSubType::toString).toList())),
         Pattern.CASE_INSENSITIVE);
@@ -221,7 +225,9 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
    * @return the WorkerConfig.
    */
   private WorkerConfigs getConfig(final KubeResourceKey key) {
-    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(key).orElseThrow();
+    final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(key)
+        .orElseThrow(() -> new NoSuchElementException(String.format("Unable to find config: {variant:%s, type:%s, subtype:%s}",
+            key.variant, key.type, key.subType)));
 
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
@@ -269,18 +275,51 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
     return getConfig(key).getResourceRequirements();
   }
 
+  /**
+   * Look up resource configs given a key.
+   * <p>
+   * We are storing configs in a tree like structure. Look up should be handled as such. Keeping in
+   * mind that we have defaults we want to fallback to, we should perform a complete scan of the
+   * configs until we find a match to make sure we do not overlook a match.
+   */
   private Optional<KubeResourceConfig> getKubeResourceConfig(final KubeResourceKey key) {
-    final Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>> typeMap = getOrElseGet(kubeResourceConfigs, key.variant, DEFAULT_VARIANT);
-    if (typeMap == null) {
+    // Look up by actual variant
+    final var resultWithVariant = getKubeResourceConfigByType(kubeResourceConfigs.get(key.variant), key);
+    if (resultWithVariant.isPresent()) {
+      return resultWithVariant;
+    }
+
+    // no match with exact variant found, try again with the default.
+    return getKubeResourceConfigByType(kubeResourceConfigs.get(DEFAULT_VARIANT), key);
+  }
+
+  private static Optional<KubeResourceConfig> getKubeResourceConfigByType(
+                                                                          final Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>> configs,
+                                                                          final KubeResourceKey key) {
+    if (configs == null) {
       return Optional.empty();
     }
 
-    final Map<ResourceSubType, KubeResourceConfig> subTypeMap = getOrElseGet(typeMap, key.type, ResourceType.DEFAULT);
-    if (subTypeMap == null) {
+    // Look up by actual type
+    final var resultWithType = getKubeResourceConfigBySubType(configs.get(key.type), key);
+    if (resultWithType.isPresent()) {
+      return resultWithType;
+    }
+
+    // no match with exact type found, try again with the default.
+    return getKubeResourceConfigBySubType(configs.get(ResourceType.DEFAULT), key);
+  }
+
+  private static Optional<KubeResourceConfig> getKubeResourceConfigBySubType(final Map<ResourceSubType, KubeResourceConfig> configBySubType,
+                                                                             final KubeResourceKey key) {
+    if (configBySubType == null) {
       return Optional.empty();
     }
 
-    return Optional.ofNullable(getOrElseGet(subTypeMap, key.subType, ResourceSubType.DEFAULT));
+    // Lookup by actual sub type
+    final var config = configBySubType.get(key.subType);
+    // if we didn't find a match, try again with the default
+    return Optional.ofNullable(config != null ? config : configBySubType.get(ResourceSubType.DEFAULT));
   }
 
   private void validateIsolatedPoolConfigInitialization(boolean useCustomNodeSelector, Map<String, String> isolatedNodeSelectors) {
@@ -336,16 +375,6 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         .withCpuRequest(useDefaultIfEmpty(kubeResourceConfig.getCpuRequest(), defaultConfig.getCpuRequest()))
         .withMemoryLimit(useDefaultIfEmpty(kubeResourceConfig.getMemoryLimit(), defaultConfig.getMemoryLimit()))
         .withMemoryRequest(useDefaultIfEmpty(kubeResourceConfig.getMemoryRequest(), defaultConfig.getMemoryRequest()));
-  }
-
-  /**
-   * Helper function to get from a map.
-   * <p>
-   * Returns map.get(key) if key is present else returns map.get(fallbackKey)
-   */
-  private static <KeyT, ValueT> ValueT getOrElseGet(final Map<KeyT, ValueT> map, final KeyT key, final KeyT fallbackKey) {
-    final ValueT lookup1 = map.get(key);
-    return lookup1 != null ? lookup1 : map.get(fallbackKey);
   }
 
   private static String useDefaultIfEmpty(final String value, final String defaultValue) {

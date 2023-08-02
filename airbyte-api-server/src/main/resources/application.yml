@@ -48,15 +48,12 @@ airbyte:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   api:
-    host: ${API_HOST}
+    host: ${AIRBYTE_API_HOST}
   internal:
     api:
       host: ${INTERNAL_API_HOST}
     documentation:
       host: https://reference.airbyte.com/
-  cloud:
-    api:
-      host: ${CLOUD_API_HOST}
 
 endpoints:
   beans:

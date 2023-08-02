@@ -8,7 +8,7 @@ airbyte_yml_file_path="$script_dir/../../airbyte.yml"
 airbyte_pro_values_yml_file_path="$script_dir/../../charts/airbyte/airbyte-pro-values.yaml"
 
 # Define the helm release name for this installation of Airbyte Pro.
-if [ ! -z RELEASE_NAME ]; then
+if [ ! -z "$RELEASE_NAME" ]; then
   airbyte_pro_release_name="$RELEASE_NAME"
 else
   # Default release name. Change this to your liking.

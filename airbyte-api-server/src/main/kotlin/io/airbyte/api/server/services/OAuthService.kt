@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.api.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -8,12 +12,13 @@ import java.util.UUID
 import javax.validation.constraints.NotBlank
 
 interface OAuthService {
+
   fun getSourceConsentUrl(
     workspaceId: @NotBlank UUID,
     definitionId: @NotBlank UUID,
     redirectUrl: @NotBlank String,
     oauthInputConfiguration: JsonNode,
-    userInfo: String,
+    userInfo: String?,
   ): OAuthConsentRead
 
   fun completeSourceOAuthReturnSecret(
@@ -22,7 +27,7 @@ interface OAuthService {
     redirectUrl: @NotBlank String,
     queryParameters: @NotBlank MutableMap<String, String>,
     oauthInputConfiguration: JsonNode,
-    userInfo: String,
+    userInfo: String?,
   ): CompleteOAuthResponse
 
   fun setWorkspaceOverrideOAuthParams(
@@ -30,6 +35,6 @@ interface OAuthService {
     actorType: ActorTypeEnum,
     definitionId: UUID,
     oauthCredentialsConfiguration: JsonNode,
-    userInfo: String,
+    userInfo: String?,
   )
 }

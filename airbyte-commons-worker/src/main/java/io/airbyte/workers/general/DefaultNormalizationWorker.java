@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
@@ -44,6 +45,7 @@ public class DefaultNormalizationWorker implements NormalizationWorker {
   private final NormalizationRunner normalizationRunner;
   private final WorkerEnvironment workerEnvironment;
   private final List<FailureReason> traceFailureReasons = new ArrayList<>();
+  private final VoidCallable onNormalizationRunning;
   private boolean failed = false;
 
   private final AtomicBoolean cancelled;
@@ -51,11 +53,13 @@ public class DefaultNormalizationWorker implements NormalizationWorker {
   public DefaultNormalizationWorker(final String jobId,
                                     final int attempt,
                                     final NormalizationRunner normalizationRunner,
-                                    final WorkerEnvironment workerEnvironment) {
+                                    final WorkerEnvironment workerEnvironment,
+                                    final VoidCallable onNormalizationRunning) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.normalizationRunner = normalizationRunner;
     this.workerEnvironment = workerEnvironment;
+    this.onNormalizationRunning = onNormalizationRunning;
 
     this.cancelled = new AtomicBoolean(false);
   }
@@ -70,7 +74,7 @@ public class DefaultNormalizationWorker implements NormalizationWorker {
     try (normalizationRunner) {
       LineGobbler.startSection("DEFAULT NORMALIZATION");
       normalizationRunner.start();
-
+      onNormalizationRunning.call();
       Path normalizationRoot = null;
       // There are no shared volumes on Kube; only create this for Docker.
       if (workerEnvironment.equals(WorkerEnvironment.DOCKER)) {

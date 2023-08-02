@@ -3,6 +3,7 @@
 
 .text {
   color: colors.$grey;
+  white-space: nowrap;
 
   &.enabled {
     color: colors.$dark-blue;
