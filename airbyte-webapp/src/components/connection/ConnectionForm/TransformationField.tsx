@@ -2,7 +2,7 @@ import { ArrayHelpers, FormikProps } from "formik";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import ArrayOfObjectsEditor from "components/ArrayOfObjectsEditor";
+import { ArrayOfObjectsEditor } from "components/ArrayOfObjectsEditor";
 import TransformationForm from "components/connection/TransformationForm";
 
 import { OperationRead } from "core/request/AirbyteClient";

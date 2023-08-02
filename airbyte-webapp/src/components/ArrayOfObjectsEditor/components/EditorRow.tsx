@@ -1,9 +1,10 @@
 import React from "react";
 import { useIntl } from "react-intl";
 
-import { CrossIcon } from "components/icons/CrossIcon";
-import { PencilIcon } from "components/icons/PencilIcon";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./EditorRow.module.scss";
@@ -21,9 +22,11 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
   const { formatMessage } = useIntl();
 
   const body = (
-    <div className={styles.body}>
-      <div className={styles.name}>{name || id}</div>
-      <div className={styles.actions}>
+    <FlexContainer justifyContent="space-between" alignItems="center" gap="xs" className={styles.body}>
+      <Text size="sm" className={styles.name}>
+        {name || id}
+      </Text>
+      <FlexContainer gap="none">
         <Button
           size="xs"
           type="button"
@@ -31,7 +34,7 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
           arial-label={formatMessage({ id: "form.edit" })}
           onClick={() => onEdit(id)}
           disabled={disabled}
-          icon={<PencilIcon />}
+          icon={<Icon type="pencil" />}
         />
         <Button
           size="xs"
@@ -40,10 +43,10 @@ export const EditorRow: React.FC<EditorRowProps> = ({ name, id, description, onE
           aria-label={formatMessage({ id: "form.delete" })}
           onClick={() => onRemove(id)}
           disabled={disabled}
-          icon={<CrossIcon />}
+          icon={<Icon type="cross" />}
         />
-      </div>
-    </div>
+      </FlexContainer>
+    </FlexContainer>
   );
 
   return (

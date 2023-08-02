@@ -1,4 +1,2 @@
-import { ArrayOfObjectsEditor } from "./ArrayOfObjectsEditor";
-
-export default ArrayOfObjectsEditor;
-export { ArrayOfObjectsEditor };
+export { ArrayOfObjectsEditor } from "./ArrayOfObjectsEditor";
+export { ArrayOfObjectsHookFormEditor } from "./ArrayOfObjectsHookFormEditor";
