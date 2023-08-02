@@ -191,8 +191,6 @@ services:
     logging: *default-logging
     container_name: airbyte-webapp
     restart: unless-stopped
-    ports:
-      - "80"
     environment:
       - INTERNAL_API_HOST=${INTERNAL_API_HOST}
       - CONNECTOR_BUILDER_API_HOST=${CONNECTOR_BUILDER_API_HOST}
