@@ -26,6 +26,7 @@ import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationWorkerImpl;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.SourceType;
 import io.airbyte.featureflag.UseSyncResourceRequirementsFromInput;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -305,6 +306,11 @@ public class ReplicationWorkerFactory {
     }
     if (syncInput.getDestinationId() != null) {
       contexts.add(new Destination(syncInput.getDestinationId()));
+    }
+    if (syncInput.getSyncResourceRequirements() != null
+        && syncInput.getSyncResourceRequirements().getConfigKey() != null
+        && syncInput.getSyncResourceRequirements().getConfigKey().getSubType() != null) {
+      contexts.add(new SourceType(syncInput.getSyncResourceRequirements().getConfigKey().getSubType()));
     }
     return new Multi(contexts);
   }

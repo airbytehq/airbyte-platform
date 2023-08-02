@@ -6,6 +6,9 @@ description: Define resource requirements for a sync
 type: object
 additionalProperties: true
 properties:
+  configKey:
+    description: Key associated to this configuration
+    $ref: SyncResourceRequirementsKey.yaml
   destination:
     description: Resource requirements for the main source container
     $ref: ResourceRequirements.yaml

@@ -40,6 +40,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -59,6 +60,7 @@ import org.junit.jupiter.api.Test;
 
 class DefaultJobCreatorTest {
 
+  private static final String DEFAULT_VARIANT = "default";
   private static final String STREAM1_NAME = "stream1";
   private static final String STREAM2_NAME = "stream2";
   private static final String STREAM3_NAME = "stream3";
@@ -227,6 +229,7 @@ class DefaultJobCreatorTest {
         .thenReturn(srcStdoutResourceRequirements);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT).withSubType("database"))
         .withDestination(destResourceRequirements)
         .withDestinationStdErr(destStderrResourceRequirements)
         .withDestinationStdIn(destStdinResourceRequirements)
@@ -341,6 +344,7 @@ class DefaultJobCreatorTest {
         WORKSPACE_ID);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(workerResourceRequirements)
         .withDestinationStdErr(workerResourceRequirements)
         .withDestinationStdIn(workerResourceRequirements)
@@ -406,6 +410,7 @@ class DefaultJobCreatorTest {
         WORKSPACE_ID);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(standardSyncResourceRequirements)
         .withDestinationStdErr(workerResourceRequirements)
         .withDestinationStdIn(workerResourceRequirements)
@@ -476,6 +481,7 @@ class DefaultJobCreatorTest {
         WORKSPACE_ID);
 
     final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
         .withDestination(destResourceRequirements)
         .withDestinationStdErr(workerResourceRequirements)
         .withDestinationStdIn(workerResourceRequirements)
