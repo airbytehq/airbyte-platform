@@ -100,20 +100,16 @@ class ConnectionServiceImpl(
     configuredCatalog: AirbyteCatalog,
     workspaceId: UUID,
     userInfo: String?,
-
   ): ConnectionResponse {
     val connectionCreateOss: ConnectionCreate =
       ConnectionCreateMapper.from(connectionCreateRequest, catalogId, configuredCatalog)
 
-    // this is kept as a string to easily parse the error response to determine if a source or a
-    // destination id is invalid
-
-    // this is kept as a string to easily parse the error response to determine if a source or a
-    // destination id is invalid
     val response = try {
       configApiClient.createConnection(connectionCreateOss, userInfo)
     } catch (e: HttpClientResponseException) {
       log.error("Config api response error for createConnection: ", e)
+      // this is kept as a string to easily parse the error response to determine if a source or a
+      // destination id is invalid
       e.response as HttpResponse<String>
     }
 
