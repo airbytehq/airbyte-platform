@@ -38,8 +38,6 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
-import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
-import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogOutput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
@@ -162,8 +160,6 @@ class ConnectionManagerWorkflowTest {
       mock(CheckRunProgressActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final RetryStatePersistenceActivity mRetryStatePersistenceActivity =
       mock(RetryStatePersistenceActivity.class, Mockito.withSettings().withoutAnnotations());
-  private static final AppendToAttemptLogActivity mAppendToAttemptLogActivity =
-      mock(AppendToAttemptLogActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final String EVENT = "event = ";
   private static final String FAILED_CHECK_MESSAGE = "nope";
 
@@ -197,7 +193,6 @@ class ConnectionManagerWorkflowTest {
     Mockito.reset(mFeatureFlagFetchActivity);
     Mockito.reset(mCheckRunProgressActivity);
     Mockito.reset(mRetryStatePersistenceActivity);
-    Mockito.reset(mAppendToAttemptLogActivity);
 
     // default is to wait "forever"
     when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
@@ -257,8 +252,6 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new HydrateOutput(manager));
     when(mRetryStatePersistenceActivity.persistRetryState(Mockito.any()))
         .thenReturn(new PersistOutput(true));
-    when(mAppendToAttemptLogActivity.log(Mockito.any()))
-        .thenReturn(new LogOutput(true));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))
@@ -1995,8 +1988,7 @@ class ConnectionManagerWorkflowTest {
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
     managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity, mGenerateInputActivityImpl,
         mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
-        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity,
-        mAppendToAttemptLogActivity);
+        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity);
 
     client = testEnv.getWorkflowClient();
     testEnv.start();
@@ -2095,8 +2087,7 @@ class ConnectionManagerWorkflowTest {
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
     managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity, mGenerateInputActivityImpl,
         mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity, mWorkflowConfigActivity,
-        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity,
-        mAppendToAttemptLogActivity);
+        mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity, mCheckRunProgressActivity, mRetryStatePersistenceActivity);
 
     client = testEnv.getWorkflowClient();
     workflow = client.newWorkflowStub(ConnectionManagerWorkflow.class,

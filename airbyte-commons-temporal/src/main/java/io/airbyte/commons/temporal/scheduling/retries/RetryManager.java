@@ -8,9 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.ToString;
 import lombok.extern.jackson.Jacksonized;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 
 /**
  * Keeps track of the number and sequence of adverse effects observed, determines whether we should
@@ -24,9 +22,8 @@ import org.apache.commons.lang3.time.DurationFormatUtils;
  * We track these failures separately and allow limits and back off to be configured independently
  * for each.
  */
-@Builder
 @Getter
-@ToString
+@Builder
 @Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RetryManager {
@@ -114,15 +111,6 @@ public class RetryManager {
       return partialFailureBackoffPolicy.getBackoff(successivePartialFailures);
     }
     return Duration.ZERO;
-  }
-
-  /**
-   * Returns a human-optimized string of backoff time.
-   *
-   * @return backoff duration as a human-readable string.
-   */
-  public String getBackoffString() {
-    return DurationFormatUtils.formatDurationWords(getBackoff().toMillis(), true, true);
   }
 
 }
