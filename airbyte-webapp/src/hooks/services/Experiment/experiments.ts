@@ -30,5 +30,6 @@ export interface Experiments {
   "connector.allowlistIpBanner": boolean;
   "settings.emailNotifications": boolean;
   "connector.airbyteCloudIpAddresses": string;
+  "connector.updateMethodSelection": boolean;
   "workspaces.newWorkspacesUI": boolean;
 }

@@ -1,7 +1,30 @@
+@use "scss/colors";
+@use "scss/variables";
+
 .dropdown {
   min-width: calc(50% - 100px);
 }
 
 .disabled {
   cursor: not-allowed;
+}
+
+.tile {
+  display: flex;
+  gap: variables.$spacing-md;
+  flex-basis: 0;
+  flex-grow: 1;
+  padding: variables.$spacing-md;
+  border: 1px solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+  cursor: pointer;
+
+  &--selected {
+    border-color: colors.$blue-500;
+    cursor: initial;
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+  }
 }

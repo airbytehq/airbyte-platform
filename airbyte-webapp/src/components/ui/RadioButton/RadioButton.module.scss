@@ -4,18 +4,28 @@
 .container {
   height: 18px;
   width: 18px;
+  cursor: pointer;
   background: colors.$foreground;
-  border: 1px solid colors.$grey-200;
   color: colors.$foreground;
+  border: 1px solid colors.$grey-200;
   text-align: center;
   border-radius: 50%;
   display: inline-block;
-  padding: 4px;
-  cursor: pointer;
+  position: relative;
+  padding: variables.$spacing-xs;
+  flex-shrink: 0;
 
   &.checked {
-    background: colors.$blue;
     border-color: colors.$blue;
+  }
+
+  &.checked::after {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: colors.$blue;
+    border-radius: 50%;
   }
 
   &.disabled {
@@ -24,20 +34,7 @@
   }
 }
 
-.innerCircle {
-  height: 100%;
-  width: 100%;
-  border-radius: 50%;
-  background: colors.$grey-200;
-
-  &.checked {
-    background: colors.$foreground;
-  }
-}
-
 .input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
+  position: absolute;
+  visibility: hidden;
 }

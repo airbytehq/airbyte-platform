@@ -12,7 +12,6 @@ export const RadioButton: React.FC<React.InputHTMLAttributes<HTMLInputElement>> 
       })}
       htmlFor={props.id}
     >
-      <div className={classNames(styles.innerCircle, { [styles.checked]: props.checked })} />
       <input {...props} type="radio" className={styles.input} />
     </label>
   );

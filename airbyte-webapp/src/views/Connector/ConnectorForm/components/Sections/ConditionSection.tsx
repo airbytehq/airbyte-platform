@@ -5,8 +5,13 @@ import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { DropDown, DropDownOptionDataItem } from "components/ui/DropDown";
+import { FlexContainer } from "components/ui/Flex";
+import { RadioButton } from "components/ui/RadioButton";
+import { Text } from "components/ui/Text";
+import { TextWithHTML } from "components/ui/TextWithHTML";
 
 import { FormConditionItem } from "core/form/types";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConditionSection.module.scss";
 import { FormSection } from "./FormSection";
@@ -26,6 +31,9 @@ interface ConditionSectionProps {
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
   const { setValue, clearErrors } = useFormContext();
   const value = useWatch({ name: path });
+
+  const showRadioButtonCards =
+    useExperiment("connector.updateMethodSelection", false) && path === "connectionConfiguration.replication_method";
 
   const { conditions, selectionConstValues } = formField;
 
@@ -57,6 +65,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       conditions.map((condition, index) => ({
         label: condition.title,
         value: index,
+        description: condition.description,
       })),
     [conditions]
   );
@@ -69,20 +78,54 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
         key={`form-field-group-${formField.fieldKey}`}
         label={<GroupLabel formField={formField} />}
         control={
-          <DropDown
-            options={options}
-            onChange={onOptionChange}
-            value={currentlySelectedCondition}
-            name={formField.path}
-            isDisabled={disabled || formField.readOnly}
-            error={!error?.types && !!error?.message}
-          />
+          showRadioButtonCards ? undefined : (
+            <DropDown
+              options={options}
+              onChange={onOptionChange}
+              value={currentlySelectedCondition}
+              name={formField.path}
+              isDisabled={disabled || formField.readOnly}
+              error={!error?.types && !!error?.message}
+            />
+          )
         }
         controlClassName={classNames(styles.dropdown, { [styles.disabled]: disabled || formField.readOnly })}
       >
         {/* currentlySelectedCondition is only falsy if a malformed config is loaded which doesn't have a valid value for the const selection key. In this case, render the selection group as empty. */}
         {typeof currentlySelectedCondition !== "undefined" && (
-          <FormSection blocks={conditions[currentlySelectedCondition]} path={path} disabled={disabled} skipAppend />
+          <>
+            {showRadioButtonCards && (
+              <FlexContainer direction="column">
+                {options.map((option) => (
+                  <label
+                    htmlFor={option.label}
+                    key={option.value}
+                    className={classNames(styles.tile, {
+                      [styles["tile--selected"]]: option.value === currentlySelectedCondition,
+                      [styles["tile--disabled"]]: disabled || formField.readOnly,
+                    })}
+                  >
+                    <RadioButton
+                      id={option.label}
+                      name={option.label}
+                      value={option.value}
+                      key={option.value}
+                      disabled={disabled || formField.readOnly}
+                      checked={option.value === currentlySelectedCondition}
+                      onChange={() => onOptionChange({ value: option.value })}
+                    />
+                    <FlexContainer direction="column">
+                      <Text size="lg">{option.label}</Text>
+                      <Text size="sm">
+                        <TextWithHTML text={option.description} />
+                      </Text>
+                    </FlexContainer>
+                  </label>
+                ))}
+              </FlexContainer>
+            )}
+            <FormSection blocks={conditions[currentlySelectedCondition]} path={path} disabled={disabled} skipAppend />
+          </>
         )}
       </GroupControls>
     </SectionContainer>
