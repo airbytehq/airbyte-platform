@@ -4,7 +4,7 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { concatPath, useBuilderWatch } from "../types";
+import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
 
 type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
   | {
@@ -23,11 +23,11 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
 
   const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
 
-  const getBodyOptions = (): OneOfOption[] => [
+  const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
     {
       label: "JSON (key-value pairs)",
-      typeValue: "json_list",
       default: {
+        type: "json_list",
         values: [],
       },
       children: (
@@ -42,8 +42,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
     },
     {
       label: "Form encoded (key-value pairs)",
-      typeValue: "form_list",
       default: {
+        type: "form_list",
         values: [],
       },
       children: (
@@ -58,8 +58,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
     },
     {
       label: "JSON (free form)",
-      typeValue: "json_freeform",
       default: {
+        type: "json_freeform",
         value: bodyValue.type === "json_list" ? JSON.stringify(Object.fromEntries(bodyValue.values)) : "{}",
       },
       children: (
@@ -73,8 +73,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
     },
     {
       label: "Text (Free form)",
-      typeValue: "string_freeform",
       default: {
+        type: "string_freeform",
         value: "",
       },
       children: (
@@ -103,7 +103,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         optional
         omitInterpolationContext={props.omitInterpolationContext}
       />
-      <BuilderOneOf
+      <BuilderOneOf<BuilderRequestBody>
         path={concatPath(props.basePath, "requestBody")}
         label="Request Body"
         options={getBodyOptions()}

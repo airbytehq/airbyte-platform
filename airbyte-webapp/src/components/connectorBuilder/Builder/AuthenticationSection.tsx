@@ -1,7 +1,10 @@
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
-import { OAuthAuthenticatorRefreshTokenUpdater } from "core/api/types/ConnectorManifest";
+import {
+  OAuthAuthenticatorRefreshTokenUpdater,
+  SessionTokenAuthenticatorRequestAuthentication,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
@@ -34,6 +37,7 @@ import {
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
   SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
   NO_AUTH,
+  BuilderFormAuthenticator,
 } from "../types";
 
 export const AuthenticationSection: React.FC = () => {
@@ -41,7 +45,7 @@ export const AuthenticationSection: React.FC = () => {
 
   return (
     <BuilderCard docLink={links.connectorBuilderAuthentication} label="Authentication">
-      <BuilderOneOf
+      <BuilderOneOf<BuilderFormAuthenticator>
         path="global.authenticator"
         label="Method"
         manifestPath="HttpRequester.properties.authenticator"
@@ -58,11 +62,11 @@ export const AuthenticationSection: React.FC = () => {
           })
         }
         options={[
-          { label: "No Auth", typeValue: "NoAuth", default: {} },
+          { label: "No Auth", default: { type: NO_AUTH } },
           {
             label: "API Key",
-            typeValue: API_KEY_AUTHENTICATOR,
             default: {
+              type: API_KEY_AUTHENTICATOR,
               ...inferredAuthValues("ApiKeyAuthenticator"),
               inject_into: {
                 type: "RequestOption",
@@ -79,17 +83,17 @@ export const AuthenticationSection: React.FC = () => {
           },
           {
             label: "Bearer",
-            typeValue: BEARER_AUTHENTICATOR,
             default: {
-              ...inferredAuthValues("BearerAuthenticator"),
+              type: BEARER_AUTHENTICATOR,
+              ...(inferredAuthValues("BearerAuthenticator") as Record<"api_token", string>),
             },
             children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
           },
           {
             label: "Basic HTTP",
-            typeValue: BASIC_AUTHENTICATOR,
             default: {
-              ...inferredAuthValues("BasicHttpAuthenticator"),
+              type: BASIC_AUTHENTICATOR,
+              ...(inferredAuthValues("BasicHttpAuthenticator") as Record<"username" | "password", string>),
             },
             children: (
               <>
@@ -100,9 +104,12 @@ export const AuthenticationSection: React.FC = () => {
           },
           {
             label: "OAuth",
-            typeValue: OAUTH_AUTHENTICATOR,
             default: {
-              ...inferredAuthValues("OAuthAuthenticator"),
+              type: OAUTH_AUTHENTICATOR,
+              ...(inferredAuthValues("OAuthAuthenticator") as Record<
+                "client_id" | "client_secret" | "refresh_token" | "oauth_access_token" | "oauth_token_expiry_date",
+                string
+              >),
               refresh_request_body: [],
               token_refresh_endpoint: "",
               grant_type: "refresh_token",
@@ -111,8 +118,8 @@ export const AuthenticationSection: React.FC = () => {
           },
           {
             label: "Session Token",
-            typeValue: SESSION_TOKEN_AUTHENTICATOR,
             default: {
+              type: SESSION_TOKEN_AUTHENTICATOR,
               login_requester: {
                 url: "",
                 authenticator: {
@@ -245,17 +252,17 @@ const SessionTokenForm = () => {
           options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
           manifestPath="HttpRequester.properties.http_method"
         />
-        <BuilderOneOf
+        <BuilderOneOf<BuilderFormAuthenticator>
           path="global.authenticator.login_requester.authenticator"
           label="Authentication Method"
           manifestPath="HttpRequester.properties.authenticator"
           manifestOptionPaths={["ApiKeyAuthenticator", "BearerAuthenticator", "BasicHttpAuthenticator"]}
           options={[
-            { label: "No Auth", typeValue: "NoAuth", default: {} },
+            { label: "No Auth", default: { type: NO_AUTH } },
             {
               label: "API Key",
-              typeValue: API_KEY_AUTHENTICATOR,
               default: {
+                type: API_KEY_AUTHENTICATOR,
                 ...inferredAuthValues("ApiKeyAuthenticator"),
                 inject_into: {
                   type: "RequestOption",
@@ -276,17 +283,17 @@ const SessionTokenForm = () => {
             },
             {
               label: "Bearer",
-              typeValue: BEARER_AUTHENTICATOR,
               default: {
-                ...inferredAuthValues("BearerAuthenticator"),
+                type: BEARER_AUTHENTICATOR,
+                ...(inferredAuthValues(BEARER_AUTHENTICATOR) as Record<"api_token", string>),
               },
               children: <BuilderInputPlaceholder manifestPath="BearerAuthenticator.properties.api_token" />,
             },
             {
               label: "Basic HTTP",
-              typeValue: BASIC_AUTHENTICATOR,
               default: {
-                ...inferredAuthValues("BasicHttpAuthenticator"),
+                type: BASIC_AUTHENTICATOR,
+                ...(inferredAuthValues(BASIC_AUTHENTICATOR) as Record<"username" | "password", string>),
               },
               children: (
                 <>
@@ -325,15 +332,15 @@ const SessionTokenForm = () => {
         manifestPath="SessionTokenAuthenticator.properties.expiration_duration"
         optional
       />
-      <BuilderOneOf
+      <BuilderOneOf<SessionTokenAuthenticatorRequestAuthentication>
         path="global.authenticator.request_authentication"
         manifestPath="SessionTokenAuthenticator.properties.request_authentication"
         manifestOptionPaths={["SessionTokenRequestApiKeyAuthenticator", "SessionTokenRequestBearerAuthenticator"]}
         options={[
           {
             label: "API Key",
-            typeValue: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
             default: {
+              type: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
               inject_into: {
                 type: "RequestOption",
                 inject_into: "header",
@@ -352,8 +359,7 @@ const SessionTokenForm = () => {
           },
           {
             label: "Bearer",
-            typeValue: SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR,
-            default: {},
+            default: { type: SESSION_TOKEN_REQUEST_BEARER_AUTHENTICATOR },
           },
         ]}
       />

@@ -9,6 +9,7 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
+import { BuilderTransformation } from "../types";
 
 interface TransformationSectionProps {
   streamFieldPath: <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
@@ -21,11 +22,11 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
 }) => {
   const { formatMessage } = useIntl();
 
-  const getTransformationOptions = (buildPath: (path: string) => string): OneOfOption[] => [
+  const getTransformationOptions = (buildPath: (path: string) => string): Array<OneOfOption<BuilderTransformation>> => [
     {
       label: "Remove field",
-      typeValue: "remove",
       default: {
+        type: "remove",
         path: [],
       },
       children: (
@@ -34,8 +35,8 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
     },
     {
       label: "Add field",
-      typeValue: "add",
       default: {
+        type: "add",
         value: "",
         path: [],
       },
@@ -82,7 +83,7 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
         }}
       >
         {({ buildPath }) => (
-          <BuilderOneOf
+          <BuilderOneOf<BuilderTransformation>
             path={buildPath("")}
             label="Transformation"
             tooltip="Add or remove a field"

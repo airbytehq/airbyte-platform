@@ -110,15 +110,14 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           text="The data must be returned in descending order for the cursor field across pages in order for incremental sync to work properly with no time filtering. If the data is returned in ascending order, you should not configure incremental syncs for this API."
         />
       )}
-      <BuilderOneOf
+      <BuilderOneOf<BuilderIncrementalSync["start_datetime"]>
         path={streamFieldPath("incrementalSync.start_datetime")}
         label={filterMode === "no_filter" ? "Earliest datetime cutoff" : undefined}
         manifestPath="DatetimeBasedCursor.properties.start_datetime"
         options={[
           {
             label: "User input",
-            typeValue: "user_input",
-            default: {},
+            default: { type: "user_input" },
             children: (
               <BuilderInputPlaceholder
                 label="Start date user input"
@@ -132,8 +131,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           },
           {
             label: "Custom",
-            typeValue: "custom",
             default: {
+              type: "custom",
               value: "",
               format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
             },
@@ -159,14 +158,13 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         ]}
       />
       {filterMode === "range" && (
-        <BuilderOneOf
+        <BuilderOneOf<BuilderIncrementalSync["end_datetime"]>
           path={streamFieldPath("incrementalSync.end_datetime")}
           manifestPath="DatetimeBasedCursor.properties.end_datetime"
           options={[
             {
               label: "User input",
-              typeValue: "user_input",
-              default: {},
+              default: { type: "user_input" },
               children: (
                 <BuilderInputPlaceholder
                   label="End date user input"
@@ -176,13 +174,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             },
             {
               label: "Now",
-              typeValue: "now",
-              default: {},
+              default: { type: "now" },
             },
             {
               label: "Custom",
-              typeValue: "custom",
               default: {
+                type: "custom",
                 value: "",
                 format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
               },
