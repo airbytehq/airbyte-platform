@@ -39,7 +39,7 @@ export const RecordTable = ({ records }: { records: StreamReadSlicesItemPagesIte
   }, [records]);
   return (
     <>
-      <Table columns={columns} data={records} />
+      <Table className={styles.table} columns={columns} data={records} />
       {modalValue !== undefined && (
         <Modal onClose={() => setModalValue(undefined)} title={modalValue.key}>
           <ModalBody>

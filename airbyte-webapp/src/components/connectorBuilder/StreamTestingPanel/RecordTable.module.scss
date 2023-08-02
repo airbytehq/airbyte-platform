@@ -1,10 +1,15 @@
 @use "scss/variables";
 @use "scss/colors";
 
+.table {
+  padding-bottom: variables.$spacing-md;
+}
+
 .content {
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   flex-grow: 1;
 }
 
