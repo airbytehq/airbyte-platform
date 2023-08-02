@@ -39,7 +39,11 @@ public class InMemoryOrchestratorHandleFactory implements OrchestratorHandleFact
                                                                                          JobRunConfig jobRunConfig,
                                                                                          StandardSyncInput syncInput,
                                                                                          final Supplier<ActivityExecutionContext> activityContext) {
-    return () -> replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig);
+    return () -> replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, /*
+                                                                                                                            * this is used to track
+                                                                                                                            * async state, but we
+                                                                                                                            * don't do that in-memory
+                                                                                                                            */() -> {});
   }
 
 }

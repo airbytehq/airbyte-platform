@@ -1,6 +1,8 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { Modal, ModalProps } from "components/ui/Modal";
 
 import { ConnectionFormMode } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -65,7 +67,7 @@ export const ArrayOfObjectsEditor = <T extends ItemBase = ItemBase>({
 
   return (
     <>
-      <div className={styles.container}>
+      <Box mb="xl">
         <EditorHeader
           itemsCount={items.length}
           onAddItem={onAddItem}
@@ -75,7 +77,7 @@ export const ArrayOfObjectsEditor = <T extends ItemBase = ItemBase>({
           disabled={disabled}
         />
         {items.length ? (
-          <div className={styles.list}>
+          <FlexContainer direction="column" gap="xs" className={styles.list}>
             {items.map((item, index) => (
               <EditorRow
                 key={`form-item-${index}`}
@@ -87,9 +89,9 @@ export const ArrayOfObjectsEditor = <T extends ItemBase = ItemBase>({
                 disabled={disabled}
               />
             ))}
-          </div>
+          </FlexContainer>
         ) : null}
-      </div>
+      </Box>
       {mode !== "readonly" && isEditable && renderEditModal()}
     </>
   );

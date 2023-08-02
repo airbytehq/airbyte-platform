@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
@@ -107,6 +108,16 @@ public class DestinationApiController implements DestinationApi {
   @Override
   public DestinationReadList listDestinationsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody));
+  }
+
+  @SuppressWarnings("LineLength")
+  @Post(uri = "/list_paginated")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public DestinationReadList listDestinationsForWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
+    return ApiHelper.execute(() -> destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody));
   }
 
   @Post(uri = "/search")

@@ -38,7 +38,7 @@ class ApplicationTest {
     assertEquals(0, code);
     verify(jobOrchestrator).runJob();
     verify(asyncStateManager).write(AsyncKubePodStatus.INITIALIZING);
-    verify(asyncStateManager).write(AsyncKubePodStatus.RUNNING);
+    // NOTE: we don't expect it to write RUNNING, because the job orchestrator is responsible for that.
     verify(asyncStateManager).write(AsyncKubePodStatus.SUCCEEDED, output);
   }
 
@@ -51,7 +51,7 @@ class ApplicationTest {
     assertEquals(1, code);
     verify(jobOrchestrator).runJob();
     verify(asyncStateManager).write(AsyncKubePodStatus.INITIALIZING);
-    verify(asyncStateManager).write(AsyncKubePodStatus.RUNNING);
+    // NOTE: we don't expect it to write RUNNING, because the job orchestrator is responsible for that.
     verify(asyncStateManager).write(AsyncKubePodStatus.FAILED);
   }
 

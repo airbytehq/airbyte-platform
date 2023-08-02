@@ -115,7 +115,7 @@ class RefreshSchemaActivityTest {
   }
 
   @Test
-  void testRefreshSchema() throws ApiException {
+  void testRefreshSchema() throws Exception {
     final UUID sourceId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();
     final UUID catalogId = UUID.randomUUID();
@@ -160,7 +160,7 @@ class RefreshSchemaActivityTest {
   }
 
   @Test
-  void testRefreshSchemaWithRefreshSchemaFeatureFlagAsFalse() throws ApiException {
+  void testRefreshSchemaWithRefreshSchemaFeatureFlagAsFalse() throws Exception {
     final UUID sourceId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -176,7 +176,7 @@ class RefreshSchemaActivityTest {
   }
 
   @Test
-  void testRefreshSchemaWithAutoPropagateFeatureFlagAsFalse() throws ApiException {
+  void testRefreshSchemaWithAutoPropagateFeatureFlagAsFalse() throws Exception {
     final UUID sourceId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();

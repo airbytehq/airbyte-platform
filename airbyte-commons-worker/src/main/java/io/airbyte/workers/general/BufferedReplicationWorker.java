@@ -5,6 +5,7 @@
 package io.airbyte.workers.general;
 
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
@@ -101,13 +102,14 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
+                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
+                                   final VoidCallable onReplicationRunning) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
     this.destination = destination;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
@@ -151,6 +153,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
             runAsync(() -> replicationWorkerHelper.startDestination(destination, syncInput, jobRoot), mdc),
             runAsync(() -> replicationWorkerHelper.startSource(source, syncInput, jobRoot), mdc)).join();
 
+        replicationWorkerHelper.markReplicationRunning();
+
         CompletableFuture.allOf(
             runAsyncWithHeartbeatCheck(this::readFromSource, mdc),
             runAsync(this::processMessage, mdc),
@@ -158,6 +162,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
             runAsync(this::readFromDestination, mdc)).join();
 
       } catch (final CompletionException e) {
+
         // Exceptions for each runnable are already handled, those exceptions are coming from the joins and
         // are safe to ignore at this point
         ApmTraceUtils.addExceptionToTrace(e);

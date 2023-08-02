@@ -79,6 +79,44 @@ paths:
               type: string
           in: query
           required: false
+        - name: status
+          description: The Job status you want to filter by
+          schema:
+            $ref: "#/components/schemas/JobStatusEnum"
+          in: query
+          required: false
+        - name: createdAtStart
+          description: The start date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
+        - name: createdAtEnd
+          description: The end date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
+        - name: updatedAtStart
+          description: The start date to filter by
+          schema:
+            type: string
+            format: date-time
+          example: 2023-06-22T16:15:00Z
+          in: query
+          required: false
+        - name: updatedAtEnd
+          description: The end date to filter by
+          schema:
+            type: string
+            format: date-time
+          in: query
+          required: false
+          example: 2023-06-22T16:15:00Z
       responses:
         "200":
           content:
@@ -1249,6 +1287,7 @@ components:
         secretId:
           description: Optional secretID obtained through the public API OAuth redirect flow.
           type: string
+      x-implements: io.airbyte.api.common.ConfigurableActor
     SourcePutRequest:
       required:
         - name
@@ -1259,6 +1298,7 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
     SourcePatchRequest:
       type: object
       properties:
@@ -1273,6 +1313,7 @@ components:
         secretId:
           description: Optional secretID obtained through the public API OAuth redirect flow.
           type: string
+      x-implements: io.airbyte.api.common.ConfigurableActor
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       description: POST body for initiating OAuth via the public API
@@ -1528,6 +1569,7 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
     DestinationPatchRequest:
       type: object
       properties:
@@ -1535,6 +1577,7 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
     DestinationPutRequest:
       required:
         - name
@@ -1545,6 +1588,7 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+      x-implements: io.airbyte.api.common.ConfigurableActor
     WorkspaceCreateRequest:
       required:
         - name

@@ -30,7 +30,8 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper);
+        replicationAirbyteMessageEventPublishingHelper,
+        onReplicationRunning);
   }
 
   // DefaultReplicationWorkerTests.

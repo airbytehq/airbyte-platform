@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.ResourceRequirements;
@@ -37,15 +38,18 @@ public class DbtTransformationWorker implements Worker<OperatorDbtInput, Void> {
   private final ResourceRequirements resourceRequirements;
 
   private final AtomicBoolean cancelled;
+  private final VoidCallable onTransformationRunning;
 
   public DbtTransformationWorker(final String jobId,
                                  final int attempt,
                                  final ResourceRequirements resourceRequirements,
-                                 final DbtTransformationRunner dbtTransformationRunner) {
+                                 final DbtTransformationRunner dbtTransformationRunner,
+                                 final VoidCallable onTransformationRunning) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.dbtTransformationRunner = dbtTransformationRunner;
     this.resourceRequirements = resourceRequirements;
+    this.onTransformationRunning = onTransformationRunning;
 
     this.cancelled = new AtomicBoolean(false);
   }
@@ -60,6 +64,7 @@ public class DbtTransformationWorker implements Worker<OperatorDbtInput, Void> {
     try (dbtTransformationRunner) {
       LOGGER.info("Running dbt transformation.");
       dbtTransformationRunner.start();
+      onTransformationRunning.call();
       final Path transformRoot = Files.createDirectories(jobRoot.resolve("transform"));
       if (!dbtTransformationRunner.run(
           jobId,

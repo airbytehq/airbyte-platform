@@ -100,6 +100,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         try {
           refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
         } catch (final Exception e) {
+          ApmTraceUtils.addExceptionToTrace(e);
           return SyncOutputProvider.getRefreshSchemaFailure(e);
         }
       }

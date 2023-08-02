@@ -55,6 +55,16 @@ spec:
         image: {{ printf "%s:%s" .Values.image.repository (include "airbyte-api-server.imageTag" .) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
+        - name: INTERNAL_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: INTERNAL_API_HOST
+        - name: AIRBYTE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_API_HOST
         {{- if .Values.debug.enabled }}
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"

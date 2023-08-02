@@ -67,7 +67,7 @@ export const StreamsList = () => {
         id: "statusIcon",
         header: () => <FormattedMessage id="connection.stream.status.table.status" />,
         cell: (props) => (
-          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center">
+          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center" className={styles.statusCell}>
             <StreamStatusIndicator status={props.cell.getValue().status} loading={props.cell.getValue().isRunning} />
             <FormattedMessage id={`connection.stream.status.${props.cell.getValue().status}`} />
           </FlexContainer>

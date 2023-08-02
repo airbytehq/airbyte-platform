@@ -14,12 +14,14 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.normalization.NormalizationWorker;
+import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
@@ -37,11 +39,17 @@ public class NormalizationJobOrchestrator implements JobOrchestrator<Normalizati
   private final Configs configs;
   private final ProcessFactory processFactory;
   private final JobRunConfig jobRunConfig;
+  // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
+  private final AsyncStateManager asyncStateManager;
 
-  public NormalizationJobOrchestrator(final Configs configs, final ProcessFactory processFactory, final JobRunConfig jobRunConfig) {
+  public NormalizationJobOrchestrator(final Configs configs,
+                                      final ProcessFactory processFactory,
+                                      final JobRunConfig jobRunConfig,
+                                      final AsyncStateManager asyncStateManager) {
     this.configs = configs;
     this.processFactory = processFactory;
     this.jobRunConfig = jobRunConfig;
+    this.asyncStateManager = asyncStateManager;
   }
 
   @Override
@@ -77,7 +85,8 @@ public class NormalizationJobOrchestrator implements JobOrchestrator<Normalizati
             processFactory,
             destinationLauncherConfig.getNormalizationDockerImage(),
             destinationLauncherConfig.getNormalizationIntegrationType()),
-        configs.getWorkerEnvironment());
+        configs.getWorkerEnvironment(),
+        this::markJobRunning);
 
     log.info("Running normalization worker...");
     final Path jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
@@ -86,6 +95,10 @@ public class NormalizationJobOrchestrator implements JobOrchestrator<Normalizati
         jobRoot);
 
     return Optional.of(Jsons.serialize(normalizationSummary));
+  }
+
+  private void markJobRunning() {
+    asyncStateManager.write(AsyncKubePodStatus.RUNNING);
   }
 
 }

@@ -40,7 +40,7 @@ class BufferedReplicationWorkerPerformanceTest extends ReplicationWorkerPerforma
                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
     return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
         fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-        messageEventPublishingHelper);
+        messageEventPublishingHelper, () -> {});
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

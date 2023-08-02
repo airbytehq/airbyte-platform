@@ -15,11 +15,13 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
+import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import java.lang.invoke.MethodHandles;
@@ -38,13 +40,17 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
   private final Configs configs;
   private final JobRunConfig jobRunConfig;
   private final ReplicationWorkerFactory replicationWorkerFactory;
+  // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
+  private final AsyncStateManager asyncStateManager;
 
   public ReplicationJobOrchestrator(final Configs configs,
                                     final JobRunConfig jobRunConfig,
-                                    final ReplicationWorkerFactory replicationWorkerFactory) {
+                                    final ReplicationWorkerFactory replicationWorkerFactory,
+                                    final AsyncStateManager asyncStateManager) {
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
+    this.asyncStateManager = asyncStateManager;
   }
 
   @Override
@@ -77,7 +83,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
 
     final ReplicationWorker replicationWorker =
-        replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig);
+        replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning);
 
     log.info("Running replication worker...");
     final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
@@ -86,6 +92,10 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));
+  }
+
+  private void markJobRunning() {
+    asyncStateManager.write(AsyncKubePodStatus.RUNNING);
   }
 
 }

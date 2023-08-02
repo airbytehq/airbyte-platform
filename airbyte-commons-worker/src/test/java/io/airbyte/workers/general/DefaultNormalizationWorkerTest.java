@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -48,6 +49,7 @@ class DefaultNormalizationWorkerTest {
   private Path normalizationRoot;
   private NormalizationInput normalizationInput;
   private NormalizationRunner normalizationRunner;
+  private VoidCallable onNormalizationRunning;
 
   @BeforeEach
   void setup() throws Exception {
@@ -74,16 +76,19 @@ class DefaultNormalizationWorkerTest {
         normalizationInput.getDestinationConfiguration(),
         normalizationInput.getCatalog(), workerConfigs.getResourceRequirements()))
             .thenReturn(true);
+
+    onNormalizationRunning = mock(VoidCallable.class);
   }
 
   @Test
   void test() throws Exception {
     final DefaultNormalizationWorker normalizationWorker =
-        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER);
+        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER, onNormalizationRunning);
 
     final NormalizationSummary normalizationOutput = normalizationWorker.run(normalizationInput, jobRoot);
 
     verify(normalizationRunner).start();
+    verify(onNormalizationRunning).call();
     verify(normalizationRunner).normalize(
         JOB_ID,
         JOB_ATTEMPT,
@@ -111,7 +116,7 @@ class DefaultNormalizationWorkerTest {
             .thenReturn(false);
 
     final DefaultNormalizationWorker normalizationWorker =
-        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER);
+        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER, () -> {});
 
     assertThrows(WorkerException.class, () -> normalizationWorker.run(normalizationInput, jobRoot));
 
@@ -135,11 +140,12 @@ class DefaultNormalizationWorkerTest {
     when(normalizationRunner.getTraceMessages()).thenReturn(Stream.of(ERROR_TRACE_MESSAGE));
 
     final DefaultNormalizationWorker normalizationWorker =
-        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER);
+        new DefaultNormalizationWorker(JOB_ID, JOB_ATTEMPT, normalizationRunner, WorkerEnvironment.DOCKER, onNormalizationRunning);
 
     final NormalizationSummary normalizationOutput = normalizationWorker.run(normalizationInput, jobRoot);
 
     verify(normalizationRunner).start();
+    verify(onNormalizationRunning).call();
     verify(normalizationRunner).normalize(
         JOB_ID,
         JOB_ATTEMPT,

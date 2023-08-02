@@ -559,7 +559,11 @@
   "connection.replicationFrequency": "Replication frequency*",
   "connection.replicationFrequency.subtitle": "Set how often data should sync to the destination",
   "connection.normalization": "Normalization",
+  "connection.normalization.successMessage": "Normalization settings were updated successfully!",
+  "connection.normalization.errorMessage": "There was an error during updating your normalization settings",
   "connection.customTransformations": "Custom Transformations",
+  "connection.customTransformations.successMessage": "Custom transformation settings were updated successfully!",
+  "connection.customTransformations.errorMessage": "There was an error during updating your custom transformation settings",
 
   "tables.name": "Name",
   "tables.connector": "Connector",

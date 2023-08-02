@@ -8,6 +8,7 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
@@ -101,12 +102,13 @@ class ContainerOrchestratorFactory {
                                      final ProcessFactory processFactory,
                                      final WorkerConfigsProvider workerConfigsProvider,
                                      final JobRunConfig jobRunConfig,
-                                     final ReplicationWorkerFactory replicationWorkerFactory) {
+                                     final ReplicationWorkerFactory replicationWorkerFactory,
+                                     final AsyncStateManager asyncStateManager) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
-          replicationWorkerFactory);
-      case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig);
-      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig);
+          replicationWorkerFactory, asyncStateManager);
+      case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig, asyncStateManager);
+      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig, asyncStateManager);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

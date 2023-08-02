@@ -4,22 +4,15 @@
 
 package io.airbyte.workers.general;
 
-import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.mockito.stubbing.Answer;
 
 /**
  * BufferedReplicationWorkerTests. Tests in this class should be implementation specific, general
@@ -43,7 +36,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper);
+        replicationAirbyteMessageEventPublishingHelper,
+        onReplicationRunning);
   }
 
   // BufferedReplicationWorkerTests.
@@ -102,12 +96,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
   }
 
   protected void setUpInfiniteSource() {
-    source = mock(AirbyteSource.class);
-    when(source.isFinished()).thenReturn(false);
-    when(source.attemptRead()).thenAnswer((Answer<Optional<AirbyteMessage>>) invocation -> {
-      sleep(100);
-      return Optional.of(RECORD_MESSAGE1);
-    });
+    sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
   }
 
 }

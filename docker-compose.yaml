@@ -261,6 +261,8 @@ services:
     environment:
       - AIRBYTE_VERSION=${VERSION}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
+      - INTERNAL_API_HOST=${INTERNAL_API_HOST}
+      - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
     networks:
       - airbyte_internal
     depends_on:
