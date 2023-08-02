@@ -13,6 +13,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
+import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
@@ -28,6 +29,7 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivityImpl;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Requires;
@@ -40,6 +42,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Micronaut bean factory for general singletons.
@@ -162,6 +166,17 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
     return new StateAggregatorFactory(featureFlags);
+  }
+
+  @Singleton
+  public LogClientSingleton logClientSingleton() {
+    return LogClientSingleton.getInstance();
+  }
+
+  @Singleton
+  @Named("appendToAttemptLogger")
+  public Logger appendToAttemptLogger() {
+    return LoggerFactory.getLogger(AppendToAttemptLogActivityImpl.class);
   }
 
 }
