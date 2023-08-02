@@ -1,10 +1,10 @@
 import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { ReactComponent as AirbyteLogo } from "./airbyte-logo.svg";
 import styles from "./AirbyteTitle.module.scss";
 
 export const AirbyteTitle = ({ title }: { title: ReactNode }) => {

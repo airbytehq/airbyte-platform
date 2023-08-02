@@ -23,7 +23,7 @@ const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
-const WorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
+const CloudWorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
 const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
@@ -101,7 +101,7 @@ const CloudMainViewRoutes = () => {
       {[CloudRoutes.Login, CloudRoutes.Signup, CloudRoutes.FirebaseAction].map((r) => (
         <Route key={r} path={`${r}/*`} element={query.from ? <Navigate to={query.from} replace /> : <DefaultView />} />
       ))}
-      <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />
+      <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}

@@ -7,12 +7,14 @@ import { FlexContainer } from "components/ui/Flex/FlexContainer";
 interface FormSubmissionButtonsProps {
   submitKey?: string;
   cancelKey?: string;
+  allowNonDirtyCancel?: boolean;
   onCancelClickCallback?: () => void;
 }
 
 export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   submitKey = "form.submit",
   cancelKey = "form.cancel",
+  allowNonDirtyCancel = false,
   onCancelClickCallback,
 }) => {
   // get isSubmitting from useFormState to avoid re-rendering of whole form if they change
@@ -25,7 +27,7 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
       <Button
         type="button"
         variant="secondary"
-        disabled={!isDirty || isSubmitting}
+        disabled={(!isDirty && !allowNonDirtyCancel) || isSubmitting}
         onClick={() => {
           reset();
           onCancelClickCallback?.();

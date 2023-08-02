@@ -5,15 +5,15 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 
-import styles from "./WorkspaceItem.module.scss";
+import styles from "./CloudWorkspaceItem.module.scss";
 
-interface WorkspaceItemProps {
+interface CloudWorkspaceItemProps {
   workspaceId: string;
   workspaceName: string;
   testId: string;
 }
 
-export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({ workspaceId, workspaceName, testId }) => {
+export const CloudWorkspaceItem: React.FC<CloudWorkspaceItemProps> = ({ workspaceId, workspaceName, testId }) => {
   return (
     <Link to={`/workspaces/${workspaceId}`} data-testid={testId} variant="primary">
       <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.button}>

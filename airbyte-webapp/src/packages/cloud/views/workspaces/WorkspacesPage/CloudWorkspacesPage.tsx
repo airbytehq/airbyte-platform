@@ -7,12 +7,11 @@ import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
+import styles from "./CloudWorkspacesPage.module.scss";
+import { CloudWorkspacesList } from "./components/CloudWorkspacesList";
 import { ReactComponent as AirbyteLogo } from "./components/workspaceHeaderLogo.svg";
-import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
-import WorkspacesList from "./components/WorkspacesList";
-import styles from "./WorkspacesPage.module.scss";
 
-const WorkspacesPage: React.FC = () => {
+export const CloudWorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
 
   return (
@@ -24,12 +23,9 @@ const WorkspacesPage: React.FC = () => {
       <Text align="center" className={styles.subtitle}>
         <FormattedMessage id="workspaces.subtitle" />
       </Text>
-      <WorkspacesCreateControl />
       <Box pb="2xl">
-        <WorkspacesList />
+        <CloudWorkspacesList />
       </Box>
     </div>
   );
 };
-
-export default WorkspacesPage;

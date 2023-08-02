@@ -4,8 +4,15 @@ import { useCallback, useLayoutEffect } from "react";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SCOPE_USER, SCOPE_WORKSPACE } from "services/Scope";
 
-import { getWorkspace, listWorkspaces, updateWorkspace, webBackendGetWorkspaceState } from "../generated/AirbyteClient";
-import { WorkspaceUpdate } from "../types/AirbyteClient";
+import {
+  createWorkspace,
+  deleteWorkspace,
+  getWorkspace,
+  listWorkspaces,
+  updateWorkspace,
+  webBackendGetWorkspaceState,
+} from "../generated/AirbyteClient";
+import { WorkspaceReadList, WorkspaceUpdate } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -27,6 +34,32 @@ export const useCurrentWorkspace = () => {
 
 export const getCurrentWorkspaceStateQueryKey = (workspaceId: string) => {
   return workspaceKeys.state(workspaceId);
+};
+
+export const useCreateWorkspace = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(async (name: string) => createWorkspace({ name }, requestOptions), {
+    onSuccess: (result) => {
+      queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => ({
+        workspaces: [result, ...(old?.workspaces ?? [])],
+      }));
+    },
+  });
+};
+
+export const useDeleteCurrentWorkspace = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(async (workspaceId: string) => deleteWorkspace({ workspaceId }, requestOptions), {
+    onSuccess: (_, workspaceId) => {
+      queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) =>
+        old ? { workspaces: old.workspaces.filter((workspace) => workspace.workspaceId !== workspaceId) } : undefined
+      );
+    },
+  });
 };
 
 export const useGetCurrentWorkspaceStateQuery = (workspaceId: string) => {
@@ -55,9 +88,10 @@ export const useInvalidateWorkspaceStateQuery = () => {
   }, [queryClient, workspaceId]);
 };
 
+// todo: after merging https://github.com/airbytehq/airbyte-platform-internal/pull/7779 this should get workspace by user id
 export const useListWorkspaces = () => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions)).workspaces;
+  return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions));
 };
 
 export const getWorkspaceQueryKey = (workspaceId: string) => {

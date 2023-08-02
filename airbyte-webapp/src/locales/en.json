@@ -6,6 +6,21 @@
   "notifications.airbyteUpdated": "Airbyte has been updated. Please reload the page.",
   "notifications.airbyteUpdated.reload": "Reload now",
 
+  "workspaces.title": "Workspaces",
+  "workspaces.subtitle": "Workspaces let you collaborate with team members and share connections across your team.",
+  "workspaces.create": "Create workspace",
+  "workspaces.createSuccess": "Workspace created successfully",
+  "workspaces.createError": "Something went wrong while creating the workspace. Please try again.",
+  "workspaces.createNew": "New workspace",
+  "workspaces.createFirst": "Create your first workspace",
+  "workspaces.loading": "Loading…",
+  "workspaces.noWorkspaces": "No workspaces found",
+
+  "user.roleLabel": "Role: {role}",
+  "role.admin": "Admin",
+  "role.member": "Member",
+  "role.editor": "Editor",
+
   "sidebar.homepage": "Homepage",
   "sidebar.sources": "Sources",
   "sidebar.destinations": "Destinations",
