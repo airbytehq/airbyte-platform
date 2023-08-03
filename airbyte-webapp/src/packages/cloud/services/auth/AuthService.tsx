@@ -5,7 +5,7 @@ import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 
-import { useGetUserService } from "core/api/cloud";
+import { useGetUserService, useListUsers } from "core/api/cloud";
 import { UserRead } from "core/api/types/CloudApi";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace } from "core/services/analytics";
@@ -338,4 +338,11 @@ export const useCurrentUser = (): UserRead => {
   }
 
   return user;
+};
+
+export const useIsForeignWorkspace = () => {
+  const { user } = useAuthService();
+  const workspaceUsers = useListUsers();
+
+  return !user || !workspaceUsers.users.some((member) => member.userId === user.userId);
 };

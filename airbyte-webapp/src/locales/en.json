@@ -951,6 +951,8 @@
   "connectorBuilder.listPage.draftTooltip": "A project in draft state can't be used in connections. Publish a first version to run syncs.",
   "connectorBuilder.loadingState.invalid": "Draft can't be saved",
   "connectorBuilder.loadingState.invalid.tooltip": "Make sure there are no errors in your configuration",
+  "connectorBuilder.loadingState.readonly": "Draft is in read-only mode",
+  "connectorBuilder.loadingState.readonly.tooltip": "As the logged in user is not part of this workspace, the draft can't be saved",
   "connectorBuilder.loadingState.loading": "Saving draft",
   "connectorBuilder.loadingState.saved": "Draft saved",
   "connectorBuilder.waitForSaving": "Wait for saving to complete...",

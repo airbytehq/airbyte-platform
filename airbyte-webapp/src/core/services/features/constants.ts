@@ -16,4 +16,5 @@ export const defaultCloudFeatures = [
   FeatureItem.FreeConnectorProgram,
   FeatureItem.EmailNotifications,
   FeatureItem.ShowInviteUsersHint,
+  FeatureItem.RestrictAdminInForeignWorkspace,
 ];

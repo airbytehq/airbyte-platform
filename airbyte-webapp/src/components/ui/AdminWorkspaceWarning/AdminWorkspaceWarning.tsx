@@ -2,18 +2,16 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { useListUsers } from "core/api/cloud";
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
 
 import styles from "./AdminWorkspaceWarning.module.scss";
 import { Tooltip } from "../Tooltip";
 
 export const AdminWorkspaceWarning = () => {
-  const user = useCurrentUser();
-  const workspaceUsers = useListUsers();
+  const isForeignWorkspace = useIsForeignWorkspace();
   const { formatMessage } = useIntl();
 
-  if (!workspaceUsers.users.some((member) => member.userId === user.userId)) {
+  if (isForeignWorkspace) {
     return (
       <div className={styles.adminWorkspaceWarning}>
         <Tooltip
