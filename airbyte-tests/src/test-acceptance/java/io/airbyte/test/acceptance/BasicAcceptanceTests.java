@@ -109,7 +109,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
@@ -258,7 +257,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(-2)
   void testGetDestinationSpec() {
     final UUID destinationDefinitionId = testHarness.getPostgresDestinationDefinitionId();
     final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId, workspaceId);
@@ -267,7 +265,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(-1)
   void testFailedGet404() {
     final var e = assertThrows(ApiException.class, () -> apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
@@ -276,7 +273,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(0)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -287,7 +283,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(1)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -309,7 +304,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(2)
   void testDestinationCheckConnection() throws ApiException {
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
 
@@ -319,7 +313,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(3)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -343,7 +336,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(4)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -359,7 +351,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(5)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -407,7 +398,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(6)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -444,7 +434,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(7)
   void testCancelSync() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
 
@@ -484,7 +473,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(8)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
@@ -516,7 +504,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(9)
   void testCronSync() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -562,7 +549,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(10)
   void testMultipleSchemasAndTablesSync() throws Exception {
     // create tables in another schema
     testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql");
@@ -590,7 +576,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(11)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = "The different way of interacting with the source db causes errors")
@@ -622,7 +607,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(12)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = SLOW_TEST_IN_GKE)
@@ -679,7 +663,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(13)
   void testIncrementalSync() throws Exception {
     LOGGER.info("Starting testIncrementalSync()");
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
@@ -773,7 +756,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(14)
   void testDeleteConnection() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -836,7 +818,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(15)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
@@ -883,7 +864,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(16)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
@@ -942,7 +922,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(17)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
@@ -977,7 +956,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(18)
   void testResetCancelsRunningSync() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
 
@@ -1028,7 +1006,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(19)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = "GKE deployment applies extra validation")
@@ -1080,7 +1057,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(20)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = SLOW_TEST_IN_GKE)
@@ -1192,7 +1168,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(21)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = SLOW_TEST_IN_GKE)
@@ -1258,7 +1233,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(23)
   @Disabled
   void testIncrementalSyncMultipleStreams() throws Exception {
     LOGGER.info("Starting testIncrementalSyncMultipleStreams()");
@@ -1365,7 +1339,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(24)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = "The different way of interacting with the source db causes errors")
@@ -1403,7 +1376,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(25)
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = SLOW_TEST_IN_GKE)
@@ -1535,7 +1507,6 @@ class BasicAcceptanceTests {
   }
 
   @Test
-  @Order(26)
   void testIncrementalDedupeSyncRemoveOneColumn() throws Exception {
     // !!! NOTE !!! this test relies on a feature flag that currently defaults to false. If you're
     // running these tests locally against an external deployment and this test is failing, make sure
@@ -1657,7 +1628,6 @@ class BasicAcceptanceTests {
   // See relevant issue: https://github.com/airbytehq/airbyte/issues/8397
   @Test
   @Disabled
-  @Order(27)
   void testFailureTimeout() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);

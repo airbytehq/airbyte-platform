@@ -52,7 +52,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -132,7 +131,6 @@ class AdvancedAcceptanceTests {
 
   @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
   @Test
-  @Order(1)
   void testManualSync() throws Exception {
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
@@ -157,7 +155,6 @@ class AdvancedAcceptanceTests {
   }
 
   @RetryingTest(3)
-  @Order(2)
   void testCheckpointing() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
@@ -232,7 +229,6 @@ class AdvancedAcceptanceTests {
 
   // verify that when the worker uses backpressure from pipes that no records are lost.
   @RetryingTest(3)
-  @Order(4)
   void testBackpressure() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
