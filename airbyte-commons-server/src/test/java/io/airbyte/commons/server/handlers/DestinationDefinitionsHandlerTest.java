@@ -13,7 +13,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,16 +35,11 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
-import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
-import io.airbyte.commons.server.scheduler.SynchronousResponse;
-import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.Version;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
-import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopeType;
@@ -89,12 +83,11 @@ class DestinationDefinitionsHandlerTest {
 
   private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private Supplier<UUID> uuidSupplier;
-  private SynchronousSchedulerClient schedulerSynchronousClient;
+  private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private DestinationHandler destinationHandler;
   private UUID workspaceId;
   private UUID organizationId;
-  private AirbyteProtocolVersionRange protocolVersionRange;
   private FeatureFlagClient featureFlagClient;
 
   @SuppressWarnings("unchecked")
@@ -106,20 +99,18 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionWithNormalization = generateDestinationDefinition();
     destinationDefinitionVersion = generateVersionFromDestinationDefinition(destinationDefinition);
     destinationDefinitionVersionWithNormalization = generateDestinationDefinitionVersionWithNormalization(destinationDefinitionWithNormalization);
-    schedulerSynchronousClient = spy(SynchronousSchedulerClient.class);
+    actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     destinationHandler = mock(DestinationHandler.class);
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
-    protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
     featureFlagClient = mock(TestClient.class);
     destinationDefinitionsHandler = new DestinationDefinitionsHandler(
         configRepository,
         uuidSupplier,
-        schedulerSynchronousClient,
+        actorDefinitionHandlerHelper,
         remoteDefinitionsProvider,
         destinationHandler,
-        protocolVersionRange,
         featureFlagClient);
   }
 
@@ -148,6 +139,14 @@ class DestinationDefinitionsHandlerTest {
         .withReleaseDate(TODAY_DATE_STRING)
 
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")));
+  }
+
+  private ActorDefinitionVersion generateCustomVersionFromDestinationDefinition(final StandardDestinationDefinition destinationDefinition) {
+    return generateVersionFromDestinationDefinition(destinationDefinition)
+        .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .withReleaseDate(null)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+        .withAllowedHosts(null);
   }
 
   private ActorDefinitionVersion generateDestinationDefinitionVersionWithNormalization(final StandardDestinationDefinition destinationDefinition) {
@@ -431,7 +430,7 @@ class DestinationDefinitionsHandlerTest {
   }
 
   @Test
-  @DisplayName("getDestinationDefinitionForWorkspace should return the destination if the grant exists")
+  @DisplayName("getDestinationDefinitionForWorkspace should return the destination definition if the grant exists")
   void testGetDefinitionWithGrantForWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(true);
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
@@ -467,7 +466,7 @@ class DestinationDefinitionsHandlerTest {
   }
 
   @Test
-  @DisplayName("getDestinationDefinitionForScope should return the destination if the grant exists")
+  @DisplayName("getDestinationDefinitionForScope should return the destination definition if the grant exists")
   void testGetDefinitionWithGrantForScope() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId,
         ScopeType.WORKSPACE.value())).thenReturn(true);
@@ -515,96 +514,60 @@ class DestinationDefinitionsHandlerTest {
   }
 
   @Test
-  @DisplayName("createDestinationDefinition should not create a destinationDefinition with unsupported protocol version")
-  void testCreateDestinationDefinitionShouldCheckProtocolVersion() throws URISyntaxException, IOException, JsonValidationException {
-    final String invalidProtocolVersion = "121.5.6";
-    final StandardDestinationDefinition destination = generateDestinationDefinition();
-    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destination);
-    destinationDefinitionVersion.getSpec().setProtocolVersion(invalidProtocolVersion);
-    final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
-
-    when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
-        destinationDefinitionVersion.getSpec(),
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
-
-    final DestinationDefinitionCreate create = new DestinationDefinitionCreate()
-        .name(destination.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(destination.getIcon())
-        .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
-            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
-            .jobSpecific(Collections.emptyList()));
-
-    final CustomDestinationDefinitionCreate customCreate = new CustomDestinationDefinitionCreate()
-        .destinationDefinition(create)
-        .workspaceId(workspaceId);
-
-    assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
-
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
-    verify(configRepository, never()).writeStandardDestinationDefinition(any());
-  }
-
-  @Test
   @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition")
   void testCreateCustomDestinationDefinition() throws URISyntaxException, IOException {
-    final StandardDestinationDefinition destination = generateDestinationDefinition();
-    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destination);
-    final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
+    final StandardDestinationDefinition newDestinationDefinition = generateDestinationDefinition();
+    final ActorDefinitionVersion destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition);
 
-    when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
-        destinationDefinitionVersion.getSpec(),
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+    when(uuidSupplier.get()).thenReturn(newDestinationDefinition.getDestinationDefinitionId());
 
     final DestinationDefinitionCreate create = new DestinationDefinitionCreate()
-        .name(destination.getName())
+        .name(newDestinationDefinition.getName())
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(destination.getIcon())
+        .icon(newDestinationDefinition.getIcon())
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
 
     final CustomDestinationDefinitionCreate customCreate = new CustomDestinationDefinitionCreate()
         .destinationDefinition(create)
         .workspaceId(workspaceId);
 
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreate.getWorkspaceId()))
+            .thenReturn(destinationDefinitionVersion);
+
     final DestinationDefinitionRead expectedRead = new DestinationDefinitionRead()
-        .name(destination.getName())
+        .name(newDestinationDefinition.getName())
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .destinationDefinitionId(destination.getDestinationDefinitionId())
-        .icon(DestinationDefinitionsHandler.loadIcon(destination.getIcon()))
+        .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
+        .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
 
     final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate);
 
     assertEquals(expectedRead, actualRead);
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreate.getWorkspaceId());
     verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
-        destination
+        newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
-        destinationDefinitionVersion
-            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
-            .withReleaseDate(null)
-            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-            .withAllowedHosts(null),
+        destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
   }
@@ -612,25 +575,20 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition for a workspace and organization using scopes")
   void testCreateCustomDestinationDefinitionUsingScopes() throws URISyntaxException, IOException {
-    final StandardDestinationDefinition destination = generateDestinationDefinition();
-    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destination);
-    final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
-    final UUID organizationId = UUID.randomUUID();
+    final StandardDestinationDefinition newDestinationDefinition = generateDestinationDefinition();
+    final ActorDefinitionVersion destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition);
 
-    when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(eq(imageName), eq(true), any())).thenReturn(new SynchronousResponse<>(
-        destinationDefinitionVersion.getSpec(),
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+    when(uuidSupplier.get()).thenReturn(newDestinationDefinition.getDestinationDefinitionId());
 
     final DestinationDefinitionCreate create = new DestinationDefinitionCreate()
-        .name(destination.getName())
+        .name(newDestinationDefinition.getName())
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(destination.getIcon())
+        .icon(newDestinationDefinition.getIcon())
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
 
     final CustomDestinationDefinitionCreate customCreateForWorkspace = new CustomDestinationDefinitionCreate()
@@ -639,90 +597,93 @@ class DestinationDefinitionsHandlerTest {
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
         .workspaceId(workspaceId);
 
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreateForWorkspace.getWorkspaceId()))
+            .thenReturn(destinationDefinitionVersion);
+
     final DestinationDefinitionRead expectedRead = new DestinationDefinitionRead()
-        .name(destination.getName())
+        .name(newDestinationDefinition.getName())
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .destinationDefinitionId(destination.getDestinationDefinitionId())
-        .icon(DestinationDefinitionsHandler.loadIcon(destination.getIcon()))
+        .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
+        .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
 
-    final DestinationDefinitionRead actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
+    final DestinationDefinitionRead actualRead =
+        destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace);
 
     assertEquals(expectedRead, actualRead);
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreateForWorkspace.getWorkspaceId());
     verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
-        destination
+        newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
-        destinationDefinitionVersion
-            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
-            .withReleaseDate(null)
-            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-            .withAllowedHosts(null),
+        destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
+
+    final UUID organizationId = UUID.randomUUID();
 
     final CustomDestinationDefinitionCreate customCreateForOrganization = new CustomDestinationDefinitionCreate()
         .destinationDefinition(create)
         .scopeId(organizationId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
 
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        null))
+            .thenReturn(destinationDefinitionVersion);
+
     destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForOrganization);
 
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
-        destination
-            .withCustom(true)
-            .withDefaultVersionId(null),
-        destinationDefinitionVersion
-            .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
-            .withReleaseDate(null)
-            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-            .withAllowedHosts(null),
-        organizationId,
-        ScopeType.ORGANIZATION);
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        null);
+    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
+        destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
   }
 
   @Test
-  @DisplayName("createCustomDestinationDefinition should not create a destinationDefinition with unsupported protocol range")
-  void testCreateCustomDestinationDefinitionWithInvalidProtocol() throws URISyntaxException, IOException, JsonValidationException {
-    final String invalidProtocol = "122.1.22";
-    final StandardDestinationDefinition destination = generateDestinationDefinition();
-    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destination);
-    destinationDefinitionVersion.getSpec().setProtocolVersion(invalidProtocol);
-    final String imageName = destinationDefinitionVersion.getDockerRepository() + ":" + destinationDefinitionVersion.getDockerImageTag();
-
-    when(uuidSupplier.get()).thenReturn(destination.getDestinationDefinitionId());
-    when(schedulerSynchronousClient.createGetSpecJob(imageName, true, workspaceId)).thenReturn(new SynchronousResponse<>(
-        destinationDefinitionVersion.getSpec(),
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+  @DisplayName("createCustomDestinationDefinition should not create a destinationDefinition "
+      + "if defaultDefinitionVersionFromCreate throws unsupported protocol version error")
+  void testCreateCustomDestinationDefinitionShouldCheckProtocolVersion() throws URISyntaxException, IOException {
+    final StandardDestinationDefinition newDestinationDefinition = generateDestinationDefinition();
+    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(newDestinationDefinition);
 
     final DestinationDefinitionCreate create = new DestinationDefinitionCreate()
-        .name(destination.getName())
+        .name(newDestinationDefinition.getName())
         .dockerRepository(destinationDefinitionVersion.getDockerRepository())
         .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(destination.getIcon())
+        .icon(newDestinationDefinition.getIcon())
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
-                .cpuRequest(destination.getResourceRequirements().getDefault().getCpuRequest()))
+                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()))
             .jobSpecific(Collections.emptyList()));
 
     final CustomDestinationDefinitionCreate customCreate = new CustomDestinationDefinitionCreate()
         .destinationDefinition(create)
         .workspaceId(workspaceId);
 
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreate.getWorkspaceId())).thenThrow(UnsupportedProtocolVersionException.class);
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
 
-    verify(schedulerSynchronousClient).createGetSpecJob(imageName, true, workspaceId);
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
+        create.getDocumentationUrl(),
+        customCreate.getWorkspaceId());
     verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
   }
 
@@ -737,34 +698,35 @@ class DestinationDefinitionsHandlerTest {
             new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
     final String currentTag = currentDestination.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttag";
-    final String newProtocolVersion = "0.2.4";
     assertNotEquals(newDockerImageTag, currentTag);
-    assertNotEquals(newProtocolVersion, currentDestination.getProtocolVersion());
 
-    final String newImageName = destinationDefinitionVersion.getDockerRepository() + ":" + newDockerImageTag;
-    final ConnectorSpecification newSpec = new ConnectorSpecification()
-        .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo2", "bar2")))
-        .withProtocolVersion(newProtocolVersion);
-    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false, null)).thenReturn(new SynchronousResponse<>(
-        newSpec,
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+    final StandardDestinationDefinition updatedDestination =
+        Jsons.clone(destinationDefinition).withDefaultVersionId(null);
+    final ActorDefinitionVersion updatedDestinationDefVersion =
+        generateVersionFromDestinationDefinition(updatedDestination)
+            .withDockerImageTag(newDockerImageTag);
 
-    final StandardDestinationDefinition updatedDestination = Jsons.clone(destinationDefinition).withDefaultVersionId(null);
-    final ActorDefinitionVersion updatedDestinationDefVersion = generateVersionFromDestinationDefinition(updatedDestination)
-        .withDockerImageTag(newDockerImageTag).withSpec(newSpec).withProtocolVersion(newProtocolVersion);
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+        destinationDefinition.getCustom()))
+            .thenReturn(updatedDestinationDefVersion);
 
-    final DestinationDefinitionRead destinationRead = destinationDefinitionsHandler.updateDestinationDefinition(
-        new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
-            .dockerImageTag(newDockerImageTag));
+    final DestinationDefinitionRead destinationRead =
+        destinationDefinitionsHandler.updateDestinationDefinition(
+            new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
+                .dockerImageTag(newDockerImageTag));
 
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
-    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false, null);
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination, updatedDestinationDefVersion);
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+        destinationDefinition.getCustom());
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination,
+        updatedDestinationDefVersion);
   }
 
   @Test
-  @DisplayName("updateDestinationDefinition should not update a destinationDefinition if protocol version is out of range")
-  void testOutOfProtocolRangeUpdateDestination() throws ConfigNotFoundException, IOException, JsonValidationException {
+  @DisplayName("updateDestinationDefinition should not update a destinationDefinition "
+      + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
+  void testOutOfProtocolRangeUpdateDestination() throws ConfigNotFoundException, IOException,
+      JsonValidationException {
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
     when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -773,24 +735,19 @@ class DestinationDefinitionsHandlerTest {
             new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
     final String currentTag = currentDestination.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttagforprotocolversion";
-    final String newProtocolVersion = "120.2.4";
     assertNotEquals(newDockerImageTag, currentTag);
-    assertNotEquals(newProtocolVersion, currentDestination.getProtocolVersion());
 
-    final String newImageName = destinationDefinitionVersion.getDockerRepository() + ":" + newDockerImageTag;
-    final ConnectorSpecification newSpec = new ConnectorSpecification()
-        .withConnectionSpecification(Jsons.jsonNode(ImmutableMap.of("foo2", "bar2")))
-        .withProtocolVersion(newProtocolVersion);
-    when(schedulerSynchronousClient.createGetSpecJob(newImageName, false, null)).thenReturn(new SynchronousResponse<>(
-        newSpec,
-        SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+        destinationDefinition.getCustom()))
+            .thenThrow(UnsupportedProtocolVersionException.class);
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.updateDestinationDefinition(
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
             .dockerImageTag(newDockerImageTag)));
 
-    verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false, null);
-    verify(configRepository, never()).writeStandardDestinationDefinition(any());
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+        destinationDefinition.getCustom());
+    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(any(), any());
   }
 
   @Test
@@ -799,18 +756,18 @@ class DestinationDefinitionsHandlerTest {
     final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
         new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
     final StandardDestinationDefinition updatedDestinationDefinition = Jsons.clone(this.destinationDefinition).withTombstone(true);
-    final DestinationRead destination = new DestinationRead();
+    final DestinationRead newDestinationDefinition = new DestinationRead();
 
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionIdRequestBody))
-        .thenReturn(new DestinationReadList().destinations(Collections.singletonList(destination)));
+        .thenReturn(new DestinationReadList().destinations(Collections.singletonList(newDestinationDefinition)));
 
     assertFalse(destinationDefinition.getTombstone());
 
     destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
 
-    verify(destinationHandler).deleteDestination(destination);
+    verify(destinationHandler).deleteDestination(newDestinationDefinition);
     verify(configRepository).writeStandardDestinationDefinition(updatedDestinationDefinition);
   }
 
@@ -912,7 +869,7 @@ class DestinationDefinitionsHandlerTest {
 
     @Test
     @DisplayName("should return the latest list")
-    void testCorrect() throws InterruptedException {
+    void testCorrect() {
       final ConnectorRegistryDestinationDefinition registryDestinationDefinition = new ConnectorRegistryDestinationDefinition()
           .withDestinationDefinitionId(UUID.randomUUID())
           .withName("some-destination")

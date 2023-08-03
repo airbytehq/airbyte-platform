@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -365,7 +366,7 @@ public class TemporalClient {
    */
   public TemporalResponse<ConnectorJobOutput> submitGetSpec(final UUID jobId,
                                                             final int attempt,
-                                                            final UUID workspaceId,
+                                                            final @Nullable UUID workspaceId,
                                                             final JobGetSpecConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 

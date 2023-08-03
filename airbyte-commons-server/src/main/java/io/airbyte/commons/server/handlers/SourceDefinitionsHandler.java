@@ -20,17 +20,10 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.commons.server.ServerConstants;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
-import io.airbyte.commons.server.converters.SpecFetcher;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
-import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
-import io.airbyte.commons.server.scheduler.SynchronousResponse;
-import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.Version;
+import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -45,7 +38,6 @@ import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -71,25 +63,22 @@ public class SourceDefinitionsHandler {
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
-  private final SynchronousSchedulerClient schedulerSynchronousClient;
+  private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final SourceHandler sourceHandler;
-  private final AirbyteProtocolVersionRange protocolVersionRange;
   private final FeatureFlagClient featureFlagClient;
 
   @Inject
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
                                   final Supplier<UUID> uuidSupplier,
-                                  final SynchronousSchedulerClient schedulerSynchronousClient,
+                                  final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
-                                  final AirbyteProtocolVersionRange protocolVersionRange,
                                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
-    this.schedulerSynchronousClient = schedulerSynchronousClient;
+    this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.sourceHandler = sourceHandler;
-    this.protocolVersionRange = protocolVersionRange;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -227,7 +216,9 @@ public class SourceDefinitionsHandler {
     final UUID id = uuidSupplier.get();
     final SourceDefinitionCreate sourceDefinitionCreate = customSourceDefinitionCreate.getSourceDefinition();
     final ActorDefinitionVersion actorDefinitionVersion =
-        defaultDefinitionVersionFromCreate(sourceDefinitionCreate, customSourceDefinitionCreate.getWorkspaceId())
+        actorDefinitionHandlerHelper
+            .defaultDefinitionVersionFromCreate(sourceDefinitionCreate.getDockerRepository(), sourceDefinitionCreate.getDockerImageTag(),
+                sourceDefinitionCreate.getDocumentationUrl(), customSourceDefinitionCreate.getWorkspaceId())
             .withActorDefinitionId(id);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -238,11 +229,6 @@ public class SourceDefinitionsHandler {
         .withPublic(false)
         .withCustom(true)
         .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
-
-    if (!protocolVersionRange.isSupported(new Version(actorDefinitionVersion.getProtocolVersion()))) {
-      throw new UnsupportedProtocolVersionException(actorDefinitionVersion.getProtocolVersion(), protocolVersionRange.min(),
-          protocolVersionRange.max());
-    }
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
@@ -256,60 +242,15 @@ public class SourceDefinitionsHandler {
     return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
   }
 
-  private ActorDefinitionVersion defaultDefinitionVersionFromCreate(final SourceDefinitionCreate sourceDefinitionCreate, final UUID workspaceId)
-      throws IOException {
-    final ConnectorSpecification spec =
-        getSpecForImage(
-            sourceDefinitionCreate.getDockerRepository(),
-            sourceDefinitionCreate.getDockerImageTag(),
-            // Only custom connectors can be created via handlers.
-            true,
-            workspaceId);
-
-    final Version airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.getProtocolVersion());
-    return new ActorDefinitionVersion()
-        .withDockerImageTag(sourceDefinitionCreate.getDockerImageTag())
-        .withDockerRepository(sourceDefinitionCreate.getDockerRepository())
-        .withSpec(spec)
-        .withDocumentationUrl(sourceDefinitionCreate.getDocumentationUrl().toString())
-        .withProtocolVersion(airbyteProtocolVersion.serialize())
-        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
-  }
-
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition currentSourceDefinition =
         configRepository.getStandardSourceDefinition(sourceDefinitionUpdate.getSourceDefinitionId());
     final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentSourceDefinition.getDefaultVersionId());
 
-    // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
-    // to allow for easier iteration of dev images
-    final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(sourceDefinitionUpdate.getDockerImageTag())
-        || ServerConstants.DEV_IMAGE_TAG.equals(sourceDefinitionUpdate.getDockerImageTag());
-    final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentVersion.getDockerRepository(), sourceDefinitionUpdate.getDockerImageTag(),
-            currentSourceDefinition.getCustom(), null)
-        : currentVersion.getSpec();
     final ActorDefinitionResourceRequirements updatedResourceReqs = sourceDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionUpdate.getResourceRequirements())
         : currentSourceDefinition.getResourceRequirements();
-
-    final Version airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.getProtocolVersion());
-    if (!protocolVersionRange.isSupported(airbyteProtocolVersion)) {
-      throw new UnsupportedProtocolVersionException(airbyteProtocolVersion, protocolVersionRange.min(), protocolVersionRange.max());
-    }
-
-    final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
-        .withActorDefinitionId(currentVersion.getActorDefinitionId())
-        .withDockerRepository(currentVersion.getDockerRepository())
-        .withDockerImageTag(sourceDefinitionUpdate.getDockerImageTag())
-        .withSpec(spec)
-        .withDocumentationUrl(currentVersion.getDocumentationUrl())
-        .withProtocolVersion(airbyteProtocolVersion.serialize())
-        .withReleaseStage(currentVersion.getReleaseStage())
-        .withReleaseDate(currentVersion.getReleaseDate())
-        .withSuggestedStreams(currentVersion.getSuggestedStreams())
-        .withAllowedHosts(currentVersion.getAllowedHosts());
 
     final StandardSourceDefinition newSource = new StandardSourceDefinition()
         .withSourceDefinitionId(currentSourceDefinition.getSourceDefinitionId())
@@ -321,8 +262,10 @@ public class SourceDefinitionsHandler {
         .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
 
+    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
     return buildSourceDefinitionRead(newSource, newVersion);
   }
 
@@ -341,17 +284,6 @@ public class SourceDefinitionsHandler {
 
     persistedSourceDefinition.withTombstone(true);
     configRepository.writeStandardSourceDefinition(persistedSourceDefinition);
-  }
-
-  private ConnectorSpecification getSpecForImage(final String dockerRepository,
-                                                 final String imageTag,
-                                                 final boolean isCustomConnector,
-                                                 final UUID workspaceId)
-      throws IOException {
-    final String imageName = dockerRepository + ":" + imageTag;
-    final SynchronousResponse<ConnectorSpecification> getSpecResponse =
-        schedulerSynchronousClient.createGetSpecJob(imageName, isCustomConnector, workspaceId);
-    return SpecFetcher.getSpecFromJob(getSpecResponse);
   }
 
   public static String loadIcon(final String name) {
