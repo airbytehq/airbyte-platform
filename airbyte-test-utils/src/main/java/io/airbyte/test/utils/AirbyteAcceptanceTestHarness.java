@@ -42,7 +42,6 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
-import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobDebugInfoRead;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
@@ -119,6 +118,7 @@ import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
@@ -137,7 +137,7 @@ import org.testcontainers.utility.MountableFile;
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
-@SuppressWarnings("MissingJavadocMethod")
+@SuppressWarnings({"MissingJavadocMethod", "PMD.AvoidDuplicateLiterals"})
 public class AirbyteAcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteAcceptanceTestHarness.class);
@@ -157,7 +157,6 @@ public class AirbyteAcceptanceTestHarness {
   public static final String POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION = "0.4.26";
 
   private static final String OUTPUT_NAMESPACE_PREFIX = "output_namespace_";
-  private static final String OUTPUT_NAMESPACE = OUTPUT_NAMESPACE_PREFIX + "${SOURCE_NAMESPACE}";
   private static final String OUTPUT_STREAM_PREFIX = "output_table_";
   private static final String TABLE_NAME = "id_and_name";
   public static final String STREAM_NAME = TABLE_NAME;
@@ -173,8 +172,6 @@ public class AirbyteAcceptanceTestHarness {
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
 
-  // Used for bypassing SSL modification for db configs
-  private static final String IS_TEST = "is_test";
   public static final int JITTER_MAX_INTERVAL_SECS = 10;
   public static final int FINAL_INTERVAL_SECS = 60;
   public static final int MAX_TRIES = 3;
@@ -213,10 +210,6 @@ public class AirbyteAcceptanceTestHarness {
   private DataSource sourceDataSource;
   private DataSource destinationDataSource;
   private String postgresPassword;
-
-  public PostgreSQLContainer getSourcePsql() {
-    return sourcePsql;
-  }
 
   public KubernetesClient getKubernetesClient() {
     return kubernetesClient;
@@ -431,7 +424,6 @@ public class AirbyteAcceptanceTestHarness {
     // check if temporal workflow is reachable
     final ConnectionManagerWorkflow connectionManagerWorkflow =
         workflowCLient.newWorkflowStub(ConnectionManagerWorkflow.class, "connection_manager_" + connectionId);
-
     return connectionManagerWorkflow.getState();
   }
 
@@ -489,28 +481,50 @@ public class AirbyteAcceptanceTestHarness {
         "get source definition spec", 10, 60, 3);
   }
 
-  public void assertSourceAndDestinationDbInSync(final boolean withScdTable) throws Exception {
+  public void assertSourceAndDestinationDbInSync(final String outputSchema, final boolean withNormalizedTable, final boolean withScdTable)
+      throws Exception {
+    assertSourceAndDestinationDbInSync(PUBLIC_SCHEMA_NAME, outputSchema, withNormalizedTable, withScdTable);
+  }
+
+  public void assertSourceAndDestinationDbInSync(final String inputSchema,
+                                                 final String outputSchema,
+                                                 final boolean withNormalizedTable,
+                                                 final boolean withScdTable)
+      throws Exception {
     // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
     // the sync is marked complete but the destination tables aren't finalized yet.
     AirbyteApiClient.retryWithJitterThrows(() -> {
       try {
         final Database source = getSourceDatabase();
-        final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
-        final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
+        final Set<SchemaTableNamePair> sourceTables = listAllTables(source, inputSchema);
+        final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
+
         final Database destination = getDestinationDatabase();
-        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-        assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
-            String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
+        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination, outputSchema);
+        assertEquals(expDestTables, destinationTables,
+            String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
 
         for (final SchemaTableNamePair pair : sourceTables) {
           final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-          assertRawDestinationContains(sourceRecords, pair);
+          // generate the raw stream with the correct schema
+          // retrieve and assert the recordds
+          assertRawDestinationContains(sourceRecords, outputSchema, pair.tableName());
         }
       } catch (final Exception e) {
         return e;
       }
       return null;
     }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+  }
+
+  public void assertDestinationDbEmpty() throws Exception {
+    final Database destination = getDestinationDatabase();
+    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
+
+    for (final SchemaTableNamePair pair : destinationTables) {
+      final List<JsonNode> recs = retrieveRecordsFromDatabase(destination, pair.getFullyQualifiedTableName());
+      assertTrue(recs.isEmpty());
+    }
   }
 
   public Database getSourceDatabase() {
@@ -541,27 +555,48 @@ public class AirbyteAcceptanceTestHarness {
         });
   }
 
-  private Set<SchemaTableNamePair> addAirbyteGeneratedTables(final boolean withScdTable, final Set<SchemaTableNamePair> sourceTables) {
+  private Set<SchemaTableNamePair> listAllTables(final Database database, final String schema) throws SQLException {
+    return database.query(
+        context -> {
+          final Result<Record> fetch =
+              context.fetch(
+                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname == '" + schema + "'");
+          return fetch.stream()
+              .map(record -> {
+                final var schemaName = (String) record.get("schemaname");
+                final var tableName = (String) record.get("tablename");
+                return new SchemaTableNamePair(schemaName, tableName);
+              })
+              .collect(Collectors.toSet());
+        });
+  }
+
+  private Set<SchemaTableNamePair> addAirbyteGeneratedTables(final String outputSchema,
+                                                             final boolean withNormalizedTable,
+                                                             final boolean withScdTable,
+                                                             final Set<SchemaTableNamePair> sourceTables) {
     return sourceTables.stream().flatMap(x -> {
       final String cleanedNameStream = x.tableName().replace(".", "_");
       final List<SchemaTableNamePair> explodedStreamNames = new ArrayList<>(List.of(
-          new SchemaTableNamePair(OUTPUT_NAMESPACE_PREFIX + x.schemaName(),
-              String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream)),
-          new SchemaTableNamePair(OUTPUT_NAMESPACE_PREFIX + x.schemaName(), String.format("%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream))));
+          new SchemaTableNamePair(outputSchema, String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream))));
+
+      if (withNormalizedTable) {
+        explodedStreamNames.add(
+            new SchemaTableNamePair(outputSchema, String.format("%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
+      }
+
       if (withScdTable) {
         explodedStreamNames
-            .add(new SchemaTableNamePair("_airbyte_" + OUTPUT_NAMESPACE_PREFIX + x.schemaName(),
-                String.format("%s%s_stg", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
+            .add(new SchemaTableNamePair("_airbyte_" + outputSchema, String.format("%s%s_stg", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
         explodedStreamNames
-            .add(new SchemaTableNamePair(OUTPUT_NAMESPACE_PREFIX + x.schemaName(),
-                String.format("%s%s_scd", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
+            .add(new SchemaTableNamePair(outputSchema, String.format("%s%s_scd", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
       }
       return explodedStreamNames.stream();
     }).collect(Collectors.toSet());
   }
 
-  public void assertRawDestinationContains(final List<JsonNode> sourceRecords, final SchemaTableNamePair pair) throws Exception {
-    final Set<JsonNode> destinationRecords = new HashSet<>(retrieveRawDestinationRecords(pair));
+  public void assertRawDestinationContains(final List<JsonNode> sourceRecords, final String outputSchema, final String tableName) throws Exception {
+    final Set<JsonNode> destinationRecords = new HashSet<>(retrieveRawDestinationRecords(outputSchema, tableName));
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
         String.format("destination contains: %s record. source contains: %s, \nsource records %s \ndestination records: %s",
@@ -574,13 +609,14 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  public void assertNormalizedDestinationContains(final List<JsonNode> sourceRecords) throws Exception {
-    assertNormalizedDestinationContains(sourceRecords, STREAM_NAME);
+  public void assertNormalizedDestinationContains(final String outputSchema, final List<JsonNode> sourceRecords) throws Exception {
+    assertNormalizedDestinationContains(outputSchema, sourceRecords, STREAM_NAME);
   }
 
-  public void assertNormalizedDestinationContains(final List<JsonNode> sourceRecords, final String streamName) throws Exception {
+  public void assertNormalizedDestinationContains(final String outputSchema, final List<JsonNode> sourceRecords, final String streamName)
+      throws Exception {
     final Database destination = getDestinationDatabase();
-    final String finalDestinationTable = String.format("%spublic.%s%s", OUTPUT_NAMESPACE_PREFIX, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
+    final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
     final List<JsonNode> destinationRecords = retrieveRecordsFromDatabase(destination, finalDestinationTable);
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
@@ -602,9 +638,9 @@ public class AirbyteAcceptanceTestHarness {
    * @param expectedRecords the records that we expect
    * @throws Exception while retrieving sources
    */
-  public void assertNormalizedDestinationContainsIdColumn(final List<JsonNode> expectedRecords) throws Exception {
+  public void assertNormalizedDestinationContainsIdColumn(final String outputSchema, final List<JsonNode> expectedRecords) throws Exception {
     final Database destination = getDestinationDatabase();
-    final String finalDestinationTable = String.format("%spublic.%s%s", OUTPUT_NAMESPACE_PREFIX, OUTPUT_STREAM_PREFIX, STREAM_NAME.replace(".", "_"));
+    final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, STREAM_NAME.replace(".", "_"));
     final List<JsonNode> destinationRecords = retrieveRecordsFromDatabase(destination, finalDestinationTable);
 
     assertEquals(expectedRecords.size(), destinationRecords.size(),
@@ -637,52 +673,62 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  public ConnectionRead createConnection(final String name,
-                                         final UUID sourceId,
-                                         final UUID destinationId,
-                                         final List<UUID> operationIds,
-                                         final AirbyteCatalog catalog,
-                                         final UUID catalogId,
-                                         final ConnectionScheduleType scheduleType,
-                                         final ConnectionScheduleData scheduleData)
+  public ConnectionRead createConnection(TestConnectionCreate create)
       throws Exception {
-    return createConnectionWithGeography(
-        name,
-        sourceId,
-        destinationId,
-        operationIds,
-        catalog,
-        catalogId,
-        scheduleType,
-        scheduleData,
-        Geography.AUTO);
-  }
 
-  public ConnectionRead createConnectionWithGeography(final String name,
-                                                      final UUID sourceId,
-                                                      final UUID destinationId,
-                                                      final List<UUID> operationIds,
-                                                      final AirbyteCatalog catalog,
-                                                      final UUID catalogId,
-                                                      final ConnectionScheduleType scheduleType,
-                                                      final ConnectionScheduleData scheduleData,
-                                                      final Geography geography)
-      throws Exception {
+    /*
+     * We control the name inside this method to avoid collisions of sync name and namespace. Especially
+     * if namespaces collide. This can cause tests to flake as they will be writing to the same tables
+     * in the destination.
+     */
+    final String slug = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+    final String name = "accp-test-connection-" + slug + (create.getNameSuffix() != null ? "-" + create.getNameSuffix() : "");
+    final String namespace = "accp_test_" + slug;
+
     return createConnectionFromRequest(
         new ConnectionCreate()
             .status(ConnectionStatus.ACTIVE)
-            .sourceId(sourceId)
-            .destinationId(destinationId)
-            .syncCatalog(catalog)
-            .sourceCatalogId(catalogId)
-            .scheduleType(scheduleType)
-            .scheduleData(scheduleData)
-            .operationIds(operationIds)
+            .sourceId(create.getSrcId())
+            .destinationId(create.getDstId())
+            .syncCatalog(create.getConfiguredCatalog())
+            .sourceCatalogId(create.getCatalogId())
+            .scheduleType(create.getScheduleType())
+            .scheduleData(create.getScheduleData())
+            .operationIds(create.getOperationIds())
             .name(name)
             .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
-            .namespaceFormat(OUTPUT_NAMESPACE)
+            .namespaceFormat(namespace)
             .prefix(OUTPUT_STREAM_PREFIX)
-            .geography(geography));
+            .geography(create.getGeography()));
+  }
+
+  public ConnectionRead createConnectionSourceNamespace(TestConnectionCreate create)
+      throws Exception {
+
+    /*
+     * We control the name inside this method to avoid collisions of sync name and namespace. Especially
+     * if namespaces collide. This can cause tests to flake as they will be writing to the same tables
+     * in the destination.
+     */
+    final String slug = RandomStringUtils.randomAlphabetic(5).toLowerCase();
+    final String name = "accp-test-connection-" + slug + (create.getNameSuffix() != null ? "-" + create.getNameSuffix() : "");
+    final String namespace = "accp_test_" + slug;
+
+    return createConnectionFromRequest(
+        new ConnectionCreate()
+            .status(ConnectionStatus.ACTIVE)
+            .sourceId(create.getSrcId())
+            .destinationId(create.getDstId())
+            .syncCatalog(create.getConfiguredCatalog())
+            .sourceCatalogId(create.getCatalogId())
+            .scheduleType(create.getScheduleType())
+            .scheduleData(create.getScheduleData())
+            .operationIds(create.getOperationIds())
+            .name(name)
+            .namespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
+            .namespaceFormat(namespace + "_${SOURCE_NAMESPACE}")
+            .prefix(OUTPUT_STREAM_PREFIX)
+            .geography(create.getGeography()));
   }
 
   private ConnectionRead createConnectionFromRequest(final ConnectionCreate request) throws Exception {
@@ -742,16 +788,12 @@ public class AirbyteAcceptanceTestHarness {
     }, "delete connection", 10, 60, 3);
   }
 
-  public DestinationRead createPostgresDestination(final boolean isLegacy) {
+  public DestinationRead createPostgresDestination() {
     return createDestination(
         "AccTestDestination-" + UUID.randomUUID(),
         defaultWorkspaceId,
         getPostgresDestinationDefinitionId(),
-        getDestinationDbConfig(isLegacy));
-  }
-
-  public DestinationRead createPostgresDestination() throws ApiException {
-    return createPostgresDestination(false);
+        getDestinationDbConfig());
   }
 
   public DestinationRead createDestination(final String name,
@@ -774,11 +816,11 @@ public class AirbyteAcceptanceTestHarness {
         .getStatus(), "check connection", 10, 60, 3);
   }
 
-  public OperationRead createOperation() {
-    return createOperation(defaultWorkspaceId);
+  public OperationRead createNormalizationOperation() {
+    return createNormalizationOperation(defaultWorkspaceId);
   }
 
-  public OperationRead createOperation(final UUID workspaceId) {
+  private OperationRead createNormalizationOperation(final UUID workspaceId) {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
@@ -813,46 +855,37 @@ public class AirbyteAcceptanceTestHarness {
         .collect(Collectors.toList());
   }
 
-  public List<JsonNode> retrieveRawDestinationRecords(final SchemaTableNamePair pair) throws Exception {
+  public List<JsonNode> retrieveRawDestinationRecords(final String schema, final String tableName) throws Exception {
     final Database destination = getDestinationDatabase();
     final Set<SchemaTableNamePair> namePairs = listAllTables(destination);
 
-    final String rawStreamName = String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, pair.tableName().replace(".", "_"));
-    final SchemaTableNamePair rawTablePair = new SchemaTableNamePair(OUTPUT_NAMESPACE_PREFIX + pair.schemaName(), rawStreamName);
+    final String rawStreamName = String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, tableName.replace(".", "_"));
+    final SchemaTableNamePair rawTablePair = new SchemaTableNamePair(schema, rawStreamName);
     assertTrue(namePairs.contains(rawTablePair), "can't find a non-normalized version (raw) of " + rawTablePair.getFullyQualifiedTableName());
 
     return retrieveDestinationRecords(destination, rawTablePair.getFullyQualifiedTableName());
   }
 
-  public JsonNode getSourceDbConfig(final boolean isLegacy) {
-    return getDbConfig(sourcePsql, false, false, isLegacy, Type.SOURCE);
-  }
-
   public JsonNode getSourceDbConfig() {
-    return getSourceDbConfig(false);
-  }
-
-  public JsonNode getDestinationDbConfig(final boolean isLegacy) {
-    return getDbConfig(destinationPsql, false, true, isLegacy, Type.DESTINATION);
+    return getDbConfig(sourcePsql, false, false, Type.SOURCE);
   }
 
   public JsonNode getDestinationDbConfig() {
-    return getDestinationDbConfig(false);
+    return getDbConfig(destinationPsql, false, true, Type.DESTINATION);
   }
 
   public JsonNode getDestinationDbConfigWithHiddenPassword() {
-    return getDbConfig(destinationPsql, true, true, false, Type.DESTINATION);
+    return getDbConfig(destinationPsql, true, true, Type.DESTINATION);
   }
 
   public JsonNode getDbConfig(final PostgreSQLContainer psql,
                               final boolean hiddenPassword,
                               final boolean withSchema,
-                              final boolean isLegacy,
                               final Type connectorType) {
     try {
       final Map<Object, Object> dbConfig =
           (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword ? null : postgresPassword, withSchema)
-              : localConfig(psql, hiddenPassword, withSchema, isLegacy);
+              : localConfig(psql, hiddenPassword, withSchema);
       final var config = Jsons.jsonNode(dbConfig);
       LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
       return config;
@@ -863,8 +896,7 @@ public class AirbyteAcceptanceTestHarness {
 
   private Map<Object, Object> localConfig(final PostgreSQLContainer psql,
                                           final boolean hiddenPassword,
-                                          final boolean withSchema,
-                                          final boolean isLegacy) {
+                                          final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
     // don't use psql.getHost() directly since the ip we need differs depending on environment
     dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
@@ -878,13 +910,6 @@ public class AirbyteAcceptanceTestHarness {
     dbConfig.put(JdbcUtils.PORT_KEY, psql.getFirstMappedPort());
     dbConfig.put(JdbcUtils.DATABASE_KEY, psql.getDatabaseName());
     dbConfig.put(JdbcUtils.USERNAME_KEY, psql.getUsername());
-
-    // bypasses the SSL modification for cloud acceptance tests. This use useful in cloud since it
-    // enforces most databases to have SSL on, but the postgres containers we use for testing does not
-    // allow SSL.
-    if (!isLegacy) {
-      dbConfig.put(IS_TEST, true);
-    }
     dbConfig.put(JdbcUtils.SSL_KEY, false);
 
     if (withSchema) {
@@ -945,16 +970,12 @@ public class AirbyteAcceptanceTestHarness {
             .documentationUrl(URI.create("https://example.com"))));
   }
 
-  public SourceRead createPostgresSource(final boolean isLegacy) {
+  public SourceRead createPostgresSource() {
     return createSource(
         "acceptanceTestDb-" + UUID.randomUUID(),
         defaultWorkspaceId,
         getPostgresSourceDefinitionId(),
-        getSourceDbConfig(isLegacy));
-  }
-
-  public SourceRead createPostgresSource() throws ApiException {
-    return createPostgresSource(false);
+        getSourceDbConfig());
   }
 
   public SourceRead createSource(final String name, final UUID workspaceId, final UUID sourceDefId, final JsonNode sourceConfig) {
@@ -1189,21 +1210,6 @@ public class AirbyteAcceptanceTestHarness {
   public enum Type {
     SOURCE,
     DESTINATION
-  }
-
-  public void assertDestinationDbEmpty(final boolean withScdTable) throws Exception {
-    final Database source = getSourceDatabase();
-    final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
-    final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-    assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
-        String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
-
-    for (final SchemaTableNamePair pair : sourceTables) {
-      final List<JsonNode> sourceRecords = retrieveRawDestinationRecords(pair);
-      assertTrue(sourceRecords.isEmpty());
-    }
   }
 
   public void setIncrementalAppendSyncMode(final AirbyteCatalog airbyteCatalog, final List<String> cursorField) {

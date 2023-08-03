@@ -15,7 +15,7 @@ services:
       - airbyte_internal
       - airbyte_public
   airbyte-temporal-ui:
-    image: temporalio/web:1.13.0
+    image: temporalio/web:1.15.0
     logging: *default-logging
     container_name: airbyte-temporal-ui
     restart: unless-stopped

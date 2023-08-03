@@ -23,7 +23,6 @@ import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
@@ -44,6 +43,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.Database;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
 import io.airbyte.test.utils.SchemaTableNamePair;
+import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -85,7 +85,7 @@ import org.slf4j.LoggerFactory;
  */
 @DisabledIfEnvironmentVariable(named = "KUBE",
                                matches = "true")
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "DataFlowIssue", "SqlDialectInspection", "SqlNoDataSourceInspection"})
 @TestInstance(Lifecycle.PER_CLASS)
 class CdcAcceptanceTests {
 
@@ -106,7 +106,6 @@ class CdcAcceptanceTests {
   private static final Integer INITIAL_WAITING_SECONDS = 5;
 
   private static final String SOURCE_NAME = "CDC Source";
-  private static final String CONNECTION_NAME = "test-connection";
   private static final String SCHEMA_NAME = "public";
   private static final String CDC_UPDATED_AT_COLUMN = "_ab_cdc_updated_at";
   private static final String CDC_DELETED_AT_COLUMN = "_ab_cdc_deleted_at";
@@ -116,8 +115,10 @@ class CdcAcceptanceTests {
   private static final String STARTING = "Starting {}";
   private static final String STARTING_SYNC_ONE = "Starting {} sync 1";
 
+  // todo (cgardens) - this looks like it isn't used, but i'm not sure if it should be. delete?
   // version of the postgres destination connector that was built with the
   // old Airbyte protocol that does not contain any per-stream logic/fields
+  @SuppressWarnings("unused")
   private static final String POSTGRES_DESTINATION_LEGACY_CONNECTOR_VERSION = "0.3.19";
 
   private static AirbyteApiClient apiClient;
@@ -155,7 +156,7 @@ class CdcAcceptanceTests {
   }
 
   @BeforeEach
-  void setup() throws URISyntaxException, IOException, InterruptedException, ApiException, SQLException {
+  void setup() throws URISyntaxException, IOException, InterruptedException, SQLException {
     testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId, POSTGRES_INIT_SQL_FILE);
     testHarness.setup();
   }
@@ -170,7 +171,9 @@ class CdcAcceptanceTests {
   void testIncrementalCdcSync(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
-    final UUID connectionId = createCdcConnection();
+    final var conn = createCdcConnection();
+    final var connectionId = conn.getConnectionId();
+    final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
@@ -181,10 +184,10 @@ class CdcAcceptanceTests {
     final Database source = testHarness.getSourceDatabase();
 
     List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final List<StreamDescriptor> expectedStreams = List.of(
         new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE),
@@ -197,7 +200,7 @@ class CdcAcceptanceTests {
     // add new records and run again.
     // add a new record
     source.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(6, 'geralt')"));
-    // mutate a record that was already synced with out updating its cursor value.
+    // mutate a record that was already synced without updating its cursor value.
     // since this is a CDC connection, the destination should contain a record with this
     // new value and an updated_at time corresponding to this update query
     source.query(ctx -> ctx.execute("UPDATE id_and_name SET name='yennefer' WHERE id=2"));
@@ -228,8 +231,8 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, expectedStreams);
 
     // reset back to no data.
@@ -240,8 +243,8 @@ class CdcAcceptanceTests {
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(ID_AND_NAME_TABLE, Collections.emptyList());
-    assertDestinationMatches(COLOR_PALETTE_TABLE, Collections.emptyList());
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, Collections.emptyList());
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, Collections.emptyList());
     assertNoState(connectionId);
 
     // sync one more time. verify it is the equivalent of a full refresh.
@@ -252,10 +255,10 @@ class CdcAcceptanceTests {
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     assertGlobalStateContainsStreams(connectionId, expectedStreams);
   }
@@ -264,7 +267,9 @@ class CdcAcceptanceTests {
   void testDeleteRecordCdcSync(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
-    final UUID connectionId = createCdcConnection();
+    final var conn = createCdcConnection();
+    final var connectionId = conn.getConnectionId();
+    final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
@@ -274,7 +279,7 @@ class CdcAcceptanceTests {
 
     final Database source = testHarness.getSourceDatabase();
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final Instant beforeDelete = Instant.now();
 
@@ -296,14 +301,16 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
   }
 
   @Test
   void testPartialResetFromSchemaUpdate(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
-    final UUID connectionId = createCdcConnection();
+    final var conn = createCdcConnection();
+    final var connectionId = conn.getConnectionId();
+    final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
@@ -313,10 +320,10 @@ class CdcAcceptanceTests {
     final Database source = testHarness.getSourceDatabase();
 
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final StreamDescriptor idAndNameStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE);
     final StreamDescriptor colorPaletteStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(COLOR_PALETTE_TABLE);
@@ -327,7 +334,8 @@ class CdcAcceptanceTests {
 
     LOGGER.info("Refreshing schema and updating connection");
     final ConnectionRead connectionRead = apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    final UUID sourceId = createCdcSource().getSourceId();
+    final UUID sourceId =
+        createCdcSource().getSourceId();
     final AirbyteCatalog refreshedCatalog = testHarness.discoverSourceSchema(sourceId);
     refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     LOGGER.info("Refreshed catalog: {}", refreshedCatalog);
@@ -347,7 +355,9 @@ class CdcAcceptanceTests {
   void testPartialResetFromStreamSelection(final TestInfo testInfo) throws Exception {
     LOGGER.info(STARTING, testInfo.getDisplayName());
 
-    final UUID connectionId = createCdcConnection();
+    final var conn = createCdcConnection();
+    final var connectionId = conn.getConnectionId();
+    final var outputSchema = conn.getNamespaceFormat();
     LOGGER.info(STARTING_SYNC_ONE, testInfo.getDisplayName());
 
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
@@ -357,10 +367,10 @@ class CdcAcceptanceTests {
     final Database source = testHarness.getSourceDatabase();
 
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final StreamDescriptor idAndNameStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE);
     final StreamDescriptor colorPaletteStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(COLOR_PALETTE_TABLE);
@@ -401,9 +411,9 @@ class CdcAcceptanceTests {
     LOGGER.info("Waiting for sync job after update to start");
     syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connectionId);
     LOGGER.info("Checking that id_and_name table is unaffected by the partial reset");
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
     LOGGER.info("Checking that color_palette table was cleared in the destination due to the reset triggered by the update");
-    assertDestinationMatches(COLOR_PALETTE_TABLE, List.of());
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, List.of());
     LOGGER.info("Waiting for sync job after update to complete");
     waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
 
@@ -411,7 +421,7 @@ class CdcAcceptanceTests {
     // If we see 0 records for this table in the destination, that means the CDC partial reset logic is
     // not working properly, and it continued from the replication log cursor for this stream despite
     // this stream's state being reset
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, List.of(idAndNameStreamDescriptor, colorPaletteStreamDescriptor));
 
     // Verify that incremental still works properly after partial reset
@@ -434,8 +444,8 @@ class CdcAcceptanceTests {
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
 
-    assertDestinationMatches(ID_AND_NAME_TABLE, expectedIdAndNameRecords);
-    assertDestinationMatches(COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, List.of(idAndNameStreamDescriptor, colorPaletteStreamDescriptor));
   }
 
@@ -447,13 +457,13 @@ class CdcAcceptanceTests {
         .toList());
   }
 
-  private UUID createCdcConnection() throws Exception {
+  private ConnectionRead createCdcConnection() throws Exception {
     final SourceRead sourceRead = createCdcSource();
     final UUID sourceId = sourceRead.getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
 
-    operationRead = testHarness.createOperation();
-    final UUID operationId = operationRead.getOperationId();
+    operationRead = testHarness.createNormalizationOperation();
+    final UUID normalizationOpId = operationRead.getOperationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final AirbyteStream stream = catalog.getStreams().get(0).getStream();
@@ -471,20 +481,17 @@ class CdcAcceptanceTests {
         .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
-    final UUID connectionId =
-        testHarness.createConnection(CONNECTION_NAME,
-            sourceId,
-            destinationId,
-            List.of(operationId),
-            catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
-            .getConnectionId();
-    return connectionId;
+    return testHarness.createConnection(new TestConnectionCreate.Builder(
+        sourceId,
+        destinationId,
+        catalog,
+        discoverResult.getCatalogId())
+            .setNormalizationOperationId(normalizationOpId)
+            .build());
   }
 
-  private SourceRead createCdcSource() throws ApiException {
+  @SuppressWarnings("unchecked")
+  private SourceRead createCdcSource() {
     final UUID postgresSourceDefinitionId = testHarness.getPostgresSourceDefinitionId();
     final JsonNode sourceDbConfig = testHarness.getSourceDbConfig();
     final Map<Object, Object> sourceDbConfigMap = Jsons.object(sourceDbConfig, Map.class);
@@ -504,10 +511,12 @@ class CdcAcceptanceTests {
         Jsons.jsonNode(sourceDbConfigMap));
   }
 
-  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private void assertDestinationMatches(final String streamName, final List<DestinationCdcRecordMatcher> expectedDestRecordMatchers)
+  @SuppressWarnings({"PMD.AvoidLiteralsInIfCondition", "unchecked", "OptionalIsPresent"})
+  private void assertDestinationMatches(final String schema,
+                                        final String streamName,
+                                        final List<DestinationCdcRecordMatcher> expectedDestRecordMatchers)
       throws Exception {
-    final List<JsonNode> destRecords = testHarness.retrieveRawDestinationRecords(new SchemaTableNamePair(SCHEMA_NAME, streamName));
+    final List<JsonNode> destRecords = testHarness.retrieveRawDestinationRecords(schema, streamName);
     if (destRecords.size() != expectedDestRecordMatchers.size()) {
       final String errorMessage = String.format(
           "The number of destination records %d does not match the expected number %d",
@@ -574,7 +583,7 @@ class CdcAcceptanceTests {
   }
 
   // can be helpful for debugging
-  @SuppressWarnings("PMD.UnusedPrivateMethod")
+  @SuppressWarnings({"PMD.UnusedPrivateMethod", "unused"})
   private void printDbs() throws SQLException {
     final Database sourceDb = testHarness.getSourceDatabase();
     Set<SchemaTableNamePair> pairs = testHarness.listAllTables(sourceDb);

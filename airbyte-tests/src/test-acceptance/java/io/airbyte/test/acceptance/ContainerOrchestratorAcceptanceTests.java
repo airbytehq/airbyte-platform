@@ -13,7 +13,6 @@ import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
@@ -25,11 +24,11 @@ import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.TestConnectionCreate;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -52,10 +51,10 @@ import org.slf4j.MDC;
  * down and back up workers while a sync is running to ensure it is not affected by a deployment.
  * <p>
  * This test class is only enabled if the KUBE environment variable is true, because container
- * orchestrators are currently only used by kuberenetes deployments, as container orchestrators have
+ * orchestrators are currently only used by kubernetes deployments, as container orchestrators have
  * not yet been ported over to docker.
  */
-@SuppressWarnings({"rawtypes", "ConstantConditions"})
+@SuppressWarnings({"ConstantConditions"})
 @EnabledIfEnvironmentVariable(named = "KUBE",
                               matches = "true")
 @TestInstance(Lifecycle.PER_CLASS)
@@ -67,10 +66,8 @@ class ContainerOrchestratorAcceptanceTests {
 
   private static AirbyteAcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
-  private static UUID workspaceId;
   private static KubernetesClient kubernetesClient;
 
-  @SuppressWarnings("UnstableApiUsage")
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
     apiClient = new AirbyteApiClient(
@@ -79,7 +76,7 @@ class ContainerOrchestratorAcceptanceTests {
             .setPort(8001)
             .setBasePath("/api"));
     // work in whatever default workspace is present.
-    workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
+    UUID workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
     LOGGER.info("workspaceId = " + workspaceId);
 
     // log which connectors are being used.
@@ -114,7 +111,6 @@ class ContainerOrchestratorAcceptanceTests {
   void testDowntimeDuringSync() throws Exception {
     // NOTE: PMD assert warning suppressed because the assertion was flaky. The test will throw if the
     // sync does not succeed.
-    final String connectionName = "test-connection";
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
@@ -125,14 +121,12 @@ class ContainerOrchestratorAcceptanceTests {
 
     LOGGER.info("Creating connection...");
     final UUID connectionId =
-        testHarness.createConnection(connectionName,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            List.of(),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
+            discoverResult.getCatalogId())
+                .build())
             .getConnectionId();
 
     LOGGER.info("Run manual sync...");
@@ -157,24 +151,20 @@ class ContainerOrchestratorAcceptanceTests {
 
   @Test
   void testCancelSyncWithInterruption() throws Exception {
-    final String connectionName = "test-connection";
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID operationId = testHarness.createOperation().getOperationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(connectionName,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            List.of(operationId),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
+            discoverResult.getCatalogId())
+                .build())
             .getConnectionId();
 
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -189,10 +179,8 @@ class ContainerOrchestratorAcceptanceTests {
 
   @Test
   void testCancelSyncWhenCancelledWhenWorkerIsNotRunning() throws Exception {
-    final String connectionName = "test-connection";
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID operationId = testHarness.createOperation().getOperationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
@@ -201,14 +189,12 @@ class ContainerOrchestratorAcceptanceTests {
 
     LOGGER.info("Creating connection...");
     final UUID connectionId =
-        testHarness.createConnection(connectionName,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            List.of(operationId),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
+            discoverResult.getCatalogId())
+                .build())
             .getConnectionId();
 
     LOGGER.info("Waiting for connection to be available in Temporal...");
