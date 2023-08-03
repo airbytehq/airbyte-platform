@@ -1143,7 +1143,7 @@ components:
           default: false
         pagination:
           $ref: "#/components/schemas/Pagination"
-        nameStartsWith:
+        nameContains:
           type: string
     Pagination:
       type: object
