@@ -233,6 +233,7 @@ create table "public"."permission" (
   "permission_type" "public"."permission_type" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "organization_id" uuid,
   constraint "permission_pkey"
     primary key ("id")
 );
@@ -393,6 +394,10 @@ alter table "public"."operation"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
 alter table "public"."permission"
+  add constraint "permission_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
+alter table "public"."permission"
   add constraint "permission_user_id_fkey"
     foreign key ("user_id")
     references "public"."user" ("id");
@@ -434,6 +439,7 @@ create index "connection_source_id_idx" on "public"."connection"("source_id" asc
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create index "permission_organization_id_idx" on "public"."permission"("organization_id" asc);
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
