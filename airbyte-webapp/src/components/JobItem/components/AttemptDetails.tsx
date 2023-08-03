@@ -74,7 +74,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
           </Text>
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
-              id="sources.countEmittedRecords"
+              id="sources.countRecordsExtracted"
               values={{ count: attempt.totalStats?.recordsEmitted || 0 }}
             />
           </Text>
@@ -83,7 +83,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
           </Text>
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
-              id="sources.countCommittedRecords"
+              id="sources.countRecordsLoaded"
               values={{ count: attempt.totalStats?.recordsCommitted || 0 }}
             />
           </Text>
