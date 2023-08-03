@@ -1066,14 +1066,6 @@ public class AirbyteAcceptanceTestHarness {
     }, "delete operation", 10, 60, 3);
   }
 
-  @Deprecated(forRemoval = true)
-  public JobRead getMostRecentSyncJobId(final UUID connectionId) {
-    return AirbyteApiClient.retryWithJitter(() -> apiClient.getJobsApi()
-        .listJobsFor(new JobListRequestBody().configId(connectionId.toString()).configTypes(List.of(JobConfigType.SYNC)))
-        .getJobs()
-        .stream().findFirst().map(JobWithAttemptsRead::getJob).orElseThrow(), "get most recent sync job", 10, 60, 3);
-  }
-
   /**
    * Returns the most recent job for the provided connection.
    */
@@ -1182,16 +1174,16 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {
-    final JobRead lastJob = getMostRecentSyncJobId(connectionId);
+    final JobRead lastJob = getMostRecentSyncForConnection(connectionId);
     if (lastJob.getStatus() != JobStatus.SUCCEEDED) {
       return lastJob;
     }
 
-    JobRead mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
+    JobRead mostRecentSyncJob = getMostRecentSyncForConnection(connectionId);
     int count = 0;
     while (count < MAX_ALLOWED_SECOND_PER_RUN && mostRecentSyncJob.getId().equals(lastJob.getId())) {
       Thread.sleep(Duration.ofSeconds(1).toMillis());
-      mostRecentSyncJob = getMostRecentSyncJobId(connectionId);
+      mostRecentSyncJob = getMostRecentSyncForConnection(connectionId);
       ++count;
     }
     final boolean exceeded120seconds = count >= MAX_ALLOWED_SECOND_PER_RUN;
