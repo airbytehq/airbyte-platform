@@ -231,7 +231,49 @@ airbyte:
         memory-limit: 50Mi
         memory-request: 25Mi
 
+      # Generally low resource containers, going even lower
+      lowside--destination-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowside--destination-stdout:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowside--heartbeat:
+        cpu-limit: 0.2
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowside--source-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+
       # Currently in testing for APIs
+      lowrss--destination-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--destination-stdout:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--heartbeat:
+        cpu-limit: 0.2
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
+      lowrss--source-stderr:
+        cpu-limit: 0.5
+        cpu-request: 0.01
+        memory-limit: 50Mi
+        memory-request: 25Mi
       lowrss--source-api:
         cpu-limit: 1
         cpu-request: 0.2
@@ -254,24 +296,24 @@ airbyte:
         memory-request: 1Gi
       lowrss--destination-stdin-api:
         cpu-limit: 1
-        cpu-request: 0.2
+        cpu-request: 0.1
         memory-limit: 50Mi
         memory-request: 25Mi
 
       # Previous version of lowrss
       lowrss2--source-api:
-        cpu-limit: 0.5
+        cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 2Gi
         memory-request: 1Gi
       lowrss2--source-stdout-api:
-        cpu-limit: 0.5
+        cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
       lowrss2--orchestrator-api:
         cpu-limit: 1
-        cpu-request: 0.5
+        cpu-request: 0.3
         memory-limit: 2Gi
         memory-request: 2Gi
       lowrss2--destination-api:
@@ -279,7 +321,7 @@ airbyte:
         cpu-request: 0.2
         memory-limit: 2Gi
         memory-request: 1Gi
-      lowrss2-destination-stdin-api:
+      lowrss2--destination-stdin-api:
         cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
