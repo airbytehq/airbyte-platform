@@ -17,6 +17,12 @@
     gap: variables.$spacing-lg;
     padding: variables.$spacing-xl 0 variables.$spacing-2xl;
   }
+
+  &__hiddenSearchResults {
+    width: variables.$width-max-notification;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 @container (max-width: 800px) {

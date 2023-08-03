@@ -109,7 +109,10 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
 
       <div className={styles.selectConnector__grid}>
         <ConnectorGrid
-          searchResultsHiddenByFilters={allSearchResults.length > filteredSearchResults.length}
+          searchResultsHiddenByFilters={allSearchResults.length - filteredSearchResults.length}
+          onShowAllResultsClick={() => {
+            setSelectedReleaseStages(RELEASE_STAGES);
+          }}
           connectorDefinitions={filteredSearchResults}
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}

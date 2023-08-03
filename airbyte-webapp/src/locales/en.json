@@ -719,7 +719,8 @@
 
   "connector.connectorCount": "{count, plural, one {# connector} other {# connectors}}",
   "connector.noSearchResults": "No connectors match your search.",
-  "connector.searchResultsHiddenByFilters": "Some matching connectors are hidden by filters.",
+  "connector.searchResultsHiddenByFilters": "{count, plural, one {# matching connector is hidden by filters.} other {# matching connectors are hidden by filters.}}",
+  "connector.showAllResults": "Show hidden results",
   "connector.requestConnectorBlock": "Request a new connector",
   "connector.requestConnector": "Request a new connector",
   "connector.request": "Request",
