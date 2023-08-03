@@ -73,7 +73,6 @@ object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-wor
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
-object UseSyncResourceRequirementsFromInput : Temporary<Boolean>(key = "platform.use-resource-requirements-from-input", default = false)
 object CheckReplicationProgress : Temporary<Boolean>(key = "check-replication-progress", default = false)
 
 object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
