@@ -170,7 +170,7 @@ airbyte:
         memory-request: 25Mi
       heartbeat:
         cpu-limit: 0.2
-        cpu-request: 0.01
+        cpu-request: 0.05
         memory-limit: 50Mi
         memory-request: 25Mi
       source-stderr:
@@ -244,7 +244,7 @@ airbyte:
         memory-request: 25Mi
       lowrss--heartbeat:
         cpu-limit: 0.2
-        cpu-request: 0.01
+        cpu-request: 0.05
         memory-limit: 50Mi
         memory-request: 25Mi
       lowrss--source-stderr:
