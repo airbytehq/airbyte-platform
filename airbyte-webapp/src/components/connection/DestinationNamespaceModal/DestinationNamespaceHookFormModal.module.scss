@@ -1,0 +1,19 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.content {
+  display: flex;
+  height: 425px;
+}
+
+.actions {
+  flex: 0 0 300px;
+  padding: variables.$spacing-xl;
+}
+
+.description {
+  flex: 1 0 0;
+  padding: variables.$spacing-xl;
+  overflow: auto;
+  background-color: colors.$backdrop;
+}

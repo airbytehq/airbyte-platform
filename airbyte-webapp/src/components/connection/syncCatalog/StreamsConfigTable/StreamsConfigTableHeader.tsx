@@ -16,13 +16,23 @@ import { SyncSchemaStream } from "core/domain/catalog";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
 import {
+  DestinationNamespaceHookFormModal,
+  DestinationNamespaceHookFormValueType,
+} from "../../DestinationNamespaceModal/DestinationNamespaceHookFormModal";
+import {
   DestinationNamespaceFormValueType,
   DestinationNamespaceModal,
 } from "../../DestinationNamespaceModal/DestinationNamespaceModal";
+import {
+  DestinationStreamNamesHookFormModal,
+  DestinationStreamNamesHookFormValueType,
+  StreamNameDefinitionValueHookFormType,
+} from "../../DestinationStreamNamesModal/DestinationStreamNamesHookFormModal";
 import {
   DestinationStreamNamesFormValueType,
   DestinationStreamNamesModal,
@@ -51,8 +61,18 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
 }) => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
+  const doUseReactHookForm = useExperiment("form.reactHookForm", false);
   const formikProps = useFormikContext<FormikConnectionFormValues>();
 
+  const destinationNamespaceHookFormChange = (value: DestinationNamespaceHookFormValueType) => {
+    formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
+
+    if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
+      formikProps.setFieldValue("namespaceFormat", value.namespaceFormat);
+    }
+  };
+
+  // TODO: remove after DestinationNamespaceModal migration
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
 
@@ -61,6 +81,14 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
     }
   };
 
+  const destinationStreamNameHookFormChange = (value: DestinationStreamNamesHookFormValueType) => {
+    formikProps.setFieldValue(
+      "prefix",
+      value.streamNameDefinition === StreamNameDefinitionValueHookFormType.Prefix ? value.prefix : ""
+    );
+  };
+
+  // TODO: remove after DestinationStreamNamesModal migration
   const destinationStreamNamesChange = (value: DestinationStreamNamesFormValueType) => {
     formikProps.setFieldValue(
       "prefix",
@@ -108,16 +136,26 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
             openModal({
               size: "lg",
               title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
-              content: () => (
-                <DestinationNamespaceModal
-                  initialValues={{
-                    namespaceDefinition: formikProps.values.namespaceDefinition,
-                    namespaceFormat: formikProps.values.namespaceFormat,
-                  }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationNamespaceChange}
-                />
-              ),
+              content: () =>
+                doUseReactHookForm ? (
+                  <DestinationNamespaceHookFormModal
+                    initialValues={{
+                      namespaceDefinition: formikProps.values.namespaceDefinition,
+                      namespaceFormat: formikProps.values.namespaceFormat,
+                    }}
+                    onCloseModal={closeModal}
+                    onSubmit={destinationNamespaceHookFormChange}
+                  />
+                ) : (
+                  <DestinationNamespaceModal
+                    initialValues={{
+                      namespaceDefinition: formikProps.values.namespaceDefinition,
+                      namespaceFormat: formikProps.values.namespaceFormat,
+                    }}
+                    onCloseModal={closeModal}
+                    onSubmit={destinationNamespaceChange}
+                  />
+                ),
             })
           }
         >
@@ -134,15 +172,24 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
             openModal({
               size: "sm",
               title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-              content: () => (
-                <DestinationStreamNamesModal
-                  initialValues={{
-                    prefix: formikProps.values.prefix,
-                  }}
-                  onCloseModal={closeModal}
-                  onSubmit={destinationStreamNamesChange}
-                />
-              ),
+              content: () =>
+                doUseReactHookForm ? (
+                  <DestinationStreamNamesHookFormModal
+                    initialValues={{
+                      prefix: formikProps.values.prefix,
+                    }}
+                    onCloseModal={closeModal}
+                    onSubmit={destinationStreamNameHookFormChange}
+                  />
+                ) : (
+                  <DestinationStreamNamesModal
+                    initialValues={{
+                      prefix: formikProps.values.prefix,
+                    }}
+                    onCloseModal={closeModal}
+                    onSubmit={destinationStreamNamesChange}
+                  />
+                ),
             })
           }
         >
