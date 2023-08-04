@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.50.0
+airbyte-cdk==0.50.2
     # via -r requirements.in
 airbyte-protocol-models==0.4.0
     # via airbyte-cdk
