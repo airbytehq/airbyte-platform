@@ -4,9 +4,9 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,7 +41,8 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.db.Database;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
@@ -126,7 +127,7 @@ class CdcAcceptanceTests {
   private static UUID workspaceId;
   private static OperationRead operationRead;
 
-  private AirbyteAcceptanceTestHarness testHarness;
+  private AcceptanceTestHarness testHarness;
 
   @BeforeAll
   static void init() throws ApiException {
@@ -157,7 +158,7 @@ class CdcAcceptanceTests {
 
   @BeforeEach
   void setup() throws URISyntaxException, IOException, InterruptedException, SQLException {
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId, POSTGRES_INIT_SQL_FILE);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId, POSTGRES_INIT_SQL_FILE);
     testHarness.setup();
   }
 
@@ -184,10 +185,10 @@ class CdcAcceptanceTests {
     final Database source = testHarness.getSourceDatabase();
 
     List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(testHarness.getDestinationDatabase(), outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(testHarness.getDestinationDatabase(), outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final List<StreamDescriptor> expectedStreams = List.of(
         new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE),
@@ -231,8 +232,9 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    final var dst = testHarness.getDestinationDatabase();
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, expectedStreams);
 
     // reset back to no data.
@@ -243,8 +245,8 @@ class CdcAcceptanceTests {
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, Collections.emptyList());
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, Collections.emptyList());
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, Collections.emptyList());
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, Collections.emptyList());
     assertNoState(connectionId);
 
     // sync one more time. verify it is the equivalent of a full refresh.
@@ -255,10 +257,10 @@ class CdcAcceptanceTests {
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     assertGlobalStateContainsStreams(connectionId, expectedStreams);
   }
@@ -278,8 +280,9 @@ class CdcAcceptanceTests {
     LOGGER.info("state after sync 1: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     final Database source = testHarness.getSourceDatabase();
+    final Database dst = testHarness.getDestinationDatabase();
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final Instant beforeDelete = Instant.now();
 
@@ -301,7 +304,7 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info("state after sync 2: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
   }
 
   @Test
@@ -318,12 +321,13 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
 
     final Database source = testHarness.getSourceDatabase();
+    final Database dst = testHarness.getDestinationDatabase();
 
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final StreamDescriptor idAndNameStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE);
     final StreamDescriptor colorPaletteStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(COLOR_PALETTE_TABLE);
@@ -365,12 +369,13 @@ class CdcAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
 
     final Database source = testHarness.getSourceDatabase();
+    final Database dst = testHarness.getDestinationDatabase();
 
     final List<DestinationCdcRecordMatcher> expectedIdAndNameRecords = getCdcRecordMatchersFromSource(source, ID_AND_NAME_TABLE);
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
 
     final List<DestinationCdcRecordMatcher> expectedColorPaletteRecords = getCdcRecordMatchersFromSource(source, COLOR_PALETTE_TABLE);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
 
     final StreamDescriptor idAndNameStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(ID_AND_NAME_TABLE);
     final StreamDescriptor colorPaletteStreamDescriptor = new StreamDescriptor().namespace(SCHEMA_NAME).name(COLOR_PALETTE_TABLE);
@@ -411,9 +416,9 @@ class CdcAcceptanceTests {
     LOGGER.info("Waiting for sync job after update to start");
     syncFromTheUpdate = testHarness.waitUntilTheNextJobIsStarted(connectionId);
     LOGGER.info("Checking that id_and_name table is unaffected by the partial reset");
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
     LOGGER.info("Checking that color_palette table was cleared in the destination due to the reset triggered by the update");
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, List.of());
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, List.of());
     LOGGER.info("Waiting for sync job after update to complete");
     waitForSuccessfulJob(apiClient.getJobsApi(), syncFromTheUpdate);
 
@@ -421,7 +426,7 @@ class CdcAcceptanceTests {
     // If we see 0 records for this table in the destination, that means the CDC partial reset logic is
     // not working properly, and it continued from the replication log cursor for this stream despite
     // this stream's state being reset
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, List.of(idAndNameStreamDescriptor, colorPaletteStreamDescriptor));
 
     // Verify that incremental still works properly after partial reset
@@ -444,8 +449,8 @@ class CdcAcceptanceTests {
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
 
-    assertDestinationMatches(outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
-    assertDestinationMatches(outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
+    assertDestinationMatches(dst, outputSchema, ID_AND_NAME_TABLE, expectedIdAndNameRecords);
+    assertDestinationMatches(dst, outputSchema, COLOR_PALETTE_TABLE, expectedColorPaletteRecords);
     assertGlobalStateContainsStreams(connectionId, List.of(idAndNameStreamDescriptor, colorPaletteStreamDescriptor));
   }
 
@@ -512,11 +517,12 @@ class CdcAcceptanceTests {
   }
 
   @SuppressWarnings({"PMD.AvoidLiteralsInIfCondition", "unchecked", "OptionalIsPresent"})
-  private void assertDestinationMatches(final String schema,
+  private void assertDestinationMatches(final Database db,
+                                        final String schema,
                                         final String streamName,
                                         final List<DestinationCdcRecordMatcher> expectedDestRecordMatchers)
       throws Exception {
-    final List<JsonNode> destRecords = testHarness.retrieveRawDestinationRecords(schema, streamName);
+    final List<JsonNode> destRecords = Databases.retrieveRawDestinationRecords(db, schema, streamName);
     if (destRecords.size() != expectedDestRecordMatchers.size()) {
       final String errorMessage = String.format(
           "The number of destination records %d does not match the expected number %d",
@@ -586,7 +592,7 @@ class CdcAcceptanceTests {
   @SuppressWarnings({"PMD.UnusedPrivateMethod", "unused"})
   private void printDbs() throws SQLException {
     final Database sourceDb = testHarness.getSourceDatabase();
-    Set<SchemaTableNamePair> pairs = testHarness.listAllTables(sourceDb);
+    Set<SchemaTableNamePair> pairs = Databases.listAllTables(sourceDb);
     LOGGER.info("Printing source tables");
     for (final SchemaTableNamePair pair : pairs) {
       final Result<Record> result = sourceDb.query(
@@ -595,7 +601,7 @@ class CdcAcceptanceTests {
     }
 
     final Database destDb = testHarness.getDestinationDatabase();
-    pairs = testHarness.listAllTables(destDb);
+    pairs = Databases.listAllTables(destDb);
     LOGGER.info("Printing destination tables");
     for (final SchemaTableNamePair pair : pairs) {
       final Result<Record> result = destDb.query(context -> context.fetch(String.format("SELECT * FROM %s.%s", pair.schemaName(), pair.tableName())));

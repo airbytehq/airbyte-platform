@@ -4,16 +4,16 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.AWESOME_PEOPLE_TABLE_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COOL_EMPLOYEES_TABLE_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.STAGING_SCHEMA_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.STREAM_NAME;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitWhileJobHasStatus;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitWhileJobIsRunning;
+import static io.airbyte.test.utils.AcceptanceTestHarness.AWESOME_PEOPLE_TABLE_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COOL_EMPLOYEES_TABLE_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.STAGING_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.STREAM_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobIsRunning;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,7 +87,10 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.db.Database;
 import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Asserts;
+import io.airbyte.test.utils.Databases;
+import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.temporal.client.WorkflowQueryException;
 import java.io.IOException;
@@ -163,7 +166,7 @@ class BasicAcceptanceTests {
   public static final int JITTER_MAX_INTERVAL_SECS = 10;
   public static final int FINAL_INTERVAL_SECS = 60;
   public static final int MAX_TRIES = 3;
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
   private static UUID workspaceId;
@@ -233,7 +236,7 @@ class BasicAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
 
     testHarness.ensureCleanSlate();
   }
@@ -499,8 +502,10 @@ class BasicAcceptanceTests {
 
     waitForSuccessfulJobWithRetries(jobRead);
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -535,12 +540,14 @@ class BasicAcceptanceTests {
     // even though the job
     // is marked successful.
     final String retryAssertOutcome = AirbyteApiClient.retryWithJitter(() -> {
-      testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+      Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+          conn.getNamespaceFormat(),
+          false, WITHOUT_SCD_TABLE);
       return "success"; // If the assertion throws after all the retries, then retryWithJitter will return null.
     }, "assert destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     assertEquals("success", retryAssertOutcome);
 
-    testHarness.assertStreamStatuses(workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, jobInfoRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
@@ -571,8 +578,10 @@ class BasicAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, false);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, false);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -602,8 +611,10 @@ class BasicAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -639,8 +650,10 @@ class BasicAcceptanceTests {
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), true, WITH_SCD_TABLE);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    final var dst = testHarness.getDestinationDatabase();
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
+        WITH_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -657,9 +670,9 @@ class BasicAcceptanceTests {
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
 
-    testHarness.assertRawDestinationContains(expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
-    testHarness.assertNormalizedDestinationContains(conn.getNamespaceFormat(), expectedNormalizedRecords);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
+    Asserts.assertNormalizedDestinationContains(dst, conn.getNamespaceFormat(), expectedNormalizedRecords);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -698,8 +711,10 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    final var src = testHarness.getSourceDatabase();
+    final var dst = testHarness.getDestinationDatabase();
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), PUBLIC_SCHEMA_NAME, false, WITHOUT_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead1, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -718,8 +733,8 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertRawDestinationContains(expectedRecords, conn.getNamespaceFormat(), STREAM_NAME);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertRawDestinationContains(dst, expectedRecords, conn.getNamespaceFormat(), STREAM_NAME);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead2, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // reset back to no data.
 
@@ -741,7 +756,7 @@ class BasicAcceptanceTests {
     // NOTE: this is a weird usage of retryWithJitter, but we've seen flakes where the destination still
     // has records even though the reset job is successful.
     AirbyteApiClient.retryWithJitter(() -> {
-      testHarness.assertRawDestinationContains(Collections.emptyList(), conn.getNamespaceFormat(), STREAM_NAME);
+      Asserts.assertRawDestinationContains(dst, Collections.emptyList(), conn.getNamespaceFormat(), STREAM_NAME);
       return null;
     }, "assert destination contains", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
 
@@ -751,8 +766,8 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(src, dst, conn.getNamespaceFormat(), PUBLIC_SCHEMA_NAME, false, WITHOUT_SCD_TABLE);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead3, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -1049,7 +1064,9 @@ class BasicAcceptanceTests {
     // run the sync
     final var jobRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getJob();
     waitForSuccessfulJobWithRetries(jobRead);
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(), true,
+        WITHOUT_SCD_TABLE);
     apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     // remove connection to avoid exception during tear down
     testHarness.removeConnection(connectionId);
@@ -1076,8 +1093,8 @@ class BasicAcceptanceTests {
 
     // Set the source to a version that does not support per-stream state
     LOGGER.info("Setting source connector to pre-per-stream state version {}...",
-        AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+        AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
@@ -1099,23 +1116,26 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
 
     // Set source to a version that supports per-stream state
     testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefintionVersion);
     LOGGER.info("Upgraded source connector per-stream state supported version {}.", currentSourceDefintionVersion);
 
     // add new records and run again.
-    final Database sourceDatabase = testHarness.getSourceDatabase();
+    final Database src = testHarness.getSourceDatabase();
+    final var dst = testHarness.getDestinationDatabase();
     // get contents of source before mutating records.
-    final List<JsonNode> expectedRecords = testHarness.retrieveRecordsFromDatabase(sourceDatabase, STREAM_NAME);
+    final List<JsonNode> expectedRecords = testHarness.retrieveRecordsFromDatabase(src, STREAM_NAME);
     expectedRecords.add(Jsons.jsonNode(ImmutableMap.builder().put(COLUMN_ID, 6).put(COLUMN_NAME, GERALT).build()));
     // add a new record
-    sourceDatabase.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(6, 'geralt')"));
+    src.query(ctx -> ctx.execute("INSERT INTO id_and_name(id, name) VALUES(6, 'geralt')"));
     // mutate a record that was already synced with out updating its cursor value. if we are actually
     // full refreshing, this record will appear in the output and cause the test to fail. if we are,
     // correctly, doing incremental, we will not find this value in the destination.
-    sourceDatabase.query(ctx -> ctx.execute("UPDATE id_and_name SET name='yennefer' WHERE id=2"));
+    src.query(ctx -> ctx.execute("UPDATE id_and_name SET name='yennefer' WHERE id=2"));
 
     LOGGER.info("Starting {} sync 2", testInfo.getDisplayName());
     final JobInfoRead connectionSyncRead2 = apiClient.getConnectionApi()
@@ -1123,7 +1143,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertRawDestinationContains(expectedRecords, conn.getNamespaceFormat(), STREAM_NAME);
+    Asserts.assertRawDestinationContains(dst, expectedRecords, conn.getNamespaceFormat(), STREAM_NAME);
 
     // reset back to no data.
     LOGGER.info("Starting {} reset", testInfo.getDisplayName());
@@ -1138,7 +1158,7 @@ class BasicAcceptanceTests {
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertRawDestinationContains(Collections.emptyList(), conn.getNamespaceFormat(), STREAM_NAME);
+    Asserts.assertRawDestinationContains(dst, Collections.emptyList(), conn.getNamespaceFormat(), STREAM_NAME);
 
     // sync one more time. verify it is the equivalent of a full refresh.
     final String expectedState =
@@ -1159,7 +1179,9 @@ class BasicAcceptanceTests {
     final ConnectionState state = apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId));
     LOGGER.info("state after sync 3: {}", state);
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
     assertNotNull(state.getStreamState());
     assertEquals(1, state.getStreamState().size());
     final StreamState idAndNameState = state.getStreamState().get(0);
@@ -1187,8 +1209,8 @@ class BasicAcceptanceTests {
 
     // Set the source to a version that does not support per-stream state
     LOGGER.info("Setting source connector to pre-per-stream state version {}...",
-        AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
-    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AirbyteAcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+        AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
+    testHarness.updateSourceDefinitionVersion(sourceDefinitionId, AcceptanceTestHarness.POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION);
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
@@ -1209,7 +1231,9 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
 
     // Set source to a version that supports per-stream state
     testHarness.updateSourceDefinitionVersion(sourceDefinitionId, currentSourceDefintionVersion);
@@ -1229,7 +1253,9 @@ class BasicAcceptanceTests {
     assertTrue(result.isPresent());
     assertEquals(0, result.get().getAttempt().getRecordsSynced());
     assertEquals(0, result.get().getAttempt().getTotalStats().getRecordsEmitted());
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
   }
 
   @Test
@@ -1277,7 +1303,9 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
+    final var dst = testHarness.getDestinationDatabase();
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
+        WITHOUT_SCD_TABLE);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -1307,9 +1335,9 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertRawDestinationContains(expectedRecordsIdAndName, PUBLIC_SCHEMA_NAME, STREAM_NAME);
-    testHarness.assertRawDestinationContains(expectedRecordsCoolEmployees, STAGING_SCHEMA_NAME, COOL_EMPLOYEES_TABLE_NAME);
-    testHarness.assertRawDestinationContains(expectedRecordsAwesomePeople, STAGING_SCHEMA_NAME, AWESOME_PEOPLE_TABLE_NAME);
+    Asserts.assertRawDestinationContains(dst, expectedRecordsIdAndName, PUBLIC_SCHEMA_NAME, STREAM_NAME);
+    Asserts.assertRawDestinationContains(dst, expectedRecordsCoolEmployees, STAGING_SCHEMA_NAME, COOL_EMPLOYEES_TABLE_NAME);
+    Asserts.assertRawDestinationContains(dst, expectedRecordsAwesomePeople, STAGING_SCHEMA_NAME, AWESOME_PEOPLE_TABLE_NAME);
 
     // reset back to no data.
 
@@ -1325,7 +1353,7 @@ class BasicAcceptanceTests {
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertRawDestinationContains(Collections.emptyList(), PUBLIC, STREAM_NAME);
+    Asserts.assertRawDestinationContains(dst, Collections.emptyList(), PUBLIC, STREAM_NAME);
 
     // sync one more time. verify it is the equivalent of a full refresh.
     LOGGER.info("Starting testIncrementalSync() sync 3");
@@ -1334,7 +1362,9 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead3.getJob());
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(), true,
+        WITHOUT_SCD_TABLE);
 
   }
 
@@ -1368,11 +1398,13 @@ class BasicAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    testHarness.assertSourceAndDestinationDbInSync(PUBLIC, conn.getNamespaceFormat(), true, false);
-    testHarness.assertSourceAndDestinationDbInSync("staging", conn.getNamespaceFormat(), true, false);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC,
+        conn.getNamespaceFormat(), true, false);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), "staging",
+        conn.getNamespaceFormat(), true, false);
     final JobInfoRead connectionResetRead = apiClient.getConnectionApi().resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionResetRead.getJob());
-    testHarness.assertDestinationDbEmpty();
+    assertDestinationDbEmpty(testHarness.getDestinationDatabase());
   }
 
   @Test
@@ -1415,7 +1447,9 @@ class BasicAcceptanceTests {
         apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connection.getConnectionId()));
     waitForSuccessfulJob(apiClient.getJobsApi(), syncRead.getJob());
 
-    testHarness.assertSourceAndDestinationDbInSync(connection.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        connection.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1468,7 +1502,9 @@ class BasicAcceptanceTests {
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
-    testHarness.assertSourceAndDestinationDbInSync(connection.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        connection.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1500,7 +1536,9 @@ class BasicAcceptanceTests {
 
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
-    testHarness.assertSourceAndDestinationDbInSync(connection.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        connection.getNamespaceFormat(),
+        false, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1542,7 +1580,10 @@ class BasicAcceptanceTests {
     LOGGER.info("state after sync: {}",
         AirbyteApiClient.retryWithJitter(() -> apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)),
             "get state", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES));
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), true, WITH_SCD_TABLE);
+
+    final var dst = testHarness.getDestinationDatabase();
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), dst, PUBLIC_SCHEMA_NAME, conn.getNamespaceFormat(), true,
+        WITH_SCD_TABLE);
 
     // Update the catalog, so we only select the id column.
     catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem("id"));
@@ -1567,7 +1608,7 @@ class BasicAcceptanceTests {
     // For the normalized records, they should all only have the ID column.
     final List<JsonNode> expectedNormalizedRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME).stream()
         .map((record) -> ((ObjectNode) record).retain(COLUMN_ID)).collect(Collectors.toList());
-    testHarness.assertRawDestinationContains(expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
+    Asserts.assertRawDestinationContains(dst, expectedRawRecords, conn.getNamespaceFormat(), STREAM_NAME);
     testHarness.assertNormalizedDestinationContainsIdColumn(conn.getNamespaceFormat(), expectedNormalizedRecords);
   }
 
@@ -1686,6 +1727,15 @@ class BasicAcceptanceTests {
       assertEquals(AttemptStatus.FAILED, attemptInfoRead.getAttempt().getStatus());
     } finally {
       apiClient.getJobsApi().cancelJob(jobId);
+    }
+  }
+
+  private static void assertDestinationDbEmpty(final Database dst) throws Exception {
+    final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(dst);
+
+    for (final SchemaTableNamePair pair : destinationTables) {
+      final List<JsonNode> recs = Databases.retrieveRecordsFromDatabase(dst, pair.getFullyQualifiedTableName());
+      assertTrue(recs.isEmpty());
     }
   }
 

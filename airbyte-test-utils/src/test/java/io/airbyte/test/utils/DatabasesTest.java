@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-class DatabaseConnectionHelperTest {
+class DatabasesTest {
 
   private static final String DATABASE_NAME = "airbyte_test_database";
 
@@ -38,7 +38,7 @@ class DatabaseConnectionHelperTest {
 
   @Test
   void testCreatingFromATestContainer() {
-    final DataSource dataSource = DatabaseConnectionHelper.createDataSource(container);
+    final DataSource dataSource = Databases.createDataSource(container);
     assertNotNull(dataSource);
     assertEquals(HikariDataSource.class, dataSource.getClass());
     assertEquals(10, ((HikariDataSource) dataSource).getHikariConfigMXBean().getMaximumPoolSize());
@@ -47,8 +47,8 @@ class DatabaseConnectionHelperTest {
   @Test
   void testCreatingADslContextFromADataSource() {
     final SQLDialect dialect = SQLDialect.POSTGRES;
-    final DataSource dataSource = DatabaseConnectionHelper.createDataSource(container);
-    final DSLContext dslContext = DatabaseConnectionHelper.createDslContext(dataSource, dialect);
+    final DataSource dataSource = Databases.createDataSource(container);
+    final DSLContext dslContext = Databases.createDslContext(dataSource, dialect);
     assertNotNull(dslContext);
     assertEquals(dialect, dslContext.configuration().dialect());
   }

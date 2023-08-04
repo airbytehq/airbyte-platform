@@ -28,7 +28,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
-import io.airbyte.test.utils.DatabaseConnectionHelper;
+import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -68,7 +68,7 @@ class MetricRepositoryTest {
         .withPassword("hunter2");
     psqlContainer.start();
 
-    final var dataSource = DatabaseConnectionHelper.createDataSource(psqlContainer);
+    final var dataSource = Databases.createDataSource(psqlContainer);
     ctx = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     final var dbProviders = new TestDatabaseProviders(dataSource, ctx);
     dbProviders.createNewConfigsDatabase();

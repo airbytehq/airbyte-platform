@@ -6,9 +6,7 @@ package io.airbyte.test.utils;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,7 +36,6 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationDefinitionSpecificationRead;
-import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
@@ -57,7 +54,6 @@ import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.OperatorConfiguration;
 import io.airbyte.api.client.model.generated.OperatorNormalization;
 import io.airbyte.api.client.model.generated.OperatorType;
-import io.airbyte.api.client.model.generated.Pagination;
 import io.airbyte.api.client.model.generated.SourceCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId;
@@ -68,11 +64,6 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
-import io.airbyte.api.client.model.generated.StreamStatusJobType;
-import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
-import io.airbyte.api.client.model.generated.StreamStatusRead;
-import io.airbyte.api.client.model.generated.StreamStatusReadList;
-import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
@@ -101,18 +92,14 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
-import org.jooq.JSONB;
 import org.jooq.Record;
-import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
@@ -138,9 +125,9 @@ import org.testcontainers.utility.MountableFile;
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
 @SuppressWarnings({"MissingJavadocMethod", "PMD.AvoidDuplicateLiterals"})
-public class AirbyteAcceptanceTestHarness {
+public class AcceptanceTestHarness {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteAcceptanceTestHarness.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
   private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
   // assume env file is one directory level up from airbyte-tests.
@@ -156,13 +143,11 @@ public class AirbyteAcceptanceTestHarness {
 
   public static final String POSTGRES_SOURCE_LEGACY_CONNECTOR_VERSION = "0.4.26";
 
-  private static final String OUTPUT_NAMESPACE_PREFIX = "output_namespace_";
-  private static final String OUTPUT_STREAM_PREFIX = "output_table_";
+  public static final String OUTPUT_STREAM_PREFIX = "output_table_";
   private static final String TABLE_NAME = "id_and_name";
   public static final String STREAM_NAME = TABLE_NAME;
   public static final String COLUMN_ID = "id";
   public static final String COLUMN_NAME = "name";
-  private static final String COLUMN_NAME_DATA = "_airbyte_data";
   private static final String SOURCE_USERNAME = "sourceusername";
   public static final String SOURCE_PASSWORD = "hunter2";
   public static final String PUBLIC_SCHEMA_NAME = "public";
@@ -223,7 +208,7 @@ public class AirbyteAcceptanceTestHarness {
     this.apiClient = apiClient;
   }
 
-  public AirbyteAcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId, final String postgresSqlInitFile)
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId, final String postgresSqlInitFile)
       throws URISyntaxException, IOException, InterruptedException {
     // reads env vars to assign static variables
     assignEnvVars();
@@ -270,7 +255,7 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  public AirbyteAcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId)
+  public AcceptanceTestHarness(final AirbyteApiClient apiClient, final UUID defaultWorkspaceId)
       throws URISyntaxException, IOException, InterruptedException {
     this(apiClient, defaultWorkspaceId, DEFAULT_POSTGRES_INIT_SQL_FILE);
   }
@@ -307,8 +292,8 @@ public class AirbyteAcceptanceTestHarness {
       destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
       destinationPsql.start();
 
-      sourceDataSource = DatabaseConnectionHelper.createDataSource(sourcePsql);
-      destinationDataSource = DatabaseConnectionHelper.createDataSource(destinationPsql);
+      sourceDataSource = Databases.createDataSource(sourcePsql);
+      destinationDataSource = Databases.createDataSource(destinationPsql);
     }
   }
 
@@ -481,52 +466,6 @@ public class AirbyteAcceptanceTestHarness {
         "get source definition spec", 10, 60, 3);
   }
 
-  public void assertSourceAndDestinationDbInSync(final String outputSchema, final boolean withNormalizedTable, final boolean withScdTable)
-      throws Exception {
-    assertSourceAndDestinationDbInSync(PUBLIC_SCHEMA_NAME, outputSchema, withNormalizedTable, withScdTable);
-  }
-
-  public void assertSourceAndDestinationDbInSync(final String inputSchema,
-                                                 final String outputSchema,
-                                                 final boolean withNormalizedTable,
-                                                 final boolean withScdTable)
-      throws Exception {
-    // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
-    // the sync is marked complete but the destination tables aren't finalized yet.
-    AirbyteApiClient.retryWithJitterThrows(() -> {
-      try {
-        final Database source = getSourceDatabase();
-        final Set<SchemaTableNamePair> sourceTables = listAllTables(source, inputSchema);
-        final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
-
-        final Database destination = getDestinationDatabase();
-        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination, outputSchema);
-        assertEquals(expDestTables, destinationTables,
-            String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables));
-
-        for (final SchemaTableNamePair pair : sourceTables) {
-          final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-          // generate the raw stream with the correct schema
-          // retrieve and assert the recordds
-          assertRawDestinationContains(sourceRecords, outputSchema, pair.tableName());
-        }
-      } catch (final Exception e) {
-        return e;
-      }
-      return null;
-    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
-  }
-
-  public void assertDestinationDbEmpty() throws Exception {
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-
-    for (final SchemaTableNamePair pair : destinationTables) {
-      final List<JsonNode> recs = retrieveRecordsFromDatabase(destination, pair.getFullyQualifiedTableName());
-      assertTrue(recs.isEmpty());
-    }
-  }
-
   public Database getSourceDatabase() {
     return getDatabase(sourceDataSource);
   }
@@ -536,99 +475,7 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public Database getDatabase(final DataSource dataSource) {
-    return new Database(DatabaseConnectionHelper.createDslContext(dataSource, SQLDialect.POSTGRES));
-  }
-
-  public Set<SchemaTableNamePair> listAllTables(final Database database) throws SQLException {
-    return database.query(
-        context -> {
-          final Result<Record> fetch =
-              context.fetch(
-                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'");
-          return fetch.stream()
-              .map(record -> {
-                final var schemaName = (String) record.get("schemaname");
-                final var tableName = (String) record.get("tablename");
-                return new SchemaTableNamePair(schemaName, tableName);
-              })
-              .collect(Collectors.toSet());
-        });
-  }
-
-  private Set<SchemaTableNamePair> listAllTables(final Database database, final String schema) throws SQLException {
-    return database.query(
-        context -> {
-          final Result<Record> fetch =
-              context.fetch(
-                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname == '" + schema + "'");
-          return fetch.stream()
-              .map(record -> {
-                final var schemaName = (String) record.get("schemaname");
-                final var tableName = (String) record.get("tablename");
-                return new SchemaTableNamePair(schemaName, tableName);
-              })
-              .collect(Collectors.toSet());
-        });
-  }
-
-  private Set<SchemaTableNamePair> addAirbyteGeneratedTables(final String outputSchema,
-                                                             final boolean withNormalizedTable,
-                                                             final boolean withScdTable,
-                                                             final Set<SchemaTableNamePair> sourceTables) {
-    return sourceTables.stream().flatMap(x -> {
-      final String cleanedNameStream = x.tableName().replace(".", "_");
-      final List<SchemaTableNamePair> explodedStreamNames = new ArrayList<>(List.of(
-          new SchemaTableNamePair(outputSchema, String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream))));
-
-      if (withNormalizedTable) {
-        explodedStreamNames.add(
-            new SchemaTableNamePair(outputSchema, String.format("%s%s", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
-      }
-
-      if (withScdTable) {
-        explodedStreamNames
-            .add(new SchemaTableNamePair("_airbyte_" + outputSchema, String.format("%s%s_stg", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
-        explodedStreamNames
-            .add(new SchemaTableNamePair(outputSchema, String.format("%s%s_scd", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
-      }
-      return explodedStreamNames.stream();
-    }).collect(Collectors.toSet());
-  }
-
-  public void assertRawDestinationContains(final List<JsonNode> sourceRecords, final String outputSchema, final String tableName) throws Exception {
-    final Set<JsonNode> destinationRecords = new HashSet<>(retrieveRawDestinationRecords(outputSchema, tableName));
-
-    assertEquals(sourceRecords.size(), destinationRecords.size(),
-        String.format("destination contains: %s record. source contains: %s, \nsource records %s \ndestination records: %s",
-            destinationRecords.size(), sourceRecords.size(), sourceRecords, destinationRecords));
-
-    for (final JsonNode sourceStreamRecord : sourceRecords) {
-      assertTrue(destinationRecords.contains(sourceStreamRecord),
-          String.format("destination does not contain record:\n %s \n destination contains:\n %s\n",
-              sourceStreamRecord, destinationRecords));
-    }
-  }
-
-  public void assertNormalizedDestinationContains(final String outputSchema, final List<JsonNode> sourceRecords) throws Exception {
-    assertNormalizedDestinationContains(outputSchema, sourceRecords, STREAM_NAME);
-  }
-
-  public void assertNormalizedDestinationContains(final String outputSchema, final List<JsonNode> sourceRecords, final String streamName)
-      throws Exception {
-    final Database destination = getDestinationDatabase();
-    final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
-    final List<JsonNode> destinationRecords = retrieveRecordsFromDatabase(destination, finalDestinationTable);
-
-    assertEquals(sourceRecords.size(), destinationRecords.size(),
-        String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
-
-    for (final JsonNode sourceStreamRecord : sourceRecords) {
-      assertTrue(
-          destinationRecords.stream()
-              .anyMatch(r -> r.get(COLUMN_NAME).asText().equals(sourceStreamRecord.get(COLUMN_NAME).asText())
-                  && r.get(COLUMN_ID).asInt() == sourceStreamRecord.get(COLUMN_ID).asInt()),
-          String.format("destination does not contain record:\n %s \n destination contains:\n %s\n", sourceStreamRecord, destinationRecords));
-    }
+    return new Database(Databases.createDslContext(dataSource, SQLDialect.POSTGRES));
   }
 
   /**
@@ -843,29 +690,6 @@ public class AirbyteAcceptanceTestHarness {
         .collect(Collectors.toList());
   }
 
-  public List<JsonNode> retrieveDestinationRecords(final Database database, final String table) throws SQLException {
-    return database.query(context -> context.fetch(String.format("SELECT * FROM %s;", table)))
-        .stream()
-        .map(Record::intoMap)
-        .map(r -> r.get(COLUMN_NAME_DATA))
-        .map(f -> (JSONB) f)
-        .map(JSONB::data)
-        .map(Jsons::deserialize)
-        .map(Jsons::jsonNode)
-        .collect(Collectors.toList());
-  }
-
-  public List<JsonNode> retrieveRawDestinationRecords(final String schema, final String tableName) throws Exception {
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> namePairs = listAllTables(destination);
-
-    final String rawStreamName = String.format("_airbyte_raw_%s%s", OUTPUT_STREAM_PREFIX, tableName.replace(".", "_"));
-    final SchemaTableNamePair rawTablePair = new SchemaTableNamePair(schema, rawStreamName);
-    assertTrue(namePairs.contains(rawTablePair), "can't find a non-normalized version (raw) of " + rawTablePair.getFullyQualifiedTableName());
-
-    return retrieveDestinationRecords(destination, rawTablePair.getFullyQualifiedTableName());
-  }
-
   public JsonNode getSourceDbConfig() {
     return getDbConfig(sourcePsql, false, false, Type.SOURCE);
   }
@@ -1016,14 +840,9 @@ public class AirbyteAcceptanceTestHarness {
         .sourceDefinitionId(sourceDefinitionId).dockerImageTag(dockerImageTag));
   }
 
-  public void updateDestinationDefinitionVersion(final UUID destDefinitionId, final String dockerImageTag) throws ApiException {
-    apiClient.getDestinationDefinitionApi().updateDestinationDefinition(new DestinationDefinitionUpdate()
-        .destinationDefinitionId(destDefinitionId).dockerImageTag(dockerImageTag));
-  }
-
   private void clearSourceDbData() throws SQLException {
     final Database database = getSourceDatabase();
-    final Set<SchemaTableNamePair> pairs = listAllTables(database);
+    final Set<SchemaTableNamePair> pairs = Databases.listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
       LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s", pair.schemaName(), pair.tableName())));
@@ -1032,7 +851,7 @@ public class AirbyteAcceptanceTestHarness {
 
   private void clearDestinationDbData() throws SQLException {
     final Database database = getDestinationDatabase();
-    final Set<SchemaTableNamePair> pairs = listAllTables(database);
+    final Set<SchemaTableNamePair> pairs = Databases.listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
       LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s CASCADE", pair.schemaName(), pair.tableName())));
@@ -1231,80 +1050,6 @@ public class AirbyteAcceptanceTestHarness {
         .status(connection.getStatus())
         .prefix(connection.getPrefix())
         .skipReset(false);
-  }
-
-  /**
-   * Asserts that all streams associated with the most recent job and attempt for the provided
-   * connection are the in expected state.
-   *
-   * @param workspaceId The workspace that contains the connection.
-   * @param connectionId The connection that just executed a sync or reset.
-   * @param jobInfoRead The job associated with the sync execution.
-   * @param expectedRunState The expected stream status for each stream in the connection for the most
-   *        recent job and attempt.
-   * @param expectedJobType The expected type of the stream status.
-   */
-  public void assertStreamStatuses(final UUID workspaceId,
-                                   final UUID connectionId,
-                                   final JobInfoRead jobInfoRead,
-                                   final StreamStatusRunState expectedRunState,
-                                   final StreamStatusJobType expectedJobType) {
-    final var jobId = jobInfoRead.getJob().getId();
-    final var attemptNumber = jobInfoRead.getAttempts().size() - 1;
-
-    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(workspaceId, connectionId, jobId, attemptNumber);
-    assertNotNull(streamStatuses);
-    final List<StreamStatusRead> filteredStreamStatuses = streamStatuses.stream().filter(s -> expectedJobType.equals(s.getJobType())).toList();
-    assertFalse(filteredStreamStatuses.isEmpty());
-    filteredStreamStatuses.forEach(status -> assertEquals(expectedRunState, status.getRunState()));
-
-  }
-
-  /**
-   * Fetches the stream status associated with the provided information, retrying for a set amount of
-   * attempts if the status is currently not available.
-   *
-   * @param workspaceId The workspace that contains the connection.
-   * @param connectionId The connection that has been executed by a test
-   * @param jobId The job ID associated with the sync execution.
-   * @param attempt The attempt number associated with the sync execution.
-   */
-  private List<StreamStatusRead> fetchStreamStatus(final UUID workspaceId,
-                                                   final UUID connectionId,
-                                                   final Long jobId,
-                                                   final Integer attempt) {
-    List<StreamStatusRead> results = List.of();
-    final StreamStatusListRequestBody streamStatusListRequestBody = new StreamStatusListRequestBody()
-        .connectionId(connectionId)
-        .jobId(jobId)
-        .attemptNumber(attempt)
-        .workspaceId(workspaceId)
-        .pagination(new Pagination().pageSize(100).rowOffset(0));
-
-    int count = 0;
-    while (count < 60 && results.isEmpty()) {
-      LOGGER.debug("Fetching stream status for {}...", streamStatusListRequestBody);
-      try {
-        final StreamStatusReadList result = apiClient.getStreamStatusesApi().getStreamStatuses(streamStatusListRequestBody);
-        if (result != null) {
-          LOGGER.debug("Stream status result for connection {}: {}", connectionId, result);
-          results = result.getStreamStatuses();
-        }
-      } catch (final ApiException e) {
-        LOGGER.info("Unable to call stream status API.", e);
-      }
-      count++;
-
-      if (results.isEmpty()) {
-        try {
-          sleep(5000);
-        } catch (final InterruptedException e) {
-          LOGGER.debug("Failed to sleep.", e);
-        }
-      }
-    }
-
-    return results;
   }
 
 }

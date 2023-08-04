@@ -4,7 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,7 +30,8 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.db.Database;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -66,7 +67,7 @@ public class ConnectorBuilderTests {
 
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
 
   private static GenericContainer echoServer;
 
@@ -172,7 +173,7 @@ public class ConnectorBuilderTests {
     workspaceId = apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID().toString()))
         .getWorkspaceId();
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
     testHarness.setup();
 
     echoServer = new GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080);
@@ -195,9 +196,9 @@ public class ConnectorBuilderTests {
       runConnection(connectionRead.getConnectionId());
 
       final Database destination = testHarness.getDestinationDatabase();
-      final Set<SchemaTableNamePair> destinationTables = testHarness.listAllTables(destination);
+      final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination);
       assertEquals(1, destinationTables.size());
-      assertEquals(3, testHarness.retrieveDestinationRecords(destination, destinationTables.iterator().next().getFullyQualifiedTableName()).size());
+      assertEquals(3, Databases.retrieveDestinationRecords(destination, destinationTables.iterator().next().getFullyQualifiedTableName()).size());
     } finally {
       // clean up
       apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId));

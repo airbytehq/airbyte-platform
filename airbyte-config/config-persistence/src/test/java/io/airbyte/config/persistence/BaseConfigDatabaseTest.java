@@ -12,7 +12,7 @@ import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
-import io.airbyte.test.utils.DatabaseConnectionHelper;
+import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.sql.SQLException;
 import javax.sql.DataSource;
@@ -143,7 +143,7 @@ class BaseConfigDatabaseTest {
   }
 
   private static void setDb() throws DatabaseInitializationException, IOException {
-    dataSource = DatabaseConnectionHelper.createDataSource(container);
+    dataSource = Databases.createDataSource(container);
     dslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     final TestDatabaseProviders databaseProviders = new TestDatabaseProviders(dataSource, dslContext);
     database = databaseProviders.createNewConfigsDatabase();

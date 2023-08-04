@@ -4,8 +4,8 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitWhileJobHasStatus;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.api.client.AirbyteApiClient;
@@ -23,7 +23,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
@@ -64,7 +64,7 @@ class ContainerOrchestratorAcceptanceTests {
   private static final String AIRBYTE_WORKER = "airbyte-worker";
   private static final String DEFAULT = "default";
 
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static KubernetesClient kubernetesClient;
 
@@ -89,7 +89,7 @@ class ContainerOrchestratorAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
     kubernetesClient = testHarness.getKubernetesClient();
   }
 

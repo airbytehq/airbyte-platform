@@ -4,10 +4,11 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForConnectionState;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitWhileJobHasStatus;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
+import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForConnectionState;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,7 +41,8 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -86,7 +88,7 @@ class AdvancedAcceptanceTests {
   private static final String TYPE = "type";
   private static final String COLUMN1 = "column1";
 
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
 
@@ -111,7 +113,7 @@ class AdvancedAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @AfterAll
@@ -149,8 +151,9 @@ class AdvancedAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    testHarness.assertSourceAndDestinationDbInSync(conn.getNamespaceFormat(), false, false);
-    testHarness.assertStreamStatuses(workspaceId, conn.getConnectionId(), connectionSyncRead, StreamStatusRunState.COMPLETE,
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(), false, false);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, conn.getConnectionId(), connectionSyncRead, StreamStatusRunState.COMPLETE,
         StreamStatusJobType.SYNC);
   }
 

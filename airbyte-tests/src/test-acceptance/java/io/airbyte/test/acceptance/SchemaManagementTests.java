@@ -31,7 +31,8 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -73,7 +74,7 @@ class SchemaManagementTests {
   public static final int MAX_TRIES = 3;
   public static final String A_NEW_COLUMN = "a_new_column";
   public static final String FIELD_NAME = "name";
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
   private static ConnectionRead createdConnection;
@@ -142,7 +143,7 @@ class SchemaManagementTests {
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @BeforeEach
@@ -210,7 +211,8 @@ class SchemaManagementTests {
     final AirbyteCatalog catalogWithPropagatedChanges = getExpectedCatalogWithExtraColumnAndTable();
     assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
     assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
-    testHarness.assertNormalizedDestinationContains(currentConnection.getNamespaceFormat(), getExpectedRecordsForIdAndNameWithUpdatedCatalog());
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), currentConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
 
     // This connection does not have auto propagation, so it should have stayed the same.
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());

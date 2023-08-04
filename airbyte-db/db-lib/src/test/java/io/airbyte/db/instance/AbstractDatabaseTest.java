@@ -8,7 +8,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.init.DatabaseInitializationException;
-import io.airbyte.test.utils.DatabaseConnectionHelper;
+import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
@@ -44,7 +44,7 @@ public abstract class AbstractDatabaseTest {
 
   @BeforeEach
   public void setup() throws IOException, DatabaseInitializationException {
-    dataSource = DatabaseConnectionHelper.createDataSource(container);
+    dataSource = Databases.createDataSource(container);
     dslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     database = getDatabase(dataSource, dslContext);
   }
