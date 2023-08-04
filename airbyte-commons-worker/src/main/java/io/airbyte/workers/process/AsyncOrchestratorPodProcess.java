@@ -59,7 +59,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   public static final String KUBE_POD_INFO = "KUBE_POD_INFO";
   public static final String NO_OP = "NO_OP";
   // TODO Ths frequency should be configured and injected rather hard coded here.
-  public static final long JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS = 5000;
+  public static final long JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS = 30000;
 
   private final KubePodInfo kubePodInfo;
   private final DocumentStoreClient documentStoreClient;
