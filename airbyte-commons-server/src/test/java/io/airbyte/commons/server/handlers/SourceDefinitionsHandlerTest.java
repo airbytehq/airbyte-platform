@@ -39,6 +39,7 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ResourceRequirements;
@@ -641,8 +642,9 @@ class SourceDefinitionsHandlerTest {
         generateVersionFromSourceDefinition(updatedSource)
             .withDockerImageTag(newDockerImageTag);
 
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, newDockerImageTag, sourceDefinition.getCustom()))
-        .thenReturn(updatedSourceDefVersion);
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
+        sourceDefinition.getCustom()))
+            .thenReturn(updatedSourceDefVersion);
 
     final SourceDefinitionRead sourceRead =
         sourceDefinitionsHandler.updateSourceDefinition(
@@ -650,7 +652,8 @@ class SourceDefinitionsHandlerTest {
                 .dockerImageTag(newDockerImageTag));
 
     assertEquals(newDockerImageTag, sourceRead.getDockerImageTag());
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, newDockerImageTag, sourceDefinition.getCustom());
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
+        sourceDefinition.getCustom());
     verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource,
         updatedSourceDefVersion);
   }
@@ -670,15 +673,17 @@ class SourceDefinitionsHandlerTest {
     final String newDockerImageTag = "averydifferenttagforprotocolversion";
     assertNotEquals(newDockerImageTag, currentTag);
 
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, newDockerImageTag, sourceDefinition.getCustom()))
-        .thenThrow(UnsupportedProtocolVersionException.class);
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
+        sourceDefinition.getCustom()))
+            .thenThrow(UnsupportedProtocolVersionException.class);
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.updateSourceDefinition(
         new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
             .dockerImageTag(newDockerImageTag)));
 
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, newDockerImageTag, sourceDefinition.getCustom());
-    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(any(), any());
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
+        sourceDefinition.getCustom());
+    verify(configRepository, never()).writeStandardSourceDefinition(any());
   }
 
   @Test

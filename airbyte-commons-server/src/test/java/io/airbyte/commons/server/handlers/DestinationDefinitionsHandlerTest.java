@@ -38,6 +38,7 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
@@ -706,7 +707,7 @@ class DestinationDefinitionsHandlerTest {
         generateVersionFromDestinationDefinition(updatedDestination)
             .withDockerImageTag(newDockerImageTag);
 
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom()))
             .thenReturn(updatedDestinationDefVersion);
 
@@ -716,7 +717,7 @@ class DestinationDefinitionsHandlerTest {
                 .dockerImageTag(newDockerImageTag));
 
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination,
         updatedDestinationDefVersion);
@@ -737,7 +738,7 @@ class DestinationDefinitionsHandlerTest {
     final String newDockerImageTag = "averydifferenttagforprotocolversion";
     assertNotEquals(newDockerImageTag, currentTag);
 
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom()))
             .thenThrow(UnsupportedProtocolVersionException.class);
 
@@ -745,9 +746,9 @@ class DestinationDefinitionsHandlerTest {
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
             .dockerImageTag(newDockerImageTag)));
 
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, newDockerImageTag,
+    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(any(), any());
+    verify(configRepository, never()).writeStandardDestinationDefinition(any());
   }
 
   @Test

@@ -21,13 +21,10 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
-import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SuggestedStreams;
-import io.airbyte.config.helpers.ConnectorRegistryConverters;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.featureflag.ConnectorVersionOverride;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -97,17 +94,15 @@ class DefaultDefinitionVersionOverrideProviderTest {
       new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
 
   private DefaultDefinitionVersionOverrideProvider overrideProvider;
-  private RemoteDefinitionsProvider mRemoteDefinitionsProvider;
-  private ConfigRepository mConfigRepository;
+  private ActorDefinitionVersionResolver mActorDefinitionVersionResolver;
   private FeatureFlagClient mFeatureFlagClient;
 
   @BeforeEach
   void setup() {
-    mRemoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
-    mConfigRepository = mock(ConfigRepository.class);
+    mActorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
     mFeatureFlagClient = mock(TestClient.class);
     overrideProvider =
-        new DefaultDefinitionVersionOverrideProvider(mConfigRepository, mRemoteDefinitionsProvider, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
+        new DefaultDefinitionVersionOverrideProvider(mActorDefinitionVersionResolver, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn("");
   }
 
@@ -116,68 +111,40 @@ class DefaultDefinitionVersionOverrideProviderTest {
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
-    verifyNoInteractions(mRemoteDefinitionsProvider);
-    verifyNoInteractions(mConfigRepository);
+
+    verifyNoInteractions(mActorDefinitionVersionResolver);
   }
 
   @Test
   void testGetVersionWithOverride() throws IOException {
-    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.of(OVERRIDE_VERSION));
+    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE),
+        any())).thenReturn(DOCKER_IMAGE_TAG_2);
+    when(mActorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))
+        .thenReturn(Optional.of(OVERRIDE_VERSION));
 
     final Optional<ActorDefinitionVersion> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID,
+            DEFAULT_VERSION);
 
     assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
-    verifyNoInteractions(mRemoteDefinitionsProvider);
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(mActorDefinitionVersionResolver).resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
+    verifyNoMoreInteractions(mActorDefinitionVersionResolver);
   }
 
   @Test
-  void testGetVersionWithOverrideNotInDb() throws IOException {
-    final ConnectorRegistrySourceDefinition registryDef = new ConnectorRegistrySourceDefinition()
-        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(OVERRIDE_VERSION.getDockerRepository())
-        .withDockerImageTag(OVERRIDE_VERSION.getDockerImageTag())
-        .withSpec(OVERRIDE_VERSION.getSpec())
-        .withProtocolVersion(OVERRIDE_VERSION.getProtocolVersion())
-        .withDocumentationUrl(OVERRIDE_VERSION.getDocumentationUrl())
-        .withReleaseStage(OVERRIDE_VERSION.getReleaseStage())
-        .withSuggestedStreams(OVERRIDE_VERSION.getSuggestedStreams())
-        .withAllowedHosts(OVERRIDE_VERSION.getAllowedHosts());
-
-    final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
-    final ActorDefinitionVersion persistedAdv = Jsons.clone(actorDefinitionVersion).withVersionId(UUID.randomUUID());
-
-    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.of(registryDef));
-    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
-    when(mConfigRepository.writeActorDefinitionVersion(actorDefinitionVersion)).thenReturn(persistedAdv);
+  void testOverrideIsEmptyIfVersionDoesNotResolve() throws IOException {
+    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE),
+        any())).thenReturn(DOCKER_IMAGE_TAG_2);
+    when(mActorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))
+        .thenReturn(Optional.empty());
 
     final Optional<ActorDefinitionVersion> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
+        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID,
+            DEFAULT_VERSION);
 
-    assertTrue(optResult.isPresent());
-    assertEquals(persistedAdv, optResult.get());
-    verify(mConfigRepository).writeActorDefinitionVersion(actorDefinitionVersion);
-    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
-  }
-
-  @Test
-  void testGetVersionWithMissingRegistryEntryFetch() throws IOException {
-    when(mRemoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
-
-    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.empty());
-
-    final Optional<ActorDefinitionVersion> optResult =
-        overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION);
-
-    assertTrue(optResult.isEmpty());
-    verify(mRemoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
-    verifyNoMoreInteractions(mConfigRepository);
+    assertEquals(Optional.empty(), optResult);
+    verify(mActorDefinitionVersionResolver).resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
+    verifyNoMoreInteractions(mActorDefinitionVersionResolver);
   }
 
   @Test
@@ -228,16 +195,16 @@ class DefaultDefinitionVersionOverrideProviderTest {
 
   @Test
   void testGetVersionWithInvalidProtocolVersion() throws IOException {
-    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
-    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.of(Jsons.clone(OVERRIDE_VERSION)
-        .withProtocolVersion("131.1.2")));
+    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE),
+        any())).thenReturn(DOCKER_IMAGE_TAG_2);
+    when(mActorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))
+        .thenReturn(
+            Optional.of(Jsons.clone(OVERRIDE_VERSION).withProtocolVersion("131.1.2")));
 
     assertThrows(RuntimeException.class,
         () -> overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION));
-
-    verifyNoInteractions(mRemoteDefinitionsProvider);
-    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
-    verifyNoMoreInteractions(mConfigRepository);
+    verify(mActorDefinitionVersionResolver).resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2);
+    verifyNoMoreInteractions(mActorDefinitionVersionResolver);
   }
 
 }

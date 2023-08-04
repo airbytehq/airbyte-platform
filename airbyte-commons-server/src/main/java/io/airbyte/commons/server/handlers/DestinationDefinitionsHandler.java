@@ -25,6 +25,7 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -262,7 +263,7 @@ public class DestinationDefinitionsHandler {
         .withResourceRequirements(updatedResourceReqs);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(currentVersion,
-        destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+        ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
 
     configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion);
     return buildDestinationDefinitionRead(newDestination, newVersion);

@@ -13,10 +13,13 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
+import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
@@ -29,11 +32,14 @@ public class ActorDefinitionHandlerHelper {
 
   private final SynchronousSchedulerClient synchronousSchedulerClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
+  private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
-                                      final AirbyteProtocolVersionRange airbyteProtocolVersionRange) {
+                                      final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
+                                      final ActorDefinitionVersionResolver actorDefinitionVersionResolver) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
+    this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
   }
 
   /**
@@ -80,9 +86,22 @@ public class ActorDefinitionHandlerHelper {
    * @throws IOException - if there is an error fetching the spec
    */
   public ActorDefinitionVersion defaultDefinitionVersionFromUpdate(final ActorDefinitionVersion currentVersion,
+                                                                   final ActorType actorType,
                                                                    final String newDockerImageTag,
                                                                    final boolean isCustomConnector)
       throws IOException {
+
+    final Optional<ActorDefinitionVersion> newVersionFromDbOrRemote = actorDefinitionVersionResolver.resolveVersionForTag(
+        currentVersion.getActorDefinitionId(), actorType, currentVersion.getDockerRepository(), newDockerImageTag);
+
+    if (newVersionFromDbOrRemote.isPresent()) {
+      // TODO (ella): based on the existing behavior, the new version from the db will exist for `dev`,
+      // so we would want to re-run the spec below for `dev` images as well. However, there is an existing
+      // bug(?) that would stop us from persisting that new spec since the ADV already exists for
+      // (<actor def id>, 'dev').
+      return newVersionFromDbOrRemote.get();
+    }
+
     // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
     // to allow for easier iteration of dev images
     final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(newDockerImageTag)
