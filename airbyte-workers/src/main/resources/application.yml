@@ -160,22 +160,22 @@ airbyte:
       # Generally low resource containers
       destination-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       destination-stdout:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       heartbeat:
         cpu-limit: 0.2
-        cpu-request: 0.05
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       source-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       # Default base sync values
@@ -228,28 +228,6 @@ airbyte:
       destination-stdin-database:
         cpu-limit: 2
         cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
-
-      # Generally low resource containers, going even lower
-      lowside--destination-stderr:
-        cpu-limit: 0.5
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      lowside--destination-stdout:
-        cpu-limit: 0.5
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      lowside--heartbeat:
-        cpu-limit: 0.2
-        cpu-request: 0.01
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      lowside--source-stderr:
-        cpu-limit: 0.5
-        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
 
