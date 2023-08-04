@@ -194,9 +194,12 @@ export const StreamTester: React.FC<{
             {
               children: (
                 <>
-                  {streamReadData !== undefined && !isError && (
-                    <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
-                  )}
+                  {streamReadData !== undefined &&
+                    !isError &&
+                    streamReadData.slices &&
+                    streamReadData.slices.length > 0 && (
+                      <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
+                    )}
                 </>
               ),
               minWidth: 40,
