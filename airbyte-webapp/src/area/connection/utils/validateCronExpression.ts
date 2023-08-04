@@ -31,10 +31,10 @@ export function validateCronFrequencyOneHourOrMore(expression: string | undefine
   return true;
 }
 
-export function validateCronExpression(expression: string | undefined): boolean {
+export function validateCronExpression(expression: string | undefined): { isValid: boolean; message?: string } {
   // yup passes string | undefined, this may be fixed in the future: https://github.com/jquense/yup/issues/1367
   if (expression === undefined) {
-    return false;
+    return { isValid: false };
   }
 
   try {
@@ -58,8 +58,8 @@ export function validateCronExpression(expression: string | undefined): boolean 
       }
     });
   } catch (e) {
-    return false;
+    return { isValid: false, message: e.message };
   }
 
-  return true;
+  return { isValid: true };
 }

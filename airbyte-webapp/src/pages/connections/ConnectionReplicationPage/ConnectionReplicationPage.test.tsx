@@ -145,7 +145,7 @@ describe("ConnectionReplicationPage", () => {
       userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
-      const errorMessage = renderResult.getByText("Invalid cron expression");
+      const errorMessage = renderResult.getByText(/must contain at least 6 fields/);
 
       expect(errorMessage).toBeInTheDocument();
     });

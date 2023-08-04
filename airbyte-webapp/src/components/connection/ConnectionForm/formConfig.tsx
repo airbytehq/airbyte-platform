@@ -116,7 +116,15 @@ const createConnectionValidationSchema = (
                 .string()
                 .trim()
                 .required("form.empty.error")
-                .test("validCron", "form.cronExpression.error", validateCronExpression)
+                .test("validCron", (value, { createError, path }) => {
+                  const validation = validateCronExpression(value);
+                  return validation.isValid === true
+                    ? true
+                    : createError({
+                        path,
+                        message: validation.message ?? "form.cronExpression.invalid",
+                      });
+                })
                 .test(
                   "validCronFrequency",
                   "form.cronExpression.underOneHourNotAllowed",
