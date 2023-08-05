@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 
@@ -148,10 +147,10 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
     final Pod pod;
     try {
-       pod = kubernetesClient.pods()
-              .inNamespace(getInfo().namespace())
-              .withName(getInfo().name())
-              .waitUntilCondition(p -> p != null, 5, TimeUnit.MINUTES);
+      pod = kubernetesClient.pods()
+          .inNamespace(getInfo().namespace())
+          .withName(getInfo().name())
+          .waitUntilCondition(p -> p != null, 5, TimeUnit.MINUTES);
     } catch (final Exception e) {
       // TODO: rework catch
       log.info("WaitUntilCondition threw an exception");
@@ -265,7 +264,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       // Most of the time we should be sleeping for 500ms except when we get to the actual timeout.
       // We are waiting polling every 5000ms for status. The trade-off here is between how often
       // we poll our status storage (GCS) and how reactive we are to detect that a process is done.
-      // Setting the polling time bellow 5000ms is putting us at risk of increasing the load on the kubeApi which might
+      // Setting the polling time bellow 5000ms is putting us at risk of increasing the load on the
+      // kubeApi which might
       // lead to 429 errors
       Thread.sleep(Math.min(TimeUnit.NANOSECONDS.toMillis(remainingNanos) + 1, JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS));
       if (hasExited()) {
