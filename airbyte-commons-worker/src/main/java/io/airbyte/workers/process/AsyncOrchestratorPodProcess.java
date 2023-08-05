@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 
@@ -145,10 +146,18 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       return 0;
     }
 
-    final Pod pod = kubernetesClient.pods()
-        .inNamespace(getInfo().namespace())
-        .withName(getInfo().name())
-        .get();
+    final Pod pod;
+    try {
+       pod = kubernetesClient.pods()
+              .inNamespace(getInfo().namespace())
+              .withName(getInfo().name())
+              .waitUntilCondition(p -> p != null, 5, TimeUnit.MINUTES);
+    } catch (final Exception e) {
+      // TODO: rework catch
+      log.info("WaitUntilCondition threw an exception");
+      log.info("State Store missing status. Orchestrator pod {} non-existent. Assume failure.", getInfo().name());
+      return 2;
+    }
 
     // Since the pod creation blocks until the pod is created the first time,
     // if the pod no longer exists (and we don't have a success/fail document)
@@ -156,6 +165,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     // we must assume failure, since the document store is the "truth" for
     // async pod status.
     if (pod == null) {
+      log.info("WaitUntilCondition returned null");
       log.info("State Store missing status. Orchestrator pod {} non-existent. Assume failure.", getInfo().name());
       return 2;
     }
@@ -253,8 +263,10 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     do {
       // The remainingNanos bit is about calculating how much time left for the actual timeout.
       // Most of the time we should be sleeping for 500ms except when we get to the actual timeout.
-      // We are waiting polling every 500ms for status. The trade-off here is between how often
+      // We are waiting polling every 5000ms for status. The trade-off here is between how often
       // we poll our status storage (GCS) and how reactive we are to detect that a process is done.
+      // Setting the polling time bellow 5000ms is putting us at risk of increasing the load on the kubeApi which might
+      // lead to 429 errors
       Thread.sleep(Math.min(TimeUnit.NANOSECONDS.toMillis(remainingNanos) + 1, JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS));
       if (hasExited()) {
         return true;
