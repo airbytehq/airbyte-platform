@@ -282,7 +282,7 @@ public class SourceHandler {
             listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
             listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
             listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
-            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {

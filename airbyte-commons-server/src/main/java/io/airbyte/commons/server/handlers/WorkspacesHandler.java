@@ -156,7 +156,7 @@ public class WorkspacesHandler {
   }
 
   private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreate workspaceCreate) {
-    NotificationSettings notificationSettings = new NotificationSettings()
+    final NotificationSettings notificationSettings = new NotificationSettings()
         .sendOnSuccess(new NotificationItem().notificationType(List.of()))
         .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnConnectionUpdate(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
@@ -164,7 +164,7 @@ public class WorkspacesHandler {
         .sendOnSyncDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
     if (workspaceCreate.getNotificationSettings() != null) {
-      NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
+      final NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
       if (inputNotificationSettings.getSendOnSuccess() != null) {
         notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
       }
@@ -194,13 +194,28 @@ public class WorkspacesHandler {
     return new WorkspaceReadList().workspaces(reads);
   }
 
+  public WorkspaceReadList listAllWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws IOException {
+    final List<WorkspaceRead> reads = configRepository.listAllWorkspacesPaginated(
+        new ResourcesQueryPaginated(
+            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(),
+            listResourcesForWorkspacesRequestBody.getNameContains()))
+        .stream()
+        .map(WorkspacesHandler::buildWorkspaceRead)
+        .collect(Collectors.toList());
+    return new WorkspaceReadList().workspaces(reads);
+  }
+
   public WorkspaceReadList listWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
       throws IOException {
     final List<StandardWorkspace> standardWorkspaces = configRepository.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
         listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
         listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
         listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
-        listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+        listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
 
     final List<WorkspaceRead> reads = standardWorkspaces
         .stream()

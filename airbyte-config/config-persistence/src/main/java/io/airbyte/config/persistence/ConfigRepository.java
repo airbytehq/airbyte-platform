@@ -173,12 +173,14 @@ public class ConfigRepository {
    * @param includeDeleted include tombstoned resources
    * @param pageSize limit
    * @param rowOffset offset
+   * @param nameContains string to search name contains by
    */
   public record ResourcesQueryPaginated(
                                         @Nonnull List<UUID> workspaceIds,
                                         boolean includeDeleted,
                                         int pageSize,
-                                        int rowOffset) {
+                                        int rowOffset,
+                                        String nameContains) {
 
   }
 
@@ -397,6 +399,26 @@ public class ConfigRepository {
    */
   public List<StandardWorkspace> listStandardWorkspaces(final boolean includeTombstone) throws IOException {
     return listWorkspaceQuery(Optional.empty(), includeTombstone).toList();
+  }
+
+  /**
+   * List ALL workspaces (paginated) with some filtering.
+   *
+   * @param resourcesQueryPaginated - contains all the information we need to paginate
+   * @return A List of StandardWorkspace objects
+   * @throws IOException you never know when you IO
+   */
+  public List<StandardWorkspace> listAllWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(resourcesQueryPaginated.nameContains() != null ? WORKSPACE.NAME.contains(resourcesQueryPaginated.nameContains()) : noCondition())
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .toList();
   }
 
   private Stream<StandardWorkspace> listWorkspaceQuery(final Optional<UUID> workspaceId, final boolean includeTombstone) throws IOException {

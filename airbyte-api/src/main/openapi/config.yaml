@@ -127,6 +127,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkspaceReadList"
+  /v1/workspaces/list_all_paginated:
+    post:
+      tags:
+        - workspace
+      summary: List all workspaces registered in the current Airbyte deployment, paginated.
+      operationId: listAllWorkspacesPaginated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListResourcesForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_paginated:
     post:
       tags:
@@ -3261,6 +3280,8 @@ components:
           default: false
         pagination:
           $ref: "#/components/schemas/Pagination"
+        nameContains:
+          type: string
     WorkspaceReadList:
       type: object
       required:
