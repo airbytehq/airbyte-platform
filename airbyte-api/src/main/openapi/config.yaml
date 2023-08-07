@@ -72,6 +72,10 @@ tags:
     description: Interactions with state related resources.
   - name: actor_definition_version
     description: Interactions with actor definition version related resources.
+  - name: user
+    description: Interactions with user related resources.
+  - name: permission
+    description: Interactions with permission related resources.
 
 paths:
   /v1/workspaces/create:
@@ -2811,6 +2815,276 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
+  # USERS
+  /v1/users/create:
+    post:
+      tags:
+        - user
+      summary: Creates an Airbyte user
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "409":
+          description: Version already exists for definition id
+          $ref: "#/components/responses/ExceptionResponse"
+
+  /v1/users/get:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by internal user ID
+      operationId: getUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/users/get_by_auth_id:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by auth id
+      operationId: getUserByAuthId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAuthIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/users/update:
+    post:
+      tags:
+        - user
+      summary: Update user state
+      operationId: updateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/delete:
+    post:
+      tags:
+        - user
+      summary: Deletes a user
+      operationId: deleteUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  # PERMISSIONS
+  /v1/permissions/create:
+    post:
+      tags:
+        - permission
+      summary: Creates a permission resource
+      operationId: createPermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "422":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/permissions/get:
+    post:
+      tags:
+        - permission
+      summary: Find a permission by ID
+      operationId: getPermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/check:
+    post:
+      tags:
+        - permission
+      summary: Check permissions for user
+      operationId: checkPermissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionCheckRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionCheckRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/check_multiple_workspaces:
+    post:
+      tags:
+        - permission
+      summary: Check permissions for user across workspaces
+      operationId: checkPermissionsAcrossMultipleWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionsCheckMultipleWorkspacesRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionCheckRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/update:
+    post:
+      tags:
+        - permission
+      summary: Updates a permission resource
+      operationId: updatePermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/delete:
+    post:
+      tags:
+        - permission
+      summary: Deletes a permission resource
+      operationId: deletePermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/list_by_user:
+    post:
+      tags:
+        - permission
+      summary: List permissions a user has access to
+      operationId: listPermissionsByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/health:
     get:
       tags:
@@ -4992,6 +5266,265 @@ components:
             - failed
         message:
           type: string
+
+    # ORGANIZATIONS
+    OrganizationId:
+      type: string
+      format: uuid
+
+    # PERMISSIONS
+    PermissionIdRequestBody:
+      type: object
+      required:
+        - permissionId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+    PermissionCreate:
+      type: object
+      required:
+        - permissionType
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    PermissionRead:
+      type: object
+      required:
+        - permissionId
+        - permissionType
+        - userId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    PermissionReadList:
+      type: object
+      required:
+        - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionRead"
+    PermissionUpdate:
+      type: object
+      required:
+        - permissionId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    PermissionType:
+      type: string
+      description: Describes what actions/endpoints the permission entitles to
+      enum:
+        - instance_admin # Permission to do anything (all permissions below)
+        - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
+        - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
+        - organization_reader # Permission to read all workspaces within an organization
+        - workspace_owner # TODO: remove this old enum. It is equivalent to `workspace_admin`.
+        - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
+        - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+        - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
+
+    PermissionCheckRequest:
+      type: object
+      required:
+        - permissionType
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    PermissionsCheckMultipleWorkspacesRequest:
+      type: object
+      required:
+        - permissionType
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+    PermissionCheckRead:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - succeeded
+            - failed
+        message:
+          type: string
+
+    # USERS
+    UserId:
+      type: string
+      description: Internal Airbyte user ID
+      format: uuid
+
+    UserIdRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+
+    AuthProvider:
+      type: string
+      description: Auth Provider
+      default: airbyte
+      enum:
+        - airbyte
+        - google_identity_platform
+        - keycloak
+
+    UserStatus:
+      type: string
+      description: user status
+      enum:
+        - invited # To use when a registered user invites someone by email to join
+        - registered
+        - disabled
+
+    UserRead:
+      type: object
+      required:
+        - userId
+        - authUserId
+        - authProvider
+        - email
+        - metadata
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        defaultWorkspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+        metadata:
+          type: object
+          description: UI metadata required by frontend
+
+    UserUpdate:
+      type: object
+      required:
+        - userId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        defaultWorkspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+        metadata:
+          type: object
+          description: UI metadata used in frontend
+
+    UserAuthIdRequestBody:
+      type: object
+      required:
+        - authUserId
+        - authProvider
+      properties:
+        authUserId:
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+
+    UserCreate:
+      type: object
+      required:
+        - name
+        - authUserId
+        - authProvider
+        - email
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+          default: false
+
     # LOGS
     LogType:
       type: string

@@ -15,11 +15,13 @@ import io.airbyte.api.client.generated.HealthApi;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.OperationApi;
+import io.airbyte.api.client.generated.PermissionApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.generated.StreamStatusesApi;
+import io.airbyte.api.client.generated.UserApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import java.util.Random;
@@ -65,6 +67,8 @@ public class AirbyteApiClient {
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
   private final StreamStatusesApi streamStatusesApi;
+  private final UserApi userApi;
+  private final PermissionApi permissionApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
@@ -84,6 +88,8 @@ public class AirbyteApiClient {
     attemptApi = new AttemptApi(apiClient);
     stateApi = new StateApi(apiClient);
     streamStatusesApi = new StreamStatusesApi(apiClient);
+    userApi = new UserApi(apiClient);
+    permissionApi = new PermissionApi();
   }
 
   public ConnectionApi getConnectionApi() {
@@ -152,6 +158,14 @@ public class AirbyteApiClient {
 
   public StreamStatusesApi getStreamStatusesApi() {
     return streamStatusesApi;
+  }
+
+  public PermissionApi getPermissionApi() {
+    return permissionApi;
+  }
+
+  public UserApi getUserApi() {
+    return userApi;
   }
 
   /**

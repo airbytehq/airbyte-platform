@@ -1,0 +1,36 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/Permission.yaml
+title: Permission
+description: Airbyte permission configuration
+type: object
+required:
+  - permissionId
+  - permissionType
+  - userId
+additionalProperties: false
+properties:
+  permissionId:
+    type: string
+    format: uuid
+  permissionType:
+    type: string
+    description: Describes what actions/endpoints the permission entitles to
+    enum:
+      - instance_admin # Permission to do anything (all permissions below)
+      - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
+      - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
+      - organization_reader # Permission to read all workspaces within an organization
+      - workspace_owner # TODO: remove this old enum. It is equivalent to `workspace_admin`.
+      - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
+      - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+      - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
+  userId:
+    type: string
+    format: uuid
+  workspaceId:
+    type: string
+    format: uuid
+  organizationId:
+    type: string
+    format: uuid

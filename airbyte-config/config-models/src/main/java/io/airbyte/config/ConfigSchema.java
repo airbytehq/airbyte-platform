@@ -15,6 +15,18 @@ import java.util.function.Function;
 @SuppressWarnings({"PMD.AvoidThrowingRawExceptionTypes", "PMD.NullAssignment"})
 public enum ConfigSchema implements AirbyteConfig {
 
+  // user
+  USER("User.yaml",
+      User.class,
+      user -> user.getUserId().toString(),
+      "userId"),
+
+  // permission
+  PERMISSION("Permission.yaml",
+      Permission.class,
+      permission -> permission.getPermissionId().toString(),
+      "permissionId"),
+
   // workspace
   STANDARD_WORKSPACE("StandardWorkspace.yaml",
       StandardWorkspace.class,

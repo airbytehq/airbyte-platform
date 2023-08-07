@@ -24,6 +24,8 @@ public enum ConfigsDatabaseTables {
   OPERATION,
   STATE,
   WORKSPACE,
+  USER,
+  PERMISSION,
   CONNECTOR_BUILDER_PROJECT;
 
   /**

@@ -19,10 +19,12 @@ import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.airbyte.commons.server.handlers.SourceHandler;
 import io.airbyte.commons.server.handlers.StateHandler;
+import io.airbyte.commons.server.handlers.UserHandler;
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
@@ -90,6 +92,22 @@ abstract class BaseControllerTest {
   @Replaces(ConnectionsHandler.class)
   ConnectionsHandler mmConnectionsHandler() {
     return connectionsHandler;
+  }
+
+  UserHandler userHandler = Mockito.mock(UserHandler.class);
+
+  @MockBean(UserHandler.class)
+  @Replaces(UserHandler.class)
+  UserHandler mmUserHandler() {
+    return userHandler;
+  }
+
+  PermissionHandler permissionHandler = Mockito.mock(PermissionHandler.class);
+
+  @MockBean(PermissionHandler.class)
+  @Replaces(PermissionHandler.class)
+  PermissionHandler mmPermissionHandler() {
+    return permissionHandler;
   }
 
   DestinationHandler destinationHandler = Mockito.mock(DestinationHandler.class);
