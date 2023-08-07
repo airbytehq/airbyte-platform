@@ -56,7 +56,9 @@ public interface CancellationHandler {
          */
         activityContext.heartbeat(null);
       } catch (final ActivityCompletionException e) {
+        LOGGER.warn("An error happened while checking that the temporal activity is still alive, starting the cancellation", e);
         onCancellationCallback.run();
+        LOGGER.warn("The cancellation callback related to the heartbeat timeout is finished.");
         LOGGER.warn("Job either timed out or was cancelled.");
       }
     }
