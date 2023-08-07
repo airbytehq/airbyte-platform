@@ -2,20 +2,15 @@ import { AttemptRead, AttemptStats, AttemptStatus, AttemptStreamStats } from "co
 
 import { progressBarCalculations } from "./utils";
 
-// used for tests which rely on Date.now(), to account for if the test takes slightly longer to run sometimes
-expect.extend({
-  toBeWithinTolerance(received, center, tolerance) {
-    const floor = center - tolerance;
-    const ceiling = center + tolerance;
-    const pass = received >= floor && received <= ceiling;
-    return {
-      message: () => `expected ${received} to be within tolerance of ${tolerance} around ${center}`,
-      pass,
-    };
-  },
-});
-
 describe("#progressBarCalculations", () => {
+  beforeEach(() => {
+    jest.spyOn(Date, "now").mockImplementation(() => new Date("2023-01-01T00:00:00.000Z").getTime());
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("for an attempt with no throughput information", () => {
     const attempt = makeAttempt();
     const { displayProgressBar, totalPercentRecords } = progressBarCalculations(attempt);
@@ -31,8 +26,8 @@ describe("#progressBarCalculations", () => {
 
     expect(displayProgressBar).toEqual(true);
     expect(totalPercentRecords).toEqual(0.01);
-    expect(elapsedTimeMS).toBeWithinTolerance(10 * 1000, 2);
-    expect(timeRemaining).toBeWithinTolerance(990 * 1000, 2);
+    expect(elapsedTimeMS).toEqual(10 * 1000);
+    expect(timeRemaining).toEqual(990 * 1000);
   });
 
   it("for an attempt with per-stream stats", () => {
@@ -55,8 +50,8 @@ describe("#progressBarCalculations", () => {
 
     expect(displayProgressBar).toEqual(true);
     expect(totalPercentRecords).toEqual(0.01);
-    expect(elapsedTimeMS).toBeWithinTolerance(10 * 1000, 2);
-    expect(timeRemaining).toBeWithinTolerance(990 * 1000, 2);
+    expect(elapsedTimeMS).toEqual(10 * 1000);
+    expect(timeRemaining).toEqual(990 * 1000);
   });
 });
 
