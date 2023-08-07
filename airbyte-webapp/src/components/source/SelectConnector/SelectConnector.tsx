@@ -109,7 +109,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
 
       <div className={styles.selectConnector__grid}>
         <ConnectorGrid
-          searchResultsHiddenByFilters={allSearchResults.length - filteredSearchResults.length}
+          searchResultsHiddenByFilters={
+            searchTerm.length > 0 ? allSearchResults.length - filteredSearchResults.length : 0
+          }
           onShowAllResultsClick={() => {
             setSelectedReleaseStages(RELEASE_STAGES);
           }}
