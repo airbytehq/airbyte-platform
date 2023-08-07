@@ -18,6 +18,11 @@ interface TransformationFieldProps extends ArrayHelpers {
   onEndEdit?: () => void;
 }
 
+/**
+ * @deprecated it's Formik version of TransformationField
+ * @see TransformationFieldHookForm
+ * TODO: replace with TransformationHookForm during Create Connection form refactoring
+ */
 const TransformationField: React.FC<TransformationFieldProps> = ({
   remove,
   push,

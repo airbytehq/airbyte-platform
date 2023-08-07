@@ -4,18 +4,12 @@ import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { ConnectionEditFormCard } from "components/connection/ConnectionEditFormCard";
-import { getInitialTransformations } from "components/connection/ConnectionForm/formConfig";
+import { getInitialTransformationsOld } from "components/connection/ConnectionForm/formConfig";
 import { TransformationField } from "components/connection/ConnectionForm/TransformationField";
-import { DbtOperationReadOrCreate } from "components/connection/TransformationHookForm";
 
 import { OperationCreate, OperationRead } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { FormikOnSubmit } from "types/formik";
-
-// will be used in 2nd part of migration, TransformationFieldHookForm refers to this interface
-export interface CustomTransformationsFormValues {
-  transformations: DbtOperationReadOrCreate[];
-}
 
 export const CustomTransformationsCard: React.FC<{
   operations?: OperationCreate[];
@@ -25,7 +19,7 @@ export const CustomTransformationsCard: React.FC<{
   const { mode } = useConnectionFormService();
   const initialValues = useMemo(
     () => ({
-      transformations: getInitialTransformations(operations || []),
+      transformations: getInitialTransformationsOld(operations || []),
     }),
     [operations]
   );

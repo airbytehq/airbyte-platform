@@ -1,11 +1,17 @@
-import { OperationCreate, OperationRead, OperatorType } from "../../request/AirbyteClient";
+import { DbtOperationRead } from "components/connection/TransformationHookForm";
+
+import { OperationCreate, OperationRead, OperatorType } from "core/request/AirbyteClient";
 
 export enum NormalizationType {
   basic = "basic",
   raw = "raw",
 }
 
-export const isDbtTransformation = (op: OperationCreate): op is OperationRead => {
+export const isDbtTransformation = (op: OperationRead): op is DbtOperationRead => {
+  return op.operatorConfiguration.operatorType === OperatorType.dbt;
+};
+// TODO: remove after NormalizationHookFormCard and CustomTransformationsHookFormCard form migration
+export const isDbtTransformationOld = (op: OperationCreate): op is OperationRead => {
   return op.operatorConfiguration.operatorType === OperatorType.dbt;
 };
 

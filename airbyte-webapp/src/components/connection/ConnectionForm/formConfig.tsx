@@ -9,6 +9,7 @@ import { useCurrentWorkspace } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
+  isDbtTransformationOld,
   isNormalizationTransformation,
   isWebhookTransformation,
   NormalizationType,
@@ -36,6 +37,7 @@ import { ValuesProps } from "hooks/services/useConnectionHook";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
 import { frequencyConfig } from "./frequencyConfig";
+import { DbtOperationRead } from "../TransformationHookForm";
 
 export interface FormikConnectionFormValues {
   name?: string;
@@ -252,6 +254,7 @@ export type ConnectionValidationSchema = ReturnType<typeof useConnectionValidati
  * @param initialOperations
  * @param workspaceId
  */
+// TODO: need to split this mapper for each type of operation(transformations, normalizations, webhooks)
 export function mapFormPropsToOperation(
   values: {
     transformations?: OperationRead[];
@@ -294,8 +297,16 @@ export function mapFormPropsToOperation(
   return newOperations;
 }
 
-export const getInitialTransformations = (operations: OperationCreate[]): OperationRead[] =>
+/**
+ * get transformation operations only
+ * @param operations
+ */
+export const getInitialTransformations = (operations: OperationRead[]): DbtOperationRead[] =>
   operations?.filter(isDbtTransformation) ?? [];
+
+// TODO: remove after NormalizationHookFormCard and CustomTransformationsHookFormCard form migration
+export const getInitialTransformationsOld = (operations: OperationCreate[]): OperationRead[] =>
+  operations?.filter(isDbtTransformationOld) ?? [];
 
 export const getInitialNormalization = (
   operations?: Array<OperationRead | OperationCreate>,

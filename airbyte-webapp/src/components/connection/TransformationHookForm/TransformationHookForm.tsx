@@ -49,7 +49,7 @@ export const TransformationHookForm: React.FC<TransformationHookFormProps> = ({ 
       onSubmit={onSubmit}
       schema={dbtOperationReadOrCreateSchema}
       defaultValues={transformation}
-      // TODO: uncomment when trackDirtyChanges will be fixed
+      // TODO: uncomment when trackDirtyChanges will be fixed. Issue: https://github.com/airbytehq/airbyte/issues/28745
       // trackDirtyChanges
     >
       <ModalBody maxHeight={400}>

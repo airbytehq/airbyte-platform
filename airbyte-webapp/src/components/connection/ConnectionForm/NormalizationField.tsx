@@ -13,6 +13,10 @@ import styles from "./NormalizationField.module.scss";
 
 type NormalizationBlockProps = FieldProps<string>;
 
+/**
+ * @deprecated will be removed during CreateConnectionForm migration
+ * @see NormalizationHookFormField
+ */
 export const NormalizationField: React.FC<NormalizationBlockProps> = ({ form, field }) => {
   const { mode } = useConnectionFormService();
 

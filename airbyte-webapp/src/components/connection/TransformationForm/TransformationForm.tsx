@@ -46,6 +46,16 @@ function prepareLabelFields(
 // enum with only one value for the moment
 const TransformationTypes = [{ value: "custom", label: "Custom DBT" }];
 
+/**
+ * @deprecated it's Formik version of TransformationForm
+ * the new version is TransformationHookForm:
+ * @see TransformationHookForm
+ * @param transformation
+ * @param onCancel
+ * @param onDone
+ * @param isNewTransformation
+ * @constructor
+ */
 const TransformationForm: React.FC<TransformationProps> = ({
   transformation,
   onCancel,
@@ -123,7 +133,7 @@ const TransformationForm: React.FC<TransformationProps> = ({
               {...prepareLabelFields(formik.errors, "operatorConfiguration.dbt.dbtArguments")}
               label={
                 <FormattedMessage
-                  id="form.entrypoint.linked"
+                  id="form.entrypoint.linked.old"
                   values={{
                     a: (node: React.ReactNode) => (
                       <a href={links.dbtCommandsReference} target="_blank" rel="noreferrer">
