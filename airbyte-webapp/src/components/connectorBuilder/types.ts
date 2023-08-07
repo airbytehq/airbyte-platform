@@ -160,10 +160,7 @@ export interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_
 }
 
 export interface BuilderIncrementalSync
-  extends Pick<
-    DatetimeBasedCursor,
-    "cursor_field" | "datetime_format" | "end_time_option" | "start_time_option" | "lookback_window"
-  > {
+  extends Pick<DatetimeBasedCursor, "cursor_field" | "end_time_option" | "start_time_option" | "lookback_window"> {
   end_datetime:
     | {
         type: "user_input";
@@ -180,6 +177,8 @@ export interface BuilderIncrementalSync
     cursor_granularity?: string;
   };
   filter_mode: "range" | "start" | "no_filter";
+  cursor_datetime_formats: string[];
+  datetime_format?: string;
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -908,7 +907,8 @@ export const builderFormValidationSchema = yup.object().shape({
                 }),
               })
             ),
-            datetime_format: yup.string().required(REQUIRED_ERROR),
+            datetime_format: yup.string().notRequired().default(undefined),
+            cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
             start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
             end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
             stream_state_field_start: yup.string(),
@@ -1023,20 +1023,35 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, slicer, start_time_option, end_time_option, filter_mode, ...regularFields } =
-    formValues;
+  const {
+    start_datetime,
+    end_datetime,
+    slicer,
+    start_time_option,
+    end_time_option,
+    filter_mode,
+    cursor_datetime_formats,
+    datetime_format,
+    ...regularFields
+  } = formValues;
   const startDatetime = {
     type: "MinMaxDatetime" as const,
     datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
     datetime_format: start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   };
+  const manifestIncrementalSync = {
+    type: "DatetimeBasedCursor" as const,
+    ...regularFields,
+    cursor_datetime_formats,
+    datetime_format: datetime_format || cursor_datetime_formats[0],
+    start_datetime: startDatetime,
+  };
+
   if (filter_mode === "range") {
     return {
-      type: "DatetimeBasedCursor",
-      ...regularFields,
+      ...manifestIncrementalSync,
       start_time_option,
       end_time_option,
-      start_datetime: startDatetime,
       end_datetime: {
         type: "MinMaxDatetime",
         datetime:
@@ -1053,17 +1068,13 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
   }
   if (filter_mode === "start") {
     return {
-      type: "DatetimeBasedCursor",
-      ...regularFields,
+      ...manifestIncrementalSync,
       start_time_option,
-      start_datetime: startDatetime,
     };
   }
   return {
-    type: "DatetimeBasedCursor",
-    ...regularFields,
+    ...manifestIncrementalSync,
     is_data_feed: true,
-    start_datetime: startDatetime,
   };
 }
 

@@ -74,12 +74,19 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         )}
       </div>
       {onAction && (
-        <Button {...actionBtnProps} variant="dark" onClick={onAction} data-testid={`${testId}-button`}>
+        <Button type="button" {...actionBtnProps} variant="dark" onClick={onAction} data-testid={`${testId}-button`}>
           {actionBtnText}
         </Button>
       )}
       {onClose && (
-        <Button variant="clear" className={styles.closeButton} onClick={onClose} size="xs" icon={<CrossIcon />} />
+        <Button
+          type="button"
+          variant="clear"
+          className={styles.closeButton}
+          onClick={onClose}
+          size="xs"
+          icon={<CrossIcon />}
+        />
       )}
     </div>
   );
