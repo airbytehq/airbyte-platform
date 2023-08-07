@@ -29,7 +29,7 @@ describe("<TransformationHookForm /> - validationSchema", () => {
     }).rejects.toThrow(ValidationError);
   });
 
-  it("should fail if 'gitRepoUrl' is invalid", async () => {
+  it("should fail if 'gitRepoUrl' is empty", async () => {
     await expect(async () => {
       await dbtOperationReadOrCreateSchema.validateAt(
         "operatorConfiguration.dbt.gitRepoUrl",
@@ -38,14 +38,27 @@ describe("<TransformationHookForm /> - validationSchema", () => {
         })
       );
     }).rejects.toThrow(ValidationError);
+  });
 
-    await expect(async () => {
-      await dbtOperationReadOrCreateSchema.validateAt(
+  it("should successfully validate 'gitRepoUrl'", async () => {
+    await expect(
+      dbtOperationReadOrCreateSchema.validateAt(
         "operatorConfiguration.dbt.gitRepoUrl",
         merge(customTransformationFields, {
-          operatorConfiguration: { dbt: { gitRepoUrl: "https://github.com/username/example.git/" } },
+          operatorConfiguration: { dbt: { gitRepoUrl: "https://github.com/username/example.git" } },
         })
-      );
-    }).rejects.toThrow(ValidationError);
+      )
+    ).resolves.toBeTruthy();
+
+    await expect(
+      dbtOperationReadOrCreateSchema.validateAt(
+        "operatorConfiguration.dbt.gitRepoUrl",
+        merge(customTransformationFields, {
+          operatorConfiguration: {
+            dbt: { gitRepoUrl: "https://OrgName@dev.azure.com/OrgName/RepoName/_git/RepoName" },
+          },
+        })
+      )
+    ).resolves.toBeTruthy();
   });
 });

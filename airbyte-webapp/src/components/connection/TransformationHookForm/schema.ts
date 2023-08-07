@@ -12,11 +12,7 @@ export const dbtOperationReadOrCreateSchema: SchemaOf<DbtOperationReadOrCreate> 
     .shape({
       operatorType: yup.mixed().oneOf(["dbt"]).default("dbt"),
       dbt: yup.object({
-        gitRepoUrl: yup
-          .string()
-          .trim()
-          .matches(/((http(s)?)|(git@[\w.]+))(:(\/\/)?)([\w.@:/\-~]+)(\.git)$/, "form.repositoryUrl.invalidUrl")
-          .required("form.empty.error"),
+        gitRepoUrl: yup.string().trim().required("form.empty.error"),
         gitRepoBranch: yup.string().optional(),
         dockerImage: yup.string().optional(),
         dbtArguments: yup.string().optional(),
