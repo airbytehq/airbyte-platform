@@ -5,7 +5,7 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { HeadTitle } from "components/common/HeadTitle";
 import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
 import { SelectSource } from "components/connection/CreateConnection/SelectSource";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -71,9 +71,9 @@ export const CreateConnectionPage: React.FC = () => {
   return (
     <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />
-      <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+      <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
         <CreateConnectionTitleBlock />
-      </NextPageHeaderWithNavigation>
+      </PageHeaderWithNavigation>
       {currentStep}
     </ConnectorDocumentationWrapper>
   );

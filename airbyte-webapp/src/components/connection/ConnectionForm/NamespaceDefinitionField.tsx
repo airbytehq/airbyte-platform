@@ -25,12 +25,7 @@ import {
   DestinationNamespaceModal,
 } from "../DestinationNamespaceModal/DestinationNamespaceModal";
 
-/**
- * Destination namespace definition field for new stream table
- * will replace NamespaceDefinitionField.tsx in future
- * TODO: rename to NamespaceDefinitionField when the old version will be removed
- */
-export const NamespaceDefinitionFieldNext = () => {
+export const NamespaceDefinitionField = () => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
   const doUseReactHookForm = useExperiment("form.reactHookForm", false);

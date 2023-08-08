@@ -7,7 +7,7 @@ import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import LoadingPage from "components/LoadingPage";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -87,7 +87,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "sidebar.settings" }]} />}
       pageTitle={
-        <NextPageHeader
+        <PageHeader
           leftComponent={
             <Heading as="h1" size="lg">
               <FormattedMessage id="sidebar.settings" />

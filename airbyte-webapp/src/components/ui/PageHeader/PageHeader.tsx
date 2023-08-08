@@ -1,14 +1,14 @@
 import classNames from "classnames";
 import React from "react";
 
-import styles from "./NextPageHeader.module.scss";
+import styles from "./PageHeader.module.scss";
 import { FlexContainer } from "../Flex";
 
-interface NextPageHeaderProps {
+interface PageHeaderProps {
   leftComponent: string | React.ReactNode;
   endComponent?: React.ReactNode;
 }
-export const NextPageHeader: React.FC<NextPageHeaderProps> = ({ leftComponent, endComponent }) => (
+export const PageHeader: React.FC<PageHeaderProps> = ({ leftComponent, endComponent }) => (
   <FlexContainer
     className={classNames(styles.container)}
     alignItems="center"

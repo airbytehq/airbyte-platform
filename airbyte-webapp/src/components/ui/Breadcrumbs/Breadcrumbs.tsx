@@ -1,20 +1,20 @@
 import React, { Fragment } from "react";
 
-import styles from "./NextBreadcrumbs.module.scss";
+import styles from "./Breadcrumbs.module.scss";
 import { FlexContainer, FlexItem } from "../Flex";
 import { Link } from "../Link";
 import { Text } from "../Text";
 
-export interface NextBreadcrumbsDataItem {
+export interface BreadcrumbsDataItem {
   label: string;
   to?: string;
 }
 
-export interface NextBreadcrumbsProps {
-  data: NextBreadcrumbsDataItem[];
+export interface BreadcrumbsProps {
+  data: BreadcrumbsDataItem[];
 }
 
-export const NextBreadcrumbs: React.FC<NextBreadcrumbsProps> = ({ data }) => {
+export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ data }) => {
   return (
     <>
       {data.length && (

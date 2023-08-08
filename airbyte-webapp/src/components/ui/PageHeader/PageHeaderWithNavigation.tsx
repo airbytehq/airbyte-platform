@@ -1,20 +1,22 @@
-import styles from "./NextPageHeaderWithNavigation.module.scss";
+import React, { PropsWithChildren } from "react";
+
+import styles from "./PageHeaderWithNavigation.module.scss";
 import { Box } from "../Box";
-import { NextBreadcrumbsDataItem, NextBreadcrumbs } from "../Breadcrumbs/NextBreadcrumbs";
+import { BreadcrumbsDataItem, Breadcrumbs } from "../Breadcrumbs";
 import { FlexContainer } from "../Flex";
 
-interface NextPageHeaderWithNavigationProps {
-  breadcrumbsData: NextBreadcrumbsDataItem[];
+interface PageHeaderWithNavigationProps {
+  breadcrumbsData: BreadcrumbsDataItem[];
 }
 
-export const NextPageHeaderWithNavigation: React.FC<React.PropsWithChildren<NextPageHeaderWithNavigationProps>> = ({
+export const PageHeaderWithNavigation: React.FC<PropsWithChildren<PageHeaderWithNavigationProps>> = ({
   breadcrumbsData,
   children,
 }) => {
   return (
     <FlexContainer direction="column" gap="none" className={styles.container}>
       <Box py="lg" px="xl" className={styles.section}>
-        <NextBreadcrumbs data={breadcrumbsData} />
+        <Breadcrumbs data={breadcrumbsData} />
       </Box>
       {children && (
         <Box pt="lg" px="xl" className={styles.section}>

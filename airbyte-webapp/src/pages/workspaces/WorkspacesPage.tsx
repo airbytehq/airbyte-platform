@@ -6,7 +6,7 @@ import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
@@ -24,7 +24,7 @@ const WorkspacesPage: React.FC = () => {
       <Box px="lg" className={styles.brandingHeader}>
         <AirbyteLogo width={110} />
       </Box>
-      <NextPageHeader
+      <PageHeader
         leftComponent={
           <FlexContainer direction="column" alignItems="flex-start" justifyContent="flex-start">
             <FlexContainer direction="row" gap="none">

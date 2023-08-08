@@ -8,7 +8,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
 import { StepsTypes } from "components/ConnectorBlocks";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useDestinationDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -44,14 +44,14 @@ export const DestinationItemPage: React.FC = () => {
     <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
-        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+        <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
           <ConnectorTitleBlock
             connector={destination}
             connectorDefinition={destinationDefinition}
             actorDefinitionVersion={actorDefinitionVersion}
           />
           <ConnectorNavigationTabs connectorType="destination" connector={destination} id={destination.destinationId} />
-        </NextPageHeaderWithNavigation>
+        </PageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
             <Outlet />
