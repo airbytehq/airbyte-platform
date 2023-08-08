@@ -355,7 +355,7 @@
   "jobs.jobStatus.sync.running": "Sync Running",
   "jobs.jobStatus.sync.succeeded": "Sync Succeeded",
   "jobs.jobStatus.sync.cancelled": "Sync Cancelled",
-  "jobs.jobStatus.sync.partialSuccess": "Sync Partial Success",
+  "jobs.jobStatus.sync.partialSuccess": "Sync Partially Succeeded",
   "jobs.jobStatus.check_connection_source.failed": "Configuration check failed",
   "jobs.jobStatus.check_connection_source.succeeded": "Configuration check finished",
   "jobs.jobStatus.check_connection_destination.failed": "Configuration check failed",
