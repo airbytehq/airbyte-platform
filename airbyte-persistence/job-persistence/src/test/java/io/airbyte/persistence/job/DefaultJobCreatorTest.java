@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job;
 
-import static io.airbyte.config.provider.ResourceRequirementsProvider.DEFAULT_VARIANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -523,6 +522,33 @@ class DefaultJobCreatorTest {
 
   @Test
   void testCreateResetConnectionJob() throws IOException {
+    final Optional<String> expectedSourceType = Optional.empty();
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(workerResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(sourceResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destResourceRequirements);
+    // More explicit resource requirements to verify data mapping
+    final ResourceRequirements destStderrResourceRequirements = new ResourceRequirements().withCpuLimit("10");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStderrResourceRequirements);
+    final ResourceRequirements destStdinResourceRequirements = new ResourceRequirements().withCpuLimit("11");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdinResourceRequirements);
+    final ResourceRequirements destStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("12");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(destStdoutResourceRequirements);
+    final ResourceRequirements heartbeatResourceRequirements = new ResourceRequirements().withCpuLimit("13");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(heartbeatResourceRequirements);
+    final ResourceRequirements srcStderrResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStderrResourceRequirements);
+    final ResourceRequirements srcStdoutResourceRequirements = new ResourceRequirements().withCpuLimit("14");
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, expectedSourceType, DEFAULT_VARIANT))
+        .thenReturn(srcStdoutResourceRequirements);
+
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);
     final ConfiguredAirbyteCatalog expectedCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream()
@@ -539,6 +565,15 @@ class DefaultJobCreatorTest {
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
 
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
+        .withDestination(destResourceRequirements)
+        .withDestinationStdErr(destStderrResourceRequirements)
+        .withDestinationStdIn(destStdinResourceRequirements)
+        .withDestinationStdOut(destStdoutResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(heartbeatResourceRequirements);
+
     final JobResetConnectionConfig jobResetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -548,6 +583,7 @@ class DefaultJobCreatorTest {
         .withConfiguredAirbyteCatalog(expectedCatalog)
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
         .withResourceRequirements(workerResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
@@ -564,12 +600,14 @@ class DefaultJobCreatorTest {
     final Optional<Long> jobId = jobCreator.createResetConnectionJob(
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
+        new StandardDestinationDefinition(),
         DESTINATION_DEFINITION_VERSION,
         DESTINATION_IMAGE_NAME,
         DESTINATION_PROTOCOL_VERSION,
         false,
         List.of(STANDARD_SYNC_OPERATION),
-        streamsToReset);
+        streamsToReset,
+        WORKSPACE_ID);
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
     assertTrue(jobId.isPresent());
@@ -594,6 +632,15 @@ class DefaultJobCreatorTest {
             .withSyncMode(SyncMode.FULL_REFRESH)
             .withDestinationSyncMode(DestinationSyncMode.APPEND)));
 
+    final SyncResourceRequirements expectedSyncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(DEFAULT_VARIANT))
+        .withDestination(workerResourceRequirements)
+        .withDestinationStdErr(workerResourceRequirements)
+        .withDestinationStdIn(workerResourceRequirements)
+        .withDestinationStdOut(workerResourceRequirements)
+        .withOrchestrator(workerResourceRequirements)
+        .withHeartbeat(workerResourceRequirements);
+
     final JobResetConnectionConfig jobResetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -603,6 +650,7 @@ class DefaultJobCreatorTest {
         .withConfiguredAirbyteCatalog(expectedCatalog)
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
         .withResourceRequirements(workerResourceRequirements)
+        .withSyncResourceRequirements(expectedSyncResourceRequirements)
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
@@ -619,12 +667,14 @@ class DefaultJobCreatorTest {
     final Optional<Long> jobId = jobCreator.createResetConnectionJob(
         DESTINATION_CONNECTION,
         STANDARD_SYNC,
+        new StandardDestinationDefinition(),
         DESTINATION_DEFINITION_VERSION,
         DESTINATION_IMAGE_NAME,
         DESTINATION_PROTOCOL_VERSION,
         false,
         List.of(STANDARD_SYNC_OPERATION),
-        streamsToReset);
+        streamsToReset,
+        WORKSPACE_ID);
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig);
     assertTrue(jobId.isEmpty());
