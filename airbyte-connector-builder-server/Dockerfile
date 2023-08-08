@@ -10,7 +10,7 @@ ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
 COPY requirements.txt requirements.txt
 RUN ${PIP} install -r requirements.txt
 
-ARG VERSION=0.50.15
+ARG VERSION=0.50.16
 
 ENV APPLICATION airbyte-connector-builder-server
 ENV VERSION ${VERSION}
@@ -23,5 +23,5 @@ ADD airbyte-app.tar /app
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
 
-LABEL io.airbyte.version=0.50.15
+LABEL io.airbyte.version=0.50.16
 LABEL io.airbyte.name=airbyte/connector-builder-server
