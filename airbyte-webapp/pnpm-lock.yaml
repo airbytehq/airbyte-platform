@@ -413,6 +413,9 @@ devDependencies:
   eslint-import-resolver-typescript:
     specifier: ^3.5.3
     version: 3.5.3(eslint-plugin-import@2.27.5)(eslint@8.36.0)
+  eslint-plugin-check-file:
+    specifier: ^2.6.1
+    version: 2.6.1(eslint@8.36.0)
   eslint-plugin-css-modules:
     specifier: ^2.11.0
     version: 2.11.0(eslint@8.36.0)
@@ -8901,6 +8904,17 @@ packages:
       eslint-import-resolver-typescript: 3.5.3(eslint-plugin-import@2.27.5)(eslint@8.36.0)
     transitivePeerDependencies:
       - supports-color
+    dev: true
+
+  /eslint-plugin-check-file@2.6.1(eslint@8.36.0):
+    resolution: {integrity: sha512-2I7cAboj6sC2CG0oHan1bMKZlk/nLz78TLc+YIiIFTCwlp/rGm0WtrGTcZ+65WWeDU3JY5OsKgEWG7TcL1H4iQ==}
+    engines: {node: 14.x || >= 16}
+    peerDependencies:
+      eslint: '>=7.28.0'
+    dependencies:
+      eslint: 8.36.0
+      is-glob: 4.0.3
+      micromatch: 4.0.5
     dev: true
 
   /eslint-plugin-css-modules@2.11.0(eslint@8.36.0):
