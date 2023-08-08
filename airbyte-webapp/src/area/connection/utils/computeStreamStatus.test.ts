@@ -119,6 +119,26 @@ describe("computeStreamStatus", () => {
         lastSuccessfulSync: undefined,
       });
     });
+
+    it('returns "Pending" when the most recent job is reset even if it is incomplete', () => {
+      const status = buildStreamStatusRead({
+        jobType: StreamStatusJobType.RESET,
+        runState: StreamStatusRunState.INCOMPLETE,
+      });
+      const result = computeStreamStatus({
+        statuses: [status],
+        scheduleType: undefined,
+        scheduleData: undefined,
+        hasBreakingSchemaChange: false,
+        lateMultiplier: 2,
+        errorMultiplier: 2,
+      });
+      expect(result).toEqual({
+        status: ConnectionStatusIndicatorStatus.Pending,
+        isRunning: false,
+        lastSuccessfulSync: undefined,
+      });
+    });
   });
 
   describe("on time", () => {

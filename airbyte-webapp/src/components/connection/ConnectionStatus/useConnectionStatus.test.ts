@@ -12,6 +12,7 @@ import {
   ConnectionStatus,
   FailureOrigin,
   FailureType,
+  JobConfigType,
   JobStatus,
   JobWithAttemptsRead,
   SchemaChange,
@@ -266,6 +267,8 @@ describe("useConnectionStatus", () => {
     ${"last sync was cancelled, but last successful sync is within 2x frequency"}                   | ${ConnectionStatusIndicatorStatus.OnTrack}        | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, within2xFrequency)}  | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
     ${"last sync was cancelled, but last successful sync is outside 2x frequency"}                  | ${ConnectionStatusIndicatorStatus.Late}           | ${ConnectionStatus.active}   | ${SchemaChange.non_breaking} | ${buildJobs(JobStatus.cancelled, outside2xFrequency)} | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
     ${"last sync has a config_error"}                                                               | ${ConnectionStatusIndicatorStatus.ActionRequired} | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobsWithConfigError(within1xFrequency)}        | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"most recent completed job was a successful reset"}                                           | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.succeeded, undefined, true)}    | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
+    ${"most recent completed job was a failed reset"}                                               | ${ConnectionStatusIndicatorStatus.Pending}        | ${ConnectionStatus.active}   | ${SchemaChange.no_change}    | ${buildJobs(JobStatus.failed, undefined, true)}       | ${"basic"}   | ${{ units: 24, timeUnit: "hours" }}
   `(
     "$title:" +
       "\n\treturns $expectedConnectionStatus when" +
@@ -297,12 +300,12 @@ function buildScheduleData(
   return { scheduleType, scheduleData: { cron: schedule as ConnectionScheduleDataCron } };
 }
 
-function buildJobs(latestSyncStatus: JobStatus, lastSuccessfulSync: number | undefined) {
+function buildJobs(latestSyncStatus: JobStatus, lastSuccessfulSync: number | undefined, lastJobWasReset?: boolean) {
   const jobs: JobWithAttemptsRead[] = [];
 
   // jobslist endpoint returns the most recent job first
 
-  if (latestSyncStatus) {
+  if (latestSyncStatus && !lastJobWasReset) {
     jobs.push({
       job: {
         ...mockJob,
@@ -322,6 +325,17 @@ function buildJobs(latestSyncStatus: JobStatus, lastSuccessfulSync: number | und
     });
   }
 
+  if (lastJobWasReset) {
+    jobs.push({
+      job: {
+        ...mockJob,
+        status: latestSyncStatus,
+        configType: JobConfigType.reset_connection,
+        resetConfig: { streamsToReset: [] },
+      },
+      attempts: [], // attempts are not used
+    });
+  }
   return jobs;
 }
 

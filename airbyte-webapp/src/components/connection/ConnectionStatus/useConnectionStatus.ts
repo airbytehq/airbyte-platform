@@ -102,6 +102,11 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   const isRunning = jobs[0]?.job?.status === JobStatus.running;
 
+  const isLastCompletedJobReset =
+    jobs[0]?.job?.resetConfig &&
+    jobs[0]?.job?.configType === JobConfigType.reset_connection &&
+    (jobs[0]?.job?.status === JobStatus.succeeded || jobs[0]?.job?.status === JobStatus.failed);
+
   // compute the connection sync status from the job history
   const lastCompletedSyncJob = jobs.find(
     ({ job }) =>
@@ -148,7 +153,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     };
   }
 
-  if (lastSyncJobStatus === JobStatus.incomplete || lastSyncJobStatus == null) {
+  if (lastSyncJobStatus === JobStatus.incomplete || lastSyncJobStatus == null || isLastCompletedJobReset) {
     return {
       status: ConnectionStatusIndicatorStatus.Pending,
       lastSyncJobStatus,
