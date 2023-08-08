@@ -425,7 +425,7 @@
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
 
   "destinationSyncMode.append": "Append",
-  "destinationSyncMode.append_dedup": "Deduped + history",
+  "destinationSyncMode.append_dedup": "Append + Deduped",
   "destinationSyncMode.overwrite": "Overwrite",
 
   "syncMode.full_refresh": "Full refresh",

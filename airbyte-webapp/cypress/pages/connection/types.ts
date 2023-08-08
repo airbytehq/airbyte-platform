@@ -4,6 +4,6 @@ export const SYNC_MODE_STRINGS: Readonly<Record<SyncMode | DestinationSyncMode, 
   [SyncMode.full_refresh]: "Full refresh",
   [SyncMode.incremental]: "Incremental",
   [DestinationSyncMode.append]: "Append",
-  [DestinationSyncMode.append_dedup]: "Deduped + history",
+  [DestinationSyncMode.append_dedup]: "Append + Deduped",
   [DestinationSyncMode.overwrite]: "Overwrite",
 };

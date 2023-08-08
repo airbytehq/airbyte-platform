@@ -203,7 +203,7 @@ describe("Connection - sync modes", () => {
     });
   });
 
-  describe("Incremental | Deduped + history", () => {
+  describe("Incremental | Append + Deduped", () => {
     it("selects and saves with source-defined primary keys", () => {
       const users2StreamRow = streamsTable.getRow("public", "users2");
       const cursor = "updated_at";
