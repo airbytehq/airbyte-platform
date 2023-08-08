@@ -4647,11 +4647,52 @@ components:
       required:
         - dockerRepository
         - dockerImageTag
+        - supportState
       properties:
         dockerRepository:
           type: string
         dockerImageTag:
           type: string
+        supportState:
+          $ref: "#/components/schemas/SupportState"
+        breakingChanges:
+          $ref: "#/components/schemas/ActorDefinitionVersionBreakingChanges"
+    ActorDefinitionBreakingChange:
+      type: object
+      required:
+        - version
+        - upgradeDeadline
+        - message
+        - migrationDocumentationUrl
+      properties:
+        version:
+          type: string
+        message:
+          type: string
+        upgradeDeadline:
+          type: string
+          format: date
+        migrationDocumentationUrl:
+          type: string
+    ActorDefinitionVersionBreakingChanges:
+      type: object
+      required:
+        - upcomingBreakingChanges
+        - minUpgradeDeadline
+      properties:
+        upcomingBreakingChanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorDefinitionBreakingChange"
+        minUpgradeDeadline:
+          type: string
+          format: date
+    SupportState:
+      type: string
+      enum:
+        - supported
+        - unsupported
+        - deprecated
     ReleaseStage:
       type: string
       enum:
