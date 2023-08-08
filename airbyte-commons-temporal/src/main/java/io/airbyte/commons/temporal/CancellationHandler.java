@@ -4,7 +4,9 @@
 
 package io.airbyte.commons.temporal;
 
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.temporal.activity.ActivityExecutionContext;
+import io.temporal.client.ActivityCanceledException;
 import io.temporal.client.ActivityCompletionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,11 +57,13 @@ public interface CancellationHandler {
          * don't time out the activity.
          */
         activityContext.heartbeat(null);
-      } catch (final ActivityCompletionException e) {
-        LOGGER.warn("An error happened while checking that the temporal activity is still alive, starting the cancellation", e);
+      } catch (final ActivityCanceledException e) {
         onCancellationCallback.run();
-        LOGGER.warn("The cancellation callback related to the heartbeat timeout is finished.");
-        LOGGER.warn("Job either timed out or was cancelled.");
+        LOGGER.warn("Job either timed out or was cancelled.", e);
+      } catch (final ActivityCompletionException e) {
+        LOGGER.warn(
+            "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry", e);
+        throw new RetryableException(e);
       }
     }
 

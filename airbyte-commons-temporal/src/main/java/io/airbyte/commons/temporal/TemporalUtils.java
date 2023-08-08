@@ -8,6 +8,7 @@ import com.uber.m3.tally.RootScopeBuilder;
 import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -62,7 +63,7 @@ public class TemporalUtils {
   private static final Duration WAIT_TIME_AFTER_CONNECT = Duration.ofSeconds(5);
   public static final String DEFAULT_NAMESPACE = "default";
   public static final Duration SEND_HEARTBEAT_INTERVAL = Duration.ofSeconds(10);
-  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(30);
+  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(60);
   public static final RetryOptions NO_RETRY = RetryOptions.newBuilder().setMaximumAttempts(1).build();
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
@@ -298,6 +299,9 @@ public class TemporalUtils {
           0, SEND_HEARTBEAT_INTERVAL.toSeconds(), TimeUnit.SECONDS);
 
       return callable.call();
+    } catch (final RetryableException e) {
+      log.warn("The activity encounter a retryable exception, it will retry");
+      throw e;
     } catch (final ActivityCompletionException e) {
       log.warn("Job either timed out or was cancelled.");
       throw new RuntimeException(e);
