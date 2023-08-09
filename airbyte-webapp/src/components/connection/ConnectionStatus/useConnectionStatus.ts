@@ -31,10 +31,6 @@ export const isConnectionLate = (
   lastSuccessfulSync: number | undefined,
   lateMultiplier: number
 ) => {
-  // @TODO: after refactors & tests, I believe this can be removed
-  // I think this is only here as a stop-gap when we don't have enough
-  // job history (only last 10 jobs are loaded) to determine the last
-  // successful sync, but that handling is in other places now
   if (lastSuccessfulSync === undefined) {
     return false;
   }
@@ -100,7 +96,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
 
-  const isRunning = jobs[0]?.job?.status === JobStatus.running;
+  const isRunning = jobs[0]?.job?.status === JobStatus.running || jobs[0]?.job?.status === JobStatus.incomplete;
 
   const isLastCompletedJobReset =
     jobs[0]?.job?.resetConfig &&
@@ -112,7 +108,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     ({ job }) =>
       job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
   );
-  const lastSyncJobStatus = lastCompletedSyncJob?.job?.status || connection.latestSyncJobStatus;
+  const lastSyncJobStatus = lastCompletedSyncJob?.job?.status;
 
   // find the last successful sync job & its timestamp
   const lastSuccessfulSyncJob = jobs.find(
@@ -153,7 +149,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     };
   }
 
-  if (lastSyncJobStatus === JobStatus.incomplete || lastSyncJobStatus == null || isLastCompletedJobReset) {
+  if (lastSyncJobStatus == null || isLastCompletedJobReset) {
     return {
       status: ConnectionStatusIndicatorStatus.Pending,
       lastSyncJobStatus,

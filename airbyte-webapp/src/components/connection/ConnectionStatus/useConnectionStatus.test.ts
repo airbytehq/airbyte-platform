@@ -282,6 +282,16 @@ describe("useConnectionStatus", () => {
       expect(result.current.status).toBe(expectedConnectionStatus);
     }
   );
+
+  it("sets isRunning to true when the current job status is incomplete", () => {
+    resetAndSetupMocks({
+      connectionStatus: ConnectionStatus.active,
+      schemaChange: SchemaChange.no_change,
+      jobList: buildJobs(JobStatus.incomplete, undefined),
+    });
+    const { result } = renderHook(() => useConnectionStatus("test-connection-id"));
+    expect(result.current.isRunning).toBe(true);
+  });
 });
 
 type ScheduleData = Pick<WebBackendConnectionRead, "scheduleType" | "scheduleData">;
