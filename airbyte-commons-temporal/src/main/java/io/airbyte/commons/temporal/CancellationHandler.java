@@ -4,10 +4,15 @@
 
 package io.airbyte.commons.temporal;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.TEMPORAL_ACTIVITY_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.TEMPORAL_WORKFLOW_ID_KEY;
+
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.client.ActivityCanceledException;
 import io.temporal.client.ActivityCompletionException;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +51,9 @@ public interface CancellationHandler {
     @Override
     public void checkAndHandleCancellation(final Runnable onCancellationCallback) {
       try {
+        ApmTraceUtils.addTagsToTrace(Map.of(
+            TEMPORAL_ACTIVITY_ID_KEY, activityContext.getInfo().getActivityId(),
+            TEMPORAL_WORKFLOW_ID_KEY, activityContext.getInfo().getWorkflowId()));
         /*
          * Heartbeat is somewhat misleading here. What it does is check the current Temporal activity's
          * context and throw an exception if the sync has been cancelled or timed out. The input to this
@@ -58,9 +66,11 @@ public interface CancellationHandler {
          */
         activityContext.heartbeat(null);
       } catch (final ActivityCanceledException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
         onCancellationCallback.run();
         LOGGER.warn("Job either timed out or was cancelled.", e);
       } catch (final ActivityCompletionException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
         LOGGER.warn(
             "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry", e);
         throw new RetryableException(e);
