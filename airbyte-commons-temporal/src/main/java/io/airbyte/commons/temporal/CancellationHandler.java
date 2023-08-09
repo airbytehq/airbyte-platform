@@ -71,7 +71,7 @@ public interface CancellationHandler {
         LOGGER.warn("Job either timed out or was cancelled.", e);
       } catch (final ActivityCompletionException e) {
         ApmTraceUtils.addExceptionToTrace(e);
-        LOGGER.warn(
+        LOGGER.debug(
             "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry", e);
         throw new RetryableException(e);
       }

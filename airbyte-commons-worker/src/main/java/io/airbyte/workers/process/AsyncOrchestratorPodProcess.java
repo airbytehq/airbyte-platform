@@ -155,7 +155,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
           .get();
       if (p == null) {
         // Todo(davin): this is the easiest way to handle this, however it's ugly.
-        log.info("Unable to retrieve orchestrator pod {} from Kubernetes API. This might indicate an issue.", getInfo().name());
+        log.debug("Unable to retrieve orchestrator pod {} from Kubernetes API. This might indicate an issue.", getInfo().name());
         throw new RuntimeException();
       }
       return p;
