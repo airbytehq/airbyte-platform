@@ -3932,6 +3932,7 @@ components:
           description: The date when this connector was first released, in yyyy-mm-dd format.
           type: string
           format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
         sourceType:
           type: string
           enum:
@@ -4672,6 +4673,7 @@ components:
         upgradeDeadline:
           type: string
           format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
         migrationDocumentationUrl:
           type: string
     ActorDefinitionVersionBreakingChanges:
@@ -4687,6 +4689,7 @@ components:
         minUpgradeDeadline:
           type: string
           format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
     SupportState:
       type: string
       enum:
