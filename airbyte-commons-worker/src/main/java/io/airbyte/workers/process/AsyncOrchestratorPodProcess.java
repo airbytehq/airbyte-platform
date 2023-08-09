@@ -170,7 +170,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     // async pod status.
     if (pod == null) {
       log.info("WaitUntilCondition returned null");
-      log.info("State Store missing status. Orchestrator pod {} non-existent. Assume failure.", getInfo().name());
+      log.info("Terminal state in the State Store is missing. Orchestrator pod {} non-existent. Assume failure.", getInfo().name());
       return 2;
     }
 

@@ -63,7 +63,7 @@ public class TemporalUtils {
   private static final Duration WAIT_TIME_AFTER_CONNECT = Duration.ofSeconds(5);
   public static final String DEFAULT_NAMESPACE = "default";
   public static final Duration SEND_HEARTBEAT_INTERVAL = Duration.ofSeconds(10);
-  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(60);
+  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(30);
   public static final RetryOptions NO_RETRY = RetryOptions.newBuilder().setMaximumAttempts(1).build();
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
