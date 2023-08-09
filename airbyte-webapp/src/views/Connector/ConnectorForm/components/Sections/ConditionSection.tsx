@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import clone from "lodash/clone";
+import pick from "lodash/pick";
 import React, { useCallback, useMemo } from "react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 
@@ -44,9 +44,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
     path === "connectionConfiguration.replication_method";
 
   const { conditions, selectionConstValues } = formField;
-
-  // the value at selectionPath determines which condition is selected
-  const currentSelectionValue = useWatch({ name: formField.selectionPath });
+  const currentSelectionValue = useWatch({ name: `${path}.${formField.selectionKey}` });
   let currentlySelectedCondition: number | undefined = selectionConstValues.indexOf(currentSelectionValue);
   if (currentlySelectedCondition === -1) {
     // there should always be a matching condition, but in some edge cases
@@ -58,14 +56,19 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
     (selectedItem: DropDownOptionDataItem) => {
       const newSelectedFormBlock = conditions[selectedItem.value];
 
-      const conditionValues = clone(value || {});
+      const conditionValues = value
+        ? pick(
+            value,
+            newSelectedFormBlock.properties.map((property) => property.fieldKey)
+          )
+        : {};
       conditionValues[formField.selectionKey] = selectionConstValues[selectedItem.value];
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
       // do not validate the new oneOf part of the form as the user didn't have a chance to fill it out yet.
       setValue(path, conditionValues, { shouldDirty: true, shouldTouch: true });
       clearErrors(path);
     },
-    [conditions, value, formField.selectionKey, selectionConstValues, setValue, path, clearErrors]
+    [conditions, value, formField.selectionKey, selectionConstValues, path, setValue, clearErrors]
   );
 
   const options = useMemo(

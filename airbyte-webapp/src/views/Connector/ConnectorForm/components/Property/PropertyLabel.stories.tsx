@@ -43,7 +43,6 @@ ConditionLabel.args = {
     fieldKey: "field_key",
     path: "section.Fieldname",
     selectionKey: "type",
-    selectionPath: "section.Fieldname.type",
     selectionConstValues: ["one", "two", "three"],
     conditions: [
       {

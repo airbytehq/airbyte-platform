@@ -48,7 +48,6 @@ const conditionFormField: FormConditionItem = {
       properties: [propOneFormBlock, propTwoFormBlock],
     },
   ],
-  selectionPath: "section.conditional.choice_one.type",
   selectionKey: "type",
   selectionConstValues: ["one"],
   isRequired: true,

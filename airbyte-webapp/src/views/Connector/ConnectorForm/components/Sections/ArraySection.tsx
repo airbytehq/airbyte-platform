@@ -17,24 +17,31 @@ interface ArraySectionProps {
   disabled?: boolean;
 }
 
-const getItemName = (item: Record<string, string>, properties: FormBlock[]): string => {
+const stringifyIfObject = (value: unknown): string => {
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 1);
+  }
+  return String(value);
+};
+
+const getItemName = (item: Record<string, unknown>, properties: FormBlock[]): string => {
   return Object.keys(item)
     .sort()
     .map((key) => {
       const property = properties.find(({ fieldKey }) => fieldKey === key);
       const name = property?.title ?? key;
-      return `${name}: ${item[key]}`;
+      return `${name}: ${stringifyIfObject(item[key])}`;
     })
     .join(" | ");
 };
 
-const getItemDescription = (item: Record<string, string>, properties: FormBlock[]): React.ReactNode => {
+const getItemDescription = (item: Record<string, unknown>, properties: FormBlock[]): React.ReactNode => {
   const rows = Object.keys(item)
     .sort()
     .map((key) => {
       const property = properties.find(({ fieldKey }) => fieldKey === key);
       const name = property?.title ?? key;
-      const value = item[key];
+      const value = stringifyIfObject(item[key]);
       return [name, value];
     });
 
@@ -126,7 +133,7 @@ export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, dis
           renderItemEditorForm={(item) => (
             <VariableInputFieldForm
               formField={formField}
-              path={`${path}[${editIndex ?? 0}]`}
+              path={`${path}.${editIndex ?? 0}`}
               disabled={disabled || formField.readOnly}
               item={item}
               onDone={clearEditIndex}

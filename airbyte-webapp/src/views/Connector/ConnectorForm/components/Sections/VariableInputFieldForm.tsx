@@ -10,11 +10,12 @@ import { FormGroupItem, FormObjectArrayItem } from "core/form/types";
 
 import { FormSection } from "./FormSection";
 import { useConnectorForm } from "../../connectorFormContext";
+import { setDefaultValues } from "../../useBuildForm";
 
 interface VariableInputFormProps {
   formField: FormObjectArrayItem;
   path: string;
-  item?: unknown;
+  item?: Record<string, unknown>;
   disabled?: boolean;
   onDone: (value: unknown) => void;
   onCancel: () => void;
@@ -40,17 +41,12 @@ export const VariableInputFieldForm: React.FC<VariableInputFormProps> = ({
   );
 
   useEffectOnce(() => {
-    const initialValue =
-      item ??
-      // Set initial default values when user is creating a new item
-      (formField.properties as FormGroupItem).properties.reduce((acc, item) => {
-        if (item._type === "formItem" && item.default) {
-          // Only "formItem" types have a default value
-          acc[item.fieldKey] = item.default;
-        }
-
-        return acc;
-      }, {} as Record<string, unknown>);
+    let initialValue = item;
+    // if no item is passed in, we are creating a new one, so we need to set the default values
+    if (!initialValue) {
+      initialValue = {};
+      setDefaultValues(formField.properties as FormGroupItem, initialValue, { respectExistingValues: true });
+    }
 
     setValue(path, initialValue);
   });
