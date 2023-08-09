@@ -23,6 +23,7 @@ public class WorkerConfigs {
   private final Map<String, String> workerKubeNodeSelectors;
   private final Optional<Map<String, String>> workerIsolatedKubeNodeSelectors;
   private final Map<String, String> workerKubeAnnotations;
+  private final Map<String, String> workerKubeLabels;
   private final List<String> jobImagePullSecrets;
   private final String jobImagePullPolicy;
   private final String sidecarImagePullPolicy;
@@ -37,6 +38,7 @@ public class WorkerConfigs {
                        Map<String, String> workerKubeNodeSelectors,
                        Optional<Map<String, String>> workerIsolatedKubeNodeSelectors,
                        Map<String, String> workerKubeAnnotations,
+                       Map<String, String> workerKubeLabels,
                        List<String> jobImagePullSecrets,
                        String jobImagePullPolicy,
                        String sidecarImagePullPolicy,
@@ -50,6 +52,7 @@ public class WorkerConfigs {
     this.workerKubeNodeSelectors = workerKubeNodeSelectors;
     this.workerIsolatedKubeNodeSelectors = workerIsolatedKubeNodeSelectors;
     this.workerKubeAnnotations = workerKubeAnnotations;
+    this.workerKubeLabels = workerKubeLabels;
     this.jobImagePullSecrets = jobImagePullSecrets;
     this.jobImagePullPolicy = jobImagePullPolicy;
     this.sidecarImagePullPolicy = sidecarImagePullPolicy;
@@ -75,6 +78,7 @@ public class WorkerConfigs {
         configs.getJobKubeNodeSelectors(),
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         configs.getJobKubeAnnotations(),
+        configs.getJobKubeLabels(),
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -106,6 +110,10 @@ public class WorkerConfigs {
 
   public Map<String, String> getWorkerKubeAnnotations() {
     return workerKubeAnnotations;
+  }
+
+  public Map<String, String> getWorkerKubeLabels() {
+    return workerKubeLabels;
   }
 
   public List<String> getJobImagePullSecrets() {

@@ -129,6 +129,7 @@ airbyte:
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${JOB_KUBE_LABELS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
@@ -136,6 +137,7 @@ airbyte:
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       check:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
+        labels: ${CHECK_JOB_KUBE_LABELS:}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
@@ -143,6 +145,7 @@ airbyte:
         memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       discover:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
+        labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
       normalization:
         cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
@@ -151,6 +154,7 @@ airbyte:
         memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${REPLICATION_JOB_KUBE_LABELS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
         cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
@@ -307,6 +311,7 @@ airbyte:
 
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
+        labels: ${SPEC_JOB_KUBE_LABELS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
     check:
       enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}

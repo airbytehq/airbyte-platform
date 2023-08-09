@@ -96,6 +96,7 @@ Helm chart to deploy airbyte
 | global.database.secretValue | string | `""`                                 |  |
 | global.deploymentMode | string | `"oss"`                              |  |
 | global.jobs.kube.annotations | object | `{}`                                 |  |
+| global.jobs.kube.labels | object | `{}` |  |
 | global.jobs.kube.images.busybox | string | `""`                                 |  |
 | global.jobs.kube.images.curl | string | `""`                                 |  |
 | global.jobs.kube.images.socat | string | `""`                                 |  |
