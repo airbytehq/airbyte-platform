@@ -20,6 +20,7 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
  * Cloud PermissionHandler {@link io.airbyte.cloud.server.handlers.PermissionHandler}.
  */
 @SuppressWarnings({"MissingJavadocMethod"})
+@Singleton
 public class PermissionHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PermissionHandler.class);
