@@ -10,6 +10,7 @@ import java.util.Arrays;
 import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
@@ -57,6 +58,17 @@ public class UserCreator {
     password.setType(CredentialRepresentation.PASSWORD);
     password.setValue(initialUserConfiguration.getPassword());
     return password;
+  }
+
+  /**
+   * This method resets the user by deleting all users and re-creating them.
+   */
+  public void resetUser(final RealmResource realmResource) {
+    UsersResource usersResource = realmResource.users();
+
+    usersResource.list().forEach(user -> usersResource.delete(user.getId()));
+
+    createUser(realmResource);
   }
 
 }

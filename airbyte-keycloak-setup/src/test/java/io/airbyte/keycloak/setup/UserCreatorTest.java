@@ -6,15 +6,19 @@ package io.airbyte.keycloak.setup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
+import java.util.Collections;
 import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
@@ -36,6 +40,8 @@ class UserCreatorTest {
   @Mock
   private UsersResource usersResource;
   @Mock
+  private UserResource userResource;
+  @Mock
   private Response response;
 
   @BeforeEach
@@ -50,6 +56,10 @@ class UserCreatorTest {
 
     when(realmResource.users()).thenReturn(usersResource);
     when(usersResource.create(any(UserRepresentation.class))).thenReturn(response);
+
+    when(usersResource.get(anyString())).thenReturn(userResource);
+    when(usersResource.search(anyString(), anyInt(), anyInt())).thenReturn(Collections.singletonList(new UserRepresentation()));
+    when(response.getStatusInfo()).thenReturn(Response.Status.OK);
 
     userCreator = new UserCreator(initialUserConfiguration);
   }
@@ -87,6 +97,21 @@ class UserCreatorTest {
     assertFalse(credentialRepresentation.isTemporary());
     assertEquals(CredentialRepresentation.PASSWORD, credentialRepresentation.getType());
     assertEquals(PASSWORD, credentialRepresentation.getValue());
+  }
+
+  @Test
+  void testResetUser() {
+    UserRepresentation userRepresentation = new UserRepresentation();
+    userRepresentation.setId("id1");
+    when(usersResource.list()).thenReturn(Collections.singletonList(userRepresentation));
+
+    when(response.getStatus()).thenReturn(201);
+
+    userCreator.resetUser(realmResource);
+
+    verify(usersResource).list();
+    verify(usersResource).delete("id1");
+    verify(usersResource).create(any(UserRepresentation.class));
   }
 
 }

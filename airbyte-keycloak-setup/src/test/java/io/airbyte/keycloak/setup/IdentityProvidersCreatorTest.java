@@ -6,11 +6,13 @@ package io.airbyte.keycloak.setup;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.IdentityProviderConfiguration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +20,7 @@ import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.keycloak.admin.client.resource.IdentityProviderResource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
@@ -38,6 +41,8 @@ class IdentityProvidersCreatorTest {
   private IdentityProviderConfiguration identityProviderConfiguration;
   @Mock
   private IdentityProvidersResource identityProvidersResource;
+  @Mock
+  private IdentityProviderRepresentation idpRepresentation;
   @InjectMocks
   private IdentityProvidersCreator identityProvidersCreator;
 
@@ -50,8 +55,10 @@ class IdentityProvidersCreatorTest {
   @Test
   void testCreateIdps() {
     when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
-    when(identityProvidersResource.create(any(IdentityProviderRepresentation.class))).thenReturn(response);
+
+    Response response = mock(Response.class);
     when(response.getStatus()).thenReturn(201);
+    when(identityProvidersResource.create(any(IdentityProviderRepresentation.class))).thenReturn(response);
 
     identityProvidersCreator.createIdps(realmResource);
 
@@ -93,6 +100,25 @@ class IdentityProvidersCreatorTest {
     assertThrows(RuntimeException.class, () -> {
       identityProvidersCreator.createIdps(realmResource);
     });
+  }
+
+  @Test
+  void testResetIdentityProviders() {
+    IdentityProviderRepresentation identityProviderRepresentation = mock(IdentityProviderRepresentation.class);
+    IdentityProviderResource identityProvider = mock(IdentityProviderResource.class);
+    Response response = mock(Response.class);
+
+    when(realmResource.identityProviders()).thenReturn(identityProvidersResource);
+    when(identityProvidersResource.findAll()).thenReturn(Arrays.asList(identityProviderRepresentation));
+    when(identityProvidersResource.get(identityProviderRepresentation.getInternalId())).thenReturn(identityProvider);
+    when(identityProvidersResource.create(any(IdentityProviderRepresentation.class))).thenReturn(response);
+    when(response.getStatus()).thenReturn(201);
+
+    identityProvidersCreator.resetIdentityProviders(realmResource);
+
+    verify(identityProvidersResource).findAll();
+    verify(identityProvidersResource).get(identityProviderRepresentation.getInternalId());
+    verify(identityProvider).remove();
   }
 
 }
