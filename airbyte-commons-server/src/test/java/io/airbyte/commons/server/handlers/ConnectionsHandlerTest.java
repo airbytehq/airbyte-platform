@@ -38,7 +38,6 @@ import io.airbyte.api.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.model.generated.ConnectionScheduleType;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatus;
-import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
@@ -58,16 +57,13 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.FailureReason;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
-import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
@@ -86,8 +82,6 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -1688,30 +1682,6 @@ class ConnectionsHandlerTest {
       assertFalse(changedSd.isEmpty());
       assertEquals(1, changedSd.size());
       assertEquals(Set.of(new StreamDescriptor().name(STREAM1)), changedSd);
-    }
-
-    @Test
-    void testConnectionStatus()
-        throws JsonValidationException, ConfigNotFoundException, IOException {
-      UUID connectionId = UUID.randomUUID();
-      AttemptFailureSummary failureSummary = new AttemptFailureSummary();
-      failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
-      Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
-      List<Job> jobs = List.of(
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
-          new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
-      when(jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(), 10, 0))
-          .thenReturn(jobs);
-      List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(List.of(connectionId));
-      assertEquals(1, status.size());
-
-      ConnectionStatusRead connectionStatus = status.get(0);
-      assertEquals(connectionId, connectionStatus.getConnectionId());
-      assertEquals(Enums.convertTo(JobStatus.FAILED, io.airbyte.api.model.generated.JobStatus.class), connectionStatus.getLastSyncJobStatus());
-      assertEquals(802L, connectionStatus.getLastSuccessfulSync());
-      assertEquals(true, connectionStatus.getIsRunning());
-      assertEquals(null, connectionStatus.getNextSync());
     }
 
     private AirbyteStreamAndConfiguration getStreamAndConfig(final String name, final AirbyteStreamConfiguration config) {

@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
-import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
@@ -49,12 +48,8 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.FailureReason;
-import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Geography;
-import io.airbyte.config.JobConfig;
-import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
@@ -75,7 +70,6 @@ import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -123,7 +117,6 @@ public class ConnectionsHandler {
   private final JobNotifier jobNotifier;
   private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
-  private final int maxJobLookback = 10;
 
   @Inject
   public ConnectionsHandler(
@@ -847,42 +840,6 @@ public class ConnectionsHandler {
       connectionReads.add(connectionRead);
     }
     return new ConnectionReadList().connections(connectionReads);
-  }
-
-  public List<ConnectionStatusRead> getConnectionStatuses(List<UUID> connectionIds)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    List<ConnectionStatusRead> result = new ArrayList<>();
-    for (UUID connectionId : connectionIds) {
-      List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(),
-          maxJobLookback, 0);
-      boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
-
-      Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();
-      Optional<JobStatus> lastSyncStatus = lastJob.map(job -> job.getStatus());
-
-      Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
-      Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(job -> job.getUpdatedAtInSecond());
-
-      ConnectionStatusRead connectionStatus = new ConnectionStatusRead()
-          .connectionId(connectionId)
-          .isRunning(isRunning)
-          .lastSyncJobStatus(Enums.convertTo(lastSyncStatus.orElse(null),
-              io.airbyte.api.model.generated.JobStatus.class))
-          .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
-          .nextSync(null)
-          .isLastCompletedJobReset(lastJob.map(job -> job.getConfigType() == ConfigType.RESET_CONNECTION).orElse(false));
-      Optional<FailureType> failureType =
-          lastJob.flatMap(Job::getLastFailedAttempt)
-              .flatMap(Attempt::getFailureSummary)
-              .flatMap(s -> s.getFailures().stream().findFirst())
-              .map(FailureReason::getFailureType);
-      if (failureType.isPresent() && lastJob.get().getStatus() == JobStatus.FAILED) {
-        connectionStatus.setFailureType(Enums.convertTo(failureType.get(), io.airbyte.api.model.generated.FailureType.class));
-      }
-      result.add(connectionStatus);
-    }
-
-    return result;
   }
 
 }
