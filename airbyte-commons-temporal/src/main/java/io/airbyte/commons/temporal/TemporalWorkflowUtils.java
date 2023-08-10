@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.client.WorkflowClient;
@@ -128,11 +129,15 @@ public class TemporalWorkflowUtils {
    * Get workflow service client.
    *
    * @param temporalHost temporal host
+   * @param temporalSdkTimeouts The SDK RPC timeouts
    * @return temporal service client
    */
   @VisibleForTesting
-  public static WorkflowServiceStubsOptions getAirbyteTemporalOptions(final String temporalHost) {
+  public static WorkflowServiceStubsOptions getAirbyteTemporalOptions(final String temporalHost, final TemporalSdkTimeouts temporalSdkTimeouts) {
     return WorkflowServiceStubsOptions.newBuilder()
+        .setRpcTimeout(temporalSdkTimeouts.getRpcTimeout())
+        .setRpcLongPollTimeout(temporalSdkTimeouts.getRpcLongPollTimeout())
+        .setRpcQueryTimeout(temporalSdkTimeouts.getRpcQueryTimeout())
         .setTarget(temporalHost)
         .build();
   }

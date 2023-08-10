@@ -71,6 +71,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
+import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.util.MoreProperties;
@@ -398,7 +399,7 @@ public class AcceptanceTestHarness {
   private WorkflowClient getWorkflowClient() {
     final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
-        TemporalWorkflowUtils.getAirbyteTemporalOptions("localhost:7233"),
+        TemporalWorkflowUtils.getAirbyteTemporalOptions("localhost:7233", new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);
     return WorkflowClient.newInstance(temporalService);
   }
@@ -520,7 +521,7 @@ public class AcceptanceTestHarness {
     }
   }
 
-  public ConnectionRead createConnection(TestConnectionCreate create)
+  public ConnectionRead createConnection(final TestConnectionCreate create)
       throws Exception {
 
     /*
@@ -549,7 +550,7 @@ public class AcceptanceTestHarness {
             .geography(create.getGeography()));
   }
 
-  public ConnectionRead createConnectionSourceNamespace(TestConnectionCreate create)
+  public ConnectionRead createConnectionSourceNamespace(final TestConnectionCreate create)
       throws Exception {
 
     /*
@@ -762,10 +763,10 @@ public class AcceptanceTestHarness {
     }
   }
 
-  public JobInfoRead getJobInfoRead(long id) {
+  public JobInfoRead getJobInfoRead(final long id) {
     try {
       return apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(id));
-    } catch (ApiException e) {
+    } catch (final ApiException e) {
       throw new RuntimeException(e);
     }
   }

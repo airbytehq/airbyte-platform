@@ -21,8 +21,8 @@ import java.nio.file.Path;
 public class TemporalBeanFactory {
 
   @Singleton
-  public WorkflowServiceStubs temporalService(final TemporalUtils temporalUtils) {
-    return temporalUtils.createTemporalService();
+  public WorkflowServiceStubs temporalService(final TemporalUtils temporalUtils, final TemporalSdkTimeouts temporalSdkTimeouts) {
+    return temporalUtils.createTemporalService(temporalSdkTimeouts);
   }
 
   @Singleton
