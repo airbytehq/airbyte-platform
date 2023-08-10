@@ -230,10 +230,10 @@ create table "public"."permission" (
   "id" uuid not null,
   "user_id" uuid not null,
   "workspace_id" uuid,
-  "permission_type" "public"."permission_type" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "organization_id" uuid,
+  "permission_type" "public"."permission_type" not null,
   constraint "permission_pkey"
     primary key ("id")
 );
@@ -274,7 +274,6 @@ create table "public"."user" (
   "id" uuid not null,
   "name" varchar(256) not null,
   "auth_user_id" varchar(256) not null,
-  "auth_provider" "public"."auth_provider" not null,
   "default_workspace_id" uuid,
   "status" "public"."status",
   "company_name" varchar(256),
@@ -283,6 +282,7 @@ create table "public"."user" (
   "ui_metadata" jsonb,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "auth_provider" "public"."auth_provider" not null,
   constraint "user_pkey"
     primary key ("id")
 );

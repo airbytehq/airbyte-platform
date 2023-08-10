@@ -222,19 +222,19 @@ public class MockData {
         .withPermissionId(PERMISSION_ID_2)
         .withUserId(CREATOR_USER_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
-        .withPermissionType(PermissionType.WORKSPACE_OWNER);
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
     final Permission permission3 = new Permission()
         .withPermissionId(PERMISSION_ID_3)
         .withUserId(CREATOR_USER_ID_3)
         .withWorkspaceId(null)
-        .withPermissionType(PermissionType.WORKSPACE_OWNER);
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
     final Permission permission4 = new Permission()
         .withPermissionId(PERMISSION_ID_4)
         .withUserId(CREATOR_USER_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
-        .withPermissionType(PermissionType.WORKSPACE_OWNER);
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
     return Arrays.asList(permission1, permission2, permission3, permission4);
   }
