@@ -17,12 +17,12 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.workers.config.WorkerConfigs;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.config.WorkerConfigsProvider;
-import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -120,7 +120,7 @@ class KubePodProcessIntegrationTest {
      * Every test has been init once in BeforeAll with getOpenPorts(30)
      */
 
-    KubePortManagerSingleton originalKubePortManager = KubePortManagerSingleton.getInstance();
+    final KubePortManagerSingleton originalKubePortManager = KubePortManagerSingleton.getInstance();
 
     // init the second time with the same ports
     KubePortManagerSingleton.init(new HashSet<>(openPorts.subList(1, openPorts.size() - 1)));
@@ -128,7 +128,7 @@ class KubePodProcessIntegrationTest {
 
     // init the second time with different ports
     final List<Integer> differentOpenPorts = new ArrayList<>(getOpenPorts(32));
-    Exception exception = assertThrows(RuntimeException.class, () -> {
+    final Exception exception = assertThrows(RuntimeException.class, () -> {
       KubePortManagerSingleton.init(new HashSet<>(differentOpenPorts.subList(1, differentOpenPorts.size() - 1)));
     });
     assertTrue(exception.getMessage().contains("Cannot initialize twice with different ports!"));

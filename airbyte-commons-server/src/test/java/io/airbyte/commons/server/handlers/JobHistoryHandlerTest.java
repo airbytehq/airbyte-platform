@@ -183,8 +183,16 @@ class JobHistoryHandlerTest {
     final SourceDefinitionsHandler sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     final DestinationDefinitionsHandler destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
-    jobHistoryHandler = new JobHistoryHandler(jobPersistence, WorkerEnvironment.DOCKER, LogConfigs.EMPTY, connectionsHandler, sourceHandler,
-        sourceDefinitionsHandler, destinationHandler, destinationDefinitionsHandler, airbyteVersion);
+    jobHistoryHandler = new JobHistoryHandler(
+        jobPersistence,
+        WorkerEnvironment.DOCKER,
+        LogConfigs.EMPTY,
+        connectionsHandler,
+        sourceHandler,
+        sourceDefinitionsHandler,
+        destinationHandler,
+        destinationDefinitionsHandler,
+        airbyteVersion);
   }
 
   @Nested

@@ -9,6 +9,7 @@ import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
@@ -16,7 +17,6 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.WorkerConfigs;
 import io.temporal.activity.ActivityExecutionContext;
 import java.util.Map;
 import java.util.UUID;
