@@ -1820,6 +1820,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/status:
+    post:
+      tags:
+        - connection
+      summary: Get the status of multiple connections
+      operationId: getConnectionStatuses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStatusesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStatusesRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/get:
     post:
       tags:
@@ -5024,6 +5047,45 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ConnectionStatusesRequestBody:
+      type: object
+      required:
+        - connectionIds
+      properties:
+        connectionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionId"
+    ConnectionStatusesRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionStatusRead"
+    ConnectionStatusRead:
+      type: object
+      required:
+        - connectionId
+        - lastSyncJobStatus
+        - lastSuccessfulSync
+        - nextSync
+        - isRunning
+        - isLastCompletedJobReset
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        lastSyncJobStatus:
+          $ref: "#/components/schemas/JobStatus"
+        lastSuccessfulSync:
+          type: integer
+          format: int64
+        nextSync:
+          type: integer
+          format: int64
+        isRunning:
+          type: boolean
+        isLastCompletedJobReset:
+          type: boolean
+        failureType:
+          $ref: "#/components/schemas/FailureType"
     SchemaChange:
       enum:
         - no_change
