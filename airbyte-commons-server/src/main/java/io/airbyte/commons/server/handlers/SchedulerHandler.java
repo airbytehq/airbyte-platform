@@ -7,11 +7,9 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
 import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.airbyte.api.model.generated.AdvancedAuth;
@@ -33,7 +31,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobConfigType;
-import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.LogRead;
@@ -57,14 +54,12 @@ import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.converters.OauthModelConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
-import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -77,14 +72,12 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
@@ -92,15 +85,10 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.JobCreator;
-import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.WebUrlHelper;
-import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -121,7 +109,7 @@ import org.slf4j.LoggerFactory;
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 @Slf4j
 public class SchedulerHandler {
@@ -145,11 +133,6 @@ public class SchedulerHandler {
   private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
-  private final StreamResetPersistence streamResetPersistence;
-  private final OAuthConfigSupplier oAuthConfigSupplier;
-  private final JobCreator jobCreator;
-  private final SyncJobFactory jobFactory;
-  private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
 
   // TODO: Convert to be fully using micronaut
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -164,13 +147,7 @@ public class SchedulerHandler {
                           final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
                           final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                          final FeatureFlagClient featureFlagClient,
-                          final StreamResetPersistence streamResetPersistence,
-                          final OAuthConfigSupplier oAuthConfigSupplier,
-                          final JobCreator jobCreator,
-                          final SyncJobFactory jobFactory,
-                          final JobNotifier jobNotifier,
-                          final JobTracker jobTracker) {
+                          final FeatureFlagClient featureFlagClient) {
     this(
         configRepository,
         secretsRepositoryWriter,
@@ -184,13 +161,7 @@ public class SchedulerHandler {
         envVariableFeatureFlags,
         webUrlHelper,
         actorDefinitionVersionHelper,
-        featureFlagClient,
-        streamResetPersistence,
-        oAuthConfigSupplier,
-        jobCreator,
-        jobFactory,
-        jobNotifier,
-        jobTracker);
+        featureFlagClient);
   }
 
   @VisibleForTesting
@@ -206,13 +177,7 @@ public class SchedulerHandler {
                    final FeatureFlags envVariableFeatureFlags,
                    final WebUrlHelper webUrlHelper,
                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                   final FeatureFlagClient featureFlagClient,
-                   final StreamResetPersistence streamResetPersistence,
-                   final OAuthConfigSupplier oAuthConfigSupplier,
-                   final JobCreator jobCreator,
-                   final SyncJobFactory jobFactory,
-                   final JobNotifier jobNotifier,
-                   final JobTracker jobTracker) {
+                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -226,15 +191,6 @@ public class SchedulerHandler {
     this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;
-    this.streamResetPersistence = streamResetPersistence;
-    this.oAuthConfigSupplier = oAuthConfigSupplier;
-    this.jobCreator = jobCreator;
-    this.jobFactory = jobFactory;
-    this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
-        jobPersistence,
-        configRepository,
-        jobNotifier,
-        jobTracker);
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -602,65 +558,6 @@ public class SchedulerHandler {
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody)
       throws IOException {
     return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.getConnectionId(), connectionStreamRequestBody.getStreams());
-  }
-
-  public JobInfoRead createJob(final JobCreate jobCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
-    // Fail non-terminal jobs first to prevent failing to create a new job
-    jobCreationAndStatusUpdateHelper.failNonTerminalJobs(jobCreate.getConnectionId());
-
-    final StandardSync standardSync = configRepository.getStandardSync(jobCreate.getConnectionId());
-    final List<StreamDescriptor> streamsToReset = streamResetPersistence.getStreamResets(jobCreate.getConnectionId());
-    log.info("Found the following streams to reset for connection {}: {}", jobCreate.getConnectionId(), streamsToReset);
-
-    if (!streamsToReset.isEmpty()) {
-      final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
-
-      final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
-          destination.getDestinationDefinitionId(),
-          destination.getDestinationId(),
-          destination.getWorkspaceId(),
-          destination.getConfiguration());
-      destination.setConfiguration(destinationConfiguration);
-
-      final StandardDestinationDefinition destinationDef =
-          configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
-      final ActorDefinitionVersion destinationVersion =
-          actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
-      final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
-
-      final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
-      for (final var operationId : standardSync.getOperationIds()) {
-        final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
-        standardSyncOperations.add(standardSyncOperation);
-      }
-
-      final Optional<Long> jobIdOptional =
-          jobCreator.createResetConnectionJob(
-              destination,
-              standardSync,
-              destinationDef,
-              destinationVersion,
-              destinationImageName,
-              new Version(destinationVersion.getProtocolVersion()),
-              destinationDef.getCustom(),
-              standardSyncOperations,
-              streamsToReset,
-              destination.getWorkspaceId());
-
-      final long jobId = jobIdOptional.isEmpty()
-          ? jobPersistence.getLastReplicationJob(standardSync.getConnectionId()).orElseThrow(() -> new RuntimeException("No job available")).getId()
-          : jobIdOptional.get();
-
-      return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
-    } else {
-      final long jobId = jobFactory.create(jobCreate.getConnectionId());
-
-      log.info("New job created, with id: " + jobId);
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job);
-
-      return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
-    }
   }
 
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) throws IOException {

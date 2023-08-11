@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.workers.config;
+package io.airbyte.workers.config;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;

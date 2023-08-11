@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.workers.config;
+package io.airbyte.workers;
 
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -32,20 +32,20 @@ public class WorkerConfigs {
   private final String jobCurlImage;
   private final Map<String, String> envMap;
 
-  public WorkerConfigs(final WorkerEnvironment workerEnvironment,
-                       final ResourceRequirements resourceRequirements,
-                       final List<TolerationPOJO> workerKubeTolerations,
-                       final Map<String, String> workerKubeNodeSelectors,
-                       final Optional<Map<String, String>> workerIsolatedKubeNodeSelectors,
-                       final Map<String, String> workerKubeAnnotations,
-                       final Map<String, String> workerKubeLabels,
-                       final List<String> jobImagePullSecrets,
-                       final String jobImagePullPolicy,
-                       final String sidecarImagePullPolicy,
-                       final String jobSocatImage,
-                       final String jobBusyboxImage,
-                       final String jobCurlImage,
-                       final Map<String, String> envMap) {
+  public WorkerConfigs(WorkerEnvironment workerEnvironment,
+                       ResourceRequirements resourceRequirements,
+                       List<TolerationPOJO> workerKubeTolerations,
+                       Map<String, String> workerKubeNodeSelectors,
+                       Optional<Map<String, String>> workerIsolatedKubeNodeSelectors,
+                       Map<String, String> workerKubeAnnotations,
+                       Map<String, String> workerKubeLabels,
+                       List<String> jobImagePullSecrets,
+                       String jobImagePullPolicy,
+                       String sidecarImagePullPolicy,
+                       String jobSocatImage,
+                       String jobBusyboxImage,
+                       String jobCurlImage,
+                       Map<String, String> envMap) {
     this.workerEnvironment = workerEnvironment;
     this.resourceRequirements = resourceRequirements;
     this.workerKubeTolerations = workerKubeTolerations;

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -22,6 +21,7 @@ import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.normalization.NormalizationRunner;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
