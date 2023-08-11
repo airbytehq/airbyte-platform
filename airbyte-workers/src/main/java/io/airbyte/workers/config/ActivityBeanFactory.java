@@ -148,10 +148,10 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("refreshSchemaActivityOptions")
-  public ActivityOptions refreshSchemaActivityOptions(@Named("shortRetryOptions") final RetryOptions shortRetryOptions) {
+  public ActivityOptions refreshSchemaActivityOptions() {
     return ActivityOptions.newBuilder()
-        .setScheduleToCloseTimeout(Duration.ofMinutes(15))
-        .setRetryOptions(shortRetryOptions)
+        .setScheduleToCloseTimeout(Duration.ofMinutes(30))
+        .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
   }
 
