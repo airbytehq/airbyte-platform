@@ -68,11 +68,18 @@ public interface CancellationHandler {
       } catch (final ActivityCanceledException e) {
         ApmTraceUtils.addExceptionToTrace(e);
         onCancellationCallback.run();
-        LOGGER.warn("Job either timed out or was cancelled.", e);
+        LOGGER.warn("Job was cancelled.", e);
       } catch (final ActivityCompletionException e) {
         ApmTraceUtils.addExceptionToTrace(e);
-        LOGGER.debug(
-            "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry", e);
+        // TODO: This is a hack to avoid having to manually destroy pod, it should be revisited
+        if (!e.getWorkflowId().orElse("").toLowerCase().startsWith("sync")) {
+          LOGGER.warn("The job timeout and was not a sync, we will destroy the pods related to it", e);
+          onCancellationCallback.run();
+        } else {
+          LOGGER.debug(
+              "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry",
+              e);
+        }
         throw new RetryableException(e);
       }
     }
