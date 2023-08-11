@@ -37,7 +37,7 @@ export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ ch
   }, [user]);
 
   useEffect(() => {
-    window.zESettings = {
+    const config = {
       webWidget: {
         contactForm: {
           // Only allow Cloud ticket form
@@ -46,6 +46,10 @@ export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ ch
         },
       },
     };
+    // Set settings to be read by ZenDesk when initially loaded
+    window.zESettings = config;
+    // Update settings in case ZenDesk already has loaded
+    window.zE?.("webWidget", "updateSettings", config);
   }, [workspaceId]);
 
   return <>{children}</>;
