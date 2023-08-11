@@ -147,6 +147,15 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
+  @Named("refreshSchemaActivityOptions")
+  public ActivityOptions refreshSchemaActivityOptions() {
+    return ActivityOptions.newBuilder()
+        .setScheduleToCloseTimeout(Duration.ofMinutes(10))
+        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
   @Named("longRunActivityOptions")
   public ActivityOptions longRunActivityOptions(
                                                 @Value("${airbyte.worker.sync.max-timeout}") final Long maxTimeout,
