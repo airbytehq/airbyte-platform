@@ -33,8 +33,8 @@ interface NotificationSettingsFormProps {
 }
 
 export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> = ({ updateNotificationSettings }) => {
-  const emailNotificationsFeature = useFeature(FeatureItem.EmailNotifications);
-  const { notificationSettings } = useCurrentWorkspace();
+  const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
+  const { notificationSettings, email } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();
   const { formatMessage } = useIntl();
@@ -128,16 +128,19 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
             <Box mb="xl">
               <Text>
                 <FormattedMessage id="settings.notifications.description" />
+                {emailNotificationsFeatureEnabled && (
+                  <FormattedMessage id="settings.notifications.emailRecipient" values={{ email }} />
+                )}
               </Text>
             </Box>
             <Box
               mb="md"
               className={classNames(styles.inputGrid, {
-                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeature,
+                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
               })}
             >
               <span />
-              {emailNotificationsFeature && (
+              {emailNotificationsFeatureEnabled && (
                 <Text align="center" color="grey">
                   <FormattedMessage id="settings.notifications.email" />
                 </Text>
@@ -152,7 +155,7 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
             </Box>
             <div
               className={classNames(styles.inputGrid, {
-                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeature,
+                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
               })}
             >
               <NotificationItemField name="sendOnFailure" />
