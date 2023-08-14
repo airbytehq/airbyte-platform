@@ -1,3 +1,3 @@
-import WorkspacesPage from "./WorkspacesPage";
+import { CloudWorkspacesPage } from "./CloudWorkspacesPage";
 
-export default WorkspacesPage;
+export default CloudWorkspacesPage;

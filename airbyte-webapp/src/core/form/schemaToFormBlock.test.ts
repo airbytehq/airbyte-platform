@@ -251,7 +251,6 @@ it("should reformat jsonSchema to internal widget representation when has oneOf"
         fieldKey: "credentials",
         selectionConstValues: ["api", "oauth"],
         selectionKey: "type",
-        selectionPath: "key.credentials.type",
         conditions: [
           {
             title: "api key",

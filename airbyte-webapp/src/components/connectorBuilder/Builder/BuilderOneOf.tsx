@@ -7,21 +7,24 @@ import { DropDown } from "components/ui/DropDown";
 
 import { getLabelAndTooltip } from "./manifestHelpers";
 
-interface Option {
-  label: string;
-  value: string;
-  default?: object;
+interface OneOfType {
+  type: string;
 }
 
-export interface OneOfOption {
+interface Option<T extends OneOfType> {
+  label: string;
+  value: string;
+  default?: T;
+}
+
+export interface OneOfOption<T extends OneOfType> {
   label: string; // label shown in the dropdown menu
-  typeValue: string; // value to set on the `type` field for this component - should match the oneOf type definition
-  default: object; // default values for the path
+  default: T; // default values for the path
   children?: React.ReactNode;
 }
 
-interface BuilderOneOfProps {
-  options: OneOfOption[];
+interface BuilderOneOfProps<T extends OneOfType> {
+  options: Array<OneOfOption<T>>;
   path: string; // path to the oneOf component in the json schema
   label?: string;
   tooltip?: string | React.ReactNode;
@@ -31,7 +34,7 @@ interface BuilderOneOfProps {
   onSelect?: (type: string) => void;
 }
 
-export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
+export const BuilderOneOf = <T extends OneOfType>({
   options,
   label,
   tooltip,
@@ -40,11 +43,11 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
   manifestOptionPaths,
   omitInterpolationContext,
   onSelect,
-}) => {
+}: BuilderOneOfProps<T>) => {
   const { setValue, unregister } = useFormContext();
   const { field } = useController({ name: `${path}.type` });
 
-  const selectedOption = options.find((option) => option.typeValue === field.value);
+  const selectedOption = options.find((option) => option.default.type === field.value);
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
     label,
     tooltip,
@@ -62,19 +65,16 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
         <DropDown
           {...field}
           options={options.map((option) => {
-            return { label: option.label, value: option.typeValue, default: option.default };
+            return { label: option.label, value: option.default.type, default: option.default };
           })}
-          value={field.value ?? options[0].typeValue}
-          onChange={(selectedOption: Option) => {
+          value={field.value ?? options[0].default.type}
+          onChange={(selectedOption: Option<T>) => {
             if (selectedOption.value === field.value) {
               return;
             }
-            unregister(path, { keepValue: true, keepDefaultValue: true });
             // clear all values for this oneOf and set selected option and default values
-            setValue(path, {
-              type: selectedOption.value,
-              ...selectedOption.default,
-            });
+            unregister(path, { keepValue: true, keepDefaultValue: true });
+            setValue(path, selectedOption.default);
 
             onSelect?.(selectedOption.value);
           }}

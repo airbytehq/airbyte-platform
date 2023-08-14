@@ -1,10 +1,10 @@
 {
   "name": "airbyte-webapp",
-  "version": "0.50.12",
+  "version": "0.50.17",
   "private": true,
   "engines": {
     "node": "18.15.0",
-    "pnpm": "7.29.3"
+    "pnpm": "8.6.12"
   },
   "scripts": {
     "prepare": "./scripts/install-githooks.sh",
@@ -186,6 +186,7 @@
     "eslint-config-prettier": "^8.7.0",
     "eslint-config-react-app": "^7.0.1",
     "eslint-import-resolver-typescript": "^3.5.3",
+    "eslint-plugin-check-file": "^2.6.1",
     "eslint-plugin-css-modules": "^2.11.0",
     "eslint-plugin-cypress": "^2.12.1",
     "eslint-plugin-import": "^2.27.5",
@@ -222,7 +223,7 @@
     "vite": "^4.2.0",
     "vite-plugin-checker": "^0.5.6",
     "vite-plugin-svgr": "^2.4.0",
-    "vite-tsconfig-paths": "^4.0.7"
+    "vite-tsconfig-paths": "^4.2.0"
   },
   "overrides": {
     "minimatch": "^3.0.5"

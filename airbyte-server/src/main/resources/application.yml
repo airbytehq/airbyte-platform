@@ -132,6 +132,11 @@ temporal:
     namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
   host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
   retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 datasources:
   config:

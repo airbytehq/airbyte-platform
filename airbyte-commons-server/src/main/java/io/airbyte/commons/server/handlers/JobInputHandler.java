@@ -339,6 +339,7 @@ public class JobInputHandler {
           .withConfiguredAirbyteCatalog(resetConnection.getConfiguredAirbyteCatalog())
           .withOperationSequence(resetConnection.getOperationSequence())
           .withResourceRequirements(resetConnection.getResourceRequirements())
+          .withSyncResourceRequirements(resetConnection.getSyncResourceRequirements())
           .withIsSourceCustomConnector(resetConnection.getIsSourceCustomConnector())
           .withIsDestinationCustomConnector(resetConnection.getIsDestinationCustomConnector())
           .withWebhookOperationConfigs(resetConnection.getWebhookOperationConfigs())

@@ -17,6 +17,9 @@ interface FormCardProps<T> extends CollapsibleCardProps {
   submitDisabled?: boolean;
 }
 
+/**
+ * @deprecated This Formik form wrapper will be removed in the future after migration TransformationCard to react-hook-form
+ */
 export const ConnectionEditFormCard = <T extends object>({
   children,
   form,

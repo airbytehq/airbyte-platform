@@ -15,16 +15,16 @@ export const JobStatusIcon: React.FC<JobStatusIconProps> = ({ job }) => {
   const jobStatus = getJobStatus(job);
   const jobIsPartialSuccess = isPartialSuccess(job.attempts);
 
-  if (!jobIsPartialSuccess && !didSucceed) {
+  if (jobIsPartialSuccess) {
+    return <StatusIcon status="warning" />;
+  } else if (!didSucceed) {
     return <StatusIcon status="error" />;
   } else if (jobStatus === JobStatus.cancelled) {
     return <StatusIcon status="cancelled" />;
-  } else if (jobStatus === JobStatus.running) {
+  } else if (jobStatus === JobStatus.running || jobStatus === JobStatus.incomplete) {
     return <StatusIcon status="loading" />;
   } else if (jobStatus === JobStatus.succeeded) {
     return <StatusIcon status="success" />;
-  } else if (jobIsPartialSuccess) {
-    return <StatusIcon status="warning" />;
   }
   return null;
 };

@@ -129,6 +129,7 @@ airbyte:
     kube-job-configs:
       default:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${JOB_KUBE_LABELS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
@@ -136,6 +137,7 @@ airbyte:
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       check:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
+        labels: ${CHECK_JOB_KUBE_LABELS:}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
@@ -143,6 +145,7 @@ airbyte:
         memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       discover:
         annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
+        labels: ${DISCOVER_JOB_KUBE_LABELS:}
         node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
       normalization:
         cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
@@ -151,6 +154,7 @@ airbyte:
         memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       replication:
         annotations: ${JOB_KUBE_ANNOTATIONS:}
+        labels: ${REPLICATION_JOB_KUBE_LABELS:}
         node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
         cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
         cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
@@ -160,12 +164,12 @@ airbyte:
       # Generally low resource containers
       destination-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       destination-stdout:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       heartbeat:
@@ -175,7 +179,7 @@ airbyte:
         memory-request: 25Mi
       source-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
       # Default base sync values
@@ -231,83 +235,27 @@ airbyte:
         memory-limit: 50Mi
         memory-request: 25Mi
 
-      # base is the proposed default syncs values
-      # Generally low resource containers
-      base--destination-stderr:
+      # Currently in testing for APIs
+      lowrss--destination-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
-      base--destination-stdout:
+      lowrss--destination-stdout:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
-      base--heartbeat:
+      lowrss--heartbeat:
         cpu-limit: 0.2
         cpu-request: 0.05
         memory-limit: 50Mi
         memory-request: 25Mi
-      base--source-stderr:
+      lowrss--source-stderr:
         cpu-limit: 0.5
-        cpu-request: 0.1
+        cpu-request: 0.01
         memory-limit: 50Mi
         memory-request: 25Mi
-      # Default base sync values
-      base--destination:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
-      base--destination-stdin:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      base--orchestrator:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 2Gi
-      base--source:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
-      base--source-stdout:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
-
-      # Database syncs resource override
-      base--source-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
-      base--source-stdout-database:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
-      base--orchestrator-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 2Gi
-      base--destination-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
-      base--destination-stdin-database:
-        cpu-limit: 2
-        cpu-request: 0.5
-        memory-limit: 50Mi
-        memory-request: 25Mi
-
-      # Currently in testing for APIs
       lowrss--source-api:
         cpu-limit: 1
         cpu-request: 0.2
@@ -320,7 +268,7 @@ airbyte:
         memory-request: 25Mi
       lowrss--orchestrator-api:
         cpu-limit: 1
-        cpu-request: 0.5
+        cpu-request: 0.3
         memory-limit: 2Gi
         memory-request: 2Gi
       lowrss--destination-api:
@@ -330,24 +278,24 @@ airbyte:
         memory-request: 1Gi
       lowrss--destination-stdin-api:
         cpu-limit: 1
-        cpu-request: 0.2
+        cpu-request: 0.1
         memory-limit: 50Mi
         memory-request: 25Mi
 
       # Previous version of lowrss
       lowrss2--source-api:
-        cpu-limit: 0.5
+        cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 2Gi
         memory-request: 1Gi
       lowrss2--source-stdout-api:
-        cpu-limit: 0.5
+        cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
       lowrss2--orchestrator-api:
         cpu-limit: 1
-        cpu-request: 0.5
+        cpu-request: 0.3
         memory-limit: 2Gi
         memory-request: 2Gi
       lowrss2--destination-api:
@@ -355,28 +303,15 @@ airbyte:
         cpu-request: 0.2
         memory-limit: 2Gi
         memory-request: 1Gi
-      lowrss2-destination-stdin-api:
-        cpu-limit: 0.5
+      lowrss2--destination-stdin-api:
+        cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
-      verylowrss--source:
-        cpu-limit: 1
-        cpu-request: 0.1
-        memory-limit: 1Gi
-        memory-request: 0.5Gi
-      verylowrss--orchestrator-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 2Gi
-        memory-request: 1.5Gi
-      verylowrss--destination-api:
-        cpu-limit: 1
-        cpu-request: 0.1
-        memory-limit: 1Gi
-        memory-request: 0.5Gi
+
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
+        labels: ${SPEC_JOB_KUBE_LABELS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
     check:
       enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}
@@ -526,6 +461,11 @@ temporal:
     namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
   host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
   retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 logger:
   levels:

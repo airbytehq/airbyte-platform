@@ -38,7 +38,6 @@ interface DestinationNamespaceModalProps {
   onCloseModal: () => void;
   onSubmit: (values: DestinationNamespaceFormValueType) => void;
 }
-
 export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps> = ({
   initialValues,
   onCloseModal,

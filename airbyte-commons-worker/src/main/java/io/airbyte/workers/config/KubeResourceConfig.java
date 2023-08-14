@@ -17,6 +17,7 @@ final class KubeResourceConfig {
 
   private final String name;
   private String annotations;
+  private String labels;
   private String nodeSelectors;
   private String cpuLimit;
   private String cpuRequest;
@@ -33,6 +34,10 @@ final class KubeResourceConfig {
 
   public String getAnnotations() {
     return annotations;
+  }
+
+  public String getLabels() {
+    return labels;
   }
 
   public String getNodeSelectors() {
@@ -57,6 +62,10 @@ final class KubeResourceConfig {
 
   public void setAnnotations(String annotations) {
     this.annotations = annotations;
+  }
+
+  public void setLabels(String labels) {
+    this.labels = labels;
   }
 
   public void setNodeSelectors(String nodeSelectors) {

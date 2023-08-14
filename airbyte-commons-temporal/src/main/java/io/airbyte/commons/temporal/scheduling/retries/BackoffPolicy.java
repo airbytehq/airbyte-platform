@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.jackson.Jacksonized;
 
 /**
@@ -16,6 +17,7 @@ import lombok.extern.jackson.Jacksonized;
  */
 @Builder
 @Getter
+@ToString
 @Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BackoffPolicy {

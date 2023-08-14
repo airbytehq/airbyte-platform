@@ -191,8 +191,7 @@ export const useResolvedBuilderProjectVersion = (projectId: string, version?: nu
       if (!project.declarativeManifest?.manifest) {
         return null;
       }
-      return (await resolveManifestQuery({ manifest: project.declarativeManifest.manifest }))
-        .manifest as DeclarativeComponentSchema;
+      return (await resolveManifestQuery(project.declarativeManifest.manifest)).manifest as DeclarativeComponentSchema;
     },
     {
       retry: false,

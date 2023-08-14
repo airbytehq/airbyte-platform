@@ -281,7 +281,7 @@ public class DestinationHandler {
             listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
             listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
             listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
-            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(), null));
     for (final DestinationConnection destinationConnection : destinationConnections) {
       reads.add(buildDestinationRead(destinationConnection));
     }

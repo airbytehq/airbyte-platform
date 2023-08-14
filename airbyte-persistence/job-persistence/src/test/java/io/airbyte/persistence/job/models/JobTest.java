@@ -91,7 +91,7 @@ class JobTest {
     assertDoesNotThrow(() -> pendingJob.validateStatusTransition(JobStatus.RUNNING));
     assertDoesNotThrow(() -> pendingJob.validateStatusTransition(JobStatus.FAILED));
     assertDoesNotThrow(() -> pendingJob.validateStatusTransition(JobStatus.CANCELLED));
-    assertThrows(IllegalStateException.class, () -> pendingJob.validateStatusTransition(JobStatus.INCOMPLETE));
+    assertDoesNotThrow(() -> pendingJob.validateStatusTransition(JobStatus.INCOMPLETE));
     assertThrows(IllegalStateException.class, () -> pendingJob.validateStatusTransition(JobStatus.SUCCEEDED));
   }
 

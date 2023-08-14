@@ -12,4 +12,5 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   size?: ButtonSize;
   variant?: ButtonVariant;
   width?: number;
+  "data-testid"?: string;
 }

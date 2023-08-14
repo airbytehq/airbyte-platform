@@ -17,7 +17,7 @@ import { links } from "core/utils/links";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useExperiment } from "hooks/services/Experiment";
-import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
@@ -92,6 +92,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
   const destinationIds = useExperiment("connection.onboarding.destinations", "").split(",");
 
   const createConnectionPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+  const createDestinationBasePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}`;
 
   const createSourcePath = (sourceDefinitionId?: string) => {
     const sourceDefinitionPath = sourceDefinitionId ? `&${SOURCE_DEFINITION_PARAM}=${sourceDefinitionId}` : "";
@@ -223,20 +224,23 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                 key={destination?.destinationDefinitionId}
                 placement="right"
                 control={
-                  <button
-                    className={styles.connectorButton}
-                    // onMouseEnter doesn't trigger on disabled buttons in React
-                    // https://github.com/facebook/react/issues/10109
-                    // Thus we just disable it via aria-disabled and make it non focusable via tabindex
-                    onMouseEnter={() => setHighlightedDestination(index as HighlightIndex)}
-                    aria-disabled="true"
+                  <Link
+                    data-testid={`onboardingDestination-${index}`}
+                    data-destination-definition-id={destination?.destinationDefinitionId}
                     aria-label={tooltipText}
-                    tabIndex={-1}
+                    to={`${createDestinationBasePath}/${destination.destinationDefinitionId}`}
                   >
-                    <div className={styles.connectorIcon}>
-                      <SvgIcon svg={destination?.icon} />
-                    </div>
-                  </button>
+                    <FlexContainer
+                      className={styles.connectorButton}
+                      onMouseEnter={() => setHighlightedDestination(index as HighlightIndex)}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <div className={styles.connectorIcon}>
+                        <SvgIcon svg={destination?.icon} />
+                      </div>
+                    </FlexContainer>
+                  </Link>
                 }
               >
                 {tooltipText}
@@ -246,18 +250,20 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
           <Tooltip
             placement="right"
             control={
-              <button
-                className={styles.connectorButton}
-                // onMouseEnter doesn't trigger on disabled buttons in React
-                // https://github.com/facebook/react/issues/10109
-                // Thus we just disable it via aria-disabled and make it non focusable via tabindex
-                onMouseEnter={() => setHighlightedDestination(3)}
-                aria-disabled="true"
+              <Link
+                data-testid="onboardingDestination-more"
+                to={createDestinationBasePath}
                 aria-label={moreDestinationsTooltip}
-                tabIndex={-1}
               >
-                <PlusIcon className={styles.moreIcon} />
-              </button>
+                <FlexContainer
+                  onMouseEnter={() => setHighlightedDestination(3)}
+                  className={styles.connectorButton}
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <PlusIcon className={styles.moreIcon} />
+                </FlexContainer>
+              </Link>
             }
           >
             {moreDestinationsTooltip}

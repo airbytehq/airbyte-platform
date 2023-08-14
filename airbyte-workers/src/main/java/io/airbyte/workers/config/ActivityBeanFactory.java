@@ -10,6 +10,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
+import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
@@ -71,7 +72,8 @@ public class ActivityBeanFactory {
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
                                                   final SubmitCheckConnectionActivity submitCheckConnectionActivity,
                                                   final CheckRunProgressActivity checkRunProgressActivity,
-                                                  final RetryStatePersistenceActivity retryStatePersistenceActivity) {
+                                                  final RetryStatePersistenceActivity retryStatePersistenceActivity,
+                                                  final AppendToAttemptLogActivity appendToAttemptLogActivity) {
     return List.of(generateInputActivity,
         jobCreationAndStatusUpdateActivity,
         configFetchActivity,
@@ -84,7 +86,8 @@ public class ActivityBeanFactory {
         featureFlagFetchActivity,
         submitCheckConnectionActivity,
         checkRunProgressActivity,
-        retryStatePersistenceActivity);
+        retryStatePersistenceActivity,
+        appendToAttemptLogActivity);
   }
 
   @Singleton
@@ -139,6 +142,15 @@ public class ActivityBeanFactory {
   public ActivityOptions discoveryActivityOptions() {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofHours(2))
+        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .build();
+  }
+
+  @Singleton
+  @Named("refreshSchemaActivityOptions")
+  public ActivityOptions refreshSchemaActivityOptions() {
+    return ActivityOptions.newBuilder()
+        .setScheduleToCloseTimeout(Duration.ofMinutes(30))
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
   }

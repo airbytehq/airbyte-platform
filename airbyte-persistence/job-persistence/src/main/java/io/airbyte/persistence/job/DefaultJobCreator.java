@@ -4,8 +4,6 @@
 
 package io.airbyte.persistence.job;
 
-import static io.airbyte.config.provider.ResourceRequirementsProvider.DEFAULT_VARIANT;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -25,6 +23,7 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -57,6 +56,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DefaultJobCreator implements JobCreator {
 
+  // Resets use an empty source which doesn't have a source definition.
+  private static final StandardSourceDefinition RESET_SOURCE_DEFINITION = null;
   private final JobPersistence jobPersistence;
   private final ResourceRequirementsProvider resourceRequirementsProvider;
   private final FeatureFlagClient featureFlagClient;
@@ -86,7 +87,7 @@ public class DefaultJobCreator implements JobCreator {
                                       final UUID workspaceId)
       throws IOException {
     final SyncResourceRequirements syncResourceRequirements =
-        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition);
+        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -118,12 +119,14 @@ public class DefaultJobCreator implements JobCreator {
   @Override
   public Optional<Long> createResetConnectionJob(final DestinationConnection destination,
                                                  final StandardSync standardSync,
+                                                 final StandardDestinationDefinition destinationDefinition,
                                                  final ActorDefinitionVersion destinationDefinitionVersion,
                                                  final String destinationDockerImage,
                                                  final Version destinationProtocolVersion,
                                                  final boolean isDestinationCustomConnector,
                                                  final List<StandardSyncOperation> standardSyncOperations,
-                                                 final List<StreamDescriptor> streamsToReset)
+                                                 final List<StreamDescriptor> streamsToReset,
+                                                 final UUID workspaceId)
       throws IOException {
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = standardSync.getCatalog();
     configuredAirbyteCatalog.getStreams().forEach(configuredAirbyteStream -> {
@@ -144,6 +147,9 @@ public class DefaultJobCreator implements JobCreator {
       }
     });
 
+    final var resetResourceRequirements =
+        getSyncResourceRequirements(workspaceId, standardSync, RESET_SOURCE_DEFINITION, destinationDefinition, true);
+
     final JobResetConnectionConfig resetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
         .withNamespaceFormat(standardSync.getNamespaceFormat())
@@ -152,8 +158,8 @@ public class DefaultJobCreator implements JobCreator {
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withConfiguredAirbyteCatalog(configuredAirbyteCatalog)
-        // We should lookup variant here but we are missing some information such as workspaceId
-        .withResourceRequirements(getOrchestratorResourceRequirements(standardSync, Optional.empty(), DEFAULT_VARIANT))
+        .withResourceRequirements(resetResourceRequirements.getOrchestrator())
+        .withSyncResourceRequirements(resetResourceRequirements)
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(isDestinationCustomConnector)
@@ -169,7 +175,8 @@ public class DefaultJobCreator implements JobCreator {
   private SyncResourceRequirements getSyncResourceRequirements(final UUID workspaceId,
                                                                final StandardSync standardSync,
                                                                final StandardSourceDefinition sourceDefinition,
-                                                               final StandardDestinationDefinition destinationDefinition) {
+                                                               final StandardDestinationDefinition destinationDefinition,
+                                                               final boolean isReset) {
     final String variant = getResourceRequirementsVariant(workspaceId, standardSync, sourceDefinition, destinationDefinition);
 
     // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
@@ -178,19 +185,26 @@ public class DefaultJobCreator implements JobCreator {
     // is slow.
     final Optional<String> sourceType = getSourceType(sourceDefinition);
     final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
-    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
     final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant);
 
-    return new SyncResourceRequirements()
+    final var syncResourceRequirements = new SyncResourceRequirements()
+        .withConfigKey(new SyncResourceRequirementsKey().withVariant(variant).withSubType(sourceType.orElse(null)))
         .withDestination(mergedDstResourceReq)
         .withDestinationStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDERR, sourceType, variant))
         .withDestinationStdIn(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDIN, sourceType, variant))
         .withDestinationStdOut(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION_STDOUT, sourceType, variant))
         .withHeartbeat(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.HEARTBEAT, sourceType, variant))
-        .withOrchestrator(mergedOrchestratorResourceReq)
-        .withSource(mergedSrcResourceReq)
-        .withSourceStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, sourceType, variant))
-        .withSourceStdOut(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, sourceType, variant));
+        .withOrchestrator(mergedOrchestratorResourceReq);
+
+    if (!isReset) {
+      final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
+      syncResourceRequirements
+          .withSource(mergedSrcResourceReq)
+          .withSourceStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, sourceType, variant))
+          .withSourceStdOut(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDOUT, sourceType, variant));
+    }
+
+    return syncResourceRequirements;
   }
 
   private String getResourceRequirementsVariant(final UUID workspaceId,
@@ -201,7 +215,8 @@ public class DefaultJobCreator implements JobCreator {
     addIfNotNull(contextList, workspaceId, Workspace::new);
     addIfNotNull(contextList, standardSync.getConnectionId(), Connection::new);
     addIfNotNull(contextList, standardSync.getSourceId(), Source::new);
-    addIfNotNull(contextList, sourceDefinition.getSourceDefinitionId(), SourceDefinition::new);
+    // Resets use an empty source. Account for lack of source definition.
+    addIfNotNull(contextList, sourceDefinition != null ? sourceDefinition.getSourceDefinitionId() : null, SourceDefinition::new);
     addIfNotNull(contextList, standardSync.getDestinationId(), Destination::new);
     addIfNotNull(contextList, destinationDefinition.getDestinationDefinitionId(), DestinationDefinition::new);
     return featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, new Multi(contextList));
@@ -230,7 +245,7 @@ public class DefaultJobCreator implements JobCreator {
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition), variant);
     return ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
-        sourceDefinition.getResourceRequirements(),
+        sourceDefinition != null ? sourceDefinition.getResourceRequirements() : null,
         defaultSrcRssReqs,
         JobType.SYNC);
   }
@@ -249,6 +264,9 @@ public class DefaultJobCreator implements JobCreator {
   }
 
   private Optional<String> getSourceType(final StandardSourceDefinition sourceDefinition) {
+    if (sourceDefinition == null) {
+      return Optional.empty();
+    }
     return Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString);
   }
 

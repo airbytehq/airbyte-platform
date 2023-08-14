@@ -4,10 +4,11 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.COLUMN_ID;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForConnectionState;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitForSuccessfulJob;
-import static io.airbyte.test.utils.AirbyteAcceptanceTestHarness.waitWhileJobHasStatus;
+import static io.airbyte.test.utils.AcceptanceTestHarness.COLUMN_ID;
+import static io.airbyte.test.utils.AcceptanceTestHarness.PUBLIC_SCHEMA_NAME;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForConnectionState;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitForSuccessfulJob;
+import static io.airbyte.test.utils.AcceptanceTestHarness.waitWhileJobHasStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,7 +23,6 @@ import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
@@ -41,11 +41,12 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Asserts;
+import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
@@ -53,7 +54,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -75,11 +75,11 @@ import org.slf4j.LoggerFactory;
  * {@code @RetryingTest} for tests that we can't get to pass reliably. New tests should thus default
  * to using {@code @Test} if possible.
  * <p>
- * We order tests such that earlier tests test more basic behavior that is relied upon in later
+ * We order tests such that earlier tests cover more basic behavior that is relied upon in later
  * tests. e.g. We test that we can create a destination before we test whether we can sync data to
  * it.
  */
-@SuppressWarnings({"rawtypes", "ConstantConditions"})
+@SuppressWarnings({"ConstantConditions"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(Lifecycle.PER_CLASS)
 class AdvancedAcceptanceTests {
@@ -88,11 +88,10 @@ class AdvancedAcceptanceTests {
   private static final String TYPE = "type";
   private static final String COLUMN1 = "column1";
 
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
 
-  @SuppressWarnings("UnstableApiUsage")
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
     apiClient = new AirbyteApiClient(
@@ -114,7 +113,7 @@ class AdvancedAcceptanceTests {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @AfterAll
@@ -132,36 +131,33 @@ class AdvancedAcceptanceTests {
     testHarness.cleanup();
   }
 
-  @RetryingTest(3)
-  @Order(1)
+  @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+  @Test
   void testManualSync() throws Exception {
-    final String connectionName = "test-connection";
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID operationId = testHarness.createOperation().getOperationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
     catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
-    final UUID connectionId =
-        testHarness.createConnection(connectionName,
+    final var conn =
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            List.of(operationId),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
-            .getConnectionId();
+            discoverResult.getCatalogId())
+                .build());
+    final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    testHarness.assertSourceAndDestinationDbInSync(false);
-    testHarness.assertStreamStatuses(workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat(), false, false);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, conn.getConnectionId(), connectionSyncRead, StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC);
   }
 
   @RetryingTest(3)
-  @Order(2)
   void testCheckpointing() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
@@ -181,7 +177,6 @@ class AdvancedAcceptanceTests {
         destinationDefinition.getDestinationDefinitionId(),
         Jsons.jsonNode(ImmutableMap.of(TYPE, "SILENT")));
 
-    final String connectionName = "test-connection";
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
@@ -201,14 +196,11 @@ class AdvancedAcceptanceTests {
         .selected(true)
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
-        testHarness.createConnection(connectionName,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            Collections.emptyList(),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
+            discoverResult.getCatalogId()).build())
             .getConnectionId();
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
@@ -226,9 +218,11 @@ class AdvancedAcceptanceTests {
 
     final ConnectionState connectionState = waitForConnectionState(apiClient, connectionId);
 
-    // the source is set to emit a state message every 5th message. because of the multi threaded
-    // nature, we can't guarantee exactly what checkpoint will be registered. what we can do is send
-    // enough messages to make sure that we checkpoint at least once.
+    /*
+     * the source is set to emit a state message every 5th message. because of the multithreaded nature,
+     * we can't guarantee exactly what checkpoint will be registered. what we can do is send enough
+     * messages to make sure that we check point at least once.
+     */
     assertNotNull(connectionState.getState());
     assertTrue(connectionState.getState().get(COLUMN1).isInt());
     LOGGER.info("state value: {}", connectionState.getState().get(COLUMN1).asInt());
@@ -238,7 +232,6 @@ class AdvancedAcceptanceTests {
 
   // verify that when the worker uses backpressure from pipes that no records are lost.
   @RetryingTest(3)
-  @Order(4)
   void testBackpressure() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
@@ -261,7 +254,6 @@ class AdvancedAcceptanceTests {
             .put("millis_per_record", 1)
             .build()));
 
-    final String connectionName = "test-connection";
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
@@ -269,14 +261,11 @@ class AdvancedAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
-        testHarness.createConnection(connectionName,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            Collections.emptyList(),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null)
+            discoverResult.getCatalogId()).build())
             .getConnectionId();
     final JobInfoRead connectionSyncRead1 = apiClient.getConnectionApi()
         .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));

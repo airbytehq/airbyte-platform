@@ -163,11 +163,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
             jobCreator.createResetConnectionJob(
                 destination,
                 standardSync,
+                destinationDef,
                 destinationVersion,
                 destinationImageName,
                 new Version(destinationVersion.getProtocolVersion()),
                 destinationDef.getCustom(),
-                standardSyncOperations, streamsToReset);
+                standardSyncOperations,
+                streamsToReset,
+                destination.getWorkspaceId());
 
         final long jobId = jobIdOptional.isEmpty()
             ? jobPersistence.getLastReplicationJob(standardSync.getConnectionId()).orElseThrow(() -> new RuntimeException("No job available")).getId()

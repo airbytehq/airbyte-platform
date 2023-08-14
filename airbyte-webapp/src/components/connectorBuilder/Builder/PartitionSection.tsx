@@ -11,7 +11,13 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { InjectIntoFields } from "./InjectIntoFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER, StreamPathFn, BuilderListPartitionRouter } from "../types";
+import {
+  LIST_PARTITION_ROUTER,
+  SUBSTREAM_PARTITION_ROUTER,
+  StreamPathFn,
+  BuilderListPartitionRouter,
+  BuilderSubstreamPartitionRouter,
+} from "../types";
 
 interface PartitionSectionProps {
   streamFieldPath: StreamPathFn;
@@ -27,30 +33,30 @@ const EMPTY_LIST_PARTITION_ROUTER: BuilderListPartitionRouter = {
 export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
 
-  const getSlicingOptions = (buildPath: (path: string) => string): OneOfOption[] => [
+  const getSlicingOptions = (
+    buildPath: (path: string) => string
+  ): Array<OneOfOption<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>> => [
     {
       label: "List",
-      typeValue: LIST_PARTITION_ROUTER,
       default: {
+        type: LIST_PARTITION_ROUTER,
         values: { type: "list", value: [] },
         cursor_field: "",
       },
       children: (
         <>
-          <BuilderOneOf
+          <BuilderOneOf<BuilderListPartitionRouter["values"]>
             path={buildPath("values")}
             manifestPath="ListPartitionRouter.properties.values"
             options={[
               {
                 label: "Value List",
-                typeValue: "list",
-                default: { value: [] },
+                default: { type: "list", value: [] },
                 children: <BuilderField type="array" path={buildPath("values.value")} label="Value List" />,
               },
               {
                 label: "User Input",
-                typeValue: "variable",
-                default: { value: "" },
+                default: { type: "variable", value: "" },
                 children: (
                   <BuilderFieldWithInputs
                     type="string"
@@ -85,8 +91,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
     },
     {
       label: "Substream",
-      typeValue: SUBSTREAM_PARTITION_ROUTER,
       default: {
+        type: SUBSTREAM_PARTITION_ROUTER,
         parent_key: "",
         partition_field: "",
         parentStreamReference: "",
@@ -136,7 +142,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
         emptyItem={EMPTY_LIST_PARTITION_ROUTER}
       >
         {({ buildPath }) => (
-          <BuilderOneOf
+          <BuilderOneOf<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>
             path={buildPath("")}
             label="Partition Router"
             manifestOptionPaths={["ListPartitionRouter", "ParentStreamConfig"]}

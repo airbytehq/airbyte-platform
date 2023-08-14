@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.converters;
 
+import io.airbyte.api.model.generated.ActorDefinitionBreakingChange;
 import io.airbyte.api.model.generated.ActorDefinitionResourceRequirements;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -21,6 +22,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -230,6 +232,24 @@ public class ApiPojoConverters {
       return null;
     }
     return ReleaseStage.fromValue(releaseStage.value());
+  }
+
+  public static SupportState toApiSupportState(final io.airbyte.config.ActorDefinitionVersion.SupportState supportState) {
+    if (supportState == null) {
+      return null;
+    }
+    return SupportState.fromValue(supportState.value());
+  }
+
+  public static ActorDefinitionBreakingChange toApiBreakingChange(final io.airbyte.config.ActorDefinitionBreakingChange breakingChange) {
+    if (breakingChange == null) {
+      return null;
+    }
+    return new ActorDefinitionBreakingChange()
+        .version(breakingChange.getVersion().serialize())
+        .message(breakingChange.getMessage())
+        .migrationDocumentationUrl(breakingChange.getMigrationDocumentationUrl())
+        .upgradeDeadline(toLocalDate(breakingChange.getUpgradeDeadline()));
   }
 
   public static LocalDate toLocalDate(final String date) {

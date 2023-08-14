@@ -27,6 +27,8 @@ import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
+import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.Schedule.TimeUnit;
@@ -44,6 +46,8 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
+import io.airbyte.config.User;
+import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.WorkspaceServiceAccount;
@@ -73,7 +77,7 @@ import lombok.Data;
 public class MockData {
 
   public static final UUID WORKSPACE_ID_1 = UUID.randomUUID();
-  private static final UUID WORKSPACE_ID_2 = UUID.randomUUID();
+  public static final UUID WORKSPACE_ID_2 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID_3 = UUID.randomUUID();
   private static final UUID WORKSPACE_CUSTOMER_ID = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_1 = UUID.randomUUID();
@@ -119,6 +123,15 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 10800;
   public static final Supplier<Long> MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER = () -> DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES;
+  // User
+  static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
+  static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();
+  static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
+  // Permission
+  static final UUID PERMISSION_ID_1 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_2 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_3 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_4 = UUID.randomUUID();
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -160,6 +173,71 @@ public class MockData {
   private static final String WEBHOOK_OPERATION_EXECUTION_BODY = "test-webhook-body";
   public static final String CONFIG_HASH = "1394";
   public static final String CONNECTOR_VERSION = "1.2.0";
+
+  public static List<User> users() {
+    final User user1 = new User()
+        .withUserId(CREATOR_USER_ID_1)
+        .withName("user-1")
+        .withAuthUserId(CREATOR_USER_ID_1.toString())
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+        .withDefaultWorkspaceId(WORKSPACE_ID_1)
+        .withStatus(User.Status.DISABLED)
+        .withCompanyName("company-1")
+        .withEmail("user-1@whatever.com")
+        .withNews(true);
+
+    final User user2 = new User()
+        .withUserId(CREATOR_USER_ID_2)
+        .withName("user-2")
+        .withAuthUserId(CREATOR_USER_ID_2.toString())
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+        .withDefaultWorkspaceId(WORKSPACE_ID_2)
+        .withStatus(User.Status.INVITED)
+        .withCompanyName("company-2")
+        .withEmail("user-2@whatever.com")
+        .withNews(false);
+
+    final User user3 = new User()
+        .withUserId(CREATOR_USER_ID_3)
+        .withName("user-3")
+        .withAuthUserId(CREATOR_USER_ID_3.toString())
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("company-3")
+        .withEmail("user-3@whatever.com")
+        .withNews(true);
+
+    return Arrays.asList(user1, user2, user3);
+  }
+
+  public static List<Permission> permissions() {
+    final Permission permission1 = new Permission()
+        .withPermissionId(PERMISSION_ID_1)
+        .withUserId(CREATOR_USER_ID_1)
+        .withWorkspaceId(WORKSPACE_ID_1)
+        .withPermissionType(PermissionType.INSTANCE_ADMIN);
+
+    final Permission permission2 = new Permission()
+        .withPermissionId(PERMISSION_ID_2)
+        .withUserId(CREATOR_USER_ID_2)
+        .withWorkspaceId(WORKSPACE_ID_2)
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+    final Permission permission3 = new Permission()
+        .withPermissionId(PERMISSION_ID_3)
+        .withUserId(CREATOR_USER_ID_3)
+        .withWorkspaceId(null)
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+    final Permission permission4 = new Permission()
+        .withPermissionId(PERMISSION_ID_4)
+        .withUserId(CREATOR_USER_ID_1)
+        .withWorkspaceId(WORKSPACE_ID_1)
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+    return Arrays.asList(permission1, permission2, permission3, permission4);
+  }
 
   public static List<StandardWorkspace> standardWorkspaces() {
     final Notification notification = new Notification()

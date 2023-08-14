@@ -176,3 +176,12 @@ data class DestinationDefinition(override val key: String) : Context {
    */
   constructor(key: UUID) : this(key = key.toString())
 }
+
+/**
+ * Context for representing a source type.
+ *
+ * @param [key] the type of source
+ */
+data class SourceType(override val key: String) : Context {
+  override val kind = "source-type"
+}

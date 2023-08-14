@@ -69,11 +69,6 @@
   border-radius: variables.$border-radius-2xl;
   transition: box-shadow variables.$transition ease;
 
-  .destinations & {
-    cursor: default;
-    opacity: 0.7;
-  }
-
   &:hover,
   &:focus-visible {
     box-shadow: variables.$box-shadow-raised;

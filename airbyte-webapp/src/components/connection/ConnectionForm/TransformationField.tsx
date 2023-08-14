@@ -2,7 +2,7 @@ import { ArrayHelpers, FormikProps } from "formik";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import ArrayOfObjectsEditor from "components/ArrayOfObjectsEditor";
+import { ArrayOfObjectsEditor } from "components/ArrayOfObjectsEditor";
 import TransformationForm from "components/connection/TransformationForm";
 
 import { OperationRead } from "core/request/AirbyteClient";
@@ -18,6 +18,11 @@ interface TransformationFieldProps extends ArrayHelpers {
   onEndEdit?: () => void;
 }
 
+/**
+ * @deprecated it's Formik version of TransformationField
+ * @see TransformationFieldHookForm
+ * TODO: replace with TransformationHookForm during Create Connection form refactoring
+ */
 const TransformationField: React.FC<TransformationFieldProps> = ({
   remove,
   push,

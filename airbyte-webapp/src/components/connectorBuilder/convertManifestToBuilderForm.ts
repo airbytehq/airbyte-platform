@@ -417,6 +417,8 @@ function manifestIncrementalSyncToBuilder(
   }
 
   const {
+    cursor_datetime_formats,
+    datetime_format,
     partition_field_end,
     partition_field_start,
     end_datetime: manifestEndDateTime,
@@ -462,6 +464,9 @@ function manifestIncrementalSyncToBuilder(
 
   return {
     ...regularFields,
+    cursor_datetime_formats: cursor_datetime_formats ?? [datetime_format],
+    datetime_format:
+      cursor_datetime_formats && datetime_format === cursor_datetime_formats[0] ? undefined : datetime_format,
     end_datetime,
     start_datetime,
     slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,

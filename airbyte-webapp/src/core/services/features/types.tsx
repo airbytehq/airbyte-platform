@@ -17,6 +17,7 @@ export enum FeatureItem {
   KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
+  RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

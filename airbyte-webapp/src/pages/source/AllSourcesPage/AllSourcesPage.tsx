@@ -8,7 +8,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useSourceList } from "hooks/services/useSourceHook";
@@ -27,7 +27,7 @@ const AllSourcesPage: React.FC = () => {
       softScrollEdge={false}
       headTitle={<HeadTitle titles={[{ id: "admin.sources" }]} />}
       pageTitle={
-        <NextPageHeader
+        <PageHeader
           leftComponent={
             <Heading as="h1" size="lg">
               <FormattedMessage id="sidebar.sources" />

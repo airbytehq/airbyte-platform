@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require("path");
+const legacyFiles = require("./.eslintLegacyFolderStructure.js");
 
 module.exports = {
   root: true,
@@ -12,7 +13,7 @@ module.exports = {
     "plugin:jsx-a11y/recommended",
     "plugin:@airbyte/recommended",
   ],
-  plugins: ["@typescript-eslint", "prettier", "unused-imports", "css-modules", "jsx-a11y", "@airbyte"],
+  plugins: ["@typescript-eslint", "prettier", "unused-imports", "css-modules", "jsx-a11y", "@airbyte", "check-file"],
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: "module",
@@ -148,6 +149,29 @@ module.exports = {
       rules: {
         "@typescript-eslint/no-var-requires": "off",
       },
+    },
+    {
+      // Prevent new files being created in the legacy folder structure.
+      // This makes sure to forbid any new files in the legacy folders
+      // we want to get rid of in favor of the new folder structure outlined
+      // in the README.md.
+      files: ["src/**/*"],
+      // Only exclude the files that already existed and haven't been moved
+      // to the new folder structure yet
+      excludedFiles: legacyFiles,
+      rules: {
+        "check-file/filename-blocklist": [
+          "error",
+          {
+            // Services should be in either src/core/services or src/area/*/services
+            "src/services/**/*": "src/core/services/**/*",
+            // Hooks (not belonging to any service) should just be in src/core/utils or src/area/*/utils
+            "src/hooks/**/*": "src/core/utils/*",
+            // Components should be in either ui/ (basic UI components) or src/area/*/components/*
+            "src/views/**/*": "src/area/*/components/*",
+          }
+        ]
+      }
     },
     {
       // Only applies to files in src. Rules should be in here that are requiring type information

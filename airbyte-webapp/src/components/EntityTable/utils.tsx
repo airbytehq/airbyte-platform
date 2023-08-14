@@ -122,6 +122,7 @@ export const getConnectionSyncStatus = (
 
     case JobStatus.pending:
     case JobStatus.running:
+    case JobStatus.incomplete:
       return ConnectionSyncStatus.PENDING;
 
     default:

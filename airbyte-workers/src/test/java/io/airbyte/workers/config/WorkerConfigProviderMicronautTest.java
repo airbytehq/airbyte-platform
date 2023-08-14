@@ -48,6 +48,7 @@ class WorkerConfigProviderMicronautTest {
   void testKubeConfigIsReadingAllTheFields() {
     assertEquals("check", checkKubeResourceConfig.getName());
     assertEquals("check annotations", checkKubeResourceConfig.getAnnotations());
+    assertEquals("check labels", checkKubeResourceConfig.getLabels());
     assertEquals("check node-selectors", checkKubeResourceConfig.getNodeSelectors());
     assertEquals("check cpu limit", checkKubeResourceConfig.getCpuLimit());
     assertEquals("check cpu request", checkKubeResourceConfig.getCpuRequest());
@@ -59,6 +60,7 @@ class WorkerConfigProviderMicronautTest {
   void testDefaultFieldBehavior() {
     assertEquals("spec", specKubeResourceConfig.getName());
     assertEquals("spec annotations", specKubeResourceConfig.getAnnotations());
+    assertEquals("spec labels", specKubeResourceConfig.getLabels());
     assertEquals("spec node selectors", specKubeResourceConfig.getNodeSelectors());
     assertNull(specKubeResourceConfig.getCpuLimit());
     assertNull(specKubeResourceConfig.getCpuRequest());

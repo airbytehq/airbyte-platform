@@ -8,7 +8,7 @@ import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.factory.DatabaseDriver;
 import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness.Type;
+import io.airbyte.test.utils.AcceptanceTestHarness.Type;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -20,9 +20,9 @@ import org.postgresql.PGProperty;
 
 /**
  * This class is used to provide information related to the test databases for running the
- * {@link AirbyteAcceptanceTestHarness} on GKE. We launch 2 postgres databases in GKE as pods which
- * act as source and destination and the tests run against them. In order to allow the test instance
- * to connect to these databases we use port forwarding Refer
+ * {@link AcceptanceTestHarness} on GKE. We launch 2 postgres databases in GKE as pods which act as
+ * source and destination and the tests run against them. In order to allow the test instance to
+ * connect to these databases we use port forwarding Refer
  * tools/bin/gke-kube-acceptance-test/acceptance_test_kube_gke.sh for more info
  */
 class GKEPostgresConfig {

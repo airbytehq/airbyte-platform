@@ -34,6 +34,7 @@ Helm chart to deploy airbyte-worker
 | global.extraLabels | object | `{}` |  |
 | global.extraSelectorLabels | object | `{}` |  |
 | global.jobs.kube.annotations | object | `{}` |  |
+| global.jobs.kube.labels | object | `{}` |  |
 | global.jobs.kube.images.busybox | string | `""` |  |
 | global.jobs.kube.images.curl | string | `""` |  |
 | global.jobs.kube.images.socat | string | `""` |  |

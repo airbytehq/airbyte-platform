@@ -77,6 +77,7 @@ public class EnvConfigs implements Configs {
   public static final String JOB_ISOLATED_KUBE_NODE_SELECTORS = "JOB_ISOLATED_KUBE_NODE_SELECTORS";
   public static final String USE_CUSTOM_NODE_SELECTOR = "USE_CUSTOM_NODE_SELECTOR";
   public static final String JOB_KUBE_ANNOTATIONS = "JOB_KUBE_ANNOTATIONS";
+  public static final String JOB_KUBE_LABELS = "JOB_KUBE_LABELS";
   private static final String DEFAULT_SIDECAR_MEMORY_REQUEST = "25Mi";
   private static final String SIDECAR_MEMORY_REQUEST = "SIDECAR_MEMORY_REQUEST";
   private static final String DEFAULT_SIDECAR_KUBE_MEMORY_LIMIT = "50Mi";
@@ -730,6 +731,11 @@ public class EnvConfigs implements Configs {
   @Override
   public Map<String, String> getDiscoverJobKubeAnnotations() {
     return splitKVPairsFromEnvString(getEnvOrDefault(DISCOVER_JOB_KUBE_ANNOTATIONS, ""));
+  }
+
+  @Override
+  public Map<String, String> getJobKubeLabels() {
+    return splitKVPairsFromEnvString(getEnvOrDefault(JOB_KUBE_LABELS, ""));
   }
 
   /**

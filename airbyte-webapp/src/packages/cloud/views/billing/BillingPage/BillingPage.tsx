@@ -7,7 +7,7 @@ import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
@@ -50,7 +50,7 @@ export const BillingPage: React.FC = () => {
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}
       pageTitle={
-        <NextPageHeader
+        <PageHeader
           leftComponent={
             <Heading as="h1" size="lg">
               <FormattedMessage id="credits.billing" />

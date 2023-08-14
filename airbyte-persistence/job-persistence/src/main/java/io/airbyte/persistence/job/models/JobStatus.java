@@ -24,7 +24,7 @@ public enum JobStatus {
   public static final Set<JobStatus> NON_TERMINAL_STATUSES = Sets.difference(Set.of(values()), TERMINAL_STATUSES);
 
   public static final Map<JobStatus, Set<JobStatus>> VALID_STATUS_CHANGES = Map.of(
-      PENDING, Set.of(RUNNING, FAILED, CANCELLED),
+      PENDING, Set.of(RUNNING, FAILED, CANCELLED, INCOMPLETE),
       RUNNING, Set.of(INCOMPLETE, SUCCEEDED, FAILED, CANCELLED),
       INCOMPLETE, Set.of(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE),
       SUCCEEDED, Set.of(),

@@ -17,7 +17,7 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -38,7 +38,7 @@ class VersioningAcceptanceTests {
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
 
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
 
   @BeforeAll
   static void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
@@ -50,7 +50,7 @@ class VersioningAcceptanceTests {
 
     workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @AfterAll

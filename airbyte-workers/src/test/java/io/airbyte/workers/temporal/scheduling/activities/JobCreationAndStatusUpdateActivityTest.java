@@ -194,9 +194,8 @@ class JobCreationAndStatusUpdateActivityTest {
       Mockito.when(mStreamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);
 
       Mockito
-          .when(mJobCreator.createResetConnectionJob(destination, standardSync, destinationVersion, DOCKER_IMAGE_NAME, DESTINATION_PROTOCOL_VERSION,
-              false, List.of(),
-              streamsToReset))
+          .when(mJobCreator.createResetConnectionJob(destination, standardSync, destinationDefinition, destinationVersion, DOCKER_IMAGE_NAME,
+              DESTINATION_PROTOCOL_VERSION, false, List.of(), streamsToReset, WORKSPACE_ID))
           .thenReturn(Optional.of(JOB_ID));
 
       final JobCreationOutput output = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));

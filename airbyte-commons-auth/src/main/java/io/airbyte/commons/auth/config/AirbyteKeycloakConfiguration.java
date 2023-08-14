@@ -35,6 +35,7 @@ public class AirbyteKeycloakConfiguration {
   String accountClientId;
   String username;
   String password;
+  Boolean resetRealm;
 
   public String getKeycloakUserInfoEndpoint() {
     final String hostWithoutTrailingSlash = host.endsWith("/") ? host.substring(0, host.length() - 1) : host;

@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
 import { ConnectionEditFormCard } from "components/connection/ConnectionEditFormCard";
-import { getInitialTransformations } from "components/connection/ConnectionForm/formConfig";
+import { getInitialTransformationsOld } from "components/connection/ConnectionForm/formConfig";
 import { TransformationField } from "components/connection/ConnectionForm/TransformationField";
 
 import { OperationCreate, OperationRead } from "core/request/AirbyteClient";
@@ -19,7 +19,7 @@ export const CustomTransformationsCard: React.FC<{
   const { mode } = useConnectionFormService();
   const initialValues = useMemo(
     () => ({
-      transformations: getInitialTransformations(operations || []),
+      transformations: getInitialTransformationsOld(operations || []),
     }),
     [operations]
   );

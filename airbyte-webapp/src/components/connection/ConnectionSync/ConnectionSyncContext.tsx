@@ -27,11 +27,7 @@ interface ConnectionSyncContext {
   lastCompletedSyncJob?: JobWithAttemptsRead;
 }
 
-export const jobStatusesIndicatingFinishedExecution: string[] = [
-  JobStatus.succeeded,
-  JobStatus.failed,
-  JobStatus.incomplete,
-];
+export const jobStatusesIndicatingFinishedExecution: string[] = [JobStatus.succeeded, JobStatus.failed];
 const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): ConnectionSyncContext => {
   const jobsPageSize = useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10);
   const {
@@ -110,7 +106,9 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
 
   const activeJob = jobs[0]?.job;
   const jobSyncRunning = useMemo(
-    () => activeJob?.status === "running" && activeJob.configType === "sync",
+    () =>
+      activeJob?.configType === "sync" &&
+      (activeJob?.status === JobStatus.running || activeJob?.status === JobStatus.incomplete),
     [activeJob?.configType, activeJob?.status]
   );
   const jobResetRunning = useMemo(

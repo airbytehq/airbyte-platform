@@ -9,7 +9,7 @@ import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { DestinationsTable } from "components/destination/DestinationsTable";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useDestinationList } from "hooks/services/useDestinationHook";
@@ -28,7 +28,7 @@ export const AllDestinationsPage: React.FC = () => {
       softScrollEdge={false}
       headTitle={<HeadTitle titles={[{ id: "admin.destinations" }]} />}
       pageTitle={
-        <NextPageHeader
+        <PageHeader
           leftComponent={
             <Heading as="h1" size="lg">
               <FormattedMessage id="sidebar.destinations" />

@@ -65,16 +65,6 @@
   "confirmResetPassword.link.invalid": "The password reset link is invalid. Please double check the reset email.",
   "confirmResetPassword.password.weak": "Your password does not meet the minimum length",
 
-  "workspaces.title": "Select a workspace",
-  "workspaces.subtitle": "Workspaces let you collaborate with team members and share sources across your team under a shared billing account.",
-  "workspaces.create": "Create workspace",
-  "workspaces.createSuccess": "Workspace created successfully",
-  "workspaces.createError": "Something went wrong while creating the workspace. Please try again.",
-  "workspaces.createNew": "Create new workspace",
-  "workspaces.createFirst": "Create your first workspace",
-  "workspaces.loading": "Loading…",
-  "workspaces.noWorkspaces": "No workspaces found",
-
   "connection.dbtCloudJobs.cardTitle": "Transformations",
   "connection.dbtCloudJobs.addJob": "Add transformation",
   "connection.dbtCloudJobs.dbtError": "There was an error communicating with dbt Cloud: {displayMessage}",

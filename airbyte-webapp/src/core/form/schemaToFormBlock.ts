@@ -80,7 +80,6 @@ export const jsonSchemaToFormBlock = (
       _type: "formCondition",
       path: path || key,
       fieldKey: key,
-      selectionPath,
       selectionKey,
       selectionConstValues,
       conditions,

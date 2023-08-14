@@ -9,7 +9,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
+import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConnectionList } from "hooks/services/useConnectionHook";
@@ -34,7 +34,7 @@ export const AllConnectionsPage: React.FC = () => {
           <MainPageWithScroll
             softScrollEdge={false}
             pageTitle={
-              <NextPageHeader
+              <PageHeader
                 leftComponent={
                   <Heading as="h1" size="lg">
                     <FormattedMessage id="sidebar.connections" />

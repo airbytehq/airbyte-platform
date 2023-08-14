@@ -55,10 +55,6 @@ export interface FormConditionItem extends FormItem {
   _type: "formCondition";
   conditions: FormGroupItem[];
   /**
-   * The full path to the const property describing which condition is selected (e.g. connectionConfiguration.a.deep.path.type)
-   */
-  selectionPath: string;
-  /**
    * The key of the const property describing which condition is selected (e.g. type)
    */
   selectionKey: string;

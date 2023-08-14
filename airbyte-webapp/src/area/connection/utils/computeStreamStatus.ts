@@ -116,8 +116,8 @@ export const computeStreamStatus = ({
     return { status: ConnectionStatusIndicatorStatus.Pending, isRunning, lastSuccessfulSync };
   }
 
-  // reset streams are pending
-  if (statuses[0].jobType === StreamStatusJobType.RESET && statuses[0].runState === StreamStatusRunState.COMPLETE) {
+  // reset streams are pending, regardless of the run state
+  if (statuses[0].jobType === StreamStatusJobType.RESET) {
     return { status: ConnectionStatusIndicatorStatus.Pending, isRunning, lastSuccessfulSync };
   }
 

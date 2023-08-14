@@ -39,8 +39,10 @@ import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/ty
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
 import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useBlocker } from "hooks/router/useBlocker";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
@@ -52,7 +54,7 @@ const worker = new SchemaWorker();
 
 export type BuilderView = "global" | "inputs" | number;
 
-export type SavingState = "loading" | "invalid" | "saved" | "error";
+export type SavingState = "loading" | "invalid" | "saved" | "error" | "readonly";
 
 interface FormStateContext {
   stateKey: number;
@@ -114,6 +116,31 @@ export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<
 );
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
+  if (restrictAdminInForeignWorkspace) {
+    return <RestrictedConnectorBuilderFormStateProvider>{children}</RestrictedConnectorBuilderFormStateProvider>;
+  }
+  return (
+    <InternalConnectorBuilderFormStateProvider readOnlyMode={false}>
+      {children}
+    </InternalConnectorBuilderFormStateProvider>
+  );
+};
+
+export const RestrictedConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
+  children,
+}) => {
+  const isForeignWorkspace = useIsForeignWorkspace();
+  return (
+    <InternalConnectorBuilderFormStateProvider readOnlyMode={isForeignWorkspace}>
+      {children}
+    </InternalConnectorBuilderFormStateProvider>
+  );
+};
+
+export const InternalConnectorBuilderFormStateProvider: React.FC<
+  React.PropsWithChildren<{ readOnlyMode: boolean }>
+> = ({ children, readOnlyMode }) => {
   const { projectId } = useParams<{
     projectId: string;
   }>();
@@ -306,12 +333,17 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     lastValidJsonManifest,
     formValuesValid,
     displayedVersion,
-    updateError
+    updateError,
+    readOnlyMode
   );
 
   const editorViewRef = useRef(storedEditorView);
   editorViewRef.current = storedEditorView;
   const triggerUpdate = useCallback(async () => {
+    if (readOnlyMode) {
+      // do not save the project if the user is not a member of the workspace to allow testing with connectors without changing them
+      return;
+    }
     if (!builderFormValues.global.connectorName) {
       // do not save the project as long as the name is not set
       return;
@@ -323,7 +355,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     }
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [builderFormValues.global.connectorName, lastValidJsonManifest, updateProject]);
+  }, [builderFormValues.global.connectorName, readOnlyMode, lastValidJsonManifest, updateProject]);
 
   useDebounce(
     () => {
@@ -465,7 +497,7 @@ function useBlockOnSavingState(savingState: SavingState) {
     [closeConfirmationModal, openConfirmationModal, savingState]
   );
 
-  useBlocker(blocker, savingState !== "saved");
+  useBlocker(blocker, savingState !== "saved" && savingState !== "readonly");
 
   useEffect(() => {
     if (savingState === "saved" && pendingTransition) {
@@ -491,7 +523,8 @@ function getSavingState(
   lastValidJsonManifest: DeclarativeComponentSchema,
   formValuesValid: boolean,
   displayedVersion: number | undefined,
-  updateError: Error | null
+  updateError: Error | null,
+  readOnlyMode: boolean
 ): SavingState {
   if (updateError) {
     return "error";
@@ -501,6 +534,9 @@ function getSavingState(
   }
   if (storedEditorView === "ui" && !formValuesValid) {
     return "invalid";
+  }
+  if (readOnlyMode) {
+    return "readonly";
   }
   const currentStateIsPersistedState =
     persistedState.manifest === lastValidJsonManifest && persistedState.name === formValues.global.connectorName;

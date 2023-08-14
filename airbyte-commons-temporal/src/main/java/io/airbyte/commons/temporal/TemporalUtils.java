@@ -8,6 +8,8 @@ import com.uber.m3.tally.RootScopeBuilder;
 import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -81,7 +83,7 @@ public class TemporalUtils {
                        @Value("${temporal.cloud.host}") final String temporalCloudHost,
                        @Value("${temporal.cloud.namespace}") final String temporalCloudNamespace,
                        @Value("${temporal.host}") final String temporalHost,
-                       @Property(name = "${temporal.retention}",
+                       @Property(name = "temporal.retention",
                                  defaultValue = "30") final Integer temporalRetentionInDays) {
     this.temporalCloudClientCert = temporalCloudClientCert;
     this.temporalCloudClientKey = temporalCloudClientKey;
@@ -117,23 +119,27 @@ public class TemporalUtils {
   // TODO consider consolidating this method's logic into createTemporalService() after the Temporal
   // Cloud migration is complete.
   // The Temporal Migration migrator is the only reason this public method exists.
-  public WorkflowServiceStubs createTemporalService(final boolean isCloud) {
-    final WorkflowServiceStubsOptions options = isCloud ? getCloudTemporalOptions() : TemporalWorkflowUtils.getAirbyteTemporalOptions(temporalHost);
+  public WorkflowServiceStubs createTemporalService(final boolean isCloud, final TemporalSdkTimeouts temporalSdkTimeouts) {
+    final WorkflowServiceStubsOptions options =
+        isCloud ? getCloudTemporalOptions(temporalSdkTimeouts) : TemporalWorkflowUtils.getAirbyteTemporalOptions(temporalHost, temporalSdkTimeouts);
     final String namespace = isCloud ? temporalCloudNamespace : DEFAULT_NAMESPACE;
 
     return createTemporalService(options, namespace);
   }
 
-  public WorkflowServiceStubs createTemporalService() {
-    return createTemporalService(temporalCloudEnabled);
+  public WorkflowServiceStubs createTemporalService(final TemporalSdkTimeouts temporalSdkTimeouts) {
+    return createTemporalService(temporalCloudEnabled, temporalSdkTimeouts);
   }
 
-  private WorkflowServiceStubsOptions getCloudTemporalOptions() {
+  private WorkflowServiceStubsOptions getCloudTemporalOptions(final TemporalSdkTimeouts temporalSdkTimeouts) {
     final InputStream clientCert = new ByteArrayInputStream(temporalCloudClientCert.getBytes(StandardCharsets.UTF_8));
     final InputStream clientKey = new ByteArrayInputStream(temporalCloudClientKey.getBytes(StandardCharsets.UTF_8));
     final WorkflowServiceStubsOptions.Builder optionBuilder;
     try {
       optionBuilder = WorkflowServiceStubsOptions.newBuilder()
+          .setRpcTimeout(temporalSdkTimeouts.getRpcTimeout())
+          .setRpcLongPollTimeout(temporalSdkTimeouts.getRpcLongPollTimeout())
+          .setRpcQueryTimeout(temporalSdkTimeouts.getRpcQueryTimeout())
           .setSslContext(SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build())
           .setTarget(temporalCloudHost);
     } catch (final SSLException e) {
@@ -298,6 +304,9 @@ public class TemporalUtils {
           0, SEND_HEARTBEAT_INTERVAL.toSeconds(), TimeUnit.SECONDS);
 
       return callable.call();
+    } catch (final RetryableException e) {
+      log.warn("The activity encounter a retryable exception, it will retry");
+      throw e;
     } catch (final ActivityCompletionException e) {
       log.warn("Job either timed out or was cancelled.");
       throw new RuntimeException(e);

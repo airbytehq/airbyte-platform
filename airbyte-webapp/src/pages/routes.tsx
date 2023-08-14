@@ -5,6 +5,7 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -30,6 +31,8 @@ const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
+
+const WorkspacesPage = React.lazy(() => import("./workspaces/WorkspacesPage"));
 
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(
@@ -86,7 +89,7 @@ const PreferencesRoutes = () => (
 
 export const AutoSelectFirstWorkspace: React.FC = () => {
   const location = useLocation();
-  const workspaces = useListWorkspaces();
+  const { workspaces } = useListWorkspaces();
   const currentWorkspace = workspaces[0];
   const [searchParams] = useSearchParams();
 
@@ -121,10 +124,14 @@ export const Routing: React.FC = () => {
       Object.values(RoutePaths).map((r) => <Route path={`${r}/*`} key={r} element={<AutoSelectFirstWorkspace />} />),
     []
   );
+
+  const isNewWorkspacesUIEnabled = useExperiment("workspaces.newWorkspacesUI", false);
+
   return (
     <Routes>
       {OldRoutes}
       <Route path={RoutePaths.AuthFlow} element={<CompleteOauthRequest />} />
+      {isNewWorkspacesUIEnabled && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
       <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<RoutingWithWorkspace />} />
       <Route path="*" element={<AutoSelectFirstWorkspace />} />
     </Routes>

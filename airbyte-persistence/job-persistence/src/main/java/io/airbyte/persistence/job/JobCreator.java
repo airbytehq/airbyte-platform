@@ -65,12 +65,14 @@ public interface JobCreator {
    */
   Optional<Long> createResetConnectionJob(DestinationConnection destination,
                                           StandardSync standardSync,
+                                          StandardDestinationDefinition destinationDefinition,
                                           ActorDefinitionVersion destinationDefinitionVersion,
                                           String destinationDockerImage,
                                           Version destinationProtocolVersion,
                                           boolean isCustom,
                                           List<StandardSyncOperation> standardSyncOperations,
-                                          List<StreamDescriptor> streamsToReset)
+                                          List<StreamDescriptor> streamsToReset,
+                                          UUID workspaceId)
       throws IOException;
 
 }

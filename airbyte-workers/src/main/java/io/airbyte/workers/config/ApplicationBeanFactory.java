@@ -13,6 +13,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
+import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
@@ -162,6 +163,11 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
     return new StateAggregatorFactory(featureFlags);
+  }
+
+  @Singleton
+  public LogClientSingleton logClientSingleton() {
+    return LogClientSingleton.getInstance();
   }
 
 }

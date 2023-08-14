@@ -41,6 +41,7 @@ import io.micronaut.core.util.StringUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -176,7 +177,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
             Math.toIntExact(jobRunConfig.getAttemptId()),
             connectionId,
             workspaceId,
-            generateMetadataLabels());
+            generateMetadataLabels(),
+            Collections.emptyMap());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";
         final var podName = podNameAndJobPrefix + jobRunConfig.getAttemptId();

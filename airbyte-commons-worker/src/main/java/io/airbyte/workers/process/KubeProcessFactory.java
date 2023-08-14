@@ -124,9 +124,9 @@ public class KubeProcessFactory implements ProcessFactory {
       final int stderrLocalPort = KubePortManagerSingleton.getInstance().take();
       LOGGER.info("{} stderrLocalPort = {}", podName, stderrLocalPort);
 
-      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, customLabels);
-
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
+
+      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, customLabels, workerConfigs.getWorkerKubeLabels());
 
       // If using isolated pool, check workerConfigs has isolated pool set. If not set, fall back to use
       // regular node pool.
@@ -180,8 +180,13 @@ public class KubeProcessFactory implements ProcessFactory {
                                               final int attemptId,
                                               final UUID connectionId,
                                               final UUID workspaceId,
-                                              final Map<String, String> customLabels) {
-    final var allLabels = new HashMap<>(customLabels);
+                                              final Map<String, String> customLabels,
+                                              final Map<String, String> envLabels) {
+    final Map<String, String> allLabels = new HashMap<>();
+    if (envLabels != null) {
+      allLabels.putAll(envLabels);
+    }
+    allLabels.putAll(customLabels);
 
     final var generalKubeLabels = Map.of(
         Metadata.JOB_LABEL_KEY, jobId,

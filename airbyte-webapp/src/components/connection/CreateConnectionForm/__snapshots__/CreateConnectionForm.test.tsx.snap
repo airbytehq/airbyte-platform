@@ -1268,9 +1268,6 @@ exports[`CreateConnectionForm should render 1`] = `
                   class="<removed-for-snapshot-test>"
                   for="radiobutton-normalization.raw"
                 >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  />
                   <input
                     class="<removed-for-snapshot-test>"
                     id="radiobutton-normalization.raw"
@@ -1297,9 +1294,6 @@ exports[`CreateConnectionForm should render 1`] = `
                   class="<removed-for-snapshot-test>"
                   for="radiobutton-normalization.basic"
                 >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  />
                   <input
                     checked=""
                     class="<removed-for-snapshot-test>"
@@ -1338,18 +1332,27 @@ exports[`CreateConnectionForm should render 1`] = `
               <div
                 class="<removed-for-snapshot-test>"
               >
-                No custom transformation
-                <button
+                <div
                   class="<removed-for-snapshot-test>"
-                  data-testid="addItemButton"
-                  type="button"
                 >
-                  <div
+                  <p
                     class="<removed-for-snapshot-test>"
+                    data-type="text"
                   >
-                    + Add transformation
-                  </div>
-                </button>
+                    No custom transformation
+                  </p>
+                  <button
+                    class="<removed-for-snapshot-test>"
+                    data-testid="addItemButton"
+                    type="button"
+                  >
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
+                      + Add transformation
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

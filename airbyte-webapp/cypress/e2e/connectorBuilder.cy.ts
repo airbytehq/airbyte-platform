@@ -138,7 +138,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     startManualSync();
 
     cy.get("[data-testid='job-history-step']").click();
-    cy.get("span").contains("2 committed records", { timeout: 60000 }).should("exist");
+    cy.get("span").contains("2 records loaded", { timeout: 60000 }).should("exist");
 
     // release new connector version
     goToConnectorBuilderProjectsPage();
@@ -148,14 +148,14 @@ describe("Connector builder", { testIsolation: false }, () => {
     sync(sourceName, destinationName);
 
     cy.get("[data-testid='job-history-step']").click();
-    cy.get("span").contains("4 committed records", { timeout: 60000 }).should("exist");
+    cy.get("span").contains("4 records loaded", { timeout: 60000 }).should("exist");
 
     goToConnectorBuilderProjectsPage();
     selectActiveVersion(connectorName, 1);
     sync(sourceName, destinationName);
 
     cy.get("[data-testid='job-history-step']").click();
-    cy.get('span:contains("2 committed records")', { timeout: 60000 }).should("have.length", 2);
+    cy.get('span:contains("2 records loaded")', { timeout: 60000 }).should("have.length", 2);
 
     goToConnectorBuilderProjectsPage();
     editProjectBuilder(connectorName);

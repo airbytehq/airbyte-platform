@@ -541,7 +541,7 @@ public class KubePodProcess implements KubePod {
       final List<Container> containers = usesStdin ? List.of(main, remoteStdin, relayStdout, relayStderr, callHeartbeatServer)
           : List.of(main, relayStdout, relayStderr, callHeartbeatServer);
 
-      PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
+      final PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
           .withApiVersion("v1")
           .withNewMetadata()
           .withName(podName)
@@ -612,8 +612,9 @@ public class KubePodProcess implements KubePod {
       // container got stuck somehow.
       fabricClient.resource(podDefinition).waitUntilCondition(p -> {
         final boolean isReady = Objects.nonNull(p) && Readiness.getInstance().isReady(p);
-        return isReady || KubePodResourceHelper.isTerminal(p);
-      }, 20, TimeUnit.MINUTES);
+        final boolean isTerminal = Objects.nonNull(p) && KubePodResourceHelper.isTerminal(p);
+        return isReady || isTerminal;
+      }, 10, TimeUnit.MINUTES);
       MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS,
           System.currentTimeMillis() - start);
 
@@ -630,7 +631,7 @@ public class KubePodProcess implements KubePod {
         LOGGER.info("Using null stdin output stream...");
         this.stdin = NullOutputStream.NULL_OUTPUT_STREAM;
       }
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // We need to make sure the ports are offered back
       cleanup();
       throw e; // Throw the exception again to inform the caller

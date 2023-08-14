@@ -8,7 +8,7 @@ import { Rnd } from "react-rnd";
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
 import { CodeEditor } from "components/ui/CodeEditor";
-import { ComboBox, Option } from "components/ui/ComboBox";
+import { ComboBox, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
@@ -73,6 +73,7 @@ export type BuilderFieldProps = BaseFieldProps &
         options: string[] | Array<{ label: string; value: string }>;
       }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
+    | { type: "multicombobox"; onChange?: (newValue: string[]) => void; options: Option[] }
   );
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
@@ -311,6 +312,17 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             field.onBlur();
           }}
           filterOptions={false}
+        />
+      )}
+      {props.type === "multicombobox" && (
+        <MultiComboBox
+          name={path}
+          options={props.options}
+          value={field.value as string[]}
+          onChange={setValue}
+          error={hasError}
+          data-testid={path}
+          fieldInputProps={field}
         />
       )}
       {hasError && (

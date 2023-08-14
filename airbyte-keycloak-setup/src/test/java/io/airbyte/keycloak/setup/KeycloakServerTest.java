@@ -83,7 +83,7 @@ class KeycloakServerTest {
 
   @Test
   void testCreateAirbyteRealmWhenRealmAlreadyExists() {
-    RealmRepresentation existingRealm = new RealmRepresentation();
+    final RealmRepresentation existingRealm = new RealmRepresentation();
     existingRealm.setRealm(REALM_NAME);
 
     when(realmsResource.findAll()).thenReturn(Collections.singletonList(existingRealm));
@@ -103,13 +103,30 @@ class KeycloakServerTest {
   void testBuildRealmRepresentation() {
     keycloakServer.createAirbyteRealm();
 
-    ArgumentCaptor<RealmRepresentation> realmRepresentationCaptor = ArgumentCaptor.forClass(RealmRepresentation.class);
+    final ArgumentCaptor<RealmRepresentation> realmRepresentationCaptor = ArgumentCaptor.forClass(RealmRepresentation.class);
     verify(realmsResource).create(realmRepresentationCaptor.capture());
 
-    RealmRepresentation createdRealm = realmRepresentationCaptor.getValue();
+    final RealmRepresentation createdRealm = realmRepresentationCaptor.getValue();
     assertEquals(REALM_NAME, createdRealm.getRealm());
     assertTrue(createdRealm.isEnabled());
     assertEquals("airbyte-keycloak-theme", createdRealm.getLoginTheme());
+  }
+
+  @Test
+  void testCreateAirbyteRealmWhenRealmAlreadyExistsAndResetUserIsTrue() {
+    final RealmRepresentation existingRealm = new RealmRepresentation();
+    existingRealm.setRealm(REALM_NAME);
+
+    when(realmsResource.findAll()).thenReturn(Collections.singletonList(existingRealm));
+    when(keycloakConfiguration.getAirbyteRealm()).thenReturn(REALM_NAME);
+    when(keycloakConfiguration.getResetRealm()).thenReturn(true);
+
+    keycloakServer.createAirbyteRealm();
+
+    verify(realmsResource, times(1)).findAll();
+    verify(realmsResource, times(0)).create(any());
+    verify(userCreator, times(1)).resetUser(any());
+    verify(identityProvidersCreator, times(1)).resetIdentityProviders(any());
   }
 
 }

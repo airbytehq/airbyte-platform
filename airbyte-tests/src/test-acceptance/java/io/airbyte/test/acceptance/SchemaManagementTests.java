@@ -4,9 +4,9 @@
 
 package io.airbyte.test.acceptance;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -20,7 +20,6 @@ import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.ConnectionRead;
-import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.ConnectionUpdate;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
@@ -32,15 +31,15 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceCreate;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
+import io.airbyte.test.utils.AcceptanceTestHarness;
+import io.airbyte.test.utils.Asserts;
+import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,10 +74,9 @@ class SchemaManagementTests {
   public static final int MAX_TRIES = 3;
   public static final String A_NEW_COLUMN = "a_new_column";
   public static final String FIELD_NAME = "name";
-  private static AirbyteAcceptanceTestHarness testHarness;
+  private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
-  private static UUID workspaceId;
   private static ConnectionRead createdConnection;
   private static ConnectionRead createdConnectionWithSameSource;
 
@@ -87,8 +85,7 @@ class SchemaManagementTests {
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-    final UUID operationId = testHarness.createOperation().getOperationId();
-    final String name = "test-connection-" + UUID.randomUUID();
+    final UUID normalizationOpId = testHarness.createNormalizationOperation().getOperationId();
     // Use incremental append-dedup with a primary key column, so we can simulate a breaking change by
     // removing that column.
     final SyncMode syncMode = SyncMode.INCREMENTAL;
@@ -97,24 +94,24 @@ class SchemaManagementTests {
         .primaryKey(List.of(List.of("id")))
         .cursorField(List.of("id")));
     createdConnection =
-        testHarness.createConnection(name,
+        testHarness.createConnection(new TestConnectionCreate.Builder(
             sourceId,
             destinationId,
-            List.of(operationId),
             catalog,
-            discoverResult.getCatalogId(),
-            ConnectionScheduleType.MANUAL,
-            null);
+            discoverResult.getCatalogId())
+                .setNormalizationOperationId(normalizationOpId)
+                .build());
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
-    createdConnectionWithSameSource = testHarness.createConnection("test-connection-with-shared-source" + UUID.randomUUID(),
+    createdConnectionWithSameSource = testHarness.createConnection(new TestConnectionCreate.Builder(
         createdConnection.getSourceId(),
         createdConnection.getDestinationId(),
-        createdConnection.getOperationIds(),
         createdConnection.getSyncCatalog(),
-        createdConnection.getSourceCatalogId(),
-        createdConnection.getScheduleType(),
-        createdConnection.getScheduleData());
+        createdConnection.getSourceCatalogId())
+            .setAdditionalOperationIds(createdConnection.getOperationIds())
+            .setSchedule(createdConnection.getScheduleType(), createdConnection.getScheduleData())
+            .setNameSuffix("-same-source")
+            .build());
   }
 
   @BeforeAll
@@ -127,9 +124,7 @@ class SchemaManagementTests {
         .setPort(8001)
         .setBasePath("/api");
     if (isGke) {
-      underlyingApiClient.setRequestInterceptor(builder -> {
-        builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER);
-      });
+      underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
     apiClient = new AirbyteApiClient(underlyingApiClient);
 
@@ -139,18 +134,16 @@ class SchemaManagementTests {
         .setPort(8001)
         .setBasePath("/api");
     if (isGke) {
-      underlyingWebBackendApiClient.setRequestInterceptor(builder -> {
-        builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER);
-      });
+      underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
     }
     webBackendApi = new WebBackendApi(underlyingWebBackendApiClient);
 
-    workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
+    UUID workspaceId = System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID) == null ? apiClient.getWorkspaceApi()
         .createWorkspace(new WorkspaceCreate().email("acceptance-tests@airbyte.io").name("Airbyte Acceptance Tests" + UUID.randomUUID()))
         .getWorkspaceId()
         : UUID.fromString(System.getenv().get(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID));
 
-    testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
+    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
   }
 
   @BeforeEach
@@ -216,9 +209,10 @@ class SchemaManagementTests {
     // This connection has auto propagation enabled, so we expect it to be updated.
     final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
     final AirbyteCatalog catalogWithPropagatedChanges = getExpectedCatalogWithExtraColumnAndTable();
-    Assertions.assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
-    Assertions.assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
-    testHarness.assertNormalizedDestinationContains(getExpectedRecordsForIdAndNameWithUpdatedCatalog());
+    assertEquals(catalogWithPropagatedChanges, currentConnection.getSyncCatalog());
+    assertEquals(ConnectionStatus.ACTIVE, currentConnection.getStatus());
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), currentConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndNameWithUpdatedCatalog());
 
     // This connection does not have auto propagation, so it should have stayed the same.
     final ConnectionRead currentConnectionWithSameSource = testHarness.getConnection(createdConnectionWithSameSource.getConnectionId());
@@ -226,7 +220,7 @@ class SchemaManagementTests {
     assertEquals(createdConnectionWithSameSource.getSyncCatalog(), currentConnectionWithSameSource.getSyncCatalog());
   }
 
-  private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() throws SQLException {
+  private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() {
     final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
     return List.of(
         new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, (String) null),

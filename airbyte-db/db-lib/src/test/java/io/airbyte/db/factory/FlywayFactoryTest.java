@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.test.utils.DatabaseConnectionHelper;
+import io.airbyte.test.utils.Databases;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class FlywayFactoryTest extends CommonFactoryTest {
     final String baselineDescription = "A test baseline description";
     final boolean baselineOnMigrate = true;
     final String migrationFileLocation = "classpath:io/airbyte/db/instance/toys/migrations";
-    final DataSource dataSource = DatabaseConnectionHelper.createDataSource(container);
+    final DataSource dataSource = Databases.createDataSource(container);
     final Flyway flyway =
         FlywayFactory.create(dataSource, INSTALLED_BY, DB_IDENTIFIER, baselineVersion, baselineDescription, baselineOnMigrate, migrationFileLocation);
     assertNotNull(flyway);
@@ -43,7 +43,7 @@ class FlywayFactoryTest extends CommonFactoryTest {
   @Test
   void testCreatingAFlywayInstanceWithDefaults() {
     final String migrationFileLocation = "classpath:io/airbyte/db/instance/toys/migrations";
-    final DataSource dataSource = DatabaseConnectionHelper.createDataSource(container);
+    final DataSource dataSource = Databases.createDataSource(container);
     final Flyway flyway = FlywayFactory.create(dataSource, INSTALLED_BY, DB_IDENTIFIER, migrationFileLocation);
     assertNotNull(flyway);
     assertTrue(flyway.getConfiguration().isBaselineOnMigrate());

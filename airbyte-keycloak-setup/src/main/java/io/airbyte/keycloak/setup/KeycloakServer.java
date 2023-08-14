@@ -47,6 +47,14 @@ public class KeycloakServer {
   public void createAirbyteRealm() {
     if (doesRealmExist()) {
       log.info("Realm {} already exists.", keycloakConfiguration.getAirbyteRealm());
+
+      if (keycloakConfiguration.getResetRealm()) {
+        final RealmResource airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.getAirbyteRealm());
+        userCreator.resetUser(airbyteRealm);
+        identityProvidersCreator.resetIdentityProviders(airbyteRealm);
+        log.info("Reset user and identity providers for realm {}.", keycloakConfiguration.getAirbyteRealm());
+      }
+
       return;
     }
     createRealm();
@@ -61,12 +69,12 @@ public class KeycloakServer {
 
   private void createRealm() {
     log.info("Creating realm {}...", keycloakConfiguration.getAirbyteRealm());
-    RealmRepresentation airbyteRealmRepresentation = buildRealmRepresentation();
+    final RealmRepresentation airbyteRealmRepresentation = buildRealmRepresentation();
     keycloakAdminClient.realms().create(airbyteRealmRepresentation);
   }
 
   private RealmRepresentation buildRealmRepresentation() {
-    RealmRepresentation airbyteRealmRepresentation = new RealmRepresentation();
+    final RealmRepresentation airbyteRealmRepresentation = new RealmRepresentation();
     airbyteRealmRepresentation.setRealm(keycloakConfiguration.getAirbyteRealm());
     airbyteRealmRepresentation.setEnabled(true);
     airbyteRealmRepresentation.setLoginTheme("airbyte-keycloak-theme");

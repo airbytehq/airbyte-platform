@@ -18,7 +18,7 @@ import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFormPreview";
 import styles from "./ConnectionFormFields.module.scss";
 import { DestinationStreamPrefixName } from "./DestinationStreamPrefixName";
-import { NamespaceDefinitionFieldNext } from "./NamespaceDefinitionFieldNext";
+import { NamespaceDefinitionField } from "./NamespaceDefinitionField";
 import { NonBreakingChangesPreferenceField } from "./NonBreakingChangesPreferenceField";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
 import { ScheduleField } from "./ScheduleField";
@@ -63,7 +63,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
         >
           <FlexContainer direction="column" gap="lg">
             <ScheduleField />
-            <NamespaceDefinitionFieldNext />
+            <NamespaceDefinitionField />
             <DestinationStreamPrefixName />
             {allowAutoDetectSchema && (
               <Field name="nonBreakingChangesPreference" component={NonBreakingChangesPreferenceField} />

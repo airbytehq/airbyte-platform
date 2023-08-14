@@ -9,7 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -84,7 +84,7 @@ export const CreateSourcePage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
-      <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
+      <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
 
       <ConnectorDocumentationWrapper>
         <FormPageContent>

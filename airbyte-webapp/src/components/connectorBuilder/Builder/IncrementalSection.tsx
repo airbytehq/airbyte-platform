@@ -1,6 +1,7 @@
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
 import { Message } from "components/ui/Message";
@@ -45,6 +46,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         path: streamFieldPath("incrementalSync"),
         defaultValue: {
           datetime_format: "",
+          cursor_datetime_formats: [],
           start_datetime: { type: "user_input" },
           end_datetime: { type: "now" },
           step: "",
@@ -71,7 +73,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       }}
     >
       <CursorField streamFieldPath={streamFieldPath} />
-      <DatetimeFormatField streamFieldPath={streamFieldPath} />
+      <CursorDatetimeFormatField streamFieldPath={streamFieldPath} />
       <BuilderField
         type="enum"
         options={[
@@ -110,15 +112,14 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           text="The data must be returned in descending order for the cursor field across pages in order for incremental sync to work properly with no time filtering. If the data is returned in ascending order, you should not configure incremental syncs for this API."
         />
       )}
-      <BuilderOneOf
+      <BuilderOneOf<BuilderIncrementalSync["start_datetime"]>
         path={streamFieldPath("incrementalSync.start_datetime")}
         label={filterMode === "no_filter" ? "Earliest datetime cutoff" : undefined}
         manifestPath="DatetimeBasedCursor.properties.start_datetime"
         options={[
           {
             label: "User input",
-            typeValue: "user_input",
-            default: {},
+            default: { type: "user_input" },
             children: (
               <BuilderInputPlaceholder
                 label="Start date user input"
@@ -132,8 +133,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           },
           {
             label: "Custom",
-            typeValue: "custom",
             default: {
+              type: "custom",
               value: "",
               format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
             },
@@ -159,14 +160,13 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         ]}
       />
       {filterMode === "range" && (
-        <BuilderOneOf
+        <BuilderOneOf<BuilderIncrementalSync["end_datetime"]>
           path={streamFieldPath("incrementalSync.end_datetime")}
           manifestPath="DatetimeBasedCursor.properties.end_datetime"
           options={[
             {
               label: "User input",
-              typeValue: "user_input",
-              default: {},
+              default: { type: "user_input" },
               children: (
                 <BuilderInputPlaceholder
                   label="End date user input"
@@ -176,13 +176,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
             },
             {
               label: "Now",
-              typeValue: "now",
-              default: {},
+              default: { type: "now" },
             },
             {
               label: "Custom",
-              typeValue: "custom",
               default: {
+                type: "custom",
                 value: "",
                 format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
               },
@@ -245,6 +244,20 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         </ToggleGroupField>
       )}
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
+        <BuilderFieldWithInputs
+          type="combobox"
+          path={streamFieldPath("incrementalSync.datetime_format")}
+          manifestPath="DatetimeBasedCursor.properties.datetime_format"
+          options={DATETIME_FORMAT_OPTIONS}
+          optional
+          tooltip={
+            <>
+              The datetime format used to format the datetime values that are sent in outgoing requests to the API. If
+              not provided, the first format in Cursor Datetime Formats will be used.
+              <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
+            </>
+          }
+        />
         {filterMode !== "no_filter" && (
           <ToggleGroupField<BuilderIncrementalSync["slicer"]>
             label="Split Up Interval"
@@ -281,8 +294,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
   );
 };
 
-const DATETIME_FORMAT_PATH = "incrementalSync.datetime_format";
 const CURSOR_PATH = "incrementalSync.cursor_field";
+const CURSOR_DATETIME_FORMATS_PATH = "incrementalSync.cursor_datetime_formats";
 
 const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const {
@@ -301,9 +314,10 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
   );
 };
 
-const DatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+const CursorDatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+  const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
-  const datetimeFormat = useBuilderWatch(streamFieldPath(DATETIME_FORMAT_PATH));
+  const cursorDatetimeFormats = useBuilderWatch(streamFieldPath(CURSOR_DATETIME_FORMATS_PATH));
   const cursorField = useBuilderWatch(streamFieldPath(CURSOR_PATH));
   const {
     streamRead: { data },
@@ -311,7 +325,7 @@ const DatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathF
   const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
   return (
     <>
-      {datetimeFormat !== detectedFormat && cursorField && detectedFormat && (
+      {!cursorDatetimeFormats.includes(detectedFormat) && cursorField && detectedFormat && (
         <Message
           type="info"
           text={
@@ -328,15 +342,30 @@ const DatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathF
           }
           actionBtnText={<FormattedMessage id="form.apply" />}
           onAction={() => {
-            setValue(streamFieldPath(DATETIME_FORMAT_PATH), detectedFormat, { shouldValidate: true });
+            setValue(
+              streamFieldPath(CURSOR_DATETIME_FORMATS_PATH),
+              [detectedFormat, ...(cursorDatetimeFormats ? cursorDatetimeFormats : [])],
+              {
+                shouldValidate: true,
+              }
+            );
           }}
         />
       )}
-      <BuilderFieldWithInputs
-        type="combobox"
-        path={streamFieldPath(DATETIME_FORMAT_PATH)}
+      <BuilderField
+        type="multicombobox"
+        path={streamFieldPath(CURSOR_DATETIME_FORMATS_PATH)}
+        // explicitly using a different manifest path here in order to pull in the examples from the manifest
         manifestPath="DatetimeBasedCursor.properties.datetime_format"
         options={DATETIME_FORMAT_OPTIONS}
+        label="Cursor Datetime Formats"
+        tooltip={
+          <>
+            The possible formats for the cursor field, in order of preference. The first format that matches the cursor
+            field value will be used to parse it.
+            <ReactMarkdown>{formatMessage({ id: "connectorBuilder.incremental.formatPlaceholders" })}</ReactMarkdown>
+          </>
+        }
       />
     </>
   );

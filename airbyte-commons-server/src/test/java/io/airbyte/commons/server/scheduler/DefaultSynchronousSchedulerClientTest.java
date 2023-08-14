@@ -137,7 +137,7 @@ class DefaultSynchronousSchedulerClientTest {
 
     @SuppressWarnings(UNCHECKED)
     @Test
-    void testExecuteJobSuccess() throws IOException {
+    void testExecuteJobSuccess() {
       final UUID sourceDefinitionId = UUID.randomUUID();
       final UUID discoveredCatalogId = UUID.randomUUID();
       final Supplier<TemporalResponse<ConnectorJobOutput>> function = mock(Supplier.class);

@@ -128,7 +128,7 @@ object AirbyteCatalogHelper {
           }
           val cron: Cron = parser.parse(connectionSchedule.cronExpression)
           cron.validate()
-          val cronStrings: List<String> = cron.asString().split("\\s+")
+          val cronStrings: List<String> = cron.asString().split(" ")
           // Ensure first value is not `*`, could be seconds or minutes value
           Integer.valueOf(cronStrings[0])
           if (cronStrings.size == MAX_LENGTH_OF_CRON) {
@@ -136,6 +136,8 @@ object AirbyteCatalogHelper {
             Integer.valueOf(cronStrings[1])
           }
         } catch (e: IllegalArgumentException) {
+          log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
+          log.debug("IllegalArgumentException: $e")
           throw ConnectionConfigurationProblem.invalidCronExpression(connectionSchedule.cronExpression)
         }
       }

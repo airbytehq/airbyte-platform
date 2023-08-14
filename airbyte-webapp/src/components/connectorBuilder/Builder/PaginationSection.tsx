@@ -12,7 +12,15 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { InjectIntoFields } from "./InjectIntoFields";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { CURSOR_PAGINATION, OFFSET_INCREMENT, PAGE_INCREMENT, StreamPathFn, useBuilderWatch } from "../types";
+import {
+  BuilderCursorPagination,
+  BuilderPaginator,
+  CURSOR_PAGINATION,
+  OFFSET_INCREMENT,
+  PAGE_INCREMENT,
+  StreamPathFn,
+  useBuilderWatch,
+} from "../types";
 
 interface PaginationSectionProps {
   streamFieldPath: StreamPathFn;
@@ -55,7 +63,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         copyToLabel: formatMessage({ id: "connectorBuilder.copyToPaginationTitle" }),
       }}
     >
-      <BuilderOneOf
+      <BuilderOneOf<BuilderPaginator["strategy"]>
         path={streamFieldPath("paginator.strategy")}
         label="Mode"
         tooltip="Pagination method to use for requests sent to the API"
@@ -63,8 +71,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         options={[
           {
             label: "Offset Increment",
-            typeValue: OFFSET_INCREMENT,
             default: {
+              type: OFFSET_INCREMENT,
               page_size: "",
             },
             children: (
@@ -82,10 +90,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           },
           {
             label: "Page Increment",
-            typeValue: PAGE_INCREMENT,
             default: {
-              page_size: "",
-              start_from_page: "",
+              type: PAGE_INCREMENT,
+              page_size: undefined,
+              start_from_page: undefined,
             },
             children: (
               <>
@@ -108,9 +116,9 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           },
           {
             label: "Cursor Pagination",
-            typeValue: CURSOR_PAGINATION,
             default: {
-              page_size: "",
+              type: CURSOR_PAGINATION,
+              page_size: undefined,
               cursor: {
                 type: "response",
                 path: [],
@@ -118,7 +126,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
             },
             children: (
               <>
-                <BuilderOneOf
+                <BuilderOneOf<BuilderCursorPagination["cursor"]>
                   path={streamFieldPath("paginator.strategy.cursor")}
                   label="Next page cursor"
                   tooltip={
@@ -146,8 +154,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   options={[
                     {
                       label: "Response",
-                      typeValue: "response",
                       default: {
+                        type: "response",
                         path: [],
                       },
                       children: (
@@ -161,8 +169,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     },
                     {
                       label: "Header",
-                      typeValue: "headers",
                       default: {
+                        type: "headers",
                         path: [],
                       },
                       children: (
@@ -176,8 +184,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     },
                     {
                       label: "Custom",
-                      typeValue: "custom",
                       default: {
+                        type: "custom",
                         cursor_value: "",
                         stop_condition: "",
                       },

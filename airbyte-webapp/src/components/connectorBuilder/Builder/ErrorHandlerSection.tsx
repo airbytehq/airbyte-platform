@@ -27,11 +27,13 @@ type ErrorHandlerSectionProps =
 export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) => {
   const { formatMessage } = useIntl();
 
-  const getBackoffOptions = (buildPath: (path: string) => string): OneOfOption[] => [
+  const getBackoffOptions = (
+    buildPath: (path: string) => string
+  ): Array<OneOfOption<DefaultErrorHandlerBackoffStrategiesItem>> => [
     {
       label: "Constant",
-      typeValue: "ConstantBackoffStrategy",
       default: {
+        type: "ConstantBackoffStrategy",
         backoff_time_in_seconds: 5,
       },
       children: (
@@ -44,8 +46,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
     },
     {
       label: "Exponential",
-      typeValue: "ExponentialBackoffStrategy",
       default: {
+        type: "ExponentialBackoffStrategy",
         factor: "",
       },
       children: (
@@ -59,8 +61,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
     },
     {
       label: "Wait time from header",
-      typeValue: "WaitTimeFromHeader",
       default: {
+        type: "WaitTimeFromHeader",
         header: "",
         regex: "",
       },
@@ -82,8 +84,8 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
     },
     {
       label: "Wait until time from header",
-      typeValue: "WaitUntilTimeFromHeader",
       default: {
+        type: "WaitUntilTimeFromHeader",
         header: "",
         regex: "",
         min_wait: "",
@@ -135,7 +137,7 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
                 backoff_time_in_seconds: 5,
               }}
             >
-              <BuilderOneOf
+              <BuilderOneOf<DefaultErrorHandlerBackoffStrategiesItem>
                 path={buildPath("backoff_strategy")}
                 label="Strategy"
                 tooltip="The strategy to use to decide when to retry a request"

@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 
 import { ChangesStatusIcon } from "components/EntityTable/components/ChangesStatusIcon";
 import { FlexContainer } from "components/ui/Flex";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs } from "components/ui/Tabs";
 import { LinkTab } from "components/ui/Tabs/LinkTab";
 
@@ -72,7 +72,7 @@ export const ConnectionPageHeader = () => {
   }, [basePath, connection.schemaChange, schemaRefreshing]);
 
   return (
-    <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+    <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
       <ConnectionTitleBlock />
       <Tabs>
         {tabsData.map((tabItem) => (
@@ -86,6 +86,6 @@ export const ConnectionPageHeader = () => {
           />
         ))}
       </Tabs>
-    </NextPageHeaderWithNavigation>
+    </PageHeaderWithNavigation>
   );
 };

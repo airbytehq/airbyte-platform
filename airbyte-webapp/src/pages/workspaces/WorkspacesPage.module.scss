@@ -1,0 +1,18 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.subtitle {
+  margin: variables.$spacing-xl 0 variables.$spacing-2xl;
+}
+
+.brandingHeader {
+  background-color: colors.$white;
+  @include mixins.shadow;
+}
+
+.content {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}

@@ -66,13 +66,13 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
   const priceList = getByTestId(container, "connectionConfiguration.priceList");
   let index = initialIndex;
 
-  return async (name: string, price: string) => {
+  return async (name: string, price: string, originType: "city" | "country", origin: string) => {
     const addButton = getByTestId(priceList, "addItemButton");
     await waitFor(() => userEvent.click(addButton));
 
     const arrayOfObjectsEditModal = getByTestId(document.body, "arrayOfObjects-editModal");
     const getPriceListInput = (index: number, key: string) =>
-      arrayOfObjectsEditModal.querySelector(`input[name='connectionConfiguration.priceList\\[${index}\\].${key}']`);
+      arrayOfObjectsEditModal.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
 
     // Type items into input
     const nameInput = getPriceListInput(index, "name");
@@ -80,6 +80,16 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
 
     const priceInput = getPriceListInput(index, "price");
     userEvent.type(priceInput!, price);
+
+    const selectContainer = getByTestId(arrayOfObjectsEditModal, "connectionConfiguration.priceList.origin");
+    await selectEvent.select(selectContainer, originType, {
+      container: arrayOfObjectsEditModal,
+    });
+
+    const originInput = arrayOfObjectsEditModal.querySelector(
+      `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
+    );
+    userEvent.type(originInput!, origin);
 
     const doneButton = getByTestId(arrayOfObjectsEditModal, "done-button");
     await waitFor(() => userEvent.click(doneButton));
@@ -192,6 +202,37 @@ const schema: AirbyteJSONSchema = {
           price: {
             type: "integer",
             title: "Price ($)",
+          },
+          origin: {
+            type: "object",
+            oneOf: [
+              {
+                title: "city",
+                properties: {
+                  type: {
+                    type: "string",
+                    const: "city",
+                    default: "city",
+                  },
+                  city: {
+                    type: "string",
+                  },
+                },
+              },
+              {
+                title: "country",
+                properties: {
+                  type: {
+                    type: "string",
+                    const: "country",
+                    default: "country",
+                  },
+                  country: {
+                    type: "string",
+                  },
+                },
+              },
+            ],
           },
         },
       },
@@ -363,7 +404,7 @@ describe("Connector form", () => {
       message: "test-message",
       password: "test-password",
       port: 123,
-      priceList: [{ name: "test-price-list-name", price: 1 }],
+      priceList: [{ name: "test-price-list-name", price: 1, origin: { type: "city", city: "test-city" } }],
       workTime: ["day"],
     };
 
@@ -821,16 +862,16 @@ describe("Connector form", () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, priceList: undefined } });
 
       const addPriceListItem = useAddPriceListItem(container);
-      await addPriceListItem("test-1", "1");
-      await addPriceListItem("test-2", "2");
+      await addPriceListItem("test-1", "1", "city", "test-city-1");
+      await addPriceListItem("test-2", "2", "country", "test-country-1");
 
       await submitForm(container);
 
       expect(result?.connectionConfiguration).toEqual({
         ...filledForm,
         priceList: [
-          { name: "test-1", price: 1 },
-          { name: "test-2", price: 2 },
+          { name: "test-1", price: 1, origin: { type: "city", city: "test-city-1" } },
+          { name: "test-2", price: 2, origin: { type: "country", country: "test-country-1" } },
         ],
       });
     });
@@ -838,15 +879,15 @@ describe("Connector form", () => {
     it("should extend values in array of objects field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm } });
       const addPriceListItem = useAddPriceListItem(container, 1);
-      await addPriceListItem("test-2", "2");
+      await addPriceListItem("test-2", "2", "country", "test-country-2");
 
       await submitForm(container);
 
       expect(result?.connectionConfiguration).toEqual({
         ...filledForm,
         priceList: [
-          { name: "test-price-list-name", price: 1 },
-          { name: "test-2", price: 2 },
+          { name: "test-price-list-name", price: 1, origin: { type: "city", city: "test-city" } },
+          { name: "test-2", price: 2, origin: { type: "country", country: "test-country-2" } },
         ],
       });
     });

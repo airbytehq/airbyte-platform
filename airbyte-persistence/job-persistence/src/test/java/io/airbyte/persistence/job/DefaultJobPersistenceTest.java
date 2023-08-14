@@ -56,7 +56,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
-import io.airbyte.test.utils.DatabaseConnectionHelper;
+import io.airbyte.test.utils.Databases;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -196,7 +196,7 @@ class DefaultJobPersistenceTest {
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setup() throws Exception {
-    dataSource = DatabaseConnectionHelper.createDataSource(container);
+    dataSource = Databases.createDataSource(container);
     dslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     final TestDatabaseProviders databaseProviders = new TestDatabaseProviders(dataSource, dslContext);
     jobDatabase = databaseProviders.createNewJobsDatabase();

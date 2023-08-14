@@ -5,7 +5,6 @@ import {
   ConnectionStatusIndicatorStatus,
   ConnectionStatusIndicator,
 } from "components/connection/ConnectionStatusIndicator";
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -29,15 +28,11 @@ const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string
 
 export const ConnectionStatusOverview: React.FC = () => {
   const { connection } = useConnectionEditService();
-  const { jobSyncRunning, jobResetRunning } = useConnectionSyncContext();
-
-  const isLoading = jobSyncRunning || jobResetRunning;
-
-  const { status, lastSyncJobStatus, nextSync } = useConnectionStatus(connection.connectionId);
+  const { isRunning, status, lastSyncJobStatus, nextSync } = useConnectionStatus(connection.connectionId);
 
   return (
     <FlexContainer alignItems="center" gap="sm">
-      <ConnectionStatusIndicator status={status} withBox loading={isLoading} />
+      <ConnectionStatusIndicator status={status} withBox loading={isRunning} />
       <Box ml="md">
         <span data-testid="connection-status-text">
           <FormattedMessage id={MESSAGE_BY_STATUS[status]} />

@@ -8,7 +8,7 @@ import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigatio
 import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
 import { StepsTypes } from "components/ConnectorBlocks";
 import LoadingPage from "components/LoadingPage";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { useSourceDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -44,14 +44,14 @@ export const SourceItemPage: React.FC = () => {
     <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
-        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+        <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
           <ConnectorTitleBlock
             connector={source}
             connectorDefinition={sourceDefinition}
             actorDefinitionVersion={actorDefinitionVersion}
           />
           <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
-        </NextPageHeaderWithNavigation>
+        </PageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
             <Outlet />

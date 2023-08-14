@@ -59,7 +59,7 @@ class KeycloakSetupTest {
 
   @Test
   void testRunThrowsException() {
-    String keycloakUrl = "http://localhost:8180/auth";
+    final String keycloakUrl = "http://localhost:8180/auth";
     when(keycloakServer.getKeycloakServerUrl()).thenReturn(keycloakUrl);
     when(httpClient.toBlocking().exchange(any(HttpRequest.class), eq(String.class)))
         .thenThrow(new HttpClientResponseException("Error", HttpResponse.serverError()));

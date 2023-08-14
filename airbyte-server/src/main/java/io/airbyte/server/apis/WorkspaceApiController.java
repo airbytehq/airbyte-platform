@@ -87,6 +87,14 @@ public class WorkspaceApiController implements WorkspaceApi {
     return ApiHelper.execute(workspacesHandler::listWorkspaces);
   }
 
+  @Post("/list_all_paginated")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceReadList listAllWorkspacesPaginated(@Body final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody) {
+    return ApiHelper.execute(() -> workspacesHandler.listAllWorkspacesPaginated(listResourcesForWorkspacesRequestBody));
+  }
+
   @Post(uri = "/list_paginated")
   @Secured({READER})
   @SecuredWorkspace

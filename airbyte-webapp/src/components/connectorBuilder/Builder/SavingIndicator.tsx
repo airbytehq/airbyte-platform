@@ -29,6 +29,20 @@ function getMessage(savingState: SavingState, displayedVersion: number | undefin
       </Tooltip>
     );
   }
+  if (savingState === "readonly") {
+    return (
+      <Tooltip
+        placement="bottom-start"
+        control={
+          <span className={styles.invalid}>
+            <FormattedMessage id="connectorBuilder.loadingState.readonly" />
+          </span>
+        }
+      >
+        <FormattedMessage id="connectorBuilder.loadingState.readonly.tooltip" />
+      </Tooltip>
+    );
+  }
   if (savingState === "loading") {
     return (
       <FlexContainer gap="sm" alignItems="center">

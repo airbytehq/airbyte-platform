@@ -188,7 +188,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
           </Text>
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
-              id="sources.countEmittedRecords"
+              id="sources.countRecordsExtracted"
               values={{ count: jobAttempt.attempt.totalStats?.recordsEmitted || 0 }}
             />
           </Text>
@@ -197,7 +197,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
           </Text>
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
-              id="sources.countCommittedRecords"
+              id="sources.countRecordsLoaded"
               values={{ count: jobAttempt.attempt.totalStats?.recordsCommitted || 0 }}
             />
           </Text>

@@ -12,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * Contains the state of the currently running workflow execution in the connection manager
@@ -19,6 +20,7 @@ import lombok.Setter;
  */
 @Getter
 @NoArgsConstructor
+@ToString
 public class WorkflowState {
 
   public WorkflowState(final UUID id, final WorkflowStateChangedListener stateChangedListener) {

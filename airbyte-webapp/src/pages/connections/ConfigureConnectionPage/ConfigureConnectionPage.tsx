@@ -4,7 +4,7 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll/MainPageWithScroll";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm";
-import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
+import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -41,9 +41,9 @@ export const ConfigureConnectionPage = () => {
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />}
       pageTitle={
-        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+        <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
           <CreateConnectionTitleBlock />
-        </NextPageHeaderWithNavigation>
+        </PageHeaderWithNavigation>
       }
     >
       <CreateConnectionForm />

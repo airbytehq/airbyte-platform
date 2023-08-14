@@ -219,7 +219,7 @@ interface ConfigApiClient {
 
   @Post(value = "/api/v1/jobs/list_for_workspaces", processes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   fun getJobListForWorkspaces(
-    requestBody: JobListForWorkspacesRequestBody,
+    @Body listForWorkspacesRequestBody: JobListForWorkspacesRequestBody,
     @Header(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
   ): HttpResponse<JobReadList>
 

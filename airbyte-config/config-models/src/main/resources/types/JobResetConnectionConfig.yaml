@@ -42,6 +42,9 @@ properties:
     type: object
     description: optional resource requirements to run sync workers
     existingJavaType: io.airbyte.config.ResourceRequirements
+  syncResourceRequirements:
+    description: Resource requirements to use for the reset
+    $ref: SyncResourceRequirements.yaml
   resetSourceConfiguration:
     "$ref": ResetSourceConfiguration.yaml
   isSourceCustomConnector:

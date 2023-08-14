@@ -248,6 +248,7 @@ public class WorkerConfigsProvider implements ResourceRequirementsProvider {
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         annotations,
+        splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
         workerConfigsDefaults.mainContainerImagePullSecret(),
         workerConfigsDefaults.mainContainerImagePullPolicy(),
         workerConfigsDefaults.sidecarContainerImagePullPolicy(),
