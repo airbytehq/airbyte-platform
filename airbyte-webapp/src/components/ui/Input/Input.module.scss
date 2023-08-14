@@ -11,6 +11,12 @@
   &.light {
     background-color: colors.$foreground;
     border: variables.$border-thin solid colors.$grey-100;
+
+    &.inline {
+      border-right-width: 0;
+      border-left-width: 0;
+      border-radius: 0;
+    }
   }
 
   &.error {

@@ -7,7 +7,7 @@
 }
 
 .brandingHeader {
-  background-color: colors.$white;
+  background-color: colors.$foreground;
   @include mixins.shadow;
 }
 

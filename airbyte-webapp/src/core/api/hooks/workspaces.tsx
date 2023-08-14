@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -93,6 +93,23 @@ export const useListWorkspaces = () => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(workspaceKeys.lists(), () => listWorkspaces(requestOptions));
 };
+
+export const getListWorkspacesAsyncQueryKey = () => {
+  return workspaceKeys.lists();
+};
+
+export const useListWorkspacesAsyncQuery = () => {
+  const requestOptions = useRequestOptions();
+
+  return () => listWorkspaces(requestOptions);
+};
+
+export function useListWorkspacesAsync(): QueryObserverResult<WorkspaceReadList> {
+  const queryKey = getListWorkspacesAsyncQueryKey();
+  const queryFn = useListWorkspacesAsyncQuery();
+
+  return useQuery(queryKey, queryFn);
+}
 
 export const getWorkspaceQueryKey = (workspaceId: string) => {
   return workspaceKeys.detail(workspaceId);

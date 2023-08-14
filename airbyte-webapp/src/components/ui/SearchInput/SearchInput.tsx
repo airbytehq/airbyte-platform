@@ -9,9 +9,10 @@ interface SearchInputProps {
   placeholder?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  inline?: boolean;
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, placeholder }) => {
+export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, placeholder, inline = false }) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -28,6 +29,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, place
         value={value}
         onChange={onChange}
         light
+        inline={inline}
       />
     </label>
   );

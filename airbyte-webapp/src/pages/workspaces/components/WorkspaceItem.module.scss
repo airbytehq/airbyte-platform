@@ -11,9 +11,14 @@
   padding: variables.$spacing-xl variables.$spacing-xl;
   width: 100%;
   min-height: 100px;
+
+  &:hover,
+  &:focus-visible {
+    background: colors.$grey-50;
+  }
 }
 
-.orgPill {
+.member {
   background: colors.$green-30;
   border-radius: variables.$border-radius-pill;
   color: colors.$green-500;
@@ -21,7 +26,7 @@
   width: fit-content;
 }
 
-.orgPillAlso {
+.admin {
   background: colors.$blue-30;
   border-radius: variables.$border-radius-pill;
   color: colors.$green-500;

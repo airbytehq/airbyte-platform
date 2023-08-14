@@ -6,9 +6,9 @@ import { SimpleCircleIcon } from "components/icons/SimpleCircleIcon";
 import { SuccessIcon } from "components/icons/SuccessIcon";
 import { WarningCircleIcon } from "components/icons/WarningCircleIcon";
 import { Icon } from "components/ui/Icon";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 
 import styles from "./ConnectionStatusIndicator.module.scss";
-import { ConnectionStatusLoadingSpinner } from "./ConnectionStatusLoadingSpinner";
 
 export enum ConnectionStatusIndicatorStatus {
   OnTime = "onTime",
@@ -59,6 +59,6 @@ interface ConnectionStatusIndicatorProps {
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ status, loading, withBox }) => (
   <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
     <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
-    {loading && <ConnectionStatusLoadingSpinner className={styles.spinner} />}
+    {loading && <LoadingSpinner className={styles.spinner} />}
   </div>
 );

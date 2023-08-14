@@ -52,13 +52,12 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                 px="md"
                 mb="sm"
                 className={classNames({
-                  [styles.orgPill]: permissions === "Member",
-                  [styles.orgPillAlso]: permissions === "Admin",
+                  [styles.member]: permissions === "Member",
+                  [styles.admin]: permissions === "Admin",
                 })}
               >
                 <Text size="sm" color={permissions === "Member" ? "green600" : "blue"}>
                   <FormattedMessage id="user.roleLabel" values={{ role: <FormattedMessage id={roleId} /> }} />
-                  {/* todo: this will probably be intl'd once we have the types available */}
                 </Text>
               </Box>
             )}
