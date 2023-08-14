@@ -910,6 +910,23 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/upgrade_version:
+    post:
+      tags:
+        - source
+      summary: Upgrade a source to the latest version
+      operationId: upgradeSourceVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/sources/list:
     post:
       tags:
@@ -1546,6 +1563,23 @@ paths:
                 $ref: "#/components/schemas/DestinationRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/upgrade_version:
+    post:
+      tags:
+        - destination
+      summary: Upgrade a destination to the latest version
+      operationId: upgradeDestinationVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destinations/list:
     post:
       tags:

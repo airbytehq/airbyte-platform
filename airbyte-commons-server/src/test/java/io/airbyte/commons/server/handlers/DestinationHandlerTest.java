@@ -217,6 +217,25 @@ class DestinationHandlerTest {
   }
 
   @Test
+  void testUpgradeDestinationVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final DestinationIdRequestBody requestBody = new DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId());
+
+    final UUID newDefaultVersionId = UUID.randomUUID();
+    final StandardDestinationDefinition destinationDefinitionWithNewVersion = Jsons.clone(standardDestinationDefinition)
+        .withDefaultVersionId(newDefaultVersionId);
+
+    when(configRepository.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(destinationConnection);
+    when(configRepository.getStandardDestinationDefinition(destinationDefinitionWithNewVersion.getDestinationDefinitionId()))
+        .thenReturn(destinationDefinitionWithNewVersion);
+
+    destinationHandler.upgradeDestinationVersion(requestBody);
+
+    // validate that we set the actor version to the actor definition (global) default version
+    verify(configRepository).setActorDefaultVersion(destinationConnection.getDestinationId(), newDefaultVersionId);
+  }
+
+  @Test
   void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())

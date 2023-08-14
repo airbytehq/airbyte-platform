@@ -218,6 +218,18 @@ public class SourceHandler {
     return buildSourceRead(configRepository.getSourceConnection(sourceId), spec);
   }
 
+  /**
+   * Upgrades the source to the source definition's default version.
+   *
+   * @param sourceIdRequestBody - ID of the source to upgrade
+   */
+  public void upgradeSourceVersion(final SourceIdRequestBody sourceIdRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
+    configRepository.setActorDefaultVersion(sourceIdRequestBody.getSourceId(), sourceDefinition.getDefaultVersionId());
+  }
+
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildSourceRead(sourceIdRequestBody.getSourceId());

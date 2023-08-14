@@ -136,6 +136,19 @@ public class DestinationApiController implements DestinationApi {
     return ApiHelper.execute(() -> destinationHandler.updateDestination(destinationUpdate));
   }
 
+  @Post("/upgrade_version")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Status(HttpStatus.NO_CONTENT)
+  @Override
+  public void upgradeDestinationVersion(@Body final DestinationIdRequestBody destinationIdRequestBody) {
+    ApiHelper.execute(() -> {
+      destinationHandler.upgradeDestinationVersion(destinationIdRequestBody);
+      return null;
+    });
+  }
+
   @Post(uri = "/partial_update")
   @Secured({EDITOR})
   @SecuredWorkspace

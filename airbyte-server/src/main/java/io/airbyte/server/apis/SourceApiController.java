@@ -171,6 +171,19 @@ public class SourceApiController implements SourceApi {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));
   }
 
+  @Post("/upgrade_version")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Status(HttpStatus.NO_CONTENT)
+  @Override
+  public void upgradeSourceVersion(@Body final SourceIdRequestBody sourceIdRequestBody) {
+    ApiHelper.execute(() -> {
+      sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
+      return null;
+    });
+  }
+
   @Post("/partial_update")
   @Secured({EDITOR})
   @SecuredWorkspace

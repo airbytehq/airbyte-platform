@@ -3444,6 +3444,19 @@ public class ConfigRepository {
         .execute());
   }
 
+  /**
+   * Set the default version for an actor.
+   *
+   * @param actorId - actor id
+   * @param actorDefinitionVersionId - actor definition version id
+   */
+  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId) throws IOException {
+    database.query(ctx -> ctx.update(Tables.ACTOR)
+        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
+        .where(Tables.ACTOR.ID.eq(actorId))
+        .execute());
+  }
+
   private Query upsertBreakingChangeQuery(final DSLContext ctx, final ActorDefinitionBreakingChange breakingChange, final OffsetDateTime timestamp) {
     return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())

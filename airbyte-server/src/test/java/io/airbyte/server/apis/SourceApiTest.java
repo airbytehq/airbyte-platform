@@ -92,7 +92,7 @@ class SourceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testDeleteDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testDeleteSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.doNothing()
         .doThrow(new ConfigNotFoundException("", ""))
         .when(sourceHandler).deleteSource(Mockito.any(SourceIdRequestBody.class));
@@ -194,6 +194,20 @@ class SourceApiTest extends BaseControllerTest {
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceDiscoverSchemaWriteRequestBody())),
         HttpStatus.OK);
+  }
+
+  @Test
+  void testUpgradeSourceVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
+    Mockito.doNothing()
+        .doThrow(new ConfigNotFoundException("", ""))
+        .when(sourceHandler).upgradeSourceVersion(Mockito.any());
+    final String path = "/api/v1/sources/upgrade_version";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpStatus.NO_CONTENT);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpStatus.NOT_FOUND);
   }
 
 }

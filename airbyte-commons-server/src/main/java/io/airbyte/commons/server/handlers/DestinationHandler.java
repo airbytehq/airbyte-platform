@@ -226,6 +226,19 @@ public class DestinationHandler {
         configRepository.getDestinationConnection(partialDestinationUpdate.getDestinationId()), spec);
   }
 
+  /**
+   * Upgrades the destination to the destination definition's default version.
+   *
+   * @param destinationIdRequestBody - ID of the destination to upgrade
+   */
+  public void upgradeDestinationVersion(final DestinationIdRequestBody destinationIdRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final DestinationConnection destinationConnection = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
+    configRepository.setActorDefaultVersion(destinationIdRequestBody.getDestinationId(), destinationDefinition.getDefaultVersionId());
+  }
+
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildDestinationRead(destinationIdRequestBody.getDestinationId());
