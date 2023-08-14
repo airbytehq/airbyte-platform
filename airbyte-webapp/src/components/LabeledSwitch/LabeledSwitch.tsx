@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import omit from "lodash/omit";
 import React from "react";
 
 import { CheckBox } from "components/ui/CheckBox";
@@ -19,7 +20,9 @@ export const LabeledSwitch = React.forwardRef<HTMLDivElement, LabeledSwitchProps
 
   return (
     <div ref={ref} className={classNames(styles.labeledSwitch, props.className)}>
-      <span>{props.checkbox ? <CheckBox {...props} id={switchId} /> : <Switch {...props} id={switchId} />}</span>
+      <span>
+        {props.checkbox ? <CheckBox {...omit(props, "checkbox")} id={switchId} /> : <Switch {...props} id={switchId} />}
+      </span>
 
       <label
         className={classNames(styles.label, {
