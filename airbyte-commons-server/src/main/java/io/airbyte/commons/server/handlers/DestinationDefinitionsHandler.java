@@ -265,6 +265,7 @@ public class DestinationDefinitionsHandler {
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(currentVersion,
         ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
 
+    actorDefinitionHandlerHelper.persistBreakingChanges(newVersion, ActorType.DESTINATION);
     configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion);
     return buildDestinationDefinitionRead(newDestination, newVersion);
   }

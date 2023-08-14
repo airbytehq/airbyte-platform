@@ -88,7 +88,7 @@ public class ActorDefinitionVersionResolver {
     }
 
     if (actorDefinitionVersion.isEmpty()) {
-      LOGGER.error("Failed to fetch registry entry for version override {}:{}", connectorRepository, dockerImageTag);
+      LOGGER.error("Failed to fetch registry entry for {}:{}", connectorRepository, dockerImageTag);
       return Optional.empty();
     }
 

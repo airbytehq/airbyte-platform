@@ -266,6 +266,7 @@ public class SourceDefinitionsHandler {
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
         currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
 
+    actorDefinitionHandlerHelper.persistBreakingChanges(newVersion, ActorType.SOURCE);
     configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
     return buildSourceDefinitionRead(newSource, newVersion);
   }

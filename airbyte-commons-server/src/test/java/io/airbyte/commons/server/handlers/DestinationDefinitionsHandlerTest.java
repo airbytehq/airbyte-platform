@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -14,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -52,6 +54,7 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
@@ -113,6 +116,8 @@ class DestinationDefinitionsHandlerTest {
         remoteDefinitionsProvider,
         destinationHandler,
         featureFlagClient);
+
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -571,6 +576,8 @@ class DestinationDefinitionsHandlerTest {
         destinationDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -653,6 +660,8 @@ class DestinationDefinitionsHandlerTest {
         null);
     verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
         destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -686,6 +695,8 @@ class DestinationDefinitionsHandlerTest {
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
     verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -719,8 +730,12 @@ class DestinationDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
+    verify(actorDefinitionHandlerHelper).persistBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
+
     verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination,
         updatedDestinationDefVersion);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -749,6 +764,8 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(configRepository, never()).writeStandardDestinationDefinition(any());
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
