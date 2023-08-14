@@ -243,7 +243,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
 
         cancellationHandler.checkAndHandleCancellation(onCancellationCallback);
       } catch (final Exception e) {
-        LOGGER.error("Cancellation checker exception", e);
+        LOGGER.debug("Cancellation checker exception", e);
       }
     };
   }
