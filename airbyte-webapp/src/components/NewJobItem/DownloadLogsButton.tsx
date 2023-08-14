@@ -1,9 +1,8 @@
-import { faFileDownload } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 
 import { useCurrentWorkspace } from "core/api";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
@@ -33,7 +32,7 @@ export const DownloadLogsButton: React.FC<DownloadButtonProps> = ({ logLines, fi
       title={formatMessage({
         id: "jobHistory.logs.downloadLogs",
       })}
-      icon={<FontAwesomeIcon icon={faFileDownload} />}
+      icon={<Icon type="download" />}
     />
   );
 };

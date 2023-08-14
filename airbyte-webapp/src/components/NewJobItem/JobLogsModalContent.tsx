@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
+import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
-import { Text } from "components/ui/Text";
 
 import { useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
-import { formatBytes } from "core/utils/numberHelper";
 
 import { DownloadLogsButton } from "./DownloadLogsButton";
 import styles from "./JobLogsModalContent.module.scss";
@@ -146,6 +145,14 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
               isDisabled={job.attempts.length === 1}
             />
           </div>
+          <AttemptDetails attempt={jobAttempt.attempt} jobId={String(jobId)} showEndedAt showFailureMessage={false} />
+          <div className={styles.downloadLogs}>
+            <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptIndex + 1}`} />
+          </div>
+        </FlexContainer>
+      </Box>
+      <Box px="md">
+        <FlexContainer alignItems="center">
           <LogSearchInput
             ref={searchInputRef}
             inputValue={inputValue}
@@ -157,50 +164,6 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
             scrollToNextMatch={scrollToNextMatch}
             scrollToPreviousMatch={scrollToPreviousMatch}
           />
-          <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptIndex + 1}`} />
-        </FlexContainer>
-      </Box>
-      <Box pl="xl" pr="md">
-        <FlexContainer>
-          {jobAttempt.attempt.endedAt && (
-            <>
-              <Text as="span" color="grey" size="sm">
-                <FormattedTimeParts value={jobAttempt.attempt.createdAt * 1000} hour="numeric" minute="2-digit">
-                  {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
-                </FormattedTimeParts>
-                <FormattedDate
-                  value={jobAttempt.attempt.createdAt * 1000}
-                  month="2-digit"
-                  day="2-digit"
-                  year="numeric"
-                />
-              </Text>
-              <Text as="span" color="grey" size="sm">
-                |
-              </Text>
-            </>
-          )}
-          <Text as="span" color="grey" size="sm">
-            {formatBytes(jobAttempt.attempt.totalStats?.bytesEmitted)}
-          </Text>
-          <Text as="span" color="grey" size="sm">
-            |
-          </Text>
-          <Text as="span" color="grey" size="sm">
-            <FormattedMessage
-              id="sources.countRecordsExtracted"
-              values={{ count: jobAttempt.attempt.totalStats?.recordsEmitted || 0 }}
-            />
-          </Text>
-          <Text as="span" color="grey" size="sm">
-            |
-          </Text>
-          <Text as="span" color="grey" size="sm">
-            <FormattedMessage
-              id="sources.countRecordsLoaded"
-              values={{ count: jobAttempt.attempt.totalStats?.recordsCommitted || 0 }}
-            />
-          </Text>
         </FlexContainer>
       </Box>
       <JobLogsModalFailureMessage failureSummary={jobAttempt.attempt.failureSummary} />

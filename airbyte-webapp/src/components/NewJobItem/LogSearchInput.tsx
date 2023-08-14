@@ -62,9 +62,8 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
           type="button"
           variant="secondary"
           size="xs"
-        >
-          <Icon type="chevronLeft" size="lg" />
-        </Button>
+          icon={<Icon type="chevronLeft" />}
+        />
         <Button
           aria-label={formatMessage({ id: "jobHistory.logs.nextMatchLabel" })}
           disabled={matches.length === 0}
@@ -72,9 +71,8 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
           type="submit"
           variant="secondary"
           size="xs"
-        >
-          <Icon type="chevronRight" size="lg" />
-        </Button>
+          icon={<Icon type="chevronRight" />}
+        />
       </>
     );
   }

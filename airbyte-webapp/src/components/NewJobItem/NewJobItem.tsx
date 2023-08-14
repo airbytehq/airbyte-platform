@@ -122,10 +122,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
       case ContextMenuOptions.OpenLogsModal:
         openModal({
           size: "full",
-          title: formatMessage(
-            { id: "jobHistory.logs.title" },
-            { jobId: jobWithAttempts.job.id, connectionName: connection.name }
-          ),
+          title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
           content: () => (
             <Suspense
               fallback={
