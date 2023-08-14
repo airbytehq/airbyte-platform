@@ -5,6 +5,7 @@ connectors-testcontainers = "1.15.3"
 datadog-version = "1.14.0"
 docker-java = "3.2.8"
 fasterxml_version = "2.14.2"
+failsafe = "3.3.2"
 flyway = "7.14.0"
 glassfish_version = "2.31"
 hikaricp = "5.0.1"
@@ -27,6 +28,7 @@ micronaut-jdbc = "4.8.0"
 micronaut-micrometer = "4.8.3"
 micronaut-security = "3.11.1"
 micronaut-test = "3.8.2"
+moshi = "1.15.0"
 mockito = "4.11.0"
 okhttp3 = "4.10.0"
 platform-testcontainers = "1.17.6"
@@ -60,6 +62,8 @@ datadog-trace-ot = { module = "com.datadoghq:dd-trace-ot", version.ref = "datado
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker.java" }
 fasterxml = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "fasterxml_version" }
+failsafe = { module = "dev.failsafe:failsafe", version.ref = "failsafe" }
+failsafe-okhttp = { module = "dev.failsafe:failsafe-okhttp", version.ref = "failsafe" }
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.12.0" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 glassfish = { module = "org.glassfish.jersey:jackson-bom", version.ref = "glassfish_version" }
@@ -102,6 +106,7 @@ log4j-over-slf4j = { module = "org.slf4j:log4j-over-slf4j", version.ref = "slf4j
 log4j-web = { module = "org.apache.logging.log4j:log4j-web", version.ref = "log4j" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
+moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }

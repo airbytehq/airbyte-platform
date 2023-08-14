@@ -6,17 +6,16 @@ package io.airbyte.test.acceptance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.CustomDestinationDefinitionCreate;
-import io.airbyte.api.client.model.generated.CustomSourceDefinitionCreate;
-import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
-import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
-import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceDefinitionRead;
+import dev.failsafe.RetryPolicy;
+import io.airbyte.api.client2.AirbyteApiClient2;
+import io.airbyte.api.client2.model.generated.CustomDestinationDefinitionCreate;
+import io.airbyte.api.client2.model.generated.CustomSourceDefinitionCreate;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionCreate;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.client2.model.generated.SourceDefinitionCreate;
+import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client2.model.generated.SourceDefinitionRead;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import java.io.IOException;
 import java.net.URI;
@@ -35,22 +34,18 @@ import org.junit.jupiter.params.provider.CsvSource;
 @TestInstance(Lifecycle.PER_CLASS)
 class VersioningAcceptanceTests {
 
-  private static AirbyteApiClient apiClient;
+  private static AirbyteApiClient2 apiClient2;
   private static UUID workspaceId;
 
   private static AcceptanceTestHarness testHarness;
 
   @BeforeAll
-  static void init() throws ApiException, URISyntaxException, IOException, InterruptedException {
-    apiClient = new AirbyteApiClient(
-        new ApiClient().setScheme("http")
-            .setHost("localhost")
-            .setPort(8001)
-            .setBasePath("/api"));
+  static void init() throws URISyntaxException, IOException, InterruptedException {
+    testHarness = new AcceptanceTestHarness(null, workspaceId);
+    RetryPolicy<okhttp3.Response> policy = RetryPolicy.ofDefaults();
+    apiClient2 = new AirbyteApiClient2("http://localhost:8001/api", policy);
 
-    workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
-
-    testHarness = new AcceptanceTestHarness(apiClient, workspaceId);
+    workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
   }
 
   @AfterAll
@@ -74,26 +69,27 @@ class VersioningAcceptanceTests {
     "2.1.2, 0.2.1",
   })
   void testCreateSourceSpec(final String dockerImageTag, final String expectedProtocolVersion)
-      throws ApiException, URISyntaxException {
-    final CustomSourceDefinitionCreate sourceDefinitionCreate = new CustomSourceDefinitionCreate()
-        .workspaceId(workspaceId)
-        .sourceDefinition(new SourceDefinitionCreate()
-            .dockerImageTag(dockerImageTag)
-            .dockerRepository("airbyte/source-e2e-test")
-            .documentationUrl(new URI("https://hub.docker.com/r/airbyte/source-e2e-test"))
-            .name("Source E2E Test Connector"));
+      throws URISyntaxException, IOException {
+    final CustomSourceDefinitionCreate srcDefCreate = new CustomSourceDefinitionCreate(
+        new SourceDefinitionCreate(
+            "Source E2E Test Connector",
+            "airbyte/source-e2e-test",
+            dockerImageTag,
+            new URI("https://hub.docker.com/r/airbyte/source-e2e-test"),
+            null,
+            null),
+        workspaceId,
+        null,
+        null);
+    final SourceDefinitionRead srcDefRead = apiClient2.getSourceDefinitionApi().createCustomSourceDefinition(srcDefCreate);
+    assertEquals(expectedProtocolVersion, srcDefRead.getProtocolVersion());
 
-    final SourceDefinitionRead sourceDefinitionRead = apiClient.getSourceDefinitionApi().createCustomSourceDefinition(sourceDefinitionCreate);
-    assertEquals(expectedProtocolVersion, sourceDefinitionRead.getProtocolVersion());
-
-    final SourceDefinitionIdRequestBody sourceDefinitionReq = new SourceDefinitionIdRequestBody()
-        .sourceDefinitionId(sourceDefinitionRead.getSourceDefinitionId());
-    final SourceDefinitionRead sourceDefinitionReadSanityCheck =
-        apiClient.getSourceDefinitionApi().getSourceDefinition(sourceDefinitionReq);
-    assertEquals(sourceDefinitionRead.getProtocolVersion(), sourceDefinitionReadSanityCheck.getProtocolVersion());
+    final SourceDefinitionIdRequestBody srcDefReq = new SourceDefinitionIdRequestBody(srcDefRead.getSourceDefinitionId());
+    final SourceDefinitionRead srcDefReadSanityCheck = apiClient2.getSourceDefinitionApi().getSourceDefinition(srcDefReq);
+    assertEquals(srcDefRead.getProtocolVersion(), srcDefReadSanityCheck.getProtocolVersion());
 
     // Clean up the source
-    apiClient.getSourceDefinitionApi().deleteSourceDefinition(sourceDefinitionReq);
+    apiClient2.getSourceDefinitionApi().deleteSourceDefinition(srcDefReq);
   }
 
   @ParameterizedTest
@@ -102,30 +98,29 @@ class VersioningAcceptanceTests {
     "2.1.2, 0.2.1",
   })
   void testCreateDestinationSpec(final String dockerImageTag, final String expectedProtocolVersion)
-      throws ApiException, URISyntaxException {
-    final CustomDestinationDefinitionCreate destDefinitionCreate =
-        new CustomDestinationDefinitionCreate()
-            .workspaceId(workspaceId)
-            .destinationDefinition(new DestinationDefinitionCreate()
-                .dockerImageTag(dockerImageTag)
-                // We are currently using source because the destination-e2e-test connector is facing a regression
-                // For the purpose of the test, at this moment, using source works because we only check version
-                .dockerRepository("airbyte/source-e2e-test")
-                .documentationUrl(new URI("https://hub.docker.com/r/airbyte/destination-e2e-test"))
-                .name("Dest E2E Test Connector"));
+      throws URISyntaxException, IOException {
+    final CustomDestinationDefinitionCreate dstDefCreate =
+        new CustomDestinationDefinitionCreate(
+            new DestinationDefinitionCreate(
+                "Dest E2E Test Connector",
+                "airbyte/source-e2e-test",
+                dockerImageTag,
+                new URI("https://hub.docker.com/r/airbyte/destination-e2e-test"),
+                null,
+                null),
+            workspaceId,
+            null,
+            null);
 
-    final DestinationDefinitionRead destDefinitionRead =
-        apiClient.getDestinationDefinitionApi().createCustomDestinationDefinition(destDefinitionCreate);
-    assertEquals(expectedProtocolVersion, destDefinitionRead.getProtocolVersion());
+    final DestinationDefinitionRead dstDefRead = apiClient2.getDestinationDefinitionApi().createCustomDestinationDefinition(dstDefCreate);
+    assertEquals(expectedProtocolVersion, dstDefRead.getProtocolVersion());
 
-    final DestinationDefinitionIdRequestBody destDefinitionReq = new DestinationDefinitionIdRequestBody()
-        .destinationDefinitionId(destDefinitionRead.getDestinationDefinitionId());
-    final DestinationDefinitionRead destDefinitionReadSanityCheck =
-        apiClient.getDestinationDefinitionApi().getDestinationDefinition(destDefinitionReq);
-    assertEquals(destDefinitionRead.getProtocolVersion(), destDefinitionReadSanityCheck.getProtocolVersion());
+    final DestinationDefinitionIdRequestBody dstDefReq = new DestinationDefinitionIdRequestBody(dstDefRead.getDestinationDefinitionId());
+    final DestinationDefinitionRead dstDefReadSanityCheck = apiClient2.getDestinationDefinitionApi().getDestinationDefinition(dstDefReq);
+    assertEquals(dstDefRead.getProtocolVersion(), dstDefReadSanityCheck.getProtocolVersion());
 
     // Clean up the destination
-    apiClient.getDestinationDefinitionApi().deleteDestinationDefinition(destDefinitionReq);
+    apiClient2.getDestinationDefinitionApi().deleteDestinationDefinition(dstDefReq);
   }
 
 }

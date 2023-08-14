@@ -4,6 +4,8 @@ plugins {
     id "io.airbyte.gradle.jvm.lib"
     id "io.airbyte.gradle.publish"
     id "org.openapi.generator"
+    id "org.jetbrains.kotlin.jvm"
+    id "org.jetbrains.kotlin.kapt"
 }
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
@@ -92,6 +94,91 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
     ]
 }
 
+def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
+    def clientOutputDir = "$buildDir/generated/api/client2"
+
+    inputs.file specFile
+    outputs.dir clientOutputDir
+
+    generatorName = "kotlin"
+    inputSpec = specFile
+    outputDir = clientOutputDir
+
+    apiPackage = "io.airbyte.api.client2.generated"
+    invokerPackage = "io.airbyte.api.client2.invoker.generated"
+    modelPackage = "io.airbyte.api.client2.model.generated"
+
+    schemaMappings = [
+            'OAuthConfiguration'                : 'com.fasterxml.jackson.databind.JsonNode',
+            'SourceDefinitionSpecification'     : 'com.fasterxml.jackson.databind.JsonNode',
+            'SourceConfiguration'               : 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationDefinitionSpecification': 'com.fasterxml.jackson.databind.JsonNode',
+            'DestinationConfiguration'          : 'com.fasterxml.jackson.databind.JsonNode',
+            'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
+            'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
+            'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+    ]
+
+    generateApiDocumentation = false
+
+    configOptions = [
+            generatePom         : "false",
+            interfaceOnly       : "true"
+    ]
+
+    doLast {
+        /*
+         * UPDATE ApiClient.kt to use Failsafe.
+         */
+        def apiClientFile = file('build/generated/api/client2/src/main/kotlin/org/openapitools/client/infrastructure/ApiClient.kt')
+        def apiClientFileText = apiClientFile.text
+
+        // replace class declaration
+        apiClientFileText = apiClientFileText.replace(
+                'open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient) {',
+                'open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClient, val policy : RetryPolicy<Response> = RetryPolicy.ofDefaults()) {')
+
+        // replace execute call
+        apiClientFileText = apiClientFileText.replace(
+                'val response = client.newCall(request).execute()',
+                '''val call = client.newCall(request)
+        val failsafeCall = FailsafeCall.with(policy).compose(call)
+        val response: Response = failsafeCall.execute()''')
+
+        // add imports if not exist
+        if(!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+            def newImports = '''import dev.failsafe.RetryPolicy
+import dev.failsafe.okhttp.FailsafeCall'''
+            apiClientFileText = apiClientFileText.replaceFirst('import ', newImports + '\nimport ')
+
+        }
+        apiClientFile.write(apiClientFileText)
+
+        /*
+         * UPDATE domain clients to use Failsafe.
+         */
+        def dir = file('build/generated/api/client2/src/main/kotlin/io/airbyte/api/client2/generated')
+        dir.eachFile { domainClient ->
+            if (domainClient.name.endsWith('.kt')) {
+                def domainClientFileText = domainClient.text
+
+                // replace class declaration
+                domainClientFileText = domainClientFileText.replaceAll(
+                        /class (\S+)\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\) : ApiClient\(basePath, client\)/,
+                        'class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)'
+                )
+
+                // add imports if not exist
+                if(!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+                    def newImports = "import dev.failsafe.RetryPolicy"
+                    domainClientFileText = domainClientFileText.replaceFirst('import ', newImports + '\nimport ')
+                }
+                domainClient.write(domainClientFileText)
+            }
+        }
+    }
+}
+
 def genApiDocs = tasks.register("generateApiDocs", GenerateTask) {
     def docsOutputDir = "$buildDir/generated/api/docs"
 
@@ -161,16 +248,35 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
 
 compileJava.dependsOn genApiDocs, genApiClient, genApiServer, genAirbyteApiServer
 
+kapt {
+    correctErrorTypes true
+}
+
+// uses afterEvaluate because at configuration time, the kaptGenerateStubsKotlin task does not exist.
+afterEvaluate {
+    tasks.named('kaptGenerateStubsKotlin').configure {
+        mustRunAfter genApiDocs, genApiClient, genApiClient2, genApiServer, genAirbyteApiServer
+    }
+}
+
+tasks.named("compileKotlin") {
+    dependsOn tasks.named("genApiClient2")
+}
+
 dependencies {
-    implementation libs.guava
     implementation libs.commons.io
-    implementation libs.slf4j.api
-    implementation libs.jackson.datatype
-    implementation libs.swagger.annotations
+    implementation libs.failsafe.okhttp
+    implementation libs.guava
     implementation libs.javax.annotation.api
     implementation libs.javax.ws.rs.api
     implementation libs.javax.validation.api
+    implementation libs.jackson.datatype
+    implementation libs.moshi.kotlin
+    implementation libs.okhttp
     implementation libs.openapi.jackson.databind.nullable
+    implementation libs.reactor.core
+    implementation libs.slf4j.api
+    implementation libs.swagger.annotations
 
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit
@@ -179,14 +285,16 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
-    implementation 'io.swagger.core.v3:swagger-annotations'
-    implementation 'io.projectreactor:reactor-core'
 }
 
 sourceSets {
     main {
         java {
-            srcDirs "$buildDir/generated/api/server/src/gen/java", "$buildDir/generated/airbyte_api/server/src/gen/java", "$buildDir/generated/api/client/src/main/java", "$projectDir/src/main/java"
+            srcDirs "$buildDir/generated/api/server/src/gen/java",
+                    "$buildDir/generated/airbyte_api/server/src/gen/java",
+                    "$buildDir/generated/api/client/src/main/java",
+                    "$buildDir/generated/api/client2/src/main/kotlin"
+                    "$projectDir/src/main/java"
         }
         resources {
             srcDir "$projectDir/src/main/openapi/"
