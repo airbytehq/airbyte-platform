@@ -27,6 +27,7 @@ import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.OperatorWebhook;
+import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.ResourceRequirements;
@@ -127,11 +128,18 @@ public class MockData {
   static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
+  static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
   static final UUID PERMISSION_ID_2 = UUID.randomUUID();
   static final UUID PERMISSION_ID_3 = UUID.randomUUID();
   static final UUID PERMISSION_ID_4 = UUID.randomUUID();
+
+  static final UUID PERMISSION_ID_5 = UUID.randomUUID();
+
+  static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
+  static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
+  static final UUID ORGANIZATION_ID_3 = UUID.randomUUID();
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -208,7 +216,18 @@ public class MockData {
         .withEmail("user-3@whatever.com")
         .withNews(true);
 
-    return Arrays.asList(user1, user2, user3);
+    final User user4 = new User()
+        .withUserId(CREATOR_USER_ID_4)
+        .withName("user-4")
+        .withAuthUserId(CREATOR_USER_ID_4.toString())
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("company-4")
+        .withEmail("user-4@whatever.com")
+        .withNews(true);
+
+    return Arrays.asList(user1, user2, user3, user4);
   }
 
   public static List<Permission> permissions() {
@@ -236,7 +255,23 @@ public class MockData {
         .withWorkspaceId(WORKSPACE_ID_1)
         .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
-    return Arrays.asList(permission1, permission2, permission3, permission4);
+    final Permission permission5 = new Permission()
+        .withPermissionId(PERMISSION_ID_5)
+        .withUserId(CREATOR_USER_ID_4)
+        .withOrganizationId(ORGANIZATION_ID_1)
+        .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5);
+  }
+
+  public static List<Organization> organizations() {
+    final Organization organization1 =
+        new Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com");
+    final Organization organization2 =
+        new Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com");
+    final Organization organization3 =
+        new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com");
+    return Arrays.asList(organization1, organization2, organization3);
   }
 
   public static List<StandardWorkspace> standardWorkspaces() {

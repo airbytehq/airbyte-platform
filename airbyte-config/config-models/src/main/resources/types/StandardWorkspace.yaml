@@ -58,3 +58,6 @@ properties:
       coordinates in the secrets manager. Must conform to WebhookOperationConfigs.yaml.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  organizationId:
+    type: string
+    format: uuid

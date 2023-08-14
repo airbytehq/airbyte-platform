@@ -19,6 +19,7 @@ import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
+import io.airbyte.commons.server.handlers.OrganizationsHandler;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
@@ -245,6 +246,14 @@ abstract class BaseControllerTest {
   @Replaces(WorkspacesHandler.class)
   WorkspacesHandler mmWorkspacesHandler() {
     return workspacesHandler;
+  }
+
+  OrganizationsHandler organizationsHandler = Mockito.mock(OrganizationsHandler.class);
+
+  @MockBean(OrganizationsHandler.class)
+  @Replaces(OrganizationsHandler.class)
+  OrganizationsHandler mmOrganizationsHandler() {
+    return organizationsHandler;
   }
 
   @MockBean(SynchronousSchedulerClient.class)

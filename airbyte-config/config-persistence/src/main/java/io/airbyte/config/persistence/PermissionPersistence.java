@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.select;
@@ -12,6 +13,8 @@ import static org.jooq.impl.DSL.select;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
+import io.airbyte.config.User;
+import io.airbyte.config.UserPermission;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.impl.DSL;
@@ -146,7 +150,8 @@ public class PermissionPersistence {
         .withPermissionType(record.get(PERMISSION.PERMISSION_TYPE) == null ? null
             : Enums.toEnum(record.get(PERMISSION.PERMISSION_TYPE, String.class), PermissionType.class).orElseThrow())
         .withUserId(record.get(PERMISSION.USER_ID))
-        .withWorkspaceId(record.get(PERMISSION.WORKSPACE_ID));
+        .withWorkspaceId(record.get(PERMISSION.WORKSPACE_ID))
+        .withOrganizationId(record.get(PERMISSION.ORGANIZATION_ID));
   }
 
   /**
@@ -176,6 +181,53 @@ public class PermissionPersistence {
    */
   public boolean deletePermissionByWorkspaceId(final UUID workspaceId) throws IOException {
     return database.transaction(ctx -> ctx.deleteFrom(PERMISSION)).where(field(DSL.name(WORKSPACE_KEY)).eq(workspaceId)).execute() > 0;
+  }
+
+  /**
+   * List all users with permissions to the workspace. Note it does not take organization info into
+   * account.
+   *
+   * @param workspaceId workspace id
+   * @return all users with their own permission type to the workspace. The list will not include org
+   *         users unless they are specifically permissioned as a workspace user.
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public List<UserPermission> listUsersInWorkspace(final UUID workspaceId) throws IOException {
+    return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
+  }
+
+  public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
+    return this.database.query(ctx -> listPermissionsForOrganization(ctx, organizationId));
+
+  }
+
+  private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {
+    var records = ctx.select(USER.NAME, USER.EMAIL, PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
+        .fetch();
+
+    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+  }
+
+  private List<UserPermission> listPermissionsForOrganization(final DSLContext ctx, final UUID organizationId) {
+    var records = ctx.select(USER.NAME, USER.EMAIL, PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
+        .fetch();
+
+    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+  }
+
+  private UserPermission buildUserPermissionFromRecord(final Record record) {
+    return new UserPermission()
+        .withUser(new User().withName(record.get(USER.NAME)).withEmail(record.get(USER.EMAIL)))
+        .withPermission(
+            new Permission().withPermissionType(Enums.toEnum(record.get(PERMISSION.PERMISSION_TYPE).toString(), PermissionType.class).get()));
   }
 
 }

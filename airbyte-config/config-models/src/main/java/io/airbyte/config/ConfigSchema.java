@@ -33,6 +33,12 @@ public enum ConfigSchema implements AirbyteConfig {
       standardWorkspace -> standardWorkspace.getWorkspaceId().toString(),
       "workspaceId"),
 
+  // organization
+  ORGANIZATION("Organization.yaml",
+      Organization.class,
+      organization -> organization.getOrganizationId().toString(),
+      "organizationId"),
+
   WORKSPACE_SERVICE_ACCOUNT("WorkspaceServiceAccount.yaml",
       WorkspaceServiceAccount.class,
       workspaceServiceAccount -> workspaceServiceAccount.getWorkspaceId().toString(),

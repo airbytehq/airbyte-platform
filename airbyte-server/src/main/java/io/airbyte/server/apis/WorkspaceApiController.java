@@ -11,6 +11,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import io.airbyte.api.generated.WorkspaceApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
@@ -140,6 +141,12 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+  }
+
+  @Override
+  public WorkspaceReadList listWorkspacesInOrganization(@Body final ListWorkspacesInOrganizationRequestBody request) {
+    // To be implemented
+    return ApiHelper.execute(() -> workspacesHandler.listWorkspacesInOrganization(request));
   }
 
 }

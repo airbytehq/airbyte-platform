@@ -6,24 +6,39 @@ package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthProvider;
+import io.airbyte.api.model.generated.OrganizationIdRequestBody;
+import io.airbyte.api.model.generated.OrganizationUserRead;
+import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserRead;
+import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.handlers.helpers.PermissionMerger;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
+import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import javax.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,13 +55,16 @@ public class UserHandler {
 
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
+  private final PermissionPersistence permissionPersistence;
 
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
+                     final PermissionPersistence permissionPersistence,
                      final Supplier<UUID> uuidGenerator) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
+    this.permissionPersistence = permissionPersistence;
   }
 
   /**
@@ -221,6 +239,51 @@ public class UserHandler {
         .email(userRead.getEmail())
         .news(userRead.getNews());
     updateUser(userUpdate);
+  }
+
+  public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody)
+      throws ConfigNotFoundException, IOException {
+    final UUID organizationId = organizationIdRequestBody.getOrganizationId();
+    final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(organizationId);
+    return buildOrganizationUserReadList(userPermissions, organizationId);
+  }
+
+  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws ConfigNotFoundException, IOException {
+    final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
+    final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(workspaceId);
+    return buildWorkspaceUserReadList(userPermissions, workspaceId);
+  }
+
+  private Map<User, PermissionType> collectUserPermissionToMap(final List<UserPermission> userPermissions) {
+    return userPermissions.stream()
+        .collect(Collectors.toMap(
+            UserPermission::getUser,
+            (UserPermission userPermission) -> userPermission.getPermission().getPermissionType(),
+            (permission1, permission2) -> PermissionMerger.pickHigherPermission(permission1, permission2)));
+  }
+
+  private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
+
+    return new WorkspaceUserReadList().users(
+        collectUserPermissionToMap(userPermissions)
+            .entrySet().stream()
+            .map((Entry<User, Permission.PermissionType> entry) -> new WorkspaceUserRead()
+                .userId(entry.getKey().getUserId())
+                .email(entry.getKey().getEmail())
+                .workspaceId(workspaceId)
+                .permissionType(Enums.toEnum(entry.getValue().toString(), io.airbyte.api.model.generated.PermissionType.class).get()))
+            .collect(Collectors.toList()));
+  }
+
+  private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
+    return new OrganizationUserReadList().users(collectUserPermissionToMap(userPermissions)
+        .entrySet().stream()
+        .map((Entry<User, PermissionType> entry) -> new OrganizationUserRead()
+            .userId(entry.getKey().getUserId())
+            .email(entry.getKey().getEmail())
+            .organizationId(organizationId)
+            .permissionType(Enums.toEnum(entry.getValue().toString(), io.airbyte.api.model.generated.PermissionType.class).get()))
+        .collect(Collectors.toList()));
   }
 
 }

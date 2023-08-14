@@ -5,17 +5,25 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.UserApi;
+import io.airbyte.api.model.generated.OrganizationIdRequestBody;
+import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.UserHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
@@ -78,6 +86,22 @@ public class UserApiController implements UserApi {
   @Override
   public UserRead updateUser(final UserUpdate userUpdate) {
     return ApiHelper.execute(() -> userHandler.updateUser(userUpdate));
+  }
+
+  @Post("/list_by_organization_id")
+  @Secured({READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public OrganizationUserReadList listUsersInOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.listUsersInOrganization(organizationIdRequestBody));
+  }
+
+  @Post("/list_by_workspace_id")
+  @Secured({READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
   }
 
 }

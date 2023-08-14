@@ -490,6 +490,7 @@ public class ConfigRepository {
             .set(WORKSPACE.UPDATED_AT, timestamp)
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .where(WORKSPACE.ID.eq(workspace.getWorkspaceId()))
             .execute();
       } else {
@@ -514,6 +515,7 @@ public class ConfigRepository {
             .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
                 workspace.getDefaultGeography().value(),
                 io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
             .execute();

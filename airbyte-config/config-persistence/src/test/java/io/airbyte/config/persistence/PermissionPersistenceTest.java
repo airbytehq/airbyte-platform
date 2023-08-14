@@ -4,9 +4,11 @@
 
 package io.airbyte.config.persistence;
 
+import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.UserPermission;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -18,10 +20,12 @@ import org.junit.jupiter.api.Test;
 class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   private PermissionPersistence permissionPersistence;
+  private OrganizationPersistence organizationPersistence;
 
   @BeforeEach
   void beforeEach() throws Exception {
     permissionPersistence = new PermissionPersistence(database);
+    organizationPersistence = new OrganizationPersistence(database);
     truncateAllTables();
     setupTestData();
   }
@@ -37,6 +41,11 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     for (final User user : MockData.users()) {
       userPersistence.writeUser(user);
     }
+
+    for (final Organization organization : MockData.organizations()) {
+      organizationPersistence.createOrganization(organization);
+    }
+
     // write permission table
     for (final Permission permission : MockData.permissions()) {
       permissionPersistence.writePermission(permission);
@@ -79,6 +88,18 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   void deletePermissionByWorkspaceIdTest() throws IOException {
     permissionPersistence.deletePermissionByWorkspaceId(MockData.WORKSPACE_ID_2);
     Assertions.assertEquals(0, permissionPersistence.listPermissionByWorkspace(MockData.WORKSPACE_ID_2).size());
+  }
+
+  @Test
+  void listUsersInOrganizationTest() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(MockData.ORGANIZATION_ID_1);
+    Assertions.assertEquals(1, userPermissions.size());
+  }
+
+  @Test
+  void listUsersInWorkspaceTest() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(MockData.WORKSPACE_ID_1);
+    Assertions.assertEquals(2, userPermissions.size());
   }
 
 }

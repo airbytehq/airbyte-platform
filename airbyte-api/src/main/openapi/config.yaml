@@ -76,6 +76,8 @@ tags:
     description: Interactions with user related resources.
   - name: permission
     description: Interactions with permission related resources.
+  - name: organization
+    description: Interactions with organizations.
 
 paths:
   /v1/workspaces/create:
@@ -169,6 +171,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkspaceReadList"
+  /v1/workspaces/list_by_organization_id:
+    post:
+      summary: List workspaces under the given org id
+      tags:
+        - workspace
+      operationId: listWorkspacesInOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListWorkspacesInOrganizationRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved workspaces under the given org id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
   /v1/workspaces/get:
     post:
       tags:
@@ -2978,6 +3001,50 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/list_by_workspace_id:
+    post:
+      tags:
+        - user
+      summary: List all users in a workspace
+      operationId: listUsersInWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUserReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/users/list_by_organization_id:
+    post:
+      summary: List all users with permissions of the given org
+      tags:
+        - user
+      operationId: listUsersInOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved workspaces under the given org id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationUserReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
   # PERMISSIONS
   /v1/permissions/create:
@@ -3423,6 +3490,81 @@ paths:
                 $ref: "#/components/schemas/RetryStateRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get:
+    post:
+      summary: Get an organization info
+      tags:
+        - organization
+      operationId: getOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved organization info.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/create:
+    post:
+      summary: Create an organization
+      tags:
+        - organization
+      operationId: createOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationCreateRequestBody"
+      responses:
+        "201":
+          description: Successfully created organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRead"
+  /v1/organizations/update:
+    post:
+      summary: Update an organization info
+      tags:
+        - organization
+      operationId: updateOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUpdateRequestBody"
+      responses:
+        "200":
+          description: Successfully updated organization info.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/delete:
+    post:
+      summary: Delete an organization
+      tags:
+        - organization
+      operationId: deleteOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "204":
+          description: Successfully deleted organization.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3467,6 +3609,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
     WebhookConfigWrite:
       type: object
       properties:
@@ -3661,6 +3805,8 @@ components:
           items:
             # Note: this omits any sensitive info e.g. auth token
             $ref: "#/components/schemas/WebhookConfigRead"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
     WebhookConfigRead:
       type: object
       description: the readable info for a webhook config; omits sensitive info e.g. auth token
@@ -7381,6 +7527,131 @@ components:
           type: integer
         totalPartialFailures:
           type: integer
+    OrganizationIdRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+    OrganizationUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+    OrganizationCreateRequestBody:
+      type: object
+      required:
+        - organizationName
+      properties:
+        organizationName:
+          type: string
+        email:
+          type: string
+    ListWorkspacesInOrganizationRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        keyword:
+          type: string
+    OrganizationRead:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - email
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        email:
+          type: string
+    WorkspaceUserRead:
+      type: object
+      required:
+        - userId
+        - isDefaultWorkspace
+        - email
+        - permissionId
+        - permissionType
+        - workspaceId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        isDefaultWorkspace:
+          type: boolean
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceUserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceUserRead"
+    OrganizationUserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationUserRead"
+    OrganizationUserRead:
+      type: object
+      required:
+        - userId
+        - email
+        - permissionId
+        - permissionType
+        - organizationId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        isDefaultWorkspace:
+          type: boolean
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+
     InvalidInputProperty:
       type: object
       required:
