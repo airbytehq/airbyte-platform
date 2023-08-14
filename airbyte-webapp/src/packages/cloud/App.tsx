@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
-import { BrowserRouter as Router } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
@@ -11,6 +11,7 @@ import { QueryProvider } from "core/api";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
+import { BlockerService } from "core/services/navigation";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -62,9 +63,9 @@ const App: React.FC = () => {
         <StyleProvider>
           <I18nProvider locale="en" messages={messages}>
             <QueryProvider>
-              <Suspense fallback={<LoadingPage />}>
-                <ConfigServiceProvider config={config}>
-                  <Router>
+              <BlockerService>
+                <Suspense fallback={<LoadingPage />}>
+                  <ConfigServiceProvider config={config}>
                     <AnalyticsProvider>
                       <AppMonitoringServiceProvider>
                         <ApiErrorBoundary>
@@ -74,9 +75,9 @@ const App: React.FC = () => {
                         </ApiErrorBoundary>
                       </AppMonitoringServiceProvider>
                     </AnalyticsProvider>
-                  </Router>
-                </ConfigServiceProvider>
-              </Suspense>
+                  </ConfigServiceProvider>
+                </Suspense>
+              </BlockerService>
             </QueryProvider>
           </I18nProvider>
         </StyleProvider>
@@ -85,4 +86,7 @@ const App: React.FC = () => {
   );
 };
 
-export default React.memo(App);
+const router = createBrowserRouter([{ path: "*", element: <App /> }]);
+
+const CloudApp: React.FC = () => <RouterProvider router={router} />;
+export default React.memo(CloudApp);

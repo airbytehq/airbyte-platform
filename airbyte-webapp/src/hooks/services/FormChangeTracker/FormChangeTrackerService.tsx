@@ -1,8 +1,6 @@
-import type { Transition } from "history";
-
 import React, { useCallback } from "react";
 
-import { useBlocker } from "hooks/router/useBlocker";
+import { Blocker, useBlocker } from "core/services/navigation";
 
 import { useFormChangeTrackerService } from "./hooks";
 import { useConfirmationModalService } from "../ConfirmationModal";
@@ -12,7 +10,7 @@ export const FormChangeTrackerService: React.FC<React.PropsWithChildren<unknown>
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const blocker = useCallback(
-    (tx: Transition) => {
+    (blocker: Blocker) => {
       openConfirmationModal({
         title: "form.discardChanges",
         text: "form.discardChangesConfirmation",
@@ -20,7 +18,7 @@ export const FormChangeTrackerService: React.FC<React.PropsWithChildren<unknown>
         onSubmit: () => {
           clearAllFormChanges();
           closeConfirmationModal();
-          tx.retry();
+          blocker.proceed();
         },
       });
     },

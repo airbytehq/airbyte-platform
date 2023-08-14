@@ -110,7 +110,7 @@
     "react-reflex": "^4.0.9",
     "react-resize-detector": "^8.0.3",
     "react-rnd": "^10.4.1",
-    "react-router-dom": "6.3.0",
+    "react-router-dom": "6.14.2",
     "react-select": "^5.4.0",
     "react-slick": "^0.29.0",
     "react-use": "^17.4.0",
