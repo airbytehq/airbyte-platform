@@ -33,6 +33,7 @@ import {
 } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { ValuesProps } from "hooks/services/useConnectionHook";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
@@ -328,8 +329,13 @@ export const useInitialValues = (
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isNotCreateMode?: boolean
 ): FormikConnectionFormValues => {
+  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
   const workspace = useCurrentWorkspace();
   const { catalogDiff } = connection;
+
+  const defaultNonBreakingChangesPreference = autoPropagationEnabled
+    ? NonBreakingChangesPreference.propagate_fully
+    : NonBreakingChangesPreference.ignore;
 
   // used to determine if we should calculate optimal sync mode
   const newStreamDescriptors = catalogDiff?.transforms
@@ -372,7 +378,7 @@ export const useInitialValues = (
       syncCatalog: initialSchema,
       scheduleType: connection.connectionId ? connection.scheduleType : ConnectionScheduleType.basic,
       scheduleData: connection.connectionId ? connection.scheduleData ?? null : DEFAULT_SCHEDULE,
-      nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? NonBreakingChangesPreference.ignore,
+      nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
       prefix: connection.prefix || "",
       namespaceDefinition: connection.namespaceDefinition || NamespaceDefinitionType.destination,
       namespaceFormat: connection.namespaceFormat ?? SOURCE_NAMESPACE_TAG,
@@ -408,6 +414,7 @@ export const useInitialValues = (
     connection.scheduleData,
     connection.scheduleType,
     connection.source.name,
+    defaultNonBreakingChangesPreference,
     destDefinition.supportsDbt,
     destDefinition.normalizationConfig,
     initialSchema,
