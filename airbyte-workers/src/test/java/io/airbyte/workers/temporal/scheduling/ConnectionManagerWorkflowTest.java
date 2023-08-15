@@ -1873,9 +1873,9 @@ class ConnectionManagerWorkflowTest {
     @ParameterizedTest
     @Timeout(value = 10,
              unit = TimeUnit.SECONDS)
-    @DisplayName("Fails job if backoff longer than time til next scheduled run.")
+    @DisplayName("Does not fail job if backoff longer than time til next scheduled run.")
     @MethodSource("backoffJobFailureMatrix")
-    void failsJobIfBackoffTooLong(final long backoffMinutes, final int jobFailureCount) throws Exception {
+    void doesNotFailJobIfBackoffTooLong(final long backoffMinutes) throws Exception {
       final var backoff = Duration.ofMinutes(backoffMinutes);
       final var policy = BackoffPolicy.builder()
           .minInterval(backoff)
@@ -1898,18 +1898,18 @@ class ConnectionManagerWorkflowTest {
       setupSuccessfulWorkflow(input);
       testEnv.sleep(Duration.ofMinutes(1));
 
-      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(jobFailureCount)).jobFailure(Mockito.any());
+      Mockito.verify(mJobCreationAndStatusUpdateActivity, Mockito.times(0)).jobFailure(Mockito.any());
     }
 
     private static Stream<Arguments> backoffJobFailureMatrix() {
       return Stream.of(
-          Arguments.of(1, 0),
-          Arguments.of(10, 0),
-          Arguments.of(55, 0),
-          Arguments.of(60, 1),
-          Arguments.of(123, 1),
-          Arguments.of(214, 1),
-          Arguments.of(7, 0));
+          Arguments.of(1),
+          Arguments.of(10),
+          Arguments.of(55),
+          Arguments.of(60),
+          Arguments.of(123),
+          Arguments.of(214),
+          Arguments.of(7));
     }
 
   }
