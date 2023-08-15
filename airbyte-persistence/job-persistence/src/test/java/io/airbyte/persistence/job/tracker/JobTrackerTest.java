@@ -383,6 +383,8 @@ class JobTrackerTest {
     metadata.put("table_prefix", false);
     metadata.put("workspace_name", WORKSPACE_NAME);
     metadata.put("connector_destination_definition_id", UUID2);
+    metadata.put("source_id", SOURCE_ID);
+    metadata.put("destination_id", DESTINATION_ID);
 
     verify(trackingClient).track(WORKSPACE_ID, JobTracker.INTERNAL_FAILURE_SYNC_EVENT, metadata);
   }
@@ -751,6 +753,8 @@ class JobTrackerTest {
         .put("table_prefix", false)
         .put("operation_count", 0)
         .put("number_of_streams", 1)
+        .put("source_id", SOURCE_ID)
+        .put("destination_id", DESTINATION_ID)
         .build();
   }
 

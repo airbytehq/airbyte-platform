@@ -5,6 +5,7 @@
 package io.airbyte.analytics;
 
 import static io.airbyte.analytics.SegmentTrackingClient.AIRBYTE_ANALYTIC_SOURCE_HEADER;
+import static io.airbyte.analytics.SegmentTrackingClient.AIRBYTE_DEPLOYMENT_ID;
 import static io.airbyte.analytics.SegmentTrackingClient.AIRBYTE_SOURCE;
 import static io.airbyte.analytics.SegmentTrackingClient.AIRBYTE_VERSION_KEY;
 import static io.airbyte.analytics.SegmentTrackingClient.UNKNOWN;
@@ -117,7 +118,8 @@ class SegmentTrackingClientTest {
     final ImmutableMap<String, Object> metadata =
         ImmutableMap.of(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION.serialize(),
             "user_id", IDENTITY.getCustomerId(),
-            AIRBYTE_SOURCE, UNKNOWN);
+            AIRBYTE_SOURCE, UNKNOWN,
+            AIRBYTE_DEPLOYMENT_ID, DEPLOYMENT.getDeploymentId());
 
     segmentTrackingClient.track(WORKSPACE_ID, JUMP);
 
@@ -136,7 +138,8 @@ class SegmentTrackingClientTest {
         EMAIL_KEY, EMAIL,
         "height", "80 meters",
         "user_id", IDENTITY.getCustomerId(),
-        AIRBYTE_SOURCE, UNKNOWN);
+        AIRBYTE_SOURCE, UNKNOWN,
+        AIRBYTE_DEPLOYMENT_ID, DEPLOYMENT.getDeploymentId());
 
     segmentTrackingClient.track(WORKSPACE_ID, JUMP, metadata);
 

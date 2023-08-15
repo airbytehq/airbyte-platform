@@ -456,6 +456,8 @@ public class ConnectionsHandler {
     metadata.put("connector_destination", destinationDefinition.getName());
     metadata.put("connector_destination_definition_id", destinationDefinition.getDestinationDefinitionId());
     metadata.put("connection_id", standardSync.getConnectionId());
+    metadata.put("source_id", standardSync.getSourceId());
+    metadata.put("destination_id", standardSync.getDestinationId());
 
     final String frequencyString;
     if (standardSync.getScheduleType() != null) {

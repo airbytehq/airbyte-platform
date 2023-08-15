@@ -30,14 +30,16 @@ class TrackingMetadataTest {
   @Test
   void testNulls() {
     final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final UUID destinationId = UUID.randomUUID();
     final StandardSync standardSync = mock(StandardSync.class);
 
     // set all the required values for a valid connection
     when(standardSync.getConnectionId()).thenReturn(connectionId);
     when(standardSync.getName()).thenReturn("connection-name");
     when(standardSync.getManual()).thenReturn(true);
-    when(standardSync.getSourceId()).thenReturn(UUID.randomUUID());
-    when(standardSync.getDestinationId()).thenReturn(UUID.randomUUID());
+    when(standardSync.getSourceId()).thenReturn(sourceId);
+    when(standardSync.getDestinationId()).thenReturn(destinationId);
     when(standardSync.getCatalog()).thenReturn(mock(ConfiguredAirbyteCatalog.class));
     when(standardSync.getResourceRequirements()).thenReturn(new ResourceRequirements());
 
@@ -49,7 +51,9 @@ class TrackingMetadataTest {
         "connection_id", connectionId,
         "frequency", "manual",
         "operation_count", 0,
-        "table_prefix", false);
+        "table_prefix", false,
+        "source_id", sourceId,
+        "destination_id", destinationId);
     final Map<String, Object> actual = TrackingMetadata.generateSyncMetadata(standardSync);
     assertEquals(expected, actual);
   }
