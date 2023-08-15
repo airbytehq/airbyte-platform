@@ -1,0 +1,32 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.jobListItem {
+  padding: 0 variables.$spacing-lg;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  &__integrationName {
+    flex: 1 2 auto;
+    gap: variables.$spacing-md;
+  }
+
+  &__dbtLogo {
+    height: 18px;
+    width: 18px;
+  }
+
+  &__idFieldGroup {
+    margin-left: auto;
+    gap: variables.$spacing-lg;
+  }
+
+  &__idField {
+    height: fit-content;
+    background-color: colors.$grey-50;
+    padding: variables.$spacing-xs variables.$spacing-md;
+    border-radius: variables.$border-radius-2xl;
+  }
+}
