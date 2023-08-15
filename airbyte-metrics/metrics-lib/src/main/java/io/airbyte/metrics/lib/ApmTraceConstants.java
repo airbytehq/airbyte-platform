@@ -144,7 +144,7 @@ public final class ApmTraceConstants {
     /**
      * Name of the APM trace tag that holds the Temporal workflow ID value associated with the trace.
      */
-    public static final String TEMPORAL_WORKFLOW_ID_KEY = "temporal.workflow.id";
+    public static final String TEMPORAL_WORKFLOW_ID_KEY = "temporal.workflow_id";
 
     /**
      * Name of the APM trace tag that holds the webhook config ID value associated with the trace.
