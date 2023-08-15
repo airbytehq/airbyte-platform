@@ -26,7 +26,7 @@ export const JobStatusLabel: React.FC<JobStatusLabelProps> = ({ jobWithAttempts 
     status = "failed";
   } else if (jobStatus === JobStatus.cancelled) {
     status = "cancelled";
-  } else if (jobStatus === JobStatus.running) {
+  } else if (jobStatus === JobStatus.running || jobStatus === JobStatus.incomplete) {
     status = "running";
   } else if (jobStatus === JobStatus.succeeded) {
     status = "succeeded";
