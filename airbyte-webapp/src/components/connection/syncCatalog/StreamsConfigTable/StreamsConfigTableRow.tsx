@@ -2,7 +2,6 @@ import classNames from "classnames";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { Row } from "components/SimpleTableComponents";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
@@ -154,7 +153,9 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   }, [rowRef, redirectionAction, doesStreamExist]);
 
   return (
-    <Row
+    <FlexContainer
+      justifyContent="flex-start"
+      alignItems="center"
       onClick={onRowClick}
       className={classNames(streamHeaderContentStyle, { [styles.highlighted]: highlighted })}
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
@@ -230,6 +231,6 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           variant={pillButtonVariant as FieldSelectionStatusVariant}
         />
       </CellText>
-    </Row>
+    </FlexContainer>
   );
 };

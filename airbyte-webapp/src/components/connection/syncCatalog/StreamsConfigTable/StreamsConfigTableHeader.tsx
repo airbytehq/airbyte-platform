@@ -1,13 +1,12 @@
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import classNames from "classnames";
 import { setIn, useFormikContext } from "formik";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { Header } from "components/SimpleTableComponents";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
@@ -111,7 +110,12 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   const areAllStreamsSyncEnabled = () => streams.every((stream) => stream.config?.selected) && streams.length > 0;
 
   return (
-    <Header className={classNames(styles.headerContainer)} data-testid="catalog-tree-table-header">
+    <FlexContainer
+      justifyContent="flex-start"
+      alignItems="center"
+      className={styles.headerContainer}
+      data-testid="catalog-tree-table-header"
+    >
       <CellText size="fixed" className={styles.syncCell} withOverflow>
         <Switch
           size="sm"
@@ -207,6 +211,6 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
       <HeaderCell size="fixed" className={styles.fieldsCell}>
         <FormattedMessage id="form.fields" />
       </HeaderCell>
-    </Header>
+    </FlexContainer>
   );
 };
