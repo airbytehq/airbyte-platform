@@ -139,7 +139,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
               .withOperatorDbt(standardSyncOperation.getOperatorDbt());
 
-          dbtTransformationActivity.run(jobRunConfig, destinationLauncherConfig, syncInput.getResourceRequirements(), operatorDbtInput);
+          dbtTransformationActivity.run(jobRunConfig, destinationLauncherConfig,
+              syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
+              operatorDbtInput);
         } else if (standardSyncOperation.getOperatorType() == OperatorType.WEBHOOK) {
           LOGGER.info("running webhook operation");
           LOGGER.debug("webhook operation input: {}", standardSyncOperation);

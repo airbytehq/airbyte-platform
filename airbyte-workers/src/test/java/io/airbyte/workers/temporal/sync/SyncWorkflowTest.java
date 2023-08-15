@@ -251,8 +251,7 @@ class SyncWorkflowTest {
 
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync);
     assertEquals(
@@ -296,8 +295,7 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     assertEquals(
         replicationFailOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
         actualOutput.getStandardSyncSummary());
@@ -391,8 +389,7 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
   }
 
   @Test

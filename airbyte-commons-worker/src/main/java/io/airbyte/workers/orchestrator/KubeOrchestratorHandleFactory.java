@@ -77,7 +77,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         sourceLauncherConfig,
         destinationLauncherConfig,
         jobRunConfig,
-        syncInput.getResourceRequirements(),
+        syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
         activityContext,
         serverPort,
         temporalUtils,

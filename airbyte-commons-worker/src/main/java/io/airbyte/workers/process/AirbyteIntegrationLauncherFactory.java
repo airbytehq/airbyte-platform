@@ -9,7 +9,6 @@ import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -52,12 +51,10 @@ public class AirbyteIntegrationLauncherFactory {
    * Create an IntegrationLauncher from a given configuration.
    *
    * @param launcherConfig the configuration of the integration.
-   * @param resourceRequirements the resource requirements for the integration.
    * @param syncResourceRequirements the resource requirements for the integration.
    * @return an AirbyteIntegrationLauncher.
    */
   public IntegrationLauncher createIntegrationLauncher(final IntegrationLauncherConfig launcherConfig,
-                                                       final ResourceRequirements resourceRequirements,
                                                        final SyncResourceRequirements syncResourceRequirements) {
     return new AirbyteIntegrationLauncher(
         launcherConfig.getJobId(),
@@ -66,7 +63,7 @@ public class AirbyteIntegrationLauncherFactory {
         launcherConfig.getWorkspaceId(),
         launcherConfig.getDockerImage(),
         processFactory,
-        resourceRequirements,
+        null,
         syncResourceRequirements,
         launcherConfig.getAllowedHosts(),
         // At this moment, if either source or destination is from custom connector image, we will put all
@@ -81,17 +78,15 @@ public class AirbyteIntegrationLauncherFactory {
    * Create an AirbyteSource from a given configuration. *
    *
    * @param sourceLauncherConfig the configuration of the source.
-   * @param resourceRequirements the resource requirements for the source.
    * @param configuredAirbyteCatalog the configuredAirbyteCatalog of the Connection the source.
    * @param heartbeatMonitor an instance of HeartbeatMonitor to use for the AirbyteSource.
    * @return an AirbyteSource.
    */
   public AirbyteSource createAirbyteSource(final IntegrationLauncherConfig sourceLauncherConfig,
-                                           final ResourceRequirements resourceRequirements,
                                            final SyncResourceRequirements syncResourceRequirements,
                                            final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                            final HeartbeatMonitor heartbeatMonitor) {
-    final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, resourceRequirements, syncResourceRequirements);
+    final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, syncResourceRequirements);
 
     return new DefaultAirbyteSource(sourceLauncher,
         getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
@@ -104,16 +99,13 @@ public class AirbyteIntegrationLauncherFactory {
    * Create an AirbyteDestination from a given configuration.
    *
    * @param destinationLauncherConfig the configuration of the destination.
-   * @param resourceRequirements the resource requirements for the destination.
    * @param configuredAirbyteCatalog the configuredAirbyteCatalog of the Connection the destination.
    * @return an AirbyteDestination.
    */
   public AirbyteDestination createAirbyteDestination(final IntegrationLauncherConfig destinationLauncherConfig,
-                                                     final ResourceRequirements resourceRequirements,
                                                      final SyncResourceRequirements syncResourceRequirements,
                                                      final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
-    final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, resourceRequirements,
-        syncResourceRequirements);
+    final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
     return new DefaultAirbyteDestination(destinationLauncher,
         getStreamFactory(destinationLauncherConfig, configuredAirbyteCatalog, DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
