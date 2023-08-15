@@ -257,7 +257,9 @@ public interface JobPersistence {
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
-                     OffsetDateTime updatedAtEnd)
+                     OffsetDateTime updatedAtEnd,
+                     String orderByField,
+                     String orderByMethod)
       throws IOException;
 
   /**
@@ -277,7 +279,9 @@ public interface JobPersistence {
                      OffsetDateTime createdAtStart,
                      OffsetDateTime createdAtEnd,
                      OffsetDateTime updatedAtStart,
-                     OffsetDateTime updatedAtEnd)
+                     OffsetDateTime updatedAtEnd,
+                     String orderByField,
+                     String orderByMethod)
       throws IOException;
 
   /**

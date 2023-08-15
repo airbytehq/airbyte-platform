@@ -55,6 +55,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -772,7 +773,9 @@ public class DefaultJobPersistence implements JobPersistence {
                             final OffsetDateTime createdAtStart,
                             final OffsetDateTime createdAtEnd,
                             final OffsetDateTime updatedAtStart,
-                            final OffsetDateTime updatedAtEnd)
+                            final OffsetDateTime updatedAtEnd,
+                            final String orderByField,
+                            final String orderByMethod)
       throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
@@ -789,9 +792,8 @@ public class DefaultJobPersistence implements JobPersistence {
           .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      LOGGER.info("subquery: {}", jobsSubquery);
-      LOGGER.info("full query: {}", jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME);
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
+      LOGGER.debug("jobs subquery: {}", jobsSubquery);
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod)));
     });
   }
 
@@ -804,8 +806,11 @@ public class DefaultJobPersistence implements JobPersistence {
                             final OffsetDateTime createdAtStart,
                             final OffsetDateTime createdAtEnd,
                             final OffsetDateTime updatedAtStart,
-                            final OffsetDateTime updatedAtEnd)
+                            final OffsetDateTime updatedAtEnd,
+                            final String orderByField,
+                            final String orderByMethod)
       throws IOException {
+
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(JOBS.asterisk()).from(JOBS)
           .join(Tables.CONNECTION)
@@ -825,8 +830,32 @@ public class DefaultJobPersistence implements JobPersistence {
           .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
-      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_CREATED_AT_DESC));
+      return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + buildJobOrderByString(orderByField, orderByMethod)));
     });
+  }
+
+  private enum OrderByField {
+
+    CREATED_AT("createdAt"),
+    UPDATED_AT("updatedAt");
+
+    private final String field;
+
+    OrderByField(final String field) {
+      this.field = field;
+    }
+
+  }
+
+  private enum OrderByMethod {
+
+    ASC,
+    DESC;
+
+    public static boolean contains(final String method) {
+      return Arrays.stream(OrderByMethod.values()).anyMatch(enumMethod -> enumMethod.name().equals(method));
+    }
+
   }
 
   @Override
@@ -1333,6 +1362,29 @@ public class DefaultJobPersistence implements JobPersistence {
      * value gets converted into a 6 character value during JSON serialization.
      */
     return value != null ? value.replaceAll("\\u0000|\\\\u0000", "") : null;
+  }
+
+  private String buildJobOrderByString(final String orderByField, final String orderByMethod) {
+    // Set up maps and values
+    final Map<OrderByField, String> fieldMap = Map.of(
+        OrderByField.CREATED_AT, JOBS.CREATED_AT.getName(),
+        OrderByField.UPDATED_AT, JOBS.UPDATED_AT.getName());
+
+    // get field w/ default
+    final String field;
+    if (orderByField == null || Arrays.stream(OrderByField.values()).noneMatch(enumField -> enumField.name().equals(orderByField))) {
+      field = fieldMap.get(OrderByField.CREATED_AT);
+    } else {
+      field = fieldMap.get(OrderByField.valueOf(orderByField));
+    }
+
+    // get sort method w/ default
+    String sortMethod = OrderByMethod.DESC.name();
+    if (orderByMethod != null && OrderByMethod.contains(orderByMethod.toUpperCase())) {
+      sortMethod = orderByMethod.toUpperCase();
+    }
+
+    return String.format("ORDER BY jobs.%s %s ", field, sortMethod);
   }
 
 }

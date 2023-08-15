@@ -12,6 +12,8 @@ import io.airbyte.api.client.model.generated.JobConfigType
 import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobInfoRead
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.client.model.generated.JobListRequestBody
 import io.airbyte.api.client.model.generated.JobReadList
 import io.airbyte.api.client.model.generated.Pagination
@@ -47,20 +49,23 @@ interface JobService {
   fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
     userInfo: String?,
   ): JobsResponse
 
   fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-
+    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT,
+    orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
     userInfo: String?,
   ): JobsResponse
 }
 
 @Singleton
 @Secondary
-class JobServiceImpl(val configApiClient: ConfigApiClient, val userService: UserService) : JobService {
+class JobServiceImpl(private val configApiClient: ConfigApiClient, val userService: UserService) : JobService {
 
   companion object {
     private val log = LoggerFactory.getLogger(JobServiceImpl::class.java)
@@ -146,7 +151,13 @@ class JobServiceImpl(val configApiClient: ConfigApiClient, val userService: User
   /**
    * Lists jobs by connection ID and job type.
    */
-  override fun getJobList(connectionId: UUID, jobsFilter: JobsFilter, userInfo: String?): JobsResponse {
+  override fun getJobList(
+    connectionId: UUID,
+    jobsFilter: JobsFilter,
+    orderByField: OrderByFieldEnum,
+    orderByMethod: OrderByMethodEnum,
+    userInfo: String?,
+  ): JobsResponse {
     val configTypes: List<JobConfigType> = getJobConfigTypes(jobsFilter.jobType)
     val jobListRequestBody = JobListRequestBody()
       .configId(connectionId.toString())
@@ -157,6 +168,10 @@ class JobServiceImpl(val configApiClient: ConfigApiClient, val userService: User
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
+      .orderByField(JobListRequestBody.OrderByFieldEnum.fromValue(orderByField.name))
+      .orderByMethod(
+        JobListRequestBody.OrderByMethodEnum.fromValue(orderByMethod.name),
+      )
 
     val response = try {
       configApiClient.getJobList(jobListRequestBody, userInfo)
@@ -179,7 +194,13 @@ class JobServiceImpl(val configApiClient: ConfigApiClient, val userService: User
   /**
    * list jobs by workspace ID and job type.
    */
-  override fun getJobList(workspaceIds: List<UUID>, jobsFilter: JobsFilter, userInfo: String?): JobsResponse {
+  override fun getJobList(
+    workspaceIds: List<UUID>,
+    jobsFilter: JobsFilter,
+    orderByField: OrderByFieldEnum,
+    orderByMethod: OrderByMethodEnum,
+    userInfo: String?,
+  ): JobsResponse {
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
     // Get relevant workspace Ids
@@ -194,6 +215,8 @@ class JobServiceImpl(val configApiClient: ConfigApiClient, val userService: User
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
+      .orderByField(OrderByFieldEnum.fromValue(orderByField.name))
+      .orderByMethod(OrderByMethodEnum.fromValue(orderByMethod.name))
 
     val response = try {
       configApiClient.getJobListForWorkspaces(requestBody, userInfo)

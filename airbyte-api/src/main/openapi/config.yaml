@@ -6019,22 +6019,34 @@ components:
         status:
           description: The Job status you want to filter by
           $ref: "#/components/schemas/JobStatus"
-        created_at_start:
+        createdAtStart:
           description: The start datetime to filter by
           type: string
           format: date-time
-        created_at_end:
+        createdAtEnd:
           description: The end datetime to filter by
           type: string
           format: date-time
-        updated_at_start:
+        updatedAtStart:
           description: The start datetime to filter by
           type: string
           format: date-time
-        updated_at_end:
+        updatedAtEnd:
           description: The end datetime to filter by
           type: string
           format: date-time
+        orderByField:
+          description: The field to order by
+          type: string
+          enum:
+            - createdAt
+            - updatedAt
+        orderByMethod:
+          description: The order by method
+          type: string
+          enum:
+            - ASC
+            - DESC
     JobListForWorkspacesRequestBody:
       type: object
       required:
@@ -6055,22 +6067,34 @@ components:
         status:
           description: The Job status you want to filter by
           $ref: "#/components/schemas/JobStatus"
-        created_at_start:
+        createdAtStart:
           description: The start datetime to filter by
           type: string
           format: date-time
-        created_at_end:
+        createdAtEnd:
           description: The end datetime to filter by
           type: string
           format: date-time
-        updated_at_start:
+        updatedAtStart:
           description: The start datetime to filter by
           type: string
           format: date-time
-        updated_at_end:
+        updatedAtEnd:
           description: The end datetime to filter by
           type: string
           format: date-time
+        orderByField:
+          description: The field to order by
+          type: string
+          enum:
+            - createdAt
+            - updatedAt
+        orderByMethod:
+          description: The order by method
+          type: string
+          enum:
+            - ASC
+            - DESC
     JobIdRequestBody:
       type: object
       required:

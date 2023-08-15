@@ -117,6 +117,14 @@ paths:
           in: query
           required: false
           example: 2023-06-22T16:15:00Z
+        - name: orderBy
+          description: The field and method to use for ordering
+          schema:
+            type: string
+            pattern: \w+|(ASC|DESC)
+          in: query
+          required: false
+          example: updatedAt|DESC
       responses:
         "200":
           content:
