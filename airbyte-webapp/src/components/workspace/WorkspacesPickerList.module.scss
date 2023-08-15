@@ -1,17 +1,10 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.workspacesPickerList__scrollbox {
-  overflow-y: auto;
+.workspacesPickerList__list,
+.workspacesPickerList__list li {
   margin: 0;
-  max-height: variables.$height-workspace-picker;
-  background-color: colors.$foreground;
-
-  ul,
-  li {
-    margin: 0;
-    padding: 0;
-  }
+  padding: 0;
 }
 
 .workspacesPickerList__item {
