@@ -27,3 +27,7 @@ flags:
     serve: false
   - name: connectors.ingestBreakingChanges
     serve: false
+  - name: check-replication-progress
+    serve: true
+  - name: use-new-retries
+    serve: true
