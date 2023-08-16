@@ -13,7 +13,7 @@
   margin-left: variables.$spacing-lg;
 }
 
-.header {
+.header:not(:empty) {
   padding-bottom: variables.$spacing-lg;
 }
 
