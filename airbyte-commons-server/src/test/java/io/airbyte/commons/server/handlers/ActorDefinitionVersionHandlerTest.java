@@ -77,7 +77,7 @@ class ActorDefinitionVersionHandlerTest {
     when(mConfigRepository.getSourceDefinitionFromSource(sourceId))
         .thenReturn(SOURCE_DEFINITION);
     when(mActorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, sourceId))
-        .thenReturn(createActorDefinitionVersion());
+        .thenReturn(actorDefinitionVersion);
 
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceId);
     final ActorDefinitionVersionRead actorDefinitionVersionRead =
@@ -91,7 +91,7 @@ class ActorDefinitionVersionHandlerTest {
     verify(mConfigRepository).getSourceConnection(sourceId);
     verify(mConfigRepository).getSourceDefinitionFromSource(sourceId);
     verify(mActorDefinitionVersionHelper).getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, sourceId);
-    verify(mConfigRepository).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
+    verify(mConfigRepository).listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
     verifyNoMoreInteractions(mConfigRepository);
     verifyNoMoreInteractions(mActorDefinitionVersionHelper);
   }
@@ -120,20 +120,14 @@ class ActorDefinitionVersionHandlerTest {
     verify(mConfigRepository).getDestinationConnection(destinationId);
     verify(mConfigRepository).getDestinationDefinitionFromDestination(destinationId);
     verify(mActorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId);
-    verify(mConfigRepository).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
+    verify(mConfigRepository).listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
     verifyNoMoreInteractions(mConfigRepository);
     verifyNoMoreInteractions(mActorDefinitionVersionHelper);
   }
 
   @Test
-  void testCreateReadWithBreakingChange() throws IOException {
+  void testCreateActorDefinitionVersionReadWithBreakingChange() throws IOException {
     final List<ActorDefinitionBreakingChange> breakingChanges = List.of(
-        new ActorDefinitionBreakingChange()
-            .withActorDefinitionId(ACTOR_DEFINITION_ID)
-            .withMigrationDocumentationUrl("https://docs.airbyte.io/1")
-            .withVersion(new Version("1.0.0"))
-            .withUpgradeDeadline("2021-01-01")
-            .withMessage("This is an old breaking change"),
         new ActorDefinitionBreakingChange()
             .withActorDefinitionId(ACTOR_DEFINITION_ID)
             .withMigrationDocumentationUrl("https://docs.airbyte.io/2")
@@ -147,10 +141,8 @@ class ActorDefinitionVersionHandlerTest {
             .withUpgradeDeadline("2023-05-01")
             .withMessage("This is another breaking change"));
 
-    when(mConfigRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID))
-        .thenReturn(breakingChanges);
-
     final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionVersion().withSupportState(SupportState.DEPRECATED);
+    when(mConfigRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(breakingChanges);
 
     final ActorDefinitionVersionRead actorDefinitionVersionRead =
         actorDefinitionVersionHandler.createActorDefinitionVersionRead(actorDefinitionVersion);
@@ -174,7 +166,7 @@ class ActorDefinitionVersionHandlerTest {
                     .message("This is another breaking change"))));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
-    verify(mConfigRepository).listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID);
+    verify(mConfigRepository).listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
     verifyNoMoreInteractions(mConfigRepository);
     verifyNoInteractions(mActorDefinitionVersionHelper);
   }
