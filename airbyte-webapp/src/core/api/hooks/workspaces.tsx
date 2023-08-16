@@ -10,9 +10,10 @@ import {
   getWorkspace,
   listWorkspaces,
   updateWorkspace,
+  updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
-import { WorkspaceReadList, WorkspaceUpdate } from "../types/AirbyteClient";
+import { WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -141,6 +142,20 @@ export const useUpdateWorkspace = () => {
       queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
     },
   });
+};
+
+export const useUpdateWorkspaceName = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    (workspaceUpdateNameBody: WorkspaceUpdateName) => updateWorkspaceName(workspaceUpdateNameBody, requestOptions),
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
+      },
+    }
+  );
 };
 
 export const useInvalidateWorkspace = (workspaceId: string) => {

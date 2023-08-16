@@ -11,3 +11,4 @@ export * from "./security";
 export * from "./instanceConfiguration";
 export * from "./streams";
 export * from "./workspaces";
+export * from "./organizations";

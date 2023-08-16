@@ -52,7 +52,7 @@ export const DeleteWorkspaceSection: React.FC = () => {
     <FlexContainer justifyContent="center" alignItems="center">
       <Box p="2xl">
         <Button isLoading={isRemovingCloudWorkspace} variant="danger" onClick={deleteCurrentWorkspace}>
-          <FormattedMessage id="settings.generalSettings.deleteLabel" />
+          <FormattedMessage id="settings.workspaceSettings.deleteLabel" />
         </Button>
       </Box>
     </FlexContainer>

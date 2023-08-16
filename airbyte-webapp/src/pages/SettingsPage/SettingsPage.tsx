@@ -10,8 +10,12 @@ import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
+import { useCurrentWorkspace } from "core/api";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
+import { GeneralOrganizationSettingsPage } from "./GeneralOrganizationSettingsPage";
+import { GeneralWorkspaceSettingsPage } from "./GeneralWorkspaceSettingsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ConfigurationsPage } from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
@@ -34,21 +38,40 @@ export const SettingsRoute = {
   Notifications: "notifications",
   Metrics: "metrics",
   DataResidency: "data-residency",
+  Workspace: "workspace",
+  Organization: "organization",
 } as const;
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
   const push = useNavigate();
+  const { organizationId } = useCurrentWorkspace();
   const { pathname } = useLocation();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
+  const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
 
   const menuItems: CategoryItem[] = pageConfig?.menuConfig || [
     {
+      category: <FormattedMessage id="settings.userSettings" />,
       routes: [
         {
           path: `${SettingsRoute.Account}`,
           name: <FormattedMessage id="settings.account" />,
           component: AccountPage,
         },
+      ],
+    },
+    {
+      category: <FormattedMessage id="settings.workspaceSettings" />,
+      routes: [
+        ...(newWorkspacesUI
+          ? [
+              {
+                path: `${SettingsRoute.Workspace}`,
+                name: <FormattedMessage id="settings.generalSettings" />,
+                component: GeneralWorkspaceSettingsPage,
+              },
+            ]
+          : []),
         {
           path: `${SettingsRoute.Source}`,
           name: <FormattedMessage id="tables.sources" />,
@@ -78,6 +101,20 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
         },
       ],
     },
+    ...(newWorkspacesUI && organizationId
+      ? [
+          {
+            category: <FormattedMessage id="settings.organizationSettings" />,
+            routes: [
+              {
+                path: `${SettingsRoute.Organization}`,
+                name: <FormattedMessage id="settings.generalSettings" />,
+                component: GeneralOrganizationSettingsPage,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const onSelectMenuItem = (newPath: string) => push(newPath);

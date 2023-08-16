@@ -43,7 +43,7 @@ export const GeneralSettingsSection: React.FC = () => {
   const onSuccess = () => {
     registerNotification({
       id: "workspace_name_change_success",
-      text: formatMessage({ id: "settings.generalSettings.changeWorkspaceSuccess" }),
+      text: formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameSuccess" }),
       type: "success",
     });
   };
@@ -53,7 +53,7 @@ export const GeneralSettingsSection: React.FC = () => {
 
     registerNotification({
       id: "workspace_name_change_error",
-      text: formatMessage({ id: "settings.generalSettings.changeWorkspaceError" }),
+      text: formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameError" }),
       type: "error",
     });
   };
@@ -82,9 +82,9 @@ export const GeneralSettingsSection: React.FC = () => {
           <FormControl<WorkspaceFormValues>
             name="name"
             fieldType="input"
-            label={formatMessage({ id: "settings.generalSettings.form.name.label" })}
+            label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
             placeholder={formatMessage({
-              id: "settings.generalSettings.form.name.placeholder",
+              id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
             })}
           />
           <FormSubmissionButtons submitKey="form.saveChanges" />
