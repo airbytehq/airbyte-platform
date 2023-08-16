@@ -13,6 +13,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -65,6 +66,14 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
       .withMigrationDocumentationUrl("https://docs.airbyte.com/migration-2#1.0.0")
       .withUpgradeDeadline("2025-01-21");
 
+  final ActorDefinitionVersion createActorDefVersion(final UUID actorDefinitionId) {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefinitionId)
+        .withDockerImageTag("1.0.0")
+        .withDockerRepository("repo")
+        .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
+  }
+
   private ConfigRepository configRepository;
 
   @BeforeEach
@@ -73,8 +82,9 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
 
     configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
 
-    configRepository.writeStandardSourceDefinition(SOURCE_DEFINITION);
-    configRepository.writeStandardDestinationDefinition(DESTINATION_DEFINITION);
+    configRepository.writeSourceDefinitionAndDefaultVersion(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()));
+    configRepository.writeDestinationDefinitionAndDefaultVersion(DESTINATION_DEFINITION,
+        createActorDefVersion(DESTINATION_DEFINITION.getDestinationDefinitionId()));
   }
 
   @Test

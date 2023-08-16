@@ -300,7 +300,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   void testListConnectionsByActorDefinitionIdAndType() throws IOException, JsonValidationException {
     createBaseObjects();
     final var expectedSync = createStandardSync(source1, destination1);
-    List<StandardSync> actualSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+    final List<StandardSync> actualSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
         ActorType.DESTINATION.value(), false);
     assertThat(actualSyncs.size()).isEqualTo(1);
@@ -337,7 +337,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private StandardSourceDefinition createStandardSourceDefinition(final String protocolVersion, final ReleaseStage releaseStage)
-      throws JsonValidationException, IOException {
+      throws IOException {
     final UUID sourceDefId = UUID.randomUUID();
     final StandardSourceDefinition sourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefId)
@@ -361,7 +361,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private StandardDestinationDefinition createStandardDestDefinition(final String protocolVersion, final ReleaseStage releaseStage)
-      throws JsonValidationException, IOException {
+      throws IOException {
     final UUID destDefId = UUID.randomUUID();
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(destDefId)

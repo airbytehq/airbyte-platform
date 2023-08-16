@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -73,14 +74,19 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private void assertReturnsSrcDef(final StandardSourceDefinition srcDef) throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardSourceDefinition(srcDef);
-    assertEquals(srcDef, configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
   }
 
   private void assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(final StandardSourceDefinition srcDef)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardSourceDefinition(srcDef);
-    assertEquals(srcDef.withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES),
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    assertEquals(
+        srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId())
+            .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES),
         configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
   }
 
@@ -88,21 +94,24 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void testSourceDefinitionFromSource() throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardSourceDefinition srcDef = createBaseSourceDef().withTombstone(false);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
     final SourceConnection source = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardSourceDefinition(srcDef);
+    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(source);
 
-    assertEquals(srcDef, configRepository.getSourceDefinitionFromSource(source.getSourceId()));
+    assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getSourceDefinitionFromSource(source.getSourceId()));
   }
 
   @Test
   void testSourceDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardSourceDefinition srcDef = createBaseSourceDef().withTombstone(false);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
     final SourceConnection source = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardSourceDefinition(srcDef);
+    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(source);
 
     final UUID connectionId = UUID.randomUUID();
@@ -115,22 +124,25 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .when(configRepository)
         .getStandardSync(connectionId);
 
-    assertEquals(srcDef, configRepository.getSourceDefinitionFromConnection(connectionId));
+    assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getSourceDefinitionFromConnection(connectionId));
   }
 
   @ParameterizedTest
   @ValueSource(ints = {0, 1, 2, 10})
-  void testListStandardSourceDefsHandlesTombstoneSourceDefs(final int numSrcDefs) throws JsonValidationException, IOException {
+  void testListStandardSourceDefsHandlesTombstoneSourceDefs(final int numSrcDefs) throws IOException {
     final List<StandardSourceDefinition> allSourceDefinitions = new ArrayList<>();
     final List<StandardSourceDefinition> notTombstoneSourceDefinitions = new ArrayList<>();
     for (int i = 0; i < numSrcDefs; i++) {
       final boolean isTombstone = i % 2 == 0; // every other is tombstone
       final StandardSourceDefinition sourceDefinition = createBaseSourceDef().withTombstone(isTombstone);
+      final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
       allSourceDefinitions.add(sourceDefinition);
       if (!isTombstone) {
         notTombstoneSourceDefinitions.add(sourceDefinition);
       }
-      configRepository.writeStandardSourceDefinition(sourceDefinition);
+      configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+      sourceDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId());
     }
 
     final List<StandardSourceDefinition> returnedSrcDefsWithoutTombstone = configRepository.listStandardSourceDefinitions(false);
@@ -156,29 +168,34 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   void assertReturnsDestDef(final StandardDestinationDefinition destDef) throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardDestinationDefinition(destDef);
-    assertEquals(destDef, configRepository.getStandardDestinationDefinition(destDef.getDestinationDefinitionId()));
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
+    assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getStandardDestinationDefinition(destDef.getDestinationDefinitionId()));
   }
 
   @Test
   void testDestinationDefinitionFromDestination() throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardDestinationDefinition(destDef);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
     configRepository.writeDestinationConnectionNoSecrets(dest);
 
-    assertEquals(destDef, configRepository.getDestinationDefinitionFromDestination(dest.getDestinationId()));
+    assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getDestinationDefinitionFromDestination(dest.getDestinationId()));
   }
 
   @Test
   void testDestinationDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardDestinationDefinition(destDef);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
     configRepository.writeDestinationConnectionNoSecrets(dest);
 
     final UUID connectionId = UUID.randomUUID();
@@ -191,22 +208,25 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .when(configRepository)
         .getStandardSync(connectionId);
 
-    assertEquals(destDef, configRepository.getDestinationDefinitionFromConnection(connectionId));
+    assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+        configRepository.getDestinationDefinitionFromConnection(connectionId));
   }
 
   @ParameterizedTest
   @ValueSource(ints = {0, 1, 2, 10})
-  void testListStandardDestDefsHandlesTombstoneDestDefs(final int numDestinationDefinitions) throws JsonValidationException, IOException {
+  void testListStandardDestDefsHandlesTombstoneDestDefs(final int numDestinationDefinitions) throws IOException {
     final List<StandardDestinationDefinition> allDestinationDefinitions = new ArrayList<>();
     final List<StandardDestinationDefinition> notTombstoneDestinationDefinitions = new ArrayList<>();
     for (int i = 0; i < numDestinationDefinitions; i++) {
       final boolean isTombstone = i % 2 == 0; // every other is tombstone
       final StandardDestinationDefinition destinationDefinition = createBaseDestDef().withTombstone(isTombstone);
+      final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
       allDestinationDefinitions.add(destinationDefinition);
       if (!isTombstone) {
         notTombstoneDestinationDefinitions.add(destinationDefinition);
       }
-      configRepository.writeStandardDestinationDefinition(destinationDefinition);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+      destinationDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId());
     }
 
     final List<StandardDestinationDefinition> returnedDestDefsWithoutTombstone = configRepository.listStandardDestinationDefinitions(false);
@@ -372,6 +392,72 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(destinationDefinition2.withDefaultVersionId(newADVId), destinationDefinitionFromDB);
   }
 
+  @Test
+  void testUpdateStandardSourceDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+
+    final StandardSourceDefinition sourceDefinitionFromDB =
+        configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
+    assertEquals(sourceDefinition.withDefaultVersionId(actorDefinitionVersion.getVersionId()), sourceDefinitionFromDB);
+
+    final StandardSourceDefinition sourceDefinition2 = sourceDefinition
+        .withName("new name")
+        .withIcon("updated icon")
+        .withTombstone(true);
+    configRepository.updateStandardSourceDefinition(sourceDefinition2);
+
+    final StandardSourceDefinition sourceDefinition2FromDB =
+        configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
+
+    // Default version has not changed
+    assertEquals(sourceDefinition2FromDB.getDefaultVersionId(), sourceDefinitionFromDB.getDefaultVersionId());
+
+    // Source definition has been updated
+    assertEquals(sourceDefinition2.withDefaultVersionId(actorDefinitionVersion.getVersionId()), sourceDefinition2FromDB);
+  }
+
+  @Test
+  void testUpdateNonexistentStandardSourceDefinitionThrows() {
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.updateStandardSourceDefinition(sourceDefinition));
+  }
+
+  @Test
+  void testUpdateStandardDestinationDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
+
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+
+    final StandardDestinationDefinition destinationDefinitionFromDB =
+        configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
+    assertEquals(destinationDefinition.withDefaultVersionId(actorDefinitionVersion.getVersionId()), destinationDefinitionFromDB);
+
+    final StandardDestinationDefinition destinationDefinition2 = destinationDefinition
+        .withName("new name")
+        .withIcon("updated icon")
+        .withTombstone(true);
+    configRepository.updateStandardDestinationDefinition(destinationDefinition2);
+
+    final StandardDestinationDefinition destinationDefinition2FromDB =
+        configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
+
+    // Default version has not changed
+    assertEquals(destinationDefinition2FromDB.getDefaultVersionId(), destinationDefinitionFromDB.getDefaultVersionId());
+
+    // Destination definition has been updated
+    assertEquals(destinationDefinition2.withDefaultVersionId(actorDefinitionVersion.getVersionId()), destinationDefinition2FromDB);
+  }
+
+  @Test
+  void testUpdateNonexistentStandardDestinationDefinitionThrows() {
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.updateStandardDestinationDefinition(destinationDefinition));
+  }
+
   @SuppressWarnings("SameParameterValue")
   private static SourceConnection createSource(final UUID sourceDefId, final UUID workspaceId) {
     return new SourceConnection()
@@ -402,6 +488,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
     return new ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)

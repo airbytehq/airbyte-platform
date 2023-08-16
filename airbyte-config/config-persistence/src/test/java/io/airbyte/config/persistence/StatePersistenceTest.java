@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -61,15 +62,21 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
     final StandardSourceDefinition sourceDefinition = MockData.publicSourceDefinition();
     final SourceConnection sourceConnection = MockData.sourceConnections().get(0);
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersionId(sourceDefinition.getDefaultVersionId());
     final StandardDestinationDefinition destinationDefinition = MockData.publicDestinationDefinition();
+    final ActorDefinitionVersion actorDefinitionVersion2 = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withVersionId(destinationDefinition.getDefaultVersionId());
     final DestinationConnection destinationConnection = MockData.destinationConnections().get(0);
     // we don't need sync operations in this test suite, zero them out.
     final StandardSync sync = Jsons.clone(MockData.standardSyncs().get(0)).withOperationIds(Collections.emptyList());
 
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeStandardSourceDefinition(sourceDefinition);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-    configRepository.writeStandardDestinationDefinition(destinationDefinition);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion2);
     configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
     configRepository.writeStandardSync(sync);
 

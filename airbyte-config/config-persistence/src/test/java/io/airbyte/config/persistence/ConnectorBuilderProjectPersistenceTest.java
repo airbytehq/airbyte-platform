@@ -13,13 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
-import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -77,7 +78,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadWithLinkedDefinition() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testReadWithLinkedDefinition() throws IOException, ConfigNotFoundException {
     createBaseObjects();
 
     final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
@@ -108,7 +109,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testListWithLinkedDefinition() throws IOException, JsonValidationException {
+  void testListWithLinkedDefinition() throws IOException {
     createBaseObjects();
 
     final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
@@ -256,7 +257,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testDeleteManifestDraftForActorDefinitionId() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testDeleteManifestDraftForActorDefinitionId() throws IOException, ConfigNotFoundException {
     createBaseObjects();
     final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
     assertNotNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
@@ -308,7 +309,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     return project;
   }
 
-  private StandardSourceDefinition linkSourceDefinition(final UUID projectId) throws JsonValidationException, IOException {
+  private StandardSourceDefinition linkSourceDefinition(final UUID projectId) throws IOException {
     final UUID id = UUID.randomUUID();
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -316,7 +317,13 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(id)
         .withTombstone(false);
 
-    configRepository.writeStandardSourceDefinition(sourceDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withDockerRepository("repo-" + id)
+        .withDockerImageTag("0.0.1")
+        .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
     configRepository.insertActiveDeclarativeManifest(new DeclarativeManifest()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersion(MANIFEST_VERSION)

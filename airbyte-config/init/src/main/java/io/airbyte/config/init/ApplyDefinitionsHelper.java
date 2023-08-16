@@ -15,6 +15,7 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -64,7 +65,7 @@ public class ApplyDefinitionsHelper {
     this.featureFlagClient = featureFlagClient;
   }
 
-  public void apply() throws JsonValidationException, IOException {
+  public void apply() throws JsonValidationException, IOException, ConfigNotFoundException {
     apply(false);
   }
 
@@ -75,7 +76,7 @@ public class ApplyDefinitionsHelper {
    *        consider whether a definition is in use before updating the definition and default
    *        version.
    */
-  public void apply(final boolean updateAll) throws JsonValidationException, IOException {
+  public void apply(final boolean updateAll) throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectorRegistrySourceDefinition> latestSourceDefinitions = definitionsProvider.getSourceDefinitions();
     final List<ConnectorRegistryDestinationDefinition> latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions();
 
@@ -112,7 +113,7 @@ public class ApplyDefinitionsHelper {
                                      final ConnectorRegistrySourceDefinition newDef,
                                      final Set<UUID> actorDefinitionIdsInUse,
                                      final boolean updateAll)
-      throws IOException, JsonValidationException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef);
     final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
 
@@ -135,7 +136,7 @@ public class ApplyDefinitionsHelper {
       changedConnectorCount++;
       configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV);
     } else {
-      configRepository.writeStandardSourceDefinition(newSourceDef);
+      configRepository.updateStandardSourceDefinition(newSourceDef);
     }
   }
 
@@ -143,7 +144,7 @@ public class ApplyDefinitionsHelper {
                                           final ConnectorRegistryDestinationDefinition newDef,
                                           final Set<UUID> actorDefinitionIdsInUse,
                                           final boolean updateAll)
-      throws IOException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardDestinationDefinition newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef);
     final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
 
@@ -166,7 +167,7 @@ public class ApplyDefinitionsHelper {
       changedConnectorCount++;
       configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV);
     } else {
-      configRepository.writeStandardDestinationDefinition(newDestinationDef);
+      configRepository.updateStandardDestinationDefinition(newDestinationDef);
     }
 
   }

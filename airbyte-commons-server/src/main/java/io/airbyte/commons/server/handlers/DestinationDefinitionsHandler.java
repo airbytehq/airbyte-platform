@@ -285,7 +285,7 @@ public class DestinationDefinitionsHandler {
     }
 
     persistedDestinationDefinition.withTombstone(true);
-    configRepository.writeStandardDestinationDefinition(persistedDestinationDefinition);
+    configRepository.updateStandardDestinationDefinition(persistedDestinationDefinition);
   }
 
   public static String loadIcon(final String name) {

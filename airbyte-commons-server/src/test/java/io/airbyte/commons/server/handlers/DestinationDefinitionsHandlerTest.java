@@ -763,7 +763,7 @@ class DestinationDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(configRepository, never()).writeStandardDestinationDefinition(any());
+    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -786,7 +786,7 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
 
     verify(destinationHandler).deleteDestination(newDestinationDefinition);
-    verify(configRepository).writeStandardDestinationDefinition(updatedDestinationDefinition);
+    verify(configRepository).updateStandardDestinationDefinition(updatedDestinationDefinition);
   }
 
   @Test

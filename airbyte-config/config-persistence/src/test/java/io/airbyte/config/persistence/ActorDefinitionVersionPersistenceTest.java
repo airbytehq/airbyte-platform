@@ -50,6 +50,12 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
       .withName(SOURCE_NAME)
       .withSourceDefinitionId(ACTOR_DEFINITION_ID);
 
+  private static final ActorDefinitionVersion initialActorDefinitionVersion = new ActorDefinitionVersion()
+      .withActorDefinitionId(ACTOR_DEFINITION_ID)
+      .withDockerImageTag("overwrite me")
+      .withDockerRepository("overwrite me")
+      .withSpec(new ConnectorSpecification().withAdditionalProperty("overwrite", "me").withProtocolVersion("0.0.0"));
+
   private static ActorDefinitionVersion baseActorDefinitionVersion() {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
@@ -78,8 +84,8 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     truncateAllTables();
     configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
 
-    // Create correlated entry in actor_definition table to satisfy foreign key requirement
-    configRepository.writeStandardSourceDefinition(SOURCE_DEFINITION);
+    // Make sure that the source definition exists before we start writing actor definition versions
+    configRepository.writeSourceDefinitionAndDefaultVersion(SOURCE_DEFINITION, initialActorDefinitionVersion);
   }
 
   @Test

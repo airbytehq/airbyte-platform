@@ -737,13 +737,18 @@ public class ConfigRepository {
   }
 
   /**
-   * Write source definition.
+   * Update source definition.
    *
    * @param sourceDefinition source definition
    * @throws JsonValidationException - throws if returned sources are invalid
    * @throws IOException - you never know when you IO
    */
-  public void writeStandardSourceDefinition(final StandardSourceDefinition sourceDefinition) throws JsonValidationException, IOException {
+  public void updateStandardSourceDefinition(final StandardSourceDefinition sourceDefinition)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Check existence before updating
+    // TODO: split out write and update methods so that we don't need explicit checking
+    getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
+
     database.transaction(ctx -> {
       ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
       return null;
@@ -943,12 +948,17 @@ public class ConfigRepository {
   }
 
   /**
-   * Write destination definition.
+   * Update destination definition.
    *
    * @param destinationDefinition destination definition
    * @throws IOException - you never know when you IO
    */
-  public void writeStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition) throws IOException {
+  public void updateStandardDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Check existence before updating
+    // TODO: split out write and update methods so that we don't need explicit checking
+    getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
+
     database.transaction(ctx -> {
       ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
       return null;

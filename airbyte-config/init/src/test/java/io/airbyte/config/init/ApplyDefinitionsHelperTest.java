@@ -22,6 +22,7 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleases;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -125,7 +126,7 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testNewConnectorIsWritten(final boolean updateAll) throws IOException, JsonValidationException {
+  void testNewConnectorIsWritten(final boolean updateAll) throws IOException, JsonValidationException, ConfigNotFoundException {
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES));
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3));
 
@@ -143,7 +144,7 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll) throws IOException, JsonValidationException {
+  void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll) throws IOException, JsonValidationException, ConfigNotFoundException {
     mockSeedInitialDefinitions();
     when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of());
 
@@ -167,7 +168,7 @@ class ApplyDefinitionsHelperTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void testUpdateBehaviorIfConnectorIsInUse(final boolean updateAll)
-      throws IOException, JsonValidationException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     mockSeedInitialDefinitions();
     when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of(POSTGRES_ID, S3_ID));
 
@@ -185,8 +186,8 @@ class ApplyDefinitionsHelperTest {
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2));
       verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     } else {
-      verify(configRepository).writeStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
-      verify(configRepository).writeStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
+      verify(configRepository).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
+      verify(configRepository).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
       verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     }
     verifyNoMoreInteractions(configRepository);
@@ -194,7 +195,7 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testDefinitionsFiltering(final boolean updateAll) throws JsonValidationException, IOException {
+  void testDefinitionsFiltering(final boolean updateAll) throws JsonValidationException, IOException, ConfigNotFoundException {
     when(jobPersistence.getCurrentProtocolVersionRange())
         .thenReturn(Optional.of(new AirbyteProtocolVersionRange(new Version("2.0.0"), new Version("3.0.0"))));
     final ConnectorRegistrySourceDefinition postgresWithOldProtocolVersion =
@@ -225,7 +226,7 @@ class ApplyDefinitionsHelperTest {
   }
 
   @Test
-  void testTurnOffIngestBreakingChangesFeatureFlag() throws JsonValidationException, IOException {
+  void testTurnOffIngestBreakingChangesFeatureFlag() throws JsonValidationException, IOException, ConfigNotFoundException {
     when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
 
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));

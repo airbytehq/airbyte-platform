@@ -693,7 +693,7 @@ class SourceDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
-    verify(configRepository, never()).writeStandardSourceDefinition(any());
+    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -716,7 +716,7 @@ class SourceDefinitionsHandlerTest {
     sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinitionIdRequestBody);
 
     verify(sourceHandler).deleteSource(newSourceDefinition);
-    verify(configRepository).writeStandardSourceDefinition(updatedSourceDefinition);
+    verify(configRepository).updateStandardSourceDefinition(updatedSourceDefinition);
   }
 
   @Test

@@ -285,7 +285,7 @@ public class SourceDefinitionsHandler {
     }
 
     persistedSourceDefinition.withTombstone(true);
-    configRepository.writeStandardSourceDefinition(persistedSourceDefinition);
+    configRepository.updateStandardSourceDefinition(persistedSourceDefinition);
   }
 
   public static String loadIcon(final String name) {

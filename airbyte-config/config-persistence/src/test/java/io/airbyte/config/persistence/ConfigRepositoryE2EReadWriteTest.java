@@ -144,7 +144,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSimpleInsertActorCatalog() throws IOException, JsonValidationException, SQLException {
+  void testSimpleInsertActorCatalog() throws IOException, SQLException {
     final String otherConfigHash = "OtherConfigHash";
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
 
@@ -152,7 +152,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(UUID.randomUUID())
         .withSourceType(SourceType.DATABASE)
         .withName("sourceDefinition");
-    configRepository.writeStandardSourceDefinition(sourceDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersionId(sourceDefinition.getDefaultVersionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())

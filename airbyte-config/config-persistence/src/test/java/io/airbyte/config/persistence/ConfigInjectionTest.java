@@ -13,8 +13,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.validation.json.JsonValidationException;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -44,7 +45,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testInject() throws IOException, JsonValidationException {
+  void testInject() throws IOException {
     createBaseObjects();
 
     final JsonNode injected = configInjector.injectConfig(exampleConfig, sourceDefinition.getSourceDefinitionId());
@@ -55,7 +56,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testInjectOverwrite() throws IOException, JsonValidationException {
+  void testInjectOverwrite() throws IOException {
     createBaseObjects();
 
     ((ObjectNode) exampleConfig).set("a", new LongNode(123));
@@ -68,7 +69,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testUpdate() throws IOException, JsonValidationException {
+  void testUpdate() throws IOException {
     createBaseObjects();
 
     // write an injection object with the same definition id and the same injection path - will update
@@ -84,7 +85,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testCreate() throws IOException, JsonValidationException {
+  void testCreate() throws IOException {
     createBaseObjects();
 
     // write an injection object with the same definition id and a new injection path - will create a
@@ -99,16 +100,18 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     assertEquals("thirdInject", injected.get("c").asText());
   }
 
-  private void createBaseObjects() throws IOException, JsonValidationException {
+  private void createBaseObjects() throws IOException {
     sourceDefinition = createBaseSourceDef();
-    configRepository.writeStandardSourceDefinition(sourceDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
 
     createInjection(sourceDefinition, "a");
     createInjection(sourceDefinition, "b");
 
     // unreachable injection, should not show up
     final StandardSourceDefinition otherSourceDefinition = createBaseSourceDef();
-    configRepository.writeStandardSourceDefinition(otherSourceDefinition);
+    final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(otherSourceDefinition.getSourceDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(otherSourceDefinition, actorDefinitionVersion2);
     createInjection(otherSourceDefinition, "c");
   }
 
@@ -128,6 +131,15 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
         .withName("source-def-" + id)
         .withSourceDefinitionId(id)
         .withTombstone(false);
+  }
+
+  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId) {
+    return new ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(actorDefId)
+        .withDockerRepository("source-image-" + actorDefId)
+        .withDockerImageTag("1.0.0")
+        .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 
 }
