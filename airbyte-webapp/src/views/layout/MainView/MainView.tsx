@@ -8,10 +8,12 @@ import { LoadingPage } from "components";
 import { Version } from "components/common/Version";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ThemeToggle } from "components/ui/ThemeToggle";
+import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
 import { useConfig } from "config";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { RoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -30,11 +32,13 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { version } = useConfig();
   const { trackError } = useAppMonitoringService();
   const { hasNewVersions } = useGetConnectorsOutOfDate();
+  const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
 
   return (
     <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
       <SideBar>
         <AirbyteHomeLink />
+        {newWorkspacesUI && <WorkspacesPicker />}
         <MenuContent>
           <MainNavItems />
           <MenuContent>

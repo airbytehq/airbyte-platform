@@ -24,6 +24,7 @@ import { FormikOnSubmit } from "types/formik";
 import styles from "./ConnectionTransformationPage.module.scss";
 import { CustomTransformationsCard } from "./CustomTransformationsCard";
 import { CustomTransformationsHookForm } from "./CustomTransformationsHookForm";
+import { DbtCloudTransformations } from "./DbtCloudTransformations";
 import { DbtCloudTransformationsCard } from "./DbtCloudTransformationsCard";
 import { NormalizationCard } from "./NormalizationCard";
 import { NormalizationHookForm } from "./NormalizationHookForm";
@@ -73,6 +74,7 @@ export const ConnectionTransformationPage: React.FC = () => {
           <>
             {supportsNormalization && <NormalizationHookForm />}
             {supportsDbt && <CustomTransformationsHookForm />}
+            {supportsCloudDbtIntegration && <DbtCloudTransformations />}
           </>
         ) : (
           <>
@@ -94,16 +96,14 @@ export const ConnectionTransformationPage: React.FC = () => {
             >
               {supportsDbt && <CustomTransformationsCard operations={connection.operations} onSubmit={onSubmit} />}
             </fieldset>
+            <fieldset
+              disabled={mode === "readonly"}
+              style={{ all: "unset", pointerEvents: `${mode === "readonly" ? "none" : "auto"}` }}
+            >
+              {supportsCloudDbtIntegration && <DbtCloudTransformationsCard connection={connection} />}
+            </fieldset>
           </>
         )}
-
-        {/* TODO: remove fieldset after DbtCloudTransformationsCard form migration*/}
-        <fieldset
-          disabled={mode === "readonly"}
-          style={{ all: "unset", pointerEvents: `${mode === "readonly" ? "none" : "auto"}` }}
-        >
-          {supportsCloudDbtIntegration && <DbtCloudTransformationsCard connection={connection} />}
-        </fieldset>
 
         {noSupportedTransformations && (
           <Card className={styles.customCard}>

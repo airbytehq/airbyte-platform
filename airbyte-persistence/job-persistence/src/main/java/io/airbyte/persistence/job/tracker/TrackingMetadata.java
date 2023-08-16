@@ -49,6 +49,8 @@ public class TrackingMetadata {
   public static Map<String, Object> generateSyncMetadata(final StandardSync standardSync) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connection_id", standardSync.getConnectionId());
+    metadata.put("source_id", standardSync.getSourceId());
+    metadata.put("destination_id", standardSync.getDestinationId());
 
     final String frequencyString;
     if (standardSync.getScheduleType() != null) {

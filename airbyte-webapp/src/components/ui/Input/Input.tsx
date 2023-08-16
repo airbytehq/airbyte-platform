@@ -11,12 +11,13 @@ import { Button } from "../Button";
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
   light?: boolean;
+  inline?: boolean;
   containerClassName?: string;
   adornment?: ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ light, error, containerClassName, adornment, ...props }, ref) => {
+  ({ light, error, inline, containerClassName, adornment, ...props }, ref) => {
     const { formatMessage } = useIntl();
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -80,6 +81,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           [styles.readOnly]: props.readOnly,
           [styles.focused]: focused,
           [styles.light]: light,
+          [styles.inline]: inline,
           [styles.error]: error,
         })}
         data-testid="input-container"

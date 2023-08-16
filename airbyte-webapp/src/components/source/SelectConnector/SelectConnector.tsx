@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useDebounce } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -11,6 +12,7 @@ import { useCurrentWorkspace } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { ReleaseStage } from "core/request/AirbyteClient";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useModalService } from "hooks/services/Modal";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
@@ -82,6 +84,24 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())
       ),
     [searchTerm, connectorDefinitions]
+  );
+
+  const analyticsService = useAnalyticsService();
+  useDebounce(
+    () => {
+      if (filteredSearchResults.length === 0) {
+        analyticsService.track(
+          connectorType === "source" ? Namespace.SOURCE : Namespace.DESTINATION,
+          Action.NO_MATCHING_CONNECTOR,
+          {
+            actionDescription: "Connector query without results",
+            query: searchTerm,
+          }
+        );
+      }
+    },
+    350,
+    [searchTerm]
   );
 
   return (

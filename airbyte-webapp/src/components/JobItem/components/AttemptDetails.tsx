@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -17,6 +17,8 @@ interface AttemptDetailsProps {
   hasMultipleAttempts?: boolean;
   jobId: string;
   isPartialSuccess?: boolean;
+  showEndedAt?: boolean;
+  showFailureMessage?: boolean;
 }
 
 export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
@@ -24,6 +26,8 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   hasMultipleAttempts,
   jobId,
   isPartialSuccess,
+  showEndedAt = false,
+  showFailureMessage = true,
 }) => {
   const { formatMessage } = useIntl();
 
@@ -60,11 +64,24 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   return (
     <>
       {!isCancelled && (
-        <FlexContainer gap="xs">
+        <FlexContainer gap="sm">
           {hasMultipleAttempts && (
             <Text color={isFailed && !isPartialSuccess ? "red" : "darkBlue"} bold as="span" size="sm">
               <FormattedMessage id="sources.lastAttempt" />
             </Text>
+          )}
+          {showEndedAt && attempt.endedAt && (
+            <>
+              <Text as="span" color="grey" size="sm">
+                <FormattedTimeParts value={attempt.createdAt * 1000} hour="numeric" minute="2-digit">
+                  {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
+                </FormattedTimeParts>
+                <FormattedDate value={attempt.createdAt * 1000} month="2-digit" day="2-digit" year="numeric" />
+              </Text>
+              <Text as="span" color="grey" size="sm">
+                |
+              </Text>
+            </>
           )}
           <Text as="span" color="grey" size="sm">
             {formatBytes(attempt?.totalStats?.bytesEmitted)}
@@ -103,7 +120,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
           </Text>
         </FlexContainer>
       )}
-      {isFailed && (
+      {showFailureMessage && isFailed && (
         <Text color={isPartialSuccess ? "grey" : "red"} size="sm" className={styles.failedMessage}>
           {formatMessage(
             {

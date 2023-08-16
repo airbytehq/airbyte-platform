@@ -19,6 +19,7 @@ import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
+import io.airbyte.commons.server.handlers.OrganizationsHandler;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
@@ -33,6 +34,7 @@ import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
 import io.airbyte.persistence.job.JobNotifier;
+import io.airbyte.persistence.job.tracker.JobTracker;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
@@ -246,6 +248,14 @@ abstract class BaseControllerTest {
     return workspacesHandler;
   }
 
+  OrganizationsHandler organizationsHandler = Mockito.mock(OrganizationsHandler.class);
+
+  @MockBean(OrganizationsHandler.class)
+  @Replaces(OrganizationsHandler.class)
+  OrganizationsHandler mmOrganizationsHandler() {
+    return organizationsHandler;
+  }
+
   @MockBean(SynchronousSchedulerClient.class)
   @Replaces(SynchronousSchedulerClient.class)
   SynchronousSchedulerClient mmSynchronousSchedulerClient() {
@@ -293,6 +303,12 @@ abstract class BaseControllerTest {
   @Replaces(JobNotifier.class)
   JobNotifier mmJobNotifier() {
     return Mockito.mock(JobNotifier.class);
+  }
+
+  @MockBean(JobTracker.class)
+  @Replaces(JobTracker.class)
+  JobTracker mmJobTracker() {
+    return Mockito.mock(JobTracker.class);
   }
 
   @Replaces(DSLContext.class)

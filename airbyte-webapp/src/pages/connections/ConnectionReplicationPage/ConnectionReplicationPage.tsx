@@ -153,7 +153,34 @@ export const ConnectionReplicationPage: React.FC = () => {
         connection.syncCatalog.streams.filter((s) => s.config?.selected)
       );
 
+      // Only adding/removing a stream - with 0 other changes - doesn't require a reset
+      // for each form value stream, find the corresponding connection value stream
+      // and remove `config.selected` from both before comparing
+      // we need to reset if any of the streams are different
+      type SyncSchemaStream = (typeof formValues.syncCatalog.streams)[number];
+
+      const getStreamId = (stream: SyncSchemaStream) => {
+        return `${stream.stream?.namespace ?? ""}-${stream.stream?.name}`;
+      };
+      const lookupConnectionValuesStreamById = connection.syncCatalog.streams.reduce<Record<string, SyncSchemaStream>>(
+        (agg, stream) => {
+          agg[getStreamId(stream)] = stream;
+          return agg;
+        },
+        {}
+      );
+      const hasUserChangesInEnabledStreamsRequiringReset = formValues.syncCatalog.streams.some((_stream) => {
+        const formStream = structuredClone(_stream);
+        const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);
+
+        delete formStream.config?.selected;
+        delete connectionStream.config?.selected;
+
+        return !equal(formStream, connectionStream);
+      });
+
       const catalogHasChanged = hasDiffInEnabledStream || hasUserChangesInEnabledStreams;
+      const catalogChangesRequireReset = hasDiffInEnabledStream || hasUserChangesInEnabledStreamsRequiringReset;
 
       setSubmitError(null);
 
@@ -161,7 +188,7 @@ export const ConnectionReplicationPage: React.FC = () => {
       // Given them a choice to opt-out in which case we'll be sending skipReset: true to the update
       // endpoint.
       try {
-        if (catalogHasChanged) {
+        if (catalogChangesRequireReset) {
           const stateType = await connectionService.getStateType(connection.connectionId);
           const result = await openModal<boolean>({
             title: formatMessage({ id: "connection.resetModalTitle" }),
@@ -179,7 +206,7 @@ export const ConnectionReplicationPage: React.FC = () => {
             return;
           }
         } else {
-          // The catalog hasn't changed. We don't need to ask for any confirmation and can simply save.
+          // The catalog hasn't changed, or only added/removed stream(s). We don't need to ask for any confirmation and can simply save.
           await saveConnection(formValues, { skipReset: true, catalogHasChanged });
         }
 

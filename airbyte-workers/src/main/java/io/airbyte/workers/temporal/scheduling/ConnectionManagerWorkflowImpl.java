@@ -121,12 +121,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private static final String CHECK_RUN_PROGRESS_TAG = "check_run_progress";
   private static final String NEW_RETRIES_TAG = "new_retries";
   private static final String APPEND_ATTEMPT_LOG_TAG = "append_attempt_log";
+  private static final String DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_TAG = "dont_fail_for_backoff_schedule_conflict";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
   private static final int CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
   private static final int CHECK_RUN_PROGRESS_VERSION = 1;
   private static final int NEW_RETRIES_VERSION = 1;
   private static final int APPEND_ATTEMPT_LOG_VERSION = 1;
+  private static final int DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION = 1;
 
   private final WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -1151,6 +1153,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return isBeforeNewRetriesVersion();
   }
 
+  private boolean isBeforeDontFailForBackoffScheduleConflictVersion() {
+    final int version =
+        Workflow.getVersion(DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_TAG, Workflow.DEFAULT_VERSION, DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION);
+    return version < DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_VERSION;
+  }
+
   private Duration resolveBackoff(final ConnectionUpdaterInput input, final Duration timeTilScheduledRun) {
     if (useAttemptCountRetries()) {
       return Duration.ZERO;
@@ -1158,13 +1166,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
     final Duration backoff = retryManager.getBackoff();
 
-    // Backoff goes beyond next scheduled run time, so we fail the attempt and let the connection resume
-    // with the next job.
-    if (backoff.compareTo(timeTilScheduledRun) >= 0) {
-      failJob(input, "Retry backoff period is longer than time until the next schedule run.");
-      resetNewConnectionInput(input);
-      prepareForNextRunAndContinueAsNew(input);
-      return Duration.ZERO; // unreachable
+    if (isBeforeDontFailForBackoffScheduleConflictVersion()) {
+      // Backoff goes beyond next scheduled run time, so we fail the attempt and let the connection resume
+      // with the next job.
+      if (backoff.compareTo(timeTilScheduledRun) >= 0) {
+        failJob(input, "Retry backoff period is longer than time until the next schedule run.");
+        resetNewConnectionInput(input);
+        prepareForNextRunAndContinueAsNew(input);
+        return Duration.ZERO; // unreachable
+      }
     }
 
     runAppendToAttemptLogActivity(String.format("Backing off for: %s.", retryManager.getBackoffString()), LogLevel.WARN);

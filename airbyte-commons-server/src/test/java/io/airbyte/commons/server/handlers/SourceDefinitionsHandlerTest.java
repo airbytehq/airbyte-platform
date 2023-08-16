@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -508,6 +509,8 @@ class SourceDefinitionsHandlerTest {
         sourceDefinitionVersion,
         workspaceId,
         ScopeType.WORKSPACE);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -588,6 +591,8 @@ class SourceDefinitionsHandlerTest {
         null);
     verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
         sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -621,6 +626,8 @@ class SourceDefinitionsHandlerTest {
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
     verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any(), any());
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -654,8 +661,11 @@ class SourceDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, sourceRead.getDockerImageTag());
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
+    verify(actorDefinitionHandlerHelper).persistBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
     verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource,
         updatedSourceDefVersion);
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test
@@ -684,6 +694,8 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
     verify(configRepository, never()).writeStandardSourceDefinition(any());
+
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
   @Test

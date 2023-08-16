@@ -17,14 +17,18 @@ import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,10 +47,18 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   private static final JsonNode CONFIG = Jsons.jsonNode(ImmutableMap.of("key-a", "value-a"));
 
   private ConfigRepository configRepository;
+  private WorkspacePersistence workspacePersistence;
 
   @BeforeEach
-  void setup() {
+  void setup() throws Exception {
     configRepository = spy(new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    workspacePersistence = new WorkspacePersistence(database);
+    OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
+
+    truncateAllTables();
+    for (final Organization organization : MockData.organizations()) {
+      organizationPersistence.createOrganization(organization);
+    }
   }
 
   @Test
@@ -206,6 +218,63 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     persistConnectorsWithReleaseStages(ReleaseStage.CUSTOM, ReleaseStage.CUSTOM);
     assertFalse(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
+  }
+
+  @Test
+  void testListWorkspacesInOrgNoKeyword() throws JsonValidationException, IOException, Exception {
+
+    final StandardWorkspace workspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1);
+    final StandardWorkspace otherWorkspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2);
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.empty());
+    assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(false));
+
+    assertEquals(1, workspaces.size());
+    assertEquals(workspace, workspaces.get(0));
+  }
+
+  @Test
+  void testListWorkspacesInOrgWithPagination() throws JsonValidationException, IOException, Exception {
+    final StandardWorkspace workspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("A workspace");
+    final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("B workspace");
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
+
+    assertEquals(1, workspaces.size());
+    assertEquals(workspace, workspaces.get(0));
+  }
+
+  @Test
+  void testListWorkspacesInOrgWithKeyword() throws JsonValidationException, IOException, Exception {
+    final StandardWorkspace workspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspaceWithKeyword");
+    final StandardWorkspace otherWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.ORGANIZATION_ID_1).withName("workspace");
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+    configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
+
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+        new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
+
+    assertEquals(1, workspaces.size());
+    assertEquals(workspace, workspaces.get(0));
   }
 
 }

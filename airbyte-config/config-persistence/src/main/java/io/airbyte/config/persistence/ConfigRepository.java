@@ -490,6 +490,7 @@ public class ConfigRepository {
             .set(WORKSPACE.UPDATED_AT, timestamp)
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .where(WORKSPACE.ID.eq(workspace.getWorkspaceId()))
             .execute();
       } else {
@@ -514,6 +515,7 @@ public class ConfigRepository {
             .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
                 workspace.getDefaultGeography().value(),
                 io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
             .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
                 : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
             .execute();
@@ -3442,6 +3444,19 @@ public class ConfigRepository {
         .execute());
   }
 
+  /**
+   * Set the default version for an actor.
+   *
+   * @param actorId - actor id
+   * @param actorDefinitionVersionId - actor definition version id
+   */
+  public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId) throws IOException {
+    database.query(ctx -> ctx.update(Tables.ACTOR)
+        .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
+        .where(Tables.ACTOR.ID.eq(actorId))
+        .execute());
+  }
+
   private Query upsertBreakingChangeQuery(final DSLContext ctx, final ActorDefinitionBreakingChange breakingChange, final OffsetDateTime timestamp) {
     return ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
@@ -3472,6 +3487,46 @@ public class ConfigRepository {
         .stream()
         .map(DbConverter::buildActorDefinitionBreakingChange)
         .collect(Collectors.toList()));
+  }
+
+  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
+        .from(ACTOR_DEFINITION)
+        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion)
+        .orElseThrow());
+  }
+
+  /**
+   * Get the list of breaking changes available affecting an actor definition version.
+   * <p>
+   * "Affecting" breaking changes are those between the provided version (non-inclusive) and the actor
+   * definition default version (inclusive).
+   *
+   * @param actorDefinitionVersion - actor definition version
+   * @return list of breaking changes
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion)
+      throws IOException {
+    final List<ActorDefinitionBreakingChange> breakingChanges = listBreakingChangesForActorDefinition(actorDefinitionVersion.getActorDefinitionId());
+    if (breakingChanges.isEmpty()) {
+      return List.of();
+    }
+
+    final Version currentVersion = new Version(actorDefinitionVersion.getDockerImageTag());
+    final Version latestVersion =
+        new Version(getDefaultVersionForActorDefinitionId(actorDefinitionVersion.getActorDefinitionId()).getDockerImageTag());
+
+    return breakingChanges.stream()
+        .filter(breakingChange -> breakingChange.getVersion().greaterThan(currentVersion)
+            && latestVersion.greaterThanOrEqualTo(breakingChange.getVersion()))
+        .sorted((v1, v2) -> v1.getVersion().versionCompareTo(v2.getVersion()))
+        .toList();
   }
 
 }

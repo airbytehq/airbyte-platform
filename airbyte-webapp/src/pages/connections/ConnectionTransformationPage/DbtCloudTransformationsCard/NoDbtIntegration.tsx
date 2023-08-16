@@ -47,7 +47,7 @@ export const NoDbtIntegration = () => {
             <FormattedMessage
               id="connection.dbtCloudJobs.noIntegration"
               values={{
-                settingsLink: (linkText: ReactNode) => <Link to={dbtSettingsPath}>{linkText}</Link>,
+                lnk: (linkText: ReactNode) => <Link to={dbtSettingsPath}>{linkText}</Link>,
               }}
             />
           </Text>

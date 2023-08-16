@@ -183,8 +183,16 @@ class JobHistoryHandlerTest {
     final SourceDefinitionsHandler sourceDefinitionsHandler = mock(SourceDefinitionsHandler.class);
     final DestinationDefinitionsHandler destinationDefinitionsHandler = mock(DestinationDefinitionsHandler.class);
     final AirbyteVersion airbyteVersion = mock(AirbyteVersion.class);
-    jobHistoryHandler = new JobHistoryHandler(jobPersistence, WorkerEnvironment.DOCKER, LogConfigs.EMPTY, connectionsHandler, sourceHandler,
-        sourceDefinitionsHandler, destinationHandler, destinationDefinitionsHandler, airbyteVersion);
+    jobHistoryHandler = new JobHistoryHandler(
+        jobPersistence,
+        WorkerEnvironment.DOCKER,
+        LogConfigs.EMPTY,
+        connectionsHandler,
+        sourceHandler,
+        sourceDefinitionsHandler,
+        destinationHandler,
+        destinationDefinitionsHandler,
+        airbyteVersion);
   }
 
   @Nested
@@ -208,6 +216,8 @@ class JobHistoryHandlerTest {
           JOB_CONFIG_ID,
           pagesize,
           rowOffset,
+          null,
+          null,
           null,
           null,
           null,
@@ -257,7 +267,7 @@ class JobHistoryHandlerTest {
       final var latestJob =
           new Job(latestJobId, ConfigType.SYNC, JOB_CONFIG_ID, JOB_CONFIG, Collections.emptyList(), JobStatus.PENDING, null, createdAt3, createdAt3);
 
-      when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset, null, null, null, null, null))
+      when(jobPersistence.listJobs(configTypes, JOB_CONFIG_ID, pagesize, rowOffset, null, null, null, null, null, null, null))
           .thenReturn(List.of(latestJob, secondJob, firstJob));
       when(jobPersistence.getJobCount(configTypes, JOB_CONFIG_ID)).thenReturn(3L);
       when(jobPersistence.getAttemptStats(List.of(300L, 200L, 100L))).thenReturn(Map.of(

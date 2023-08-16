@@ -159,4 +159,18 @@ class DestinationApiTest extends BaseControllerTest {
         HttpStatus.NOT_FOUND);
   }
 
+  @Test
+  void testUpgradeDestinationVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
+    Mockito.doNothing()
+        .doThrow(new ConfigNotFoundException("", ""))
+        .when(destinationHandler).upgradeDestinationVersion(Mockito.any());
+    final String path = "/api/v1/destinations/upgrade_version";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpStatus.NO_CONTENT);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new DestinationIdRequestBody())),
+        HttpStatus.NOT_FOUND);
+  }
+
 }

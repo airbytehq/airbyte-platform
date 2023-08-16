@@ -1,0 +1,6 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.cardBodyContainer {
+  background-color: colors.$grey-50;
+}

@@ -5,7 +5,6 @@ import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
-import { ConnectionStatusLoadingSpinner } from "components/connection/ConnectionStatusIndicator";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
@@ -16,6 +15,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
@@ -72,7 +72,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
           text: (
             <FlexContainer alignItems="center">
               <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />
-              <ConnectionStatusLoadingSpinner />
+              <LoadingSpinner />
             </FlexContainer>
           ),
           id: notificationId,
@@ -122,10 +122,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
       case ContextMenuOptions.OpenLogsModal:
         openModal({
           size: "full",
-          title: formatMessage(
-            { id: "jobHistory.logs.title" },
-            { jobId: jobWithAttempts.job.id, connectionName: connection.name }
-          ),
+          title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
           content: () => (
             <Suspense
               fallback={

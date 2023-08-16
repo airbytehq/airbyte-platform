@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
@@ -45,15 +44,6 @@ public class ActorDefinitionVersionHandler {
                                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-  }
-
-  private List<ActorDefinitionBreakingChange> filterFutureBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges,
-                                                                          final ActorDefinitionVersion actorDefinitionVersion) {
-    final Version currentVersion = new Version(actorDefinitionVersion.getDockerImageTag());
-    return breakingChanges.stream()
-        .filter(breakingChange -> breakingChange.getVersion().greaterThan(currentVersion))
-        .sorted((v1, v2) -> v1.getVersion().versionCompareTo(v2.getVersion()))
-        .toList();
   }
 
   private LocalDate getMinBreakingChangeUpgradeDeadline(final List<ActorDefinitionBreakingChange> breakingChanges) {
@@ -90,14 +80,12 @@ public class ActorDefinitionVersionHandler {
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()));
 
-    final List<ActorDefinitionBreakingChange> breakingChanges =
-        configRepository.listBreakingChangesForActorDefinition(actorDefinitionVersion.getActorDefinitionId());
-    final List<ActorDefinitionBreakingChange> futureBreakingChanges = filterFutureBreakingChanges(breakingChanges, actorDefinitionVersion);
+    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
 
-    if (!futureBreakingChanges.isEmpty()) {
-      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(futureBreakingChanges);
+    if (!breakingChanges.isEmpty()) {
+      final LocalDate minUpgradeDeadline = getMinBreakingChangeUpgradeDeadline(breakingChanges);
       advRead.breakingChanges(new ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(futureBreakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
+          .upcomingBreakingChanges(breakingChanges.stream().map(ApiPojoConverters::toApiBreakingChange).toList())
           .minUpgradeDeadline(minUpgradeDeadline));
     }
 

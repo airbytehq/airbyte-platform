@@ -12,6 +12,7 @@ import io.airbyte.api.generated.JobsApi;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoLightRead;
@@ -58,6 +59,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.cancelJob(jobIdRequestBody));
+  }
+
+  @Post("/create")
+  @SecuredWorkspace
+  @Secured({EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Override
+  public JobInfoRead createJob(final JobCreate jobCreate) {
+    return ApiHelper.execute(() -> schedulerHandler.createJob(jobCreate));
   }
 
   @Post("/get_normalization_status")

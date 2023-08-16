@@ -231,6 +231,24 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testUpgradeSourceVersion() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceConnection.getSourceId());
+
+    final UUID newDefaultVersionId = UUID.randomUUID();
+    final StandardSourceDefinition sourceDefinitionWithNewVersion = Jsons.clone(standardSourceDefinition)
+        .withDefaultVersionId(newDefaultVersionId);
+
+    when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(configRepository.getStandardSourceDefinition(sourceDefinitionWithNewVersion.getSourceDefinitionId()))
+        .thenReturn(sourceDefinitionWithNewVersion);
+
+    sourceHandler.upgradeSourceVersion(sourceIdRequestBody);
+
+    // validate that we set the actor version to the actor definition (global) default version
+    verify(configRepository).setActorDefaultVersion(sourceConnection.getSourceId(), newDefaultVersionId);
+  }
+
+  @Test
   void testGetSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId());

@@ -15,6 +15,7 @@ import io.airbyte.api.client.generated.HealthApi;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.OperationApi;
+import io.airbyte.api.client.generated.OrganizationApi;
 import io.airbyte.api.client.generated.PermissionApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
@@ -69,6 +70,7 @@ public class AirbyteApiClient {
   private final StreamStatusesApi streamStatusesApi;
   private final UserApi userApi;
   private final PermissionApi permissionApi;
+  private final OrganizationApi organizationApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
@@ -90,6 +92,7 @@ public class AirbyteApiClient {
     streamStatusesApi = new StreamStatusesApi(apiClient);
     userApi = new UserApi(apiClient);
     permissionApi = new PermissionApi();
+    organizationApi = new OrganizationApi(apiClient);
   }
 
   public ConnectionApi getConnectionApi() {
@@ -166,6 +169,10 @@ public class AirbyteApiClient {
 
   public UserApi getUserApi() {
     return userApi;
+  }
+
+  public OrganizationApi getOrganizationApi() {
+    return organizationApi;
   }
 
   /**

@@ -1,12 +1,12 @@
 import classNames from "classnames";
 
-import styles from "./ConnectionStatusLoadingSpinner.module.scss";
+import styles from "./LoadingSpinner.module.scss";
 
 interface SpinnerProps {
   className?: string;
 }
 
-export const ConnectionStatusLoadingSpinner: React.FC<SpinnerProps> = ({ className }) => (
+export const LoadingSpinner: React.FC<SpinnerProps> = ({ className }) => (
   <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className={classNames(styles.spinner, className)}>
     <path
       fillRule="evenodd"

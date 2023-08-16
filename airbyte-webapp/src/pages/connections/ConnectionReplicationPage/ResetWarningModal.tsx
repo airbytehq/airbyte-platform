@@ -32,7 +32,7 @@ export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, 
           TODO: This should use proper text stylings once we have them available.
           See https://github.com/airbytehq/airbyte/issues/14478
         */}
-        <FormattedMessage id={requireFullReset ? "connection.streamFullResetHint" : "connection.streamResetHint"} />
+        <FormattedMessage id="connection.streamResetHint" />
         <p>
           <LabeledSwitch
             name="reset"

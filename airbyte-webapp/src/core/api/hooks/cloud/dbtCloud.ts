@@ -60,7 +60,7 @@ export const toDbtCloudJob = (operationRead: OperationRead): DbtCloudJob => {
   );
 };
 
-const isDbtCloudJob = (operation: OperationRead): boolean =>
+export const isDbtCloudJob = (operation: OperationRead): boolean =>
   operation.operatorConfiguration.operatorType === OperatorType.webhook;
 
 export const isSameJob = (remoteJob: DbtCloudJobInfo, savedJob: DbtCloudJob): boolean =>
@@ -151,6 +151,7 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
           ],
         });
       } catch (e) {
+        // FIXME: remove this once we migrate to react-hook-form since it will handle onError and OnSuccess
         registerNotification({
           id: "connection.updateFailed",
           text: formatMessage({ id: "notification.connection.updateFailed" }),

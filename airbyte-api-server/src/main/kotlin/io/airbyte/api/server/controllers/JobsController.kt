@@ -9,6 +9,8 @@ import io.airbyte.airbyte_api.model.generated.ConnectionResponse
 import io.airbyte.airbyte_api.model.generated.JobCreateRequest
 import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
+import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.JOBS_PATH
@@ -17,6 +19,7 @@ import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.filters.JobsFilter
 import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
+import io.airbyte.api.server.problems.BadRequestProblem
 import io.airbyte.api.server.problems.UnprocessableEntityProblem
 import io.airbyte.api.server.services.ConnectionService
 import io.airbyte.api.server.services.JobService
@@ -164,7 +167,7 @@ open class JobsController(
     createdAtEnd: OffsetDateTime?,
     updatedAtStart: OffsetDateTime?,
     updatedAtEnd: OffsetDateTime?,
-
+    orderBy: String?,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -179,6 +182,9 @@ open class JobsController(
       jobType,
       status,
     )
+
+    val (orderByField, orderByMethod) = orderByToFieldAndMethod(orderBy)
+
     jobsResponse = (
       if (connectionId != null) {
         TrackingHelper.callWithTracker(
@@ -186,6 +192,8 @@ open class JobsController(
             jobService.getJobList(
               connectionId,
               filter,
+              orderByField,
+              orderByMethod,
               getLocalUserInfoIfNull(userInfo),
             )
           },
@@ -199,6 +207,8 @@ open class JobsController(
             jobService.getJobList(
               workspaceIds ?: emptyList(),
               filter,
+              orderByField,
+              orderByMethod,
               getLocalUserInfoIfNull(userInfo),
             )
           },
@@ -218,5 +228,20 @@ open class JobsController(
       .status(Response.Status.OK.statusCode)
       .entity(jobsResponse)
       .build()
+  }
+
+  private fun orderByToFieldAndMethod(orderBy: String?): Pair<OrderByFieldEnum, OrderByMethodEnum> {
+    var field: OrderByFieldEnum = OrderByFieldEnum.CREATEDAT
+    var method: OrderByMethodEnum = OrderByMethodEnum.ASC
+    if (orderBy != null) {
+      val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile("([a-zA-Z0-9]+)|(ASC|DESC)")
+      val matcher: java.util.regex.Matcher = pattern.matcher(orderBy)
+      if (!matcher.find()) {
+        throw BadRequestProblem("Invalid order by clause provided: $orderBy")
+      }
+      field = OrderByFieldEnum.valueOf(matcher.group(1))
+      method = OrderByMethodEnum.valueOf(matcher.group(2))
+    }
+    return Pair(field, method)
   }
 }

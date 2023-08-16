@@ -19,14 +19,18 @@ testing {
         implementation(project(":airbyte-test-utils"))
         implementation(project(":airbyte-commons-worker"))
 
-        implementation("com.fasterxml.jackson.core:jackson-databind")
-        implementation("io.github.cdimascio:java-dotenv:3.0.0")
+
+
+        implementation(libs.failsafe)
+        implementation(libs.jackson.databind)
+        implementation(libs.okhttp)
         implementation(libs.temporal.sdk)
-        implementation("org.apache.commons:commons-csv:1.4")
         implementation(libs.platform.testcontainers.postgresql)
         implementation(libs.postgresql)
-        implementation("org.bouncycastle:bcprov-jdk15on:1.66")
-        implementation("org.bouncycastle:bcpkix-jdk15on:1.66")
+
+        // needed for fabric to connect to k8s.
+        runtimeOnly("org.bouncycastle:bcprov-jdk15on:1.66")
+        runtimeOnly("org.bouncycastle:bcpkix-jdk15on:1.66")
     }
 }
 
@@ -86,19 +90,6 @@ dependencies {
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.pioneer)
 }
-// Cole - Leaving these commented out, if nothing breaks I'll delete them
-// test should run using the current version of the docker compose configuration.
-//val taskAcceptance = tasks.register<Copy>("copyComposeFileForAcceptanceTests") {
-//    from("${rootDir}/docker-compose.yaml")
-//    into("${sourceSets.acceptanceTests.output.resourcesDir}")
-//}
-//tasks.named("checkstyleAcceptanceTests") {
-//    dependsOn(taskAcceptance)
-//}
-//tasks.named("pmdAcceptanceTests") {
-//    dependsOn(taskAcceptance)
-//}
-//
 
 tasks.withType<Copy>().configureEach {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE

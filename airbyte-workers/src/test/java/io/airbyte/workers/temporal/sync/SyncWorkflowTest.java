@@ -115,8 +115,8 @@ class SyncWorkflowTest {
   private NormalizationSummary normalizationSummary;
   private ActivityOptions longActivityOptions;
   private ActivityOptions shortActivityOptions;
-
   private ActivityOptions discoveryActivityOptions;
+  private ActivityOptions refreshSchemaActivityOptions;
   private TemporalProxyHelper temporalProxyHelper;
 
   @BeforeEach
@@ -186,6 +186,10 @@ class SyncWorkflowTest {
         .setStartToCloseTimeout(Duration.ofSeconds(360))
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
+    refreshSchemaActivityOptions = ActivityOptions.newBuilder()
+        .setStartToCloseTimeout(Duration.ofSeconds(360))
+        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .build();
 
     final BeanIdentifier longActivitiesBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration longActivityOptionsBeanRegistration = mock(BeanRegistration.class);
@@ -202,8 +206,14 @@ class SyncWorkflowTest {
     when(discoveryActivityBeanIdentifier.getName()).thenReturn("discoveryActivityOptions");
     when(discoveryActivityOptionsBeanRegistration.getIdentifier()).thenReturn(discoveryActivityBeanIdentifier);
     when(discoveryActivityOptionsBeanRegistration.getBean()).thenReturn(discoveryActivityOptions);
+    final BeanIdentifier refreshSchemaActivityBeanIdentifier = mock(BeanIdentifier.class);
+    final BeanRegistration refreshSchemaActivityOptionsBeanRegistration = mock(BeanRegistration.class);
+    when(refreshSchemaActivityBeanIdentifier.getName()).thenReturn("refreshSchemaActivityOptions");
+    when(refreshSchemaActivityOptionsBeanRegistration.getIdentifier()).thenReturn(refreshSchemaActivityBeanIdentifier);
+    when(refreshSchemaActivityOptionsBeanRegistration.getBean()).thenReturn(refreshSchemaActivityOptions);
     temporalProxyHelper = new TemporalProxyHelper(
-        List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration, discoveryActivityOptionsBeanRegistration));
+        List.of(longActivityOptionsBeanRegistration, shortActivityOptionsBeanRegistration, discoveryActivityOptionsBeanRegistration,
+            refreshSchemaActivityOptionsBeanRegistration));
 
     syncWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
   }
@@ -241,8 +251,7 @@ class SyncWorkflowTest {
 
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
     verifyRefreshSchema(refreshSchemaActivity, sync);
     assertEquals(
@@ -286,8 +295,7 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     assertEquals(
         replicationFailOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
         actualOutput.getStandardSyncSummary());
@@ -381,8 +389,7 @@ class SyncWorkflowTest {
     verifyRefreshSchema(refreshSchemaActivity, sync);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
-    verifyDbtTransform(dbtTransformationActivity, syncInput.getResourceRequirements(),
-        operatorDbtInput);
+    verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
   }
 
   @Test

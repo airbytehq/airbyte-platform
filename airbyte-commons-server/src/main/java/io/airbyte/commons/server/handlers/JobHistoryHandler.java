@@ -141,7 +141,9 @@ public class JobHistoryHandler {
           request.getCreatedAtStart(),
           request.getCreatedAtEnd(),
           request.getUpdatedAtStart(),
-          request.getUpdatedAtEnd());
+          request.getUpdatedAtEnd(),
+          request.getOrderByField() == null ? null : request.getOrderByField().name(),
+          request.getOrderByMethod() == null ? null : request.getOrderByMethod().name());
     }
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
@@ -188,7 +190,9 @@ public class JobHistoryHandler {
         request.getCreatedAtStart(),
         request.getCreatedAtEnd(),
         request.getUpdatedAtStart(),
-        request.getUpdatedAtEnd());
+        request.getUpdatedAtEnd(),
+        request.getOrderByField() == null ? null : request.getOrderByField().name(),
+        request.getOrderByMethod() == null ? null : request.getOrderByMethod().name());
 
     final List<JobWithAttemptsRead> jobReads = jobs.stream().map(JobConverter::getJobWithAttemptsRead).collect(Collectors.toList());
     final var jobIds = jobReads.stream().map(r -> r.getJob().getId()).toList();

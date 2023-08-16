@@ -4,11 +4,15 @@
 
 package io.airbyte.server.apis;
 
+import io.airbyte.api.model.generated.OrganizationIdRequestBody;
+import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
@@ -72,6 +76,26 @@ class UserApiControllerTest extends BaseControllerTest {
     final String path = "/api/v1/users/update";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new UserUpdate())),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testListUsersInOrganization() throws IOException, ConfigNotFoundException {
+    Mockito.when(userHandler.listUsersInOrganization(Mockito.any()))
+        .thenReturn(new OrganizationUserReadList());
+    final String path = "/api/v1/users/list_by_organization_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new OrganizationIdRequestBody())),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testListUsersInWorkspace() throws Exception {
+    Mockito.when(userHandler.listUsersInWorkspace(Mockito.any()))
+        .thenReturn(new WorkspaceUserReadList());
+    final String path = "/api/v1/users/list_by_workspace_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
         HttpStatus.OK);
   }
 

@@ -5,10 +5,12 @@
 package io.airbyte.server.config;
 
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
@@ -105,6 +107,16 @@ public class DatabaseBeanFactory {
   @Singleton
   public UserPersistence userPersistence(@Named("configDatabase") final Database configDatabase) {
     return new UserPersistence(configDatabase);
+  }
+
+  @Singleton
+  public OrganizationPersistence organizationPersistence(@Named("configDatabase") final Database configDatabase) {
+    return new OrganizationPersistence(configDatabase);
+  }
+
+  @Singleton
+  public WorkspacePersistence workspacePersistence(@Named("configDatabase") final Database configDatabase) {
+    return new WorkspacePersistence(configDatabase);
   }
 
   @Singleton

@@ -124,6 +124,7 @@ class BaseConfigDatabaseTest {
               declarative_manifest,
               notification_configuration,
               operation,
+              organization,
               permission,
               schema_management,
               state,

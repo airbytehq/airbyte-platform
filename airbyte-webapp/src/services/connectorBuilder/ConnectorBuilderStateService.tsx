@@ -1,5 +1,4 @@
 import { UseQueryResult } from "@tanstack/react-query";
-import { Transition } from "history";
 import { dump } from "js-yaml";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -40,7 +39,7 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
 import { SourceDefinitionIdBody } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useBlocker } from "hooks/router/useBlocker";
+import { Blocker, useBlocker } from "core/services/navigation";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
@@ -376,7 +375,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     [triggerUpdate, builderFormValues.global.connectorName, lastValidJsonManifest]
   );
 
-  const { pendingTransition, blockedOnInvalidState } = useBlockOnSavingState(savingState);
+  const { pendingBlocker, blockedOnInvalidState } = useBlockOnSavingState(savingState);
 
   const ctx: FormStateContext = {
     stateKey,
@@ -409,7 +408,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   return (
     <ConnectorBuilderFormStateContext.Provider value={ctx}>
-      {pendingTransition && <WaitForSavingModal pendingTransition={pendingTransition} />}
+      {pendingBlocker && <WaitForSavingModal pendingBlocker={pendingBlocker} />}
       {children}
     </ConnectorBuilderFormStateContext.Provider>
   );
@@ -472,10 +471,10 @@ function useInitializedBuilderProject(projectId: string) {
 
 function useBlockOnSavingState(savingState: SavingState) {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const [pendingTransition, setPendingTransition] = useState<undefined | Transition>();
+  const [pendingBlocker, setPendingBlocker] = useState<undefined | Blocker>();
   const [blockedOnInvalidState, setBlockedOnInvalidState] = useState(false);
   const blocker = useCallback(
-    (tx: Transition) => {
+    (blocker: Blocker) => {
       if (savingState === "invalid" || savingState === "error") {
         setBlockedOnInvalidState(true);
         openConfirmationModal({
@@ -484,14 +483,14 @@ function useBlockOnSavingState(savingState: SavingState) {
           submitButtonText: "form.discardChanges",
           onSubmit: () => {
             closeConfirmationModal();
-            tx.retry();
+            blocker.proceed();
           },
           onClose: () => {
             setBlockedOnInvalidState(false);
           },
         });
       } else {
-        setPendingTransition(tx);
+        setPendingBlocker(blocker);
       }
     },
     [closeConfirmationModal, openConfirmationModal, savingState]
@@ -500,12 +499,12 @@ function useBlockOnSavingState(savingState: SavingState) {
   useBlocker(blocker, savingState !== "saved" && savingState !== "readonly");
 
   useEffect(() => {
-    if (savingState === "saved" && pendingTransition) {
-      pendingTransition.retry();
+    if (savingState === "saved" && pendingBlocker) {
+      pendingBlocker.proceed();
     }
-  }, [savingState, pendingTransition]);
+  }, [savingState, pendingBlocker]);
 
-  return { pendingTransition, blockedOnInvalidState };
+  return { pendingBlocker, blockedOnInvalidState };
 }
 
 function getDefaultFormValuesWithName(name: string) {

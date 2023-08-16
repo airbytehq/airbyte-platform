@@ -1,4 +1,3 @@
-import { Transition } from "history";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -7,9 +6,11 @@ import { Modal, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { Blocker } from "core/services/navigation";
+
 import styles from "./WaitForSavingModal.module.scss";
 
-export const WaitForSavingModal: React.FC<{ pendingTransition: Transition }> = ({ pendingTransition }) => {
+export const WaitForSavingModal: React.FC<{ pendingBlocker: Blocker }> = ({ pendingBlocker }) => {
   return (
     <Modal title="Waiting for save" testId="waitForSaveModal">
       <FlexContainer direction="column" alignItems="center" className={styles.container}>
@@ -22,7 +23,7 @@ export const WaitForSavingModal: React.FC<{ pendingTransition: Transition }> = (
         <FlexContainer direction="row-reverse">
           <Button
             onClick={() => {
-              pendingTransition.retry();
+              pendingBlocker.proceed();
             }}
             variant="danger"
           >

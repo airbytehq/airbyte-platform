@@ -7,6 +7,9 @@ package io.airbyte.workers.orchestrator;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.workers.config.WorkerConfigs;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider;
+import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.Connection;
@@ -17,9 +20,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
-import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.config.WorkerConfigsProvider;
-import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
@@ -77,7 +77,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         sourceLauncherConfig,
         destinationLauncherConfig,
         jobRunConfig,
-        syncInput.getResourceRequirements(),
+        syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
         activityContext,
         serverPort,
         temporalUtils,

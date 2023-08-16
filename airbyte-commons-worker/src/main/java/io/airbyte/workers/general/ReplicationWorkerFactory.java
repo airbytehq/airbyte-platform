@@ -131,12 +131,12 @@ public class ReplicationWorkerFactory {
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = syncInput.getIsReset()
         ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
+        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
             syncInput.getSyncResourceRequirements(), syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        syncInput.getDestinationResourceRequirements(), syncInput.getSyncResourceRequirements(), syncInput.getCatalog());
+        syncInput.getSyncResourceRequirements(), syncInput.getCatalog());
 
     // TODO MetricClient should be injectable
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);

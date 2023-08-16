@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.NotificationItem;
 import io.airbyte.api.model.generated.NotificationSettings;
 import io.airbyte.api.model.generated.NotificationType;
@@ -36,17 +37,22 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
+import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jooq.tools.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +66,9 @@ public class WorkspacesHandler {
   public static final int MAX_SLUG_GENERATION_ATTEMPTS = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final ConfigRepository configRepository;
+  private final WorkspacePersistence workspacePersistence;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final PermissionPersistence permissionPersistence;
   private final ConnectionsHandler connectionsHandler;
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
@@ -69,22 +77,29 @@ public class WorkspacesHandler {
 
   @Inject
   public WorkspacesHandler(final ConfigRepository configRepository,
+                           final WorkspacePersistence workspacePersistence,
                            final SecretsRepositoryWriter secretsRepositoryWriter,
+                           final PermissionPersistence permissionPersistence,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler) {
-    this(configRepository, secretsRepositoryWriter, connectionsHandler, destinationHandler, sourceHandler, UUID::randomUUID);
+    this(configRepository, workspacePersistence, secretsRepositoryWriter, permissionPersistence, connectionsHandler, destinationHandler,
+        sourceHandler, UUID::randomUUID);
   }
 
   @VisibleForTesting
   WorkspacesHandler(final ConfigRepository configRepository,
+                    final WorkspacePersistence workspacePersistence,
                     final SecretsRepositoryWriter secretsRepositoryWriter,
+                    final PermissionPersistence permissionPersistence,
                     final ConnectionsHandler connectionsHandler,
                     final DestinationHandler destinationHandler,
                     final SourceHandler sourceHandler,
                     final Supplier<UUID> uuidSupplier) {
     this.configRepository = configRepository;
+    this.workspacePersistence = workspacePersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.permissionPersistence = permissionPersistence;
     this.connectionsHandler = connectionsHandler;
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
@@ -123,7 +138,8 @@ public class WorkspacesHandler {
         .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
         .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
         .withDefaultGeography(defaultGeography)
-        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier));
+        .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier))
+        .withOrganizationId(workspaceCreate.getOrganizationId());
 
     if (!Strings.isNullOrEmpty(email)) {
       workspace.withEmail(email);
@@ -244,6 +260,20 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
+  public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request)
+      throws ConfigNotFoundException, IOException {
+    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
+    final List<WorkspaceRead> standardWorkspaces = workspacePersistence
+        .listWorkspacesByOrganizationId(
+            new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
+                false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
+            keyword)
+        .stream()
+        .map(WorkspacesHandler::buildWorkspaceRead)
+        .collect(Collectors.toList());
+    return new WorkspaceReadList().workspaces(standardWorkspaces);
+  }
+
   public WorkspaceRead updateWorkspace(final WorkspaceUpdate workspacePatch) throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID workspaceId = workspacePatch.getWorkspaceId();
 
@@ -340,7 +370,8 @@ public class WorkspacesHandler {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class));
+        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
+        .organizationId(workspace.getOrganizationId());
     // Add read-only webhook configs.
     if (workspace.getWebhookOperationConfigs() != null) {
       result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));

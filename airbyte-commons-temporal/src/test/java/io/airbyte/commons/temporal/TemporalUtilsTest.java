@@ -218,7 +218,7 @@ class TemporalUtilsTest {
     // use async execution to avoid blocking the test thread
     WorkflowClient.start(heartbeatWorkflow::execute);
 
-    assertTrue(latch.await(15, TimeUnit.SECONDS));
+    assertTrue(latch.await(25, TimeUnit.SECONDS));
 
   }
 
@@ -260,7 +260,7 @@ class TemporalUtilsTest {
     // use async execution to avoid blocking the test thread
     WorkflowClient.start(heartbeatWorkflow::execute);
 
-    assertTrue(latch.await(15, TimeUnit.SECONDS));
+    assertTrue(latch.await(25, TimeUnit.SECONDS));
 
   }
 

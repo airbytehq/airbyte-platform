@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import io.airbyte.commons.server.ServerConstants;
 import io.airbyte.commons.server.converters.SpecFetcher;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
@@ -12,34 +14,55 @@ import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
+import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.RemoteDefinitionsProvider;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.IngestBreakingChanges;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * A helper class for server code that is the shared for actor definitions (source definitions and
  * destination definitions).
  */
 @Singleton
+@Slf4j
 public class ActorDefinitionHandlerHelper {
 
   private final SynchronousSchedulerClient synchronousSchedulerClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
+  private final ConfigRepository configRepository;
+  private final RemoteDefinitionsProvider remoteDefinitionsProvider;
+  private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
                                       final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
-                                      final ActorDefinitionVersionResolver actorDefinitionVersionResolver) {
+                                      final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
+                                      final ConfigRepository configRepository,
+                                      final RemoteDefinitionsProvider remoteDefinitionsProvider,
+                                      final FeatureFlagClient featureFlagClient) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
+    this.configRepository = configRepository;
+    this.remoteDefinitionsProvider = remoteDefinitionsProvider;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -142,6 +165,44 @@ public class ActorDefinitionHandlerHelper {
       throw new UnsupportedProtocolVersionException(airbyteProtocolVersion, protocolVersionRange.min(), protocolVersionRange.max());
     }
     return airbyteProtocolVersion.serialize();
+  }
+
+  /**
+   * Fetches an optional breaking change list from the registry entry for the actor definition version
+   * and persists it to the DB if present. The optional is empty if the registry entry is not found.
+   *
+   * @param actorDefinitionVersion - the actor definition version
+   * @param actorType - the actor type
+   * @throws IOException - if there is an error persisting the breaking changes
+   */
+  public void persistBreakingChanges(final ActorDefinitionVersion actorDefinitionVersion, final ActorType actorType)
+      throws IOException {
+    if (!featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
+      return;
+    }
+
+    final String connectorRepository = actorDefinitionVersion.getDockerRepository();
+    // We always want the most up-to-date version of the list breaking changes, in case they've been
+    // updated retroactively after the version was released.
+    final String dockerImageTag = "latest";
+    final Optional<List<ActorDefinitionBreakingChange>> breakingChanges;
+    switch (actorType) {
+      case SOURCE -> {
+        final Optional<ConnectorRegistrySourceDefinition> registryDef =
+            remoteDefinitionsProvider.getSourceDefinitionByVersion(connectorRepository, dockerImageTag);
+        breakingChanges = registryDef.map(ConnectorRegistryConverters::toActorDefinitionBreakingChanges);
+      }
+      case DESTINATION -> {
+        final Optional<ConnectorRegistryDestinationDefinition> registryDef =
+            remoteDefinitionsProvider.getDestinationDefinitionByVersion(connectorRepository, dockerImageTag);
+        breakingChanges = registryDef.map(ConnectorRegistryConverters::toActorDefinitionBreakingChanges);
+      }
+      default -> throw new IllegalArgumentException("Actor type not supported: " + actorType);
+    }
+
+    if (breakingChanges.isPresent()) {
+      configRepository.writeActorDefinitionBreakingChanges(breakingChanges.get());
+    }
   }
 
 }

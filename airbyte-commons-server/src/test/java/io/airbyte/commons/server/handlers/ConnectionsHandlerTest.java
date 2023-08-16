@@ -27,6 +27,7 @@ import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -95,6 +96,7 @@ import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -1652,6 +1654,65 @@ class ConnectionsHandlerTest {
       assertFalse(changedSd.isEmpty());
       assertEquals(1, changedSd.size());
       assertEquals(Set.of(new StreamDescriptor().name(STREAM1)), changedSd);
+    }
+
+    @Test
+    void testGetCatalogDiffHandlesInvalidTypes() throws IOException, JsonValidationException {
+      final String bad_catalog_json = new String(ConnectionsHandlerTest.class.getClassLoader()
+          .getResourceAsStream("catalogs/catalog_with_invalid_type.json").readAllBytes(), StandardCharsets.UTF_8);
+
+      final String good_catalog_json = new String(ConnectionsHandlerTest.class.getClassLoader()
+          .getResourceAsStream("catalogs/catalog_with_valid_type.json").readAllBytes(), StandardCharsets.UTF_8);
+
+      final String good_catalog_altered_json = new String(ConnectionsHandlerTest.class.getClassLoader()
+          .getResourceAsStream("catalogs/catalog_with_valid_type_and_update.json").readAllBytes(), StandardCharsets.UTF_8);
+
+      final String bad_config_catalog_json = new String(ConnectionsHandlerTest.class.getClassLoader()
+          .getResourceAsStream("catalogs/configured_catalog_with_invalid_type.json").readAllBytes(), StandardCharsets.UTF_8);
+
+      final String good_config_catalog_json = new String(ConnectionsHandlerTest.class.getClassLoader()
+          .getResourceAsStream("catalogs/configured_catalog_with_valid_type.json").readAllBytes(), StandardCharsets.UTF_8);
+
+      // use Jsons.object to convert the json string to an AirbyteCatalog model
+
+      final io.airbyte.protocol.models.AirbyteCatalog badCatalog = Jsons.deserialize(
+          bad_catalog_json, io.airbyte.protocol.models.AirbyteCatalog.class);
+      final io.airbyte.protocol.models.AirbyteCatalog goodCatalog = Jsons.deserialize(
+          good_catalog_json, io.airbyte.protocol.models.AirbyteCatalog.class);
+      final io.airbyte.protocol.models.AirbyteCatalog goodCatalogAltered = Jsons.deserialize(
+          good_catalog_altered_json, io.airbyte.protocol.models.AirbyteCatalog.class);
+      final ConfiguredAirbyteCatalog badConfiguredCatalog = Jsons.deserialize(
+          bad_config_catalog_json, io.airbyte.protocol.models.ConfiguredAirbyteCatalog.class);
+      final ConfiguredAirbyteCatalog goodConfiguredCatalog = Jsons.deserialize(
+          good_config_catalog_json, io.airbyte.protocol.models.ConfiguredAirbyteCatalog.class);
+
+      // convert the AirbyteCatalog model to the AirbyteCatalog API model
+
+      final AirbyteCatalog convertedGoodCatalog = CatalogConverter.toApi(goodCatalog, null);
+      final AirbyteCatalog convertedGoodCatalogAltered = CatalogConverter.toApi(goodCatalogAltered, null);
+      final AirbyteCatalog convertedBadCatalog = CatalogConverter.toApi(badCatalog, null);
+
+      // No issue for valid catalogs
+
+      final CatalogDiff gggDiff = connectionsHandler.getDiff(convertedGoodCatalog, convertedGoodCatalog, goodConfiguredCatalog);
+      assertEquals(gggDiff.getTransforms().size(), 0);
+      final CatalogDiff ggagDiff = connectionsHandler.getDiff(convertedGoodCatalog, convertedGoodCatalogAltered, goodConfiguredCatalog);
+      assertEquals(ggagDiff.getTransforms().size(), 1);
+
+      // No issue for good catalog and a bad configured catalog
+
+      final CatalogDiff ggbDiff = connectionsHandler.getDiff(convertedGoodCatalog, convertedGoodCatalog, badConfiguredCatalog);
+      assertEquals(ggbDiff.getTransforms().size(), 0);
+      final CatalogDiff ggabDiff = connectionsHandler.getDiff(convertedGoodCatalog, convertedGoodCatalogAltered, badConfiguredCatalog);
+      assertEquals(ggabDiff.getTransforms().size(), 1);
+
+      // assert no issue when migrating two or from a catalog with a skippable (slightly invalid) type
+
+      final CatalogDiff bggDiff = connectionsHandler.getDiff(convertedBadCatalog, convertedGoodCatalog, goodConfiguredCatalog);
+      assertEquals(bggDiff.getTransforms().size(), 1);
+
+      final CatalogDiff gbgDiff = connectionsHandler.getDiff(convertedGoodCatalog, convertedBadCatalog, goodConfiguredCatalog);
+      assertEquals(gbgDiff.getTransforms().size(), 1);
     }
 
     @Test
