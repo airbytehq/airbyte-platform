@@ -11,7 +11,7 @@ import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import jakarta.inject.Singleton;
-import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * Custom Micronaut exception handler for the {@link AirbyteCdkInvalidInputException}.
@@ -25,13 +25,7 @@ public class AirbyteCdkInvalidInputExceptionHandler implements ExceptionHandler<
 
   @Override
   public HttpResponse handle(final HttpRequest request, final AirbyteCdkInvalidInputException exception) {
-    final HashMap<String, Object> responseBody = new HashMap<>();
-    if (exception.trace != null) {
-      helper.updateResponseBodyFromTrace(responseBody, exception.trace);
-    } else {
-      helper.updateResponseBodyFromException(responseBody, exception);
-    }
-    return HttpResponse.status(HttpStatus.BAD_REQUEST).body(responseBody);
+    return this.helper.handle(request, exception, HttpStatus.BAD_REQUEST, Optional.ofNullable(exception.trace));
   }
 
 }
