@@ -82,6 +82,7 @@ $message-icon-container-size: 32px;
 .textContainer {
   align-self: center;
   flex-grow: 1;
+  overflow-wrap: anywhere;
 }
 
 .text {
