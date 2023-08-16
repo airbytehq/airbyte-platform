@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
@@ -50,6 +51,32 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
         .withInitialSetupComplete(false)
         .withTombstone(false)
         .withDefaultGeography(Geography.US));
+  }
+
+  @Test
+  void testNewSourceGetsActorDefinitionDefaultVersionId() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final SourceConnection sourceConnection = new SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName("My Source");
+    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
+    final SourceConnection sourceConnectionFromDb = configRepository.getSourceConnection(sourceConnection.getSourceId());
+    assertNotNull(sourceConnectionFromDb.getDefaultVersionId());
+    assertEquals(standardSourceDefinition.getDefaultVersionId(), sourceConnectionFromDb.getDefaultVersionId());
+  }
+
+  @Test
+  void testNewDestinationGetsActorDefinitionDefaultVersionId() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final DestinationConnection destinationConnection = new DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName("My Destination");
+    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
+    final DestinationConnection destinationConnectionFromDb = configRepository.getDestinationConnection(destinationConnection.getDestinationId());
+    assertNotNull(destinationConnectionFromDb.getDefaultVersionId());
+    assertEquals(standardDestinationDefinition.getDefaultVersionId(), destinationConnectionFromDb.getDefaultVersionId());
   }
 
   @Test

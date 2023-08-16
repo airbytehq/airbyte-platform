@@ -1299,6 +1299,8 @@ public class ConfigRepository {
             .where(ACTOR.ID.eq(sourceConnection.getSourceId()))
             .execute();
       } else {
+        final UUID actorDefinitionDefaultVersionId =
+            getDefaultVersionForActorDefinitionId(sourceConnection.getSourceDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, sourceConnection.getSourceId())
             .set(ACTOR.WORKSPACE_ID, sourceConnection.getWorkspaceId())
@@ -1307,6 +1309,7 @@ public class ConfigRepository {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.source)
             .set(ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
+            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
@@ -1431,6 +1434,8 @@ public class ConfigRepository {
             .execute();
 
       } else {
+        final UUID actorDefinitionDefaultVersionId =
+            getDefaultVersionForActorDefinitionId(destinationConnection.getDestinationDefinitionId(), ctx).getVersionId();
         ctx.insertInto(ACTOR)
             .set(ACTOR.ID, destinationConnection.getDestinationId())
             .set(ACTOR.WORKSPACE_ID, destinationConnection.getWorkspaceId())
@@ -1439,6 +1444,7 @@ public class ConfigRepository {
             .set(ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.getConfiguration())))
             .set(ACTOR.ACTOR_TYPE, ActorType.destination)
             .set(ACTOR.TOMBSTONE, destinationConnection.getTombstone() != null && destinationConnection.getTombstone())
+            .set(ACTOR.DEFAULT_VERSION_ID, actorDefinitionDefaultVersionId)
             .set(ACTOR.CREATED_AT, timestamp)
             .set(ACTOR.UPDATED_AT, timestamp)
             .execute();
@@ -3483,6 +3489,22 @@ public class ConfigRepository {
         .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp);
   }
 
+  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> getDefaultVersionForActorDefinitionId(actorDefinitionId, ctx));
+  }
+
+  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
+    return ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
+        .from(ACTOR_DEFINITION)
+        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion)
+        .orElseThrow();
+  }
+
   /**
    * Get the list of breaking changes available affecting an actor definition.
    *
@@ -3497,18 +3519,6 @@ public class ConfigRepository {
         .stream()
         .map(DbConverter::buildActorDefinitionBreakingChange)
         .collect(Collectors.toList()));
-  }
-
-  private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId) throws IOException {
-    return database.query(ctx -> ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
-        .from(ACTOR_DEFINITION)
-        .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-        .fetch()
-        .stream()
-        .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion)
-        .orElseThrow());
   }
 
   /**
