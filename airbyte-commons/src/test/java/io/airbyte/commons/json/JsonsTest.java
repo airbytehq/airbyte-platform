@@ -19,6 +19,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.CatalogHelpers;
+import io.airbyte.protocol.models.Field;
+import io.airbyte.protocol.models.JsonSchemaType;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -385,6 +390,44 @@ class JsonsTest {
       return Objects.hash(str, num, numLong);
     }
 
+  }
+
+  /**
+   * Test that {@link Jsons#canonicalJsonSerialize(Object)} returns a JSON string with keys sorted in
+   * alphabetical order.
+   */
+  @Test
+  void testCanonicalJsonSerialize() throws IOException {
+
+    final AirbyteCatalog actorCatalog = CatalogHelpers.createAirbyteCatalog("clothes",
+        Field.of("name", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
+        Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
+
+    String actualJson = Jsons.canonicalJsonSerialize(actorCatalog);
+
+    final String expectedJson =
+        "{"
+            + "\"streams\":["
+            + "{"
+            + "\"default_cursor_field\":[],"
+            + "\"json_schema\":{"
+            + "\"properties\":{"
+            + "\"color\":{\"type\":\"string\"},"
+            + "\"name\":{\"type\":\"string\"},"
+            + "\"price\":{\"type\":\"number\"},"
+            + "\"size\":{\"type\":\"number\"}"
+            + "},"
+            + "\"type\":\"object\""
+            + "},"
+            + "\"name\":\"clothes\","
+            + "\"source_defined_primary_key\":[],"
+            + "\"supported_sync_modes\":[\"full_refresh\"]"
+            + "}"
+            + "]"
+            + "}";
+
+    // Assert that the result is a JSON string with keys sorted in alphabetical order
+    assertEquals(expectedJson, actualJson);
   }
 
 }

@@ -39,6 +39,8 @@ object AutoPropagateSchema : Temporary<Boolean>(key = "autopropagation.enabled",
 
 object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-streams.enabled", default = false)
 
+object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
+
 object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
 
 object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)
