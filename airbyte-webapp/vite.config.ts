@@ -25,7 +25,7 @@ export default defineConfig(() => {
       react(),
       buildInfo(),
       compileFormatJsMessages(),
-      viteTsconfigPaths(),
+      viteTsconfigPaths({ projects: [__dirname] }), // avoid picking up build/airbyte-repository/docusaurus/tsconfig.json
       viteYaml(),
       svgrPlugin({
         svgrOptions: {

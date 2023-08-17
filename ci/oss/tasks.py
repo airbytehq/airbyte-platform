@@ -12,7 +12,7 @@ from aircmd.actions.environments import (
 from aircmd.actions.pipelines import get_repo_dir
 from aircmd.models.base import PipelineContext
 from aircmd.models.utils import load_settings
-from dagger import Client, Container
+from dagger import CacheVolume, Client, Container
 from prefect import task
 from prefect.artifacts import create_link_artifact
 
@@ -65,11 +65,14 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
 @task
 async def build_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, client: Client) -> Container:
 
+    airbyte_repo_cache: CacheVolume = client.cache_volume("airbyte-repo-cache")
+
     result = (with_node(client, settings.airbyte_webapp_node_version)
                 .with_(with_pnpm(client, settings.airbyte_webapp_pnpm_version))
                 .with_mounted_directory("/airbyte", get_repo_dir(client, settings, ".", include=frontend_files))
                 .with_workdir("/airbyte/oss/airbyte-webapp" if base_dir == "oss" else "/airbyte/airbyte-webapp")
                 .with_(load_settings(settings))
+                .with_mounted_cache("./build/airbyte-repository", airbyte_repo_cache)
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "build"]))
     return result.sync()
@@ -126,8 +129,6 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
                             "**/airbyte-*/**/*"
                             ]
     
-
-    client.cache_volume("platform-build-cache")
 
     ( # service binding for airbyte-proxy-test-container
         client.container()
