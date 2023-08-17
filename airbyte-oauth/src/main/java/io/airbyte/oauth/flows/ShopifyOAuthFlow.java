@@ -45,8 +45,8 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
      */
     final URIBuilder builder = new URIBuilder()
         .setScheme("https")
-        .setHost("partners.shopify.com")
-        .setPath("2027738/apps/5841799/overview");
+        .setHost("apps.shopify.com")
+        .setPath("airbyte");
 
     try {
       return builder.build().toString();

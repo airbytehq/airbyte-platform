@@ -102,7 +102,6 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-retently", new RetentlyOAuthFlow(httpClient));
     builder.put("airbyte/source-salesforce", new SalesforceOAuthFlow(httpClient));
     builder.put("airbyte/source-shopify", new ShopifyOAuthFlow(httpClient));
-    builder.put("airbyte/source-shopify-oauth", new ShopifyOAuthFlow(httpClient));
     builder.put("airbyte/source-slack", new SlackOAuthFlow(httpClient));
     builder.put("airbyte/source-smartsheets", new SmartsheetsOAuthFlow(httpClient));
     builder.put("airbyte/source-snapchat-marketing", new SnapchatMarketingOAuthFlow(httpClient));
