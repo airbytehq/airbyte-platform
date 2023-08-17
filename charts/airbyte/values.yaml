@@ -1639,7 +1639,7 @@ airbyte-api-server:
 
   env_vars: {}
   service:
-    port: 80
+    port: 8006
 
 keycloak:
   enabled: false
