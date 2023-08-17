@@ -61,9 +61,7 @@ public class GcsLogs implements CloudLogs {
     final var os = new FileOutputStream(tmpOutputFile);
     LOGGER.debug("Start getting GCS objects.");
     // Objects are returned in lexicographical order.
-    for (final Blob blob : blobs.iterateAll()) {
-      blob.downloadTo(os);
-    }
+    blobs.iterateAll().forEach(blob -> blob.downloadTo(os));
     os.close();
     LOGGER.debug("Done retrieving GCS logs: {}.", logPath);
     return tmpOutputFile;
@@ -76,38 +74,42 @@ public class GcsLogs implements CloudLogs {
 
     LOGGER.debug("Start GCS list request.");
 
-    final Page<Blob> blobs = gcsClient.list(
-        configs.getStorageConfigs().getGcsConfig().getBucketName(),
-        Storage.BlobListOption.prefix(logPath));
-
     final var ascendingTimestampBlobs = new ArrayList<Blob>();
-    for (final Blob blob : blobs.iterateAll()) {
-      ascendingTimestampBlobs.add(blob);
-    }
-    final var descendingTimestampBlobs = Lists.reverse(ascendingTimestampBlobs);
+    gcsClient.list(
+        configs.getStorageConfigs().getGcsConfig().getBucketName(),
+        Storage.BlobListOption.prefix(logPath))
+        .iterateAll()
+        .forEach(ascendingTimestampBlobs::add);
 
     final var lines = new ArrayList<String>();
-    int linesRead = 0;
 
     LOGGER.debug("Start getting GCS objects.");
-    while (linesRead <= numLines && !descendingTimestampBlobs.isEmpty()) {
-      final var poppedBlob = descendingTimestampBlobs.remove(0);
-      try (final var inMemoryData = new ByteArrayOutputStream()) {
-        poppedBlob.downloadTo(inMemoryData);
-        final var currFileLines = inMemoryData.toString(StandardCharsets.UTF_8).split("\n");
-        final List<String> currFileLinesReversed = Lists.reverse(List.of(currFileLines));
-        for (final var line : currFileLinesReversed) {
-          if (linesRead == numLines) {
-            break;
-          }
-          lines.add(0, line);
-          linesRead++;
+    final var inMemoryData = new ByteArrayOutputStream();
+    // iterate through blobs in descending order (oldest first)
+    for (var i = ascendingTimestampBlobs.size() - 1; i >= 0; i--) {
+      inMemoryData.reset();
+
+      final var blob = ascendingTimestampBlobs.get(i);
+      blob.downloadTo(inMemoryData);
+
+      final String[] currFileLines = inMemoryData.toString(StandardCharsets.UTF_8).split("\n");
+      // Iterate through the lines in reverse order. This ensures we keep the newer messages over the
+      // older messages if we hit the numLines limit.
+      for (var j = currFileLines.length - 1; j >= 0; j--) {
+        lines.add(currFileLines[j]);
+        if (lines.size() >= numLines) {
+          break;
         }
+      }
+
+      if (lines.size() >= numLines) {
+        break;
       }
     }
 
     LOGGER.debug("Done retrieving GCS logs: {}.", logPath);
-    return lines;
+    // finally reverse the lines so they're returned in ascending order
+    return Lists.reverse(lines);
   }
 
   @Override
@@ -117,9 +119,7 @@ public class GcsLogs implements CloudLogs {
 
     LOGGER.debug("Start GCS list and delete request.");
     final Page<Blob> blobs = gcsClient.list(configs.getStorageConfigs().getGcsConfig().getBucketName(), Storage.BlobListOption.prefix(logPath));
-    for (final Blob blob : blobs.iterateAll()) {
-      blob.delete(BlobSourceOption.generationMatch());
-    }
+    blobs.iterateAll().forEach(blob -> blob.delete(BlobSourceOption.generationMatch()));
     LOGGER.debug("Finished all deletes.");
   }
 
@@ -128,6 +128,14 @@ public class GcsLogs implements CloudLogs {
       gcs = gcsClientFactory.get();
     }
     return gcs;
+  }
+
+  /**
+   * This method exists only for unit testing purposes.
+   */
+  @VisibleForTesting
+  static void resetGcs() {
+    gcs = null;
   }
 
 }
