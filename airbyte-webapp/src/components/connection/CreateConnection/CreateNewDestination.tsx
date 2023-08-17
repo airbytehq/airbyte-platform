@@ -11,7 +11,6 @@ import { Icon } from "components/ui/Icon";
 
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 
@@ -25,10 +24,9 @@ export const CreateNewDestination: React.FC = () => {
 
   const destinationDefinitions = useAvailableDestinationDefinitions();
   const { trackAction } = useAppMonitoringService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: createDestination } = useCreateDestination();
 
-  const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
 
   const onSelectDestinationDefinitionId = (destinationDefinitionId: string) => {
     searchParams.set(DESTINATION_DEFINITION_PARAM, destinationDefinitionId);
@@ -47,31 +45,17 @@ export const CreateNewDestination: React.FC = () => {
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    searchParams.set(DESTINATION_ID_PARAM, result.destinationId);
-    searchParams.delete(DESTINATION_TYPE_PARAM);
-    searchParams.delete(DESTINATION_DEFINITION_PARAM);
-    setSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set(DESTINATION_ID_PARAM, result.destinationId);
+    newParams.delete(DESTINATION_TYPE_PARAM);
+    newParams.delete(DESTINATION_DEFINITION_PARAM);
+    setSearchParams(newParams);
   };
 
   const onGoBack = () => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          searchParams.delete(DESTINATION_DEFINITION_PARAM);
-          setSearchParams(searchParams);
-        },
-        onClose: () => {
-          closeConfirmationModal();
-        },
-      });
-    } else {
-      searchParams.delete(DESTINATION_DEFINITION_PARAM);
-      setSearchParams(searchParams);
-    }
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(DESTINATION_DEFINITION_PARAM);
+    setSearchParams(newParams);
   };
 
   if (selectedDestinationDefinitionId) {

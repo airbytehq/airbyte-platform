@@ -79,8 +79,7 @@ export const NormalizationHookForm: React.FC = () => {
       onSuccess={onSuccess}
       onError={onError}
       disabled={mode === "readonly"}
-      // TODO: uncomment when trackDirtyChanges will be fixed. Issue: https://github.com/airbytehq/airbyte/issues/28745
-      // trackDirtyChanges
+      trackDirtyChanges
     >
       <CollapsibleCard title={<FormattedMessage id="connection.normalization" />} collapsible>
         <NormalizationHookFormField />

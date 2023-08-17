@@ -24,18 +24,18 @@ export const useFormChangeTrackerService = (): FormChangeTrackerServiceApi => {
 
   const clearFormChange = useCallback(
     (id: string) => {
-      setChangedFormsById({ ...changedFormsByIdRef.current, [id]: false });
+      setChangedFormsById(({ [id]: _, ...state }) => state);
     },
-    [changedFormsByIdRef, setChangedFormsById]
+    [setChangedFormsById]
   );
 
   const trackFormChange = useCallback(
     (id: string, changed: boolean) => {
       if (Boolean(changedFormsByIdRef.current?.[id]) !== changed) {
-        setChangedFormsById({ ...changedFormsByIdRef.current, [id]: changed });
+        setChangedFormsById((state) => ({ ...state, [id]: changed }));
       }
     },
-    [changedFormsByIdRef, setChangedFormsById]
+    [setChangedFormsById]
   );
 
   return {

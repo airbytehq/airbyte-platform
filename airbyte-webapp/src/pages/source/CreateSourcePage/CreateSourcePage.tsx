@@ -14,7 +14,6 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourcePaths } from "pages/routePaths";
@@ -27,7 +26,7 @@ export const CreateSourcePage: React.FC = () => {
   const params = useParams<{ workspaceId: string }>();
 
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
-  const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
@@ -44,7 +43,6 @@ export const CreateSourcePage: React.FC = () => {
 
   const sourceDefinitions = useAvailableSourceDefinitions();
   const { mutateAsync: createSource } = useCreateSource();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const onSubmitSourceStep = async (values: {
     name: string;
@@ -63,22 +61,7 @@ export const CreateSourcePage: React.FC = () => {
   };
 
   const onGoBack = () => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          navigate(`../${SourcePaths.SelectSourceNew}`);
-        },
-        onClose: () => {
-          closeConfirmationModal();
-        },
-      });
-    } else {
-      navigate(`../${SourcePaths.SelectSourceNew}`);
-    }
+    navigate(`../${SourcePaths.SelectSourceNew}`);
   };
 
   return (

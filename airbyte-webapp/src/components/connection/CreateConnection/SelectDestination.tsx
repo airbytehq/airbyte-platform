@@ -9,8 +9,6 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 
@@ -44,38 +42,18 @@ export const SelectDestination: React.FC = () => {
     return searchParams.get(DESTINATION_TYPE_PARAM) as DestinationType;
   }, [searchParams]);
 
-  const { hasFormChanges } = useFormChangeTrackerService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-
   const selectDestinationType = (destinationType: DestinationType) => {
-    searchParams.delete(DESTINATION_DEFINITION_PARAM);
-    searchParams.set(DESTINATION_TYPE_PARAM, destinationType);
-    setSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(DESTINATION_DEFINITION_PARAM);
+    newParams.set(DESTINATION_TYPE_PARAM, destinationType);
+    setSearchParams(newParams);
   };
 
   const selectDestination = (destinationId: string) => {
-    searchParams.delete(DESTINATION_TYPE_PARAM);
-    searchParams.set(DESTINATION_ID_PARAM, destinationId);
-    setSearchParams(searchParams);
-  };
-
-  const onSelectDestinationType = (destinationType: DestinationType) => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          selectDestinationType(destinationType);
-        },
-        onClose: () => {
-          selectDestinationType(destinationType);
-        },
-      });
-    } else {
-      selectDestinationType(destinationType);
-    }
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(DESTINATION_TYPE_PARAM);
+    newParams.set(DESTINATION_ID_PARAM, destinationId);
+    setSearchParams(newParams);
   };
 
   const sortedDestinations = useMemo(() => {
@@ -114,7 +92,7 @@ export const SelectDestination: React.FC = () => {
                       },
                     ]}
                     selectedValue={selectedDestinationType}
-                    onSelectRadioButton={(id) => onSelectDestinationType(id)}
+                    onSelectRadioButton={(id) => selectDestinationType(id)}
                   />
                 </Box>
               </Card>

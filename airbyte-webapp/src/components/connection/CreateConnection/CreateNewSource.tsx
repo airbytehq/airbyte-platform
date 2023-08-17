@@ -9,7 +9,6 @@ import { Icon } from "components/ui/Icon";
 
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
@@ -24,10 +23,9 @@ export const CreateNewSource: React.FC = () => {
 
   const sourceDefinitions = useAvailableSourceDefinitions();
   const { trackAction } = useAppMonitoringService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: createSource } = useCreateSource();
 
-  const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
 
   const onSelectSourceDefinitionId = (sourceDefinitionId: string) => {
     searchParams.set(SOURCE_DEFINITION_PARAM, sourceDefinitionId);
@@ -44,31 +42,17 @@ export const CreateNewSource: React.FC = () => {
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    searchParams.set(SOURCE_ID_PARAM, result.sourceId);
-    searchParams.delete(SOURCE_TYPE_PARAM);
-    searchParams.delete(SOURCE_DEFINITION_PARAM);
-    setSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set(SOURCE_ID_PARAM, result.sourceId);
+    newParams.delete(SOURCE_TYPE_PARAM);
+    newParams.delete(SOURCE_DEFINITION_PARAM);
+    setSearchParams(newParams);
   };
 
   const onGoBack = () => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          searchParams.delete(SOURCE_DEFINITION_PARAM);
-          setSearchParams(searchParams);
-        },
-        onClose: () => {
-          closeConfirmationModal();
-        },
-      });
-    } else {
-      searchParams.delete(SOURCE_DEFINITION_PARAM);
-      setSearchParams(searchParams);
-    }
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(SOURCE_DEFINITION_PARAM);
+    setSearchParams(newParams);
   };
 
   if (selectedSourceDefinitionId) {

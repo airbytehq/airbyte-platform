@@ -15,7 +15,6 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { DestinationPaths } from "pages/routePaths";
@@ -30,10 +29,9 @@ export const CreateDestinationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_NEW);
 
   const navigate = useNavigate();
-  const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
   const destinationDefinitions = useAvailableDestinationDefinitions();
   const { mutateAsync: createDestination } = useCreateDestination();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const onSubmitDestinationForm = async (values: {
     name: string;
@@ -62,22 +60,7 @@ export const CreateDestinationPage: React.FC = () => {
   ];
 
   const onGoBack = () => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          navigate(`../${DestinationPaths.SelectDestinationNew}`);
-        },
-        onClose: () => {
-          closeConfirmationModal();
-        },
-      });
-    } else {
-      navigate(`../${DestinationPaths.SelectDestinationNew}`);
-    }
+    navigate(`../${DestinationPaths.SelectDestinationNew}`);
   };
 
   return (

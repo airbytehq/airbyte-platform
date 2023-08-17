@@ -9,8 +9,6 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
@@ -43,9 +41,6 @@ export const SelectSource: React.FC = () => {
     return searchParams.get(SOURCE_TYPE_PARAM) as SourceType;
   }, [searchParams]);
 
-  const { hasFormChanges } = useFormChangeTrackerService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-
   const selectSourceType = (sourceType: SourceType) => {
     searchParams.delete(SOURCE_DEFINITION_PARAM);
     searchParams.set(SOURCE_TYPE_PARAM, sourceType);
@@ -56,25 +51,6 @@ export const SelectSource: React.FC = () => {
     searchParams.delete(SOURCE_TYPE_PARAM);
     searchParams.set(SOURCE_ID_PARAM, sourceId);
     setSearchParams(searchParams);
-  };
-
-  const onSelectSourceType = (sourceType: SourceType) => {
-    if (hasFormChanges) {
-      openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
-        onSubmit: () => {
-          closeConfirmationModal();
-          selectSourceType(sourceType);
-        },
-        onClose: () => {
-          selectSourceType(sourceType);
-        },
-      });
-    } else {
-      selectSourceType(sourceType);
-    }
   };
 
   const sortedSources = useMemo(() => {
@@ -113,7 +89,7 @@ export const SelectSource: React.FC = () => {
                       },
                     ]}
                     selectedValue={selectedSourceType}
-                    onSelectRadioButton={(id) => onSelectSourceType(id)}
+                    onSelectRadioButton={(id) => selectSourceType(id)}
                   />
                 </Box>
               </Card>

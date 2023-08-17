@@ -87,8 +87,7 @@ export const DbtCloudTransformationsHookForm: React.FC<DbtCloudTransformationsHo
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}
-      // TODO: uncomment when trackDirtyChanges will be fixed. Issue: https://github.com/airbytehq/airbyte/issues/28745
-      // trackDirtyChanges
+      trackDirtyChanges
     >
       <CollapsibleCard title={<FormattedMessage id="connection.dbtCloudJobs.cardTitle" />} collapsible>
         <DbtCloudTransformationsHookFormControls
