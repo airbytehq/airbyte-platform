@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import capitalize from "lodash/capitalize";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -8,13 +9,11 @@ import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import {
-  useConnectorBuilderTestRead,
-  useConnectorBuilderFormState,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
 import { ReactComponent as CaretDownIcon } from "../../ui/ListBox/CaretDownIcon.svg";
+import { useBuilderWatch } from "../types";
 
 interface StreamSelectorProps {
   className?: string;
@@ -36,10 +35,13 @@ const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOp
 export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
-  const { selectedView, setSelectedView } = useConnectorBuilderFormState();
-  const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestRead();
+  const { setValue } = useFormContext();
+  const view = useBuilderWatch("view");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
 
-  const streams = useStreamNames();
+  const {
+    resolvedManifest: { streams },
+  } = useConnectorBuilderTestRead();
 
   if (streams.length === 0) {
     return (
@@ -54,16 +56,16 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const options = streams.map((stream) => {
     const label =
       stream.name && stream.name.trim() ? capitalize(stream.name) : formatMessage({ id: "connectorBuilder.emptyName" });
-    return { label, value: stream.name };
+    return { label, value: stream.name ?? "" };
   });
 
   const handleStreamSelect = (selectedStreamName: string) => {
     const selectedStreamIndex = streams.findIndex((stream) => selectedStreamName === stream.name);
     if (selectedStreamIndex >= 0) {
-      setTestStreamIndex(selectedStreamIndex);
+      setValue("testStreamIndex", selectedStreamIndex);
 
-      if (selectedView !== "global") {
-        setSelectedView(selectedStreamIndex);
+      if (view !== "global" && view !== "inputs") {
+        setValue("view", selectedStreamIndex);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected in testing panel",
           stream_name: selectedStreamName,
@@ -83,18 +85,3 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     />
   );
 };
-
-function useStreamNames() {
-  const { builderFormValues, editorView, formValuesValid } = useConnectorBuilderFormState();
-  const { streams: testStreams, isFetchingStreamList, streamListErrorMessage } = useConnectorBuilderTestRead();
-
-  let streams: Array<{ name: string }> = editorView === "ui" ? builderFormValues.streams : testStreams;
-
-  const testStreamListUpToDate = formValuesValid && !isFetchingStreamList && !streamListErrorMessage;
-
-  if (editorView === "ui" && testStreamListUpToDate) {
-    streams = streams.map((stream, index) => ({ name: testStreams[index]?.name || stream.name }));
-  }
-
-  return streams;
-}

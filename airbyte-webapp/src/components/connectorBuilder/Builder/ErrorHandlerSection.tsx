@@ -16,12 +16,12 @@ import { ToggleGroupField } from "./ToggleGroupField";
 type ErrorHandlerSectionProps =
   | {
       inline: false;
-      basePath: `streams.${number}.errorHandler`;
+      basePath: `formValues.streams.${number}.errorHandler`;
       currentStreamIndex: number;
     }
   | {
       inline: true;
-      basePath: "global.authenticator.login_requester.errorHandler";
+      basePath: "formValues.global.authenticator.login_requester.errorHandler";
     };
 
 export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) => {

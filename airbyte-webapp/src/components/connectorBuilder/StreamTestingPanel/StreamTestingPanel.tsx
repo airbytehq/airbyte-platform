@@ -22,6 +22,7 @@ import { ConfigMenu } from "./ConfigMenu";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
+import { useBuilderWatch } from "../types";
 
 const EMPTY_SCHEMA = {};
 
@@ -44,8 +45,9 @@ function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
-  const { jsonManifest, yamlEditorIsMounted, editorView } = useConnectorBuilderFormState();
+  const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
   const { testInputJson } = useConnectorBuilderTestRead();
+  const mode = useBuilderWatch("mode");
   const { theme } = useAirbyteTheme();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
@@ -63,7 +65,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
   return (
     <div className={styles.container}>
       <ConfigMenu testInputJsonErrors={testInputJsonErrors} isOpen={isTestInputOpen} setIsOpen={setTestInputOpen} />
-      {hasStreams || editorView === "yaml" ? (
+      {hasStreams || mode === "yaml" ? (
         <>
           <StreamSelector className={styles.streamSelector} />
           <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />

@@ -57,9 +57,8 @@ import {
 import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
-export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
+export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
-  builderFormValues.global.connectorName = connectorName;
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
 
   const streams = resolvedManifest.streams;
@@ -667,7 +666,6 @@ function manifestAuthenticatorToBuilder(
     builderAuthenticator = {
       ...manifestAuthenticator,
       login_requester: {
-        // Remove leading slashes to treat path as relative, preserving base URL's path when combining
         url: `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
           manifestLoginRequester.path
         )}`,

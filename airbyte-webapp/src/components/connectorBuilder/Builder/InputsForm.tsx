@@ -99,7 +99,7 @@ export const InputForm = ({
   if (!setValue || !watch) {
     throw new Error("rhf context not available");
   }
-  const inputs = watch("inputs");
+  const inputs = watch("formValues.inputs");
   const inferredInputs = useInferredInputs();
   const usedKeys = useMemo(() => [...inputs, ...inferredInputs].map((input) => input.key), [inputs, inferredInputs]);
   const inputInEditValidation = useMemo(
@@ -127,12 +127,12 @@ export const InputForm = ({
   });
   const onSubmit = async (inputInEditing: InputInEditing) => {
     if (inputInEditing.isInferredInputOverride) {
-      setValue(`inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
+      setValue(`formValues.inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
       onClose();
     } else {
       const newInput = inputInEditingToFormInput(inputInEditing);
       setValue(
-        "inputs",
+        "formValues.inputs",
         inputInEditing.isNew
           ? [...inputs, newInput]
           : inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
@@ -164,7 +164,7 @@ export const InputForm = ({
         inputInEditing={inputInEditing}
         onDelete={() => {
           setValue(
-            "inputs",
+            "formValues.inputs",
             inputs.filter((input) => input.key !== inputInEditing.key)
           );
           onClose();

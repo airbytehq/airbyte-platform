@@ -40,13 +40,16 @@ import {
   BuilderFormAuthenticator,
 } from "../types";
 
+const AUTH_PATH = "formValues.global.authenticator";
+const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
+
 export const AuthenticationSection: React.FC = () => {
   const analyticsService = useAnalyticsService();
 
   return (
     <BuilderCard docLink={links.connectorBuilderAuthentication} label="Authentication">
       <BuilderOneOf<BuilderFormAuthenticator>
-        path="global.authenticator"
+        path={AUTH_PATH}
         label="Method"
         manifestPath="HttpRequester.properties.authenticator"
         manifestOptionPaths={[
@@ -76,7 +79,7 @@ export const AuthenticationSection: React.FC = () => {
             },
             children: (
               <>
-                <InjectIntoFields path="global.authenticator.inject_into" descriptor="token" excludeValues={["path"]} />
+                <InjectIntoFields path={authPath("inject_into")} descriptor="token" excludeValues={["path"]} />
                 <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
               </>
             ),
@@ -155,18 +158,18 @@ export const AuthenticationSection: React.FC = () => {
 };
 
 const OAuthForm = () => {
-  const grantType = useBuilderWatch("global.authenticator.grant_type");
-  const refreshToken = useBuilderWatch("global.authenticator.refresh_token");
+  const grantType = useBuilderWatch(authPath("grant_type"));
+  const refreshToken = useBuilderWatch(authPath("refresh_token"));
   return (
     <>
       <BuilderFieldWithInputs
         type="string"
-        path="global.authenticator.token_refresh_endpoint"
+        path={authPath("token_refresh_endpoint")}
         manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
       />
       <BuilderField
         type="enum"
-        path="global.authenticator.grant_type"
+        path={authPath("grant_type")}
         options={["refresh_token", "client_credentials"]}
         manifestPath="OAuthAuthenticator.properties.grant_type"
       />
@@ -178,7 +181,7 @@ const OAuthForm = () => {
           <ToggleGroupField<OAuthAuthenticatorRefreshTokenUpdater>
             label="Overwrite config with refresh token response"
             tooltip="If enabled, the refresh token response will overwrite the current OAuth config. This is useful if requesting a new access token invalidates the old refresh token."
-            fieldPath="global.authenticator.refresh_token_updater"
+            fieldPath={authPath("refresh_token_updater")}
             initialValues={{
               refresh_token_name: "",
               access_token_config_path: [OAUTH_ACCESS_TOKEN_INPUT],
@@ -188,7 +191,7 @@ const OAuthForm = () => {
           >
             <BuilderField
               type="string"
-              path="global.authenticator.refresh_token_updater.refresh_token_name"
+              path={authPath("refresh_token_updater.refresh_token_name")}
               optional
               manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
             />
@@ -198,30 +201,30 @@ const OAuthForm = () => {
       <BuilderOptional>
         <BuilderField
           type="array"
-          path="global.authenticator.scopes"
+          path={authPath("scopes")}
           optional
           manifestPath="OAuthAuthenticator.properties.scopes"
         />
         <BuilderFieldWithInputs
           type="string"
-          path="global.authenticator.token_expiry_date_format"
+          path={authPath("token_expiry_date_format")}
           optional
           manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
         />
         <BuilderFieldWithInputs
           type="string"
-          path="global.authenticator.expires_in_name"
+          path={authPath("expires_in_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.expires_in_name"
         />
         <BuilderFieldWithInputs
           type="string"
-          path="global.authenticator.access_token_name"
+          path={authPath("access_token_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.access_token_name"
         />
         <KeyValueListField
-          path="global.authenticator.refresh_request_body"
+          path={authPath("refresh_request_body")}
           manifestPath="OAuthAuthenticator.properties.refresh_request_body"
         />
       </BuilderOptional>
@@ -234,7 +237,7 @@ const SessionTokenForm = () => {
     "Session Token Retrieval",
     undefined,
     "SessionTokenAuthenticator.properties.login_requester",
-    "global.authenticator.login_requester",
+    authPath("login_requester"),
     true
   );
   return (
@@ -242,18 +245,18 @@ const SessionTokenForm = () => {
       <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
         <BuilderFieldWithInputs
           type="string"
-          path="global.authenticator.login_requester.url"
+          path={authPath("login_requester.url")}
           label="URL"
           tooltip="The full URL of where to send the request to retrieve the session token"
         />
         <BuilderField
           type="enum"
-          path="global.authenticator.login_requester.httpMethod"
+          path={authPath("login_requester.httpMethod")}
           options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
           manifestPath="HttpRequester.properties.http_method"
         />
         <BuilderOneOf<BuilderFormAuthenticator>
-          path="global.authenticator.login_requester.authenticator"
+          path={authPath("login_requester.authenticator")}
           label="Authentication Method"
           manifestPath="HttpRequester.properties.authenticator"
           manifestOptionPaths={["ApiKeyAuthenticator", "BearerAuthenticator", "BasicHttpAuthenticator"]}
@@ -273,7 +276,7 @@ const SessionTokenForm = () => {
               children: (
                 <>
                   <InjectIntoFields
-                    path="global.authenticator.login_requester.authenticator.inject_into"
+                    path={authPath("login_requester.authenticator.inject_into")}
                     descriptor="token"
                     excludeValues={["path"]}
                   />
@@ -304,36 +307,32 @@ const SessionTokenForm = () => {
             },
           ]}
         />
-        <RequestOptionSection
-          inline
-          basePath="global.authenticator.login_requester.requestOptions"
-          omitInterpolationContext
-        />
+        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} omitInterpolationContext />
         <ToggleGroupField<BuilderErrorHandler[]>
           label="Error Handler"
           tooltip={getDescriptionByManifest("DefaultErrorHandler")}
-          fieldPath="global.authenticator.login_requester.errorHandler"
+          fieldPath={authPath("login_requester.errorHandler")}
           initialValues={[{ type: "DefaultErrorHandler" }]}
         >
-          <ErrorHandlerSection inline basePath="global.authenticator.login_requester.errorHandler" />
+          <ErrorHandlerSection inline basePath={authPath("login_requester.errorHandler")} />
         </ToggleGroupField>
       </GroupControls>
       <BuilderField
         type="array"
-        path="global.authenticator.session_token_path"
+        path={authPath("session_token_path")}
         label="Session Token Path"
         tooltip="The path to the session token in the response body returned from the Session Token Retrieval request"
         directionalStyle
       />
       <BuilderField
         type="combobox"
-        path="global.authenticator.expiration_duration"
+        path={authPath("expiration_duration")}
         options={LARGE_DURATION_OPTIONS}
         manifestPath="SessionTokenAuthenticator.properties.expiration_duration"
         optional
       />
       <BuilderOneOf<SessionTokenAuthenticatorRequestAuthentication>
-        path="global.authenticator.request_authentication"
+        path={authPath("request_authentication")}
         manifestPath="SessionTokenAuthenticator.properties.request_authentication"
         manifestOptionPaths={["SessionTokenRequestApiKeyAuthenticator", "SessionTokenRequestBearerAuthenticator"]}
         options={[
@@ -349,7 +348,7 @@ const SessionTokenForm = () => {
             },
             children: (
               <InjectIntoFields
-                path="global.authenticator.request_authentication.inject_into"
+                path={authPath("request_authentication.inject_into")}
                 descriptor="session token"
                 label="Inject Session Token into outgoing HTTP Request"
                 tooltip="Configure how the session token will be sent in requests to the source API"

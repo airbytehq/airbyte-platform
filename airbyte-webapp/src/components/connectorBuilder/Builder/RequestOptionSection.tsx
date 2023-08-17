@@ -9,12 +9,12 @@ import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
 type RequestOptionSectionProps = { omitInterpolationContext?: boolean } & (
   | {
       inline: false;
-      basePath: `streams.${number}.requestOptions`;
+      basePath: `formValues.streams.${number}.requestOptions`;
       currentStreamIndex: number;
     }
   | {
       inline: true;
-      basePath: "global.authenticator.login_requester.requestOptions";
+      basePath: "formValues.global.authenticator.login_requester.requestOptions";
     }
 );
 

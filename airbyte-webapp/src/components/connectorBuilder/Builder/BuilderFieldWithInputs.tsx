@@ -1,6 +1,6 @@
 import { faPlus, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
@@ -10,7 +10,7 @@ import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBo
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField, BuilderFieldProps } from "./BuilderField";
 import styles from "./BuilderFieldWithInputs.module.scss";
@@ -28,17 +28,19 @@ interface UserInputHelperProps {
 }
 
 const UserInputHelper = (props: UserInputHelperProps) => {
-  const { builderFormValues } = useConnectorBuilderFormState();
+  const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!watch) {
+    throw new Error("rhf context not available");
+  }
+  const inputs = watch("formValues.inputs");
   const inferredInputs = useInferredInputs();
   const listOptions = useMemo(() => {
-    const options: Array<Option<string | undefined>> = [...builderFormValues.inputs, ...inferredInputs].map(
-      (input) => ({
-        label: input.definition.title || input.key,
-        value: input.key,
-      })
-    );
+    const options: Array<Option<string | undefined>> = [...inputs, ...inferredInputs].map((input) => ({
+      label: input.definition.title || input.key,
+      value: input.key,
+    }));
     return options;
-  }, [builderFormValues.inputs, inferredInputs]);
+  }, [inputs, inferredInputs]);
   return <InnerUserInputHelper {...props} listOptions={listOptions} />;
 };
 

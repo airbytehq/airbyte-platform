@@ -11,14 +11,10 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { StreamsListReadStreamsItem } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
-import {
-  useConnectorBuilderTestRead,
-  useConnectorBuilderFormState,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
@@ -26,6 +22,7 @@ import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
 import { useTestWarnings } from "./useTestWarnings";
+import { useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
@@ -34,10 +31,9 @@ export const StreamTester: React.FC<{
 }> = ({ hasTestInputJsonErrors, setTestInputOpen }) => {
   const { formatMessage } = useIntl();
   const {
-    streams,
-    testStreamIndex,
-    isFetchingStreamList,
-    streamListErrorMessage,
+    resolvedManifest,
+    isResolving,
+    resolveErrorMessage,
     streamRead: {
       data: streamReadData,
       refetch: readStream,
@@ -50,14 +46,14 @@ export const StreamTester: React.FC<{
     },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage<boolean>("connectorBuilderLimitWarning", true);
-  const {
-    editorView,
-    builderFormValues: { streams: builderFormStreams },
-  } = useConnectorBuilderFormState();
+  const mode = useBuilderWatch("mode");
+  const builderFormStreams = useBuilderWatch("formValues.streams");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
 
-  const streamName = streams[testStreamIndex]?.name;
+  const resolvedStreams = resolvedManifest.streams;
+  const streamName = resolvedStreams[testStreamIndex]?.name;
 
   const analyticsService = useAnalyticsService();
 
@@ -107,33 +103,23 @@ export const StreamTester: React.FC<{
 
   const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
   useEffect(() => {
-    if (editorView === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
-      setValue(`streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
+    if (mode === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
+      setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
         shouldValidate: true,
         shouldTouch: true,
         shouldDirty: true,
       });
     }
-  }, [editorView, autoImportSchema, testStreamIndex, streamReadData?.inferred_schema, setValue]);
+  }, [mode, autoImportSchema, testStreamIndex, streamReadData?.inferred_schema, setValue]);
 
   const testDataWarnings = useTestWarnings();
 
-  const currentStream = streams[testStreamIndex] as StreamsListReadStreamsItem | undefined;
+  const currentStream = resolvedStreams[testStreamIndex];
   return (
     <div className={styles.container}>
-      {currentStream && (
-        <Text size="lg" align="center" className={styles.url}>
-          {currentStream.url}
-        </Text>
-      )}
-      {!currentStream && isFetchingStreamList && (
+      {!currentStream && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
-        </Text>
-      )}
-      {!currentStream && streamListErrorMessage && (
-        <Text size="lg" align="center">
-          <FormattedMessage id="connectorBuilder.streamListUrlError" />
         </Text>
       )}
 
@@ -145,18 +131,18 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
-        isFetchingStreamList={isFetchingStreamList}
         hasTestInputJsonErrors={hasTestInputJsonErrors}
-        hasStreamListErrors={Boolean(streamListErrorMessage)}
         setTestInputOpen={setTestInputOpen}
+        isResolving={isResolving}
+        hasResolveErrors={Boolean(resolveErrorMessage)}
       />
 
-      {streamListErrorMessage !== undefined && (
+      {resolveErrorMessage !== undefined && (
         <div className={styles.listErrorDisplay}>
           <Text>
             <FormattedMessage id="connectorBuilder.couldNotDetectStreams" />
           </Text>
-          <Text bold>{streamListErrorMessage}</Text>
+          <Text bold>{resolveErrorMessage}</Text>
           <Text>
             <FormattedMessage
               id="connectorBuilder.ensureProperYaml"

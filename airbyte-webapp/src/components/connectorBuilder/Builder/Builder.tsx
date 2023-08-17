@@ -1,6 +1,8 @@
+import debounce from "lodash/debounce";
 import { useEffect, useMemo } from "react";
 import React from "react";
 
+import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./Builder.module.scss";
@@ -8,11 +10,11 @@ import { BuilderSidebar } from "./BuilderSidebar";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
+import { BuilderFormValues, builderFormValidationSchema, convertToManifest, useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface BuilderProps {
   hasMultipleStreams: boolean;
-  toggleYamlEditor: () => void;
 }
 
 function getView(
@@ -36,22 +38,39 @@ function getView(
   }
 }
 
-export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams, toggleYamlEditor }) => {
+function cleanedFormValues(values: unknown) {
+  return builderFormValidationSchema.cast(removeEmptyProperties(values)) as unknown as BuilderFormValues;
+}
+
+export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
   const { validateAndTouch } = useBuilderErrors();
-  const {
-    selectedView: selectedBuilderView,
-    blockedOnInvalidState,
-    builderFormValues,
-  } = useConnectorBuilderFormState();
+  const { blockedOnInvalidState, updateJsonManifest, setFormValuesValid } = useConnectorBuilderFormState();
+  const formValues = useBuilderWatch("formValues");
+  const view = useBuilderWatch("view");
+  const streams = useBuilderWatch("formValues.streams");
+
+  const debouncedUpdateJsonManifest = useMemo(
+    () =>
+      debounce((values) => {
+        setFormValuesValid(builderFormValidationSchema.isValidSync(values));
+        updateJsonManifest(convertToManifest(cleanedFormValues(values)));
+      }, 200),
+    [setFormValuesValid, updateJsonManifest]
+  );
+
+  useEffect(() => {
+    debouncedUpdateJsonManifest(formValues);
+  }, [debouncedUpdateJsonManifest, formValues]);
+
   const selectedView = useMemo(
     () =>
-      selectedBuilderView !== "global" && selectedBuilderView !== "inputs"
+      view !== "global" && view !== "inputs"
         ? {
-            streamNum: selectedBuilderView,
-            streamId: builderFormValues.streams[selectedBuilderView]?.id ?? selectedBuilderView,
+            streamNum: view,
+            streamId: streams[view]?.id ?? view,
           }
-        : selectedBuilderView,
-    [builderFormValues.streams, selectedBuilderView]
+        : view,
+    [streams, view]
   );
 
   useEffect(() => {
@@ -63,10 +82,10 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams, toggleYaml
   return useMemo(
     () => (
       <div className={styles.container}>
-        <BuilderSidebar className={styles.sidebar} toggleYamlEditor={toggleYamlEditor} />
-        <form className={styles.form}>{getView(selectedView, hasMultipleStreams)}</form>
+        <BuilderSidebar className={styles.sidebar} />
+        <div className={styles.builderView}>{getView(selectedView, hasMultipleStreams)}</div>
       </div>
     ),
-    [hasMultipleStreams, selectedView, toggleYamlEditor]
+    [hasMultipleStreams, selectedView]
   );
 };

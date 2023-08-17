@@ -1,20 +1,20 @@
 import { useMemo } from "react";
 import { useIntl } from "react-intl";
 
-import {
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+
+import { useBuilderWatch } from "../types";
 
 export const useTestWarnings = () => {
   const { formatMessage } = useIntl();
-  const { editorView, builderFormValues } = useConnectorBuilderFormState();
+  const formValues = useBuilderWatch("formValues");
+  const mode = useBuilderWatch("mode");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const {
-    testStreamIndex,
     streamRead: { data: streamReadData },
   } = useConnectorBuilderTestRead();
 
-  const currentStream = editorView === "ui" && builderFormValues.streams[testStreamIndex];
+  const currentStream = mode === "ui" && formValues.streams[testStreamIndex];
 
   return useMemo(() => {
     if (!currentStream || !streamReadData) {

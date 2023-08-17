@@ -15,10 +15,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import {
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
@@ -67,30 +64,33 @@ function getDiff(existingSchema: string | undefined, detectedSchema: object): Di
 
 export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, incompatibleErrors }) => {
   const analyticsService = useAnalyticsService();
-  const { streams, testStreamIndex } = useConnectorBuilderTestRead();
-  const { editorView } = useConnectorBuilderFormState();
+  const {
+    resolvedManifest: { streams },
+  } = useConnectorBuilderTestRead();
+  const mode = useBuilderWatch("mode");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();
-  const path = `streams.${testStreamIndex}.schema` as const;
+  const path = `formValues.streams.${testStreamIndex}.schema` as const;
   const value = useBuilderWatch(path);
   const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
 
   const [schemaDiff, setSchemaDiff] = useState<Diff>(() =>
-    editorView === "ui" ? getDiff(value, inferredSchema) : { changes: [], lossyOverride: false }
+    mode === "ui" ? getDiff(value, inferredSchema) : { changes: [], lossyOverride: false }
   );
 
   useDebounce(
     () => {
-      if (editorView === "ui") {
+      if (mode === "ui") {
         setSchemaDiff(getDiff(value, inferredSchema));
       }
     },
     250,
-    [value, inferredSchema, editorView]
+    [value, inferredSchema, mode]
   );
 
   return (
     <FlexContainer direction="column">
-      {editorView === "ui" && !isEmptyOrDefault(value) && value !== formattedSchema && (
+      {mode === "ui" && !isEmptyOrDefault(value) && value !== formattedSchema && (
         <Message type="warning" text={<SchemaConflictMessage errors={incompatibleErrors} />}>
           <FlexItem grow className={styles.mergeButtons}>
             <FlexContainer direction="column">
@@ -147,7 +147,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
           </FlexItem>
         </Message>
       )}
-      {editorView === "ui" && isEmptyOrDefault(value) && (
+      {mode === "ui" && isEmptyOrDefault(value) && (
         <Button
           full
           variant="secondary"
@@ -165,7 +165,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
         </Button>
       )}
       <FlexItem>
-        {editorView === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(value) ? (
+        {mode === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(value) ? (
           <Pre className={styles.diffLine}>
             {formattedSchema
               .split("\n")

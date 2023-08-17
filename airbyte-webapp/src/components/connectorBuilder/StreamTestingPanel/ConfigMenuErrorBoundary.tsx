@@ -6,7 +6,7 @@ import { Message } from "components/ui/Message";
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
 import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
-import { EditorView } from "../types";
+import { BuilderState } from "../types";
 
 interface ApiErrorBoundaryState {
   error?: string | FormBuildError;
@@ -14,7 +14,7 @@ interface ApiErrorBoundaryState {
 
 interface ApiErrorBoundaryProps {
   closeAndSwitchToYaml: () => void;
-  currentView: EditorView;
+  currentMode: BuilderState["mode"];
   trackError: TrackErrorFn;
 }
 
@@ -45,7 +45,7 @@ export class ConfigMenuErrorBoundaryComponent extends React.Component<
     return { error: error.message };
   }
   render(): React.ReactNode {
-    const { children, currentView, closeAndSwitchToYaml } = this.props;
+    const { children, currentMode, closeAndSwitchToYaml } = this.props;
     const { error } = this.state;
 
     if (!error) {
@@ -70,7 +70,7 @@ export class ConfigMenuErrorBoundaryComponent extends React.Component<
         }
         type="error"
         actionBtnText={
-          currentView === "ui" ? (
+          currentMode === "ui" ? (
             <FormattedMessage id="connectorBuilder.goToYaml" />
           ) : (
             <FormattedMessage id="connectorBuilder.close" />

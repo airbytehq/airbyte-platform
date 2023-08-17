@@ -8,6 +8,7 @@ import { listStreams, readStream, resolveManifest } from "../generated/Connector
 import {
   ConnectorConfig,
   ConnectorManifest,
+  ResolveManifestRequestBody,
   StreamRead,
   StreamReadRequestBody,
   StreamsListRequestBody,
@@ -24,6 +25,8 @@ const connectorBuilderKeys = {
     [...connectorBuilderKeys.all, "list", { manifest, config }] as const,
   template: ["template"] as const,
   resolve: (manifest?: ConnectorManifest) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
+  resolveSuspense: (manifest?: ConnectorManifest) =>
+    [...connectorBuilderKeys.all, "resolveSuspense", { manifest }] as const,
 };
 
 export const useBuilderReadStream = (
@@ -55,6 +58,17 @@ export const useBuilderListStreams = (params: StreamsListRequestBody, enabled = 
   );
 };
 
+export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(connectorBuilderKeys.resolve(params.manifest), () => resolveManifest(params, requestOptions), {
+    keepPreviousData: true,
+    cacheTime: 0,
+    retry: false,
+    enabled,
+  });
+};
+
 export const useBuilderResolveManifestQuery = () => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
@@ -62,10 +76,10 @@ export const useBuilderResolveManifestQuery = () => {
     resolveManifest({ manifest, workspace_id: workspaceId, project_id: projectId }, requestOptions);
 };
 
-export const useBuilderResolvedManifest = (manifest?: ConnectorManifest, projectId?: string) => {
+export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest, projectId?: string) => {
   const resolveManifestQuery = useBuilderResolveManifestQuery();
 
-  return useSuspenseQuery(connectorBuilderKeys.resolve(manifest), async () => {
+  return useSuspenseQuery(connectorBuilderKeys.resolveSuspense(manifest), async () => {
     if (!manifest) {
       return DEFAULT_JSON_MANIFEST_VALUES;
     }

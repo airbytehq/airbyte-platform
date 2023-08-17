@@ -9,10 +9,7 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { BuilderProject, useListBuilderProjectVersions, useResolvedBuilderProjectVersion } from "core/api";
-import {
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./VersionModal.module.scss";
 
@@ -21,7 +18,6 @@ export const VersionModal: React.FC<{
   onClose: () => void;
 }> = ({ onClose, project }) => {
   const { displayedVersion, previousManifestDraft, setDisplayedVersion } = useConnectorBuilderFormState();
-  const { setTestStreamIndex } = useConnectorBuilderTestRead();
   const { data: versions, isLoading: isLoadingVersionList } = useListBuilderProjectVersions(project);
   const [selectedVersion, setSelectedVersion] = useState<number | undefined>(undefined);
   const { data, isLoading } = useResolvedBuilderProjectVersion(project.id, selectedVersion);
@@ -36,9 +32,8 @@ export const VersionModal: React.FC<{
     }
 
     setDisplayedVersion(selectedVersion, data);
-    setTestStreamIndex(0);
     onClose();
-  }, [data, isLoading, onClose, selectedVersion, setDisplayedVersion, setTestStreamIndex]);
+  }, [data, isLoading, onClose, selectedVersion, setDisplayedVersion]);
 
   return (
     <Modal size="sm" title={<FormattedMessage id="connectorBuilder.versionModal.title" />} onClose={onClose}>

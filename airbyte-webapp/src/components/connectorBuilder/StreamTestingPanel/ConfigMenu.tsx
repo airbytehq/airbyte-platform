@@ -1,6 +1,7 @@
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo } from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useLocalStorage } from "react-use";
 
@@ -23,6 +24,7 @@ import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
 import { ConfigMenuErrorBoundaryComponent } from "./ConfigMenuErrorBoundary";
+import { useBuilderWatch } from "../types";
 
 interface ConfigMenuProps {
   testInputJsonErrors: number;
@@ -31,7 +33,9 @@ interface ConfigMenuProps {
 }
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
-  const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
+  const { setValue } = useFormContext();
+  const mode = useBuilderWatch("mode");
+  const { jsonManifest } = useConnectorBuilderFormState();
   const {
     testInputJson,
     setTestInputJson,
@@ -43,8 +47,8 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
-  const switchToYaml = () => {
-    setEditorView("yaml");
+  const closeAndSwitchToYaml = () => {
+    setValue("mode", "yaml");
     setIsOpen(false);
   };
 
@@ -65,6 +69,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
         control={
           <>
             <Button
+              type="button"
               size="sm"
               variant="secondary"
               data-testid="test-inputs"
@@ -83,12 +88,12 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
             )}
           </>
         }
-        placement={editorView === "yaml" ? "left" : "top"}
+        placement={mode === "yaml" ? "left" : "top"}
         containerClassName={styles.container}
       >
         {jsonManifest.spec ? (
           <FormattedMessage id="connectorBuilder.inputsTooltip" />
-        ) : editorView === "ui" ? (
+        ) : mode === "ui" ? (
           <FormattedMessage id="connectorBuilder.inputsNoSpecUITooltip" />
         ) : (
           <FormattedMessage id="connectorBuilder.inputsNoSpecYAMLTooltip" />
@@ -102,8 +107,8 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
         >
           <ModalBody>
             <ConfigMenuErrorBoundaryComponent
-              currentView={editorView}
-              closeAndSwitchToYaml={switchToYaml}
+              currentMode={mode}
+              closeAndSwitchToYaml={closeAndSwitchToYaml}
               trackError={trackError}
             >
               <FlexContainer direction="column">

@@ -1,23 +1,24 @@
 import intersection from "lodash/intersection";
 import { useCallback, useRef } from "react";
 import { FieldErrors, set, useFormContext, useFormState } from "react-hook-form";
+import { BaseSchema } from "yup";
 
 import {
   BuilderView,
   useConnectorBuilderFormManagementState,
-  useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderFormValues, builderFormValidationSchema } from "./types";
+import { BuilderFormValues, BuilderState, builderFormValidationSchema, globalSchema, streamSchema } from "./types";
 
 export const useBuilderErrors = () => {
-  const { trigger, getValues } = useFormContext<BuilderFormValues>();
-  const { errors } = useFormState<BuilderFormValues>();
-  const { setSelectedView } = useConnectorBuilderFormState();
+  const { trigger, getValues } = useFormContext<BuilderState>();
+  const { errors } = useFormState<BuilderState>();
+  const formValuesErrors: FieldErrors<BuilderFormValues> = errors.formValues ?? {};
   const { setScrollToField } = useConnectorBuilderFormManagementState();
+  const { setValue } = useFormContext();
 
-  const errorsRef = useRef(errors);
-  errorsRef.current = errors;
+  const errorsRef = useRef(formValuesErrors);
+  errorsRef.current = formValuesErrors;
 
   const invalidViews = useCallback((limitToViews?: BuilderView[], inputErrors?: FieldErrors<BuilderFormValues>) => {
     const errorsToCheck = inputErrors !== undefined ? inputErrors : errorsRef.current;
@@ -51,6 +52,16 @@ export const useBuilderErrors = () => {
     [invalidViews]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getFirstErrorPath = (value: any, schema: BaseSchema): string | undefined => {
+    try {
+      schema.validateSync(value);
+    } catch (e) {
+      return e.path;
+    }
+    return undefined;
+  };
+
   const validateAndTouch = useCallback(
     (callback?: () => void, limitToViews?: BuilderView[]) => {
       trigger().then((isValid) => {
@@ -58,33 +69,47 @@ export const useBuilderErrors = () => {
           callback?.();
           return;
         }
-        const currentValues = getValues();
-        let firstErrorPath: string | undefined = undefined;
-        try {
-          builderFormValidationSchema.validateSync(currentValues);
-        } catch (e) {
-          firstErrorPath = e.path;
-        }
-        if (!firstErrorPath) {
-          return;
-        }
 
-        const errorObject = {};
-        set(errorObject, firstErrorPath, "error");
-
-        const invalidBuilderViews = invalidViews(limitToViews, errorObject);
-
-        if (invalidBuilderViews.length > 0) {
-          setScrollToField(firstErrorPath);
-          if (invalidBuilderViews.includes("global")) {
-            setSelectedView("global");
-          } else {
-            setSelectedView(invalidBuilderViews[0]);
+        if (limitToViews) {
+          for (const view of limitToViews) {
+            if (view === "global") {
+              // cast to any to avoid "Type instantiation is excessively deep and possibly infinite" error
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const firstErrorPath = getFirstErrorPath(getValues("formValues.global") as any, globalSchema);
+              if (firstErrorPath) {
+                setScrollToField(`formValues.global.${firstErrorPath}`);
+                setValue("view", view);
+                return;
+              }
+            }
+            if (typeof view === "number") {
+              const firstErrorPath = getFirstErrorPath(getValues(`formValues.streams.${view}`), streamSchema);
+              if (firstErrorPath) {
+                setScrollToField(`formValues.streams.${view}.${firstErrorPath}`);
+                setValue("view", view);
+                return;
+              }
+            }
+          }
+        } else {
+          const firstErrorPath = getFirstErrorPath(getValues("formValues"), builderFormValidationSchema);
+          if (!firstErrorPath) {
+            return;
+          }
+          const errorObject = {};
+          set(errorObject, firstErrorPath, "error");
+          const invalidBuilderViews = invalidViews(limitToViews, errorObject);
+          if (invalidBuilderViews.length > 0) {
+            setScrollToField(`formValues.${firstErrorPath}`);
+            setValue("view", invalidBuilderViews[0]);
+            return;
           }
         }
+
+        callback?.();
       });
     },
-    [getValues, invalidViews, setScrollToField, setSelectedView, trigger]
+    [getValues, invalidViews, setScrollToField, setValue, trigger]
   );
 
   return { hasErrors, validateAndTouch };

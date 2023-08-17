@@ -1,184 +1,126 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classnames from "classnames";
-import debounce from "lodash/debounce";
-import isEqual from "lodash/isEqual";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
+import React, { useMemo, useRef } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { AnyObjectSchema } from "yup";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { builderFormValidationSchema, BuilderFormValues } from "components/connectorBuilder/types";
+import { BuilderState, builderStateValidationSchema, useBuilderWatch } from "components/connectorBuilder/types";
 import { YamlEditor } from "components/connectorBuilder/YamlEditor";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
-import { removeEmptyProperties } from "core/utils/form";
-import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import {
+  ConnectorBuilderLocalStorageProvider,
+  useConnectorBuilderLocalStorage,
+} from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
   ConnectorBuilderTestReadProvider,
   ConnectorBuilderFormStateProvider,
-  useConnectorBuilderFormState,
   ConnectorBuilderFormManagementStateProvider,
   ConnectorBuilderMainRHFContext,
+  useInitializedBuilderProject,
+  useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
-  const { builderFormValues, editorView, setEditorView, stateKey } = useConnectorBuilderFormState();
-  const analyticsService = useAnalyticsService();
+  const {
+    initialFormValues,
+    failedInitialFormValueConversion,
+    initialYaml,
+    builderProject: {
+      builderProject: { name },
+    },
+  } = useInitializedBuilderProject();
+  const { storedMode } = useConnectorBuilderLocalStorage();
+  const values = {
+    mode: failedInitialFormValueConversion ? "yaml" : storedMode,
+    formValues: initialFormValues,
+    yaml: initialYaml,
+    name,
+    view: "global" as const,
+    testStreamIndex: 0,
+  };
+  const initialValues = useRef(values);
+  initialValues.current = values;
 
-  useEffect(() => {
-    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_EDIT, {
-      actionDescription: "Connector Builder UI /edit page opened",
-    });
-  }, [analyticsService]);
-
-  const switchToUI = useCallback(() => setEditorView("ui"), [setEditorView]);
-  const switchToYaml = useCallback(() => setEditorView("yaml"), [setEditorView]);
-
-  const initialFormValues = useRef(builderFormValues);
-  initialFormValues.current = builderFormValues;
-
-  return (
-    <BaseForm
-      // key is used to force re-mount of the form when a different state version is loaded so the react-hook-form / YAML editor state is re-initialized with the new values
-      key={stateKey}
-      editorView={editorView}
-      switchToUI={switchToUI}
-      switchToYaml={switchToYaml}
-      defaultValues={initialFormValues}
-    />
-  );
+  return <BaseForm defaultValues={initialValues} />;
 });
+ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
 export const ConnectorBuilderEditPage: React.FC = () => (
   <ConnectorBuilderFormManagementStateProvider>
     <ConnectorBuilderLocalStorageProvider>
-      <ConnectorBuilderFormStateProvider>
-        <ConnectorBuilderTestReadProvider>
-          <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-          <ConnectorBuilderEditPageInner />
-        </ConnectorBuilderTestReadProvider>
-      </ConnectorBuilderFormStateProvider>
+      <ConnectorBuilderEditPageInner />
     </ConnectorBuilderLocalStorageProvider>
   </ConnectorBuilderFormManagementStateProvider>
 );
-ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
-const BaseForm = React.memo(
-  ({
-    editorView,
-    switchToUI,
-    switchToYaml,
-    defaultValues,
-  }: {
-    editorView: string;
-    switchToUI: () => void;
-    switchToYaml: () => void;
-    defaultValues: React.MutableRefObject<BuilderFormValues>;
-  }) => {
-    // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
-    // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
-    const methods = useForm({
-      defaultValues: defaultValues.current,
-      mode: "onChange",
-      resolver: yupResolver<AnyObjectSchema>(builderFormValidationSchema),
-    });
+const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRefObject<BuilderState> }) => {
+  // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
+  // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
+  const methods = useForm({
+    defaultValues: defaultValues.current,
+    mode: "onChange",
+    resolver: yupResolver<AnyObjectSchema>(builderStateValidationSchema),
+  });
 
-    return (
-      <FormProvider {...methods}>
-        <ConnectorBuilderMainRHFContext.Provider value={methods}>
-          <Panels editorView={editorView} switchToUI={switchToUI} switchToYaml={switchToYaml} />
-        </ConnectorBuilderMainRHFContext.Provider>
-      </FormProvider>
-    );
-  }
-);
-
+  return (
+    <FormProvider {...methods}>
+      <ConnectorBuilderMainRHFContext.Provider value={methods}>
+        <form className={styles.form}>
+          <ConnectorBuilderFormStateProvider>
+            <ConnectorBuilderTestReadProvider>
+              <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+              <Panels />
+            </ConnectorBuilderTestReadProvider>
+          </ConnectorBuilderFormStateProvider>
+        </form>
+      </ConnectorBuilderMainRHFContext.Provider>
+    </FormProvider>
+  );
+});
 BaseForm.displayName = "BaseForm";
 
-function cleanedFormValues(values: unknown) {
-  return builderFormValidationSchema.cast(removeEmptyProperties(values)) as unknown as BuilderFormValues;
-}
+const Panels = React.memo(() => {
+  const { formatMessage } = useIntl();
+  const formValues = useBuilderWatch("formValues");
+  const mode = useBuilderWatch("mode");
+  const { stateKey } = useConnectorBuilderFormManagementState();
 
-const Panels = React.memo(
-  ({
-    editorView,
-    switchToUI,
-    switchToYaml,
-  }: {
-    editorView: string;
-    switchToUI: () => void;
-    switchToYaml: () => void;
-  }) => {
-    const { formatMessage } = useIntl();
-    const { setBuilderFormValues } = useConnectorBuilderFormState();
-
-    const values = useWatch();
-
-    const lastUpdatedValues = useRef<BuilderFormValues | null>(null);
-    if (lastUpdatedValues.current === null) {
-      lastUpdatedValues.current = cleanedFormValues(values);
-    }
-
-    const debouncedSetBuilderFormValues = useMemo(
-      () =>
-        debounce((values) => {
-          const newFormValues = cleanedFormValues(values);
-          if (isEqual(lastUpdatedValues.current, newFormValues)) {
-            return;
-          }
-
-          lastUpdatedValues.current = newFormValues;
-          // update upstream state
-          setBuilderFormValues(newFormValues, builderFormValidationSchema.isValidSync(newFormValues));
-        }, 200),
-      [setBuilderFormValues]
-    );
-
-    useEffect(() => {
-      debouncedSetBuilderFormValues(values);
-    }, [values, debouncedSetBuilderFormValues]);
-
-    return useMemo(
-      () => (
-        <ResizablePanels
-          className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}
-          panels={[
-            {
-              children: (
-                <>
-                  {editorView === "yaml" ? (
-                    <YamlEditor toggleYamlEditor={switchToUI} />
-                  ) : (
-                    <Builder hasMultipleStreams={values.streams.length > 1} toggleYamlEditor={switchToYaml} />
-                  )}
-                </>
-              ),
-              className: styles.leftPanel,
-              minWidth: 550,
+  return useMemo(
+    () => (
+      <ResizablePanels
+        // key is used to force re-mount of the form when a different state version is loaded so the react-hook-form / YAML editor state is re-initialized with the new values
+        key={stateKey}
+        className={classnames({ [styles.gradientBg]: mode === "yaml", [styles.solidBg]: mode === "ui" })}
+        panels={[
+          {
+            children: (
+              <>{mode === "yaml" ? <YamlEditor /> : <Builder hasMultipleStreams={formValues.streams.length > 1} />}</>
+            ),
+            className: styles.leftPanel,
+            minWidth: 550,
+          },
+          {
+            children: <StreamTestingPanel />,
+            className: styles.rightPanel,
+            flex: 0.33,
+            minWidth: 60,
+            overlay: {
+              displayThreshold: 325,
+              header: formatMessage({ id: "connectorBuilder.testConnector" }),
+              rotation: "counter-clockwise",
             },
-            {
-              children: <StreamTestingPanel />,
-              className: styles.rightPanel,
-              flex: 0.33,
-              minWidth: 60,
-              overlay: {
-                displayThreshold: 325,
-                header: formatMessage({ id: "connectorBuilder.testConnector" }),
-                rotation: "counter-clockwise",
-              },
-            },
-          ]}
-        />
-      ),
-      [editorView, formatMessage, switchToUI, switchToYaml, values.streams.length]
-    );
-  }
-);
+          },
+        ]}
+      />
+    ),
+    [formValues.streams.length, formatMessage, mode, stateKey]
+  );
+});
 Panels.displayName = "Panels";

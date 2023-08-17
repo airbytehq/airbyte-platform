@@ -2,7 +2,7 @@ import { faSliders, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import React from "react";
-import { useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
@@ -25,7 +25,7 @@ import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
-import { BuilderFormValues } from "../types";
+import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useInferredInputs } from "../useInferredInputs";
 
@@ -47,6 +47,7 @@ const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>>
 }) => {
   return (
     <button
+      type="button"
       data-testid={testId}
       className={classnames(className, styles.viewButton, {
         [styles.selectedViewButton]: selected,
@@ -62,40 +63,42 @@ const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>>
 
 interface BuilderSidebarProps {
   className?: string;
-  toggleYamlEditor: () => void;
 }
 
-export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
+export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
-  const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
-  const values = useWatch<BuilderFormValues>();
+  const { toggleUI } = useConnectorBuilderFormState();
+  const { setValue } = useFormContext();
+  const formValues = useBuilderWatch("formValues");
+  const name = useBuilderWatch("name");
+  const view = useBuilderWatch("view");
   const handleViewSelect = (selectedView: BuilderView) => {
-    setSelectedView(selectedView);
+    setValue("view", selectedView);
   };
 
   const inferredInputsLength = useInferredInputs().length;
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
-      <UiYamlToggleButton yamlSelected={false} onClick={toggleYamlEditor} />
+      <UiYamlToggleButton yamlSelected={false} onClick={() => toggleUI("yaml")} />
 
       <FlexContainer direction="column" alignItems="center">
         <ConnectorImage />
 
         <div className={styles.connectorName}>
           <Heading as="h2" size="sm">
-            {values.global?.connectorName}
+            {name}
           </Heading>
         </div>
 
-        {builderFormValues.streams.length > 0 && <SavingIndicator />}
+        {formValues.streams.length > 0 && <SavingIndicator />}
       </FlexContainer>
 
       <FlexContainer direction="column" alignItems="stretch" gap="none">
         <ViewSelectButton
           data-testid="navbutton-global"
-          selected={selectedView === "global"}
+          selected={view === "global"}
           showErrorIndicator={hasErrors(["global"])}
           onClick={() => {
             handleViewSelect("global");
@@ -113,7 +116,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         <ViewSelectButton
           data-testid="navbutton-inputs"
           showErrorIndicator={false}
-          selected={selectedView === "inputs"}
+          selected={view === "inputs"}
           onClick={() => {
             handleViewSelect("inputs");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUTS_SELECT, {
@@ -126,7 +129,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: (values.inputs?.length ?? 0) + inferredInputsLength,
+                number: formValues.inputs.length + inferredInputsLength,
               }}
             />
           </Text>
@@ -137,7 +140,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
           <FlexContainer alignItems="center" gap="none">
             <Text className={styles.streamsHeading} size="xs" bold>
-              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
+              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: formValues.streams.length }} />
             </Text>
             <InfoTooltip placement="top">
               <FormattedMessage id="connectorBuilder.streamTooltip" />
@@ -151,11 +154,11 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </FlexContainer>
 
         <div className={styles.streamList}>
-          {values.streams?.map(({ name, id }, num) => (
+          {formValues.streams.map(({ name, id }, num) => (
             <ViewSelectButton
               key={num}
               data-testid={`navbutton-${String(num)}`}
-              selected={selectedView === num}
+              selected={view === num}
               showErrorIndicator={hasErrors([num])}
               onClick={() => {
                 handleViewSelect(num);
@@ -178,7 +181,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </div>
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="md">
-        <DownloadYamlButton yamlIsValid yaml={yamlManifest} />
+        <DownloadYamlButton />
         <PublishButton />
       </FlexContainer>
       <FlexContainer direction="column" gap="lg">

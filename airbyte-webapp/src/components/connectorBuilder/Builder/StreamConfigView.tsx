@@ -15,11 +15,7 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import {
-  BuilderView,
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { BuilderView, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import { BuilderCard } from "./BuilderCard";
@@ -36,7 +32,7 @@ import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -48,7 +44,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
   const { formatMessage } = useIntl();
 
   const [selectedTab, setSelectedTab] = useState<"configuration" | "schema">("configuration");
-  const streamPath = `streams.${streamNum}` as const;
+  const streamPath = `formValues.streams.${streamNum}` as const;
   const streamFieldPath: StreamPathFn = useCallback(
     <T extends string>(fieldPath: T) => `${streamPath}.${fieldPath}` as const,
     [streamPath]
@@ -136,10 +132,9 @@ const StreamControls = ({
 }) => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   const { setValue } = useFormContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setSelectedView } = useConnectorBuilderFormState();
   const {
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
@@ -153,11 +148,11 @@ const StreamControls = ({
       title: "connectorBuilder.deleteStreamModal.title",
       submitButtonText: "connectorBuilder.deleteStreamModal.submitButton",
       onSubmit: () => {
-        const updatedStreams = streams.filter((_, index) => index !== streamNum);
+        const updatedStreams: BuilderStream[] = streams.filter((_, index) => index !== streamNum);
         const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
         const viewToSelect: BuilderView = updatedStreams.length === 0 ? "global" : streamToSelect;
-        setValue("streams", updatedStreams);
-        setSelectedView(viewToSelect);
+        setValue("formValues.streams", updatedStreams);
+        setValue("view", viewToSelect);
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_DELETE, {
           actionDescription: "New stream created from the Add Stream button",
@@ -186,7 +181,7 @@ const StreamControls = ({
       />
       <AddStreamButton
         onAddStream={(addedStreamNum) => {
-          setSelectedView(addedStreamNum);
+          setValue("view", addedStreamNum);
         }}
         initialValues={streams[streamNum]}
         button={
@@ -239,11 +234,15 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
   const schema = useBuilderWatch(schemaFieldPath);
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();
   const path = streamFieldPath("schema");
   const { errors } = useFormState({ name: path });
   const error = get(errors, path);
-  const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
+  const {
+    resolvedManifest: { streams },
+    streamRead,
+  } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
   const formattedSchema = useMemo(() => {

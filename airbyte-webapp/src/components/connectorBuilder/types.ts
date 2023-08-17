@@ -55,7 +55,14 @@ import { formatJson } from "./utils";
 import { FORM_PATTERN_ERROR } from "../../core/form/types";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
-export type EditorView = "ui" | "yaml";
+export interface BuilderState {
+  name: string;
+  mode: "ui" | "yaml";
+  formValues: BuilderFormValues;
+  yaml: string;
+  view: "global" | "inputs" | number;
+  testStreamIndex: number;
+}
 
 export interface BuilderFormInput {
   key: string;
@@ -95,7 +102,6 @@ export type BuilderFormAuthenticator = (
 
 export interface BuilderFormValues {
   global: {
-    connectorName: string;
     urlBase: string;
     authenticator: BuilderFormAuthenticator;
   };
@@ -254,7 +260,6 @@ export const DATETIME_FORMAT_OPTIONS = [
 
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
-    connectorName: DEFAULT_CONNECTOR_NAME,
     urlBase: "",
     authenticator: { type: "NoAuth" },
   },
@@ -695,231 +700,260 @@ const requestOptionsSchema = yup.object().shape({
   }),
 });
 
-export const builderFormValidationSchema = yup.object().shape({
-  global: yup.object().shape({
-    connectorName: yup.string().required(REQUIRED_ERROR).max(256, "connectorBuilder.maxLength"),
-    urlBase: yup.string().required(REQUIRED_ERROR),
-    authenticator: yup.object({
-      inject_into: apiKeyInjectIntoSchema,
-      token_refresh_endpoint: yup.mixed().when("type", {
-        is: OAUTH_AUTHENTICATOR,
-        then: yup.string().required(REQUIRED_ERROR),
-        otherwise: strip,
+export const authenticatorSchema = yup.object({
+  type: yup.string().required(REQUIRED_ERROR),
+  inject_into: apiKeyInjectIntoSchema,
+  token_refresh_endpoint: yup.mixed().when("type", {
+    is: OAUTH_AUTHENTICATOR,
+    then: yup.string().required(REQUIRED_ERROR),
+    otherwise: strip,
+  }),
+  refresh_token_updater: yup.mixed().when("type", {
+    is: OAUTH_AUTHENTICATOR,
+    then: yup
+      .object()
+      .shape({
+        refresh_token_name: yup.string(),
+      })
+      .default(undefined),
+    otherwise: strip,
+  }),
+  refresh_request_body: yup.mixed().when("type", {
+    is: OAUTH_AUTHENTICATOR,
+    then: keyValueListSchema,
+    otherwise: strip,
+  }),
+  login_requester: yup.mixed().when("type", {
+    is: SESSION_TOKEN_AUTHENTICATOR,
+    then: yup.object().shape({
+      url: yup.string().required(REQUIRED_ERROR),
+      authenticator: yup.object({
+        inject_into: apiKeyInjectIntoSchema,
       }),
-      refresh_token_updater: yup.mixed().when("type", {
-        is: OAUTH_AUTHENTICATOR,
-        then: yup
-          .object()
-          .shape({
-            refresh_token_name: yup.string(),
-          })
-          .default(undefined),
-        otherwise: strip,
-      }),
-      refresh_request_body: yup.mixed().when("type", {
-        is: OAUTH_AUTHENTICATOR,
-        then: keyValueListSchema,
-        otherwise: strip,
-      }),
-      login_requester: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.object().shape({
-          url: yup.string().required(REQUIRED_ERROR),
-          authenticator: yup.object({
-            inject_into: apiKeyInjectIntoSchema,
-          }),
-          errorHandler: errorHandlerSchema,
-          httpMethod: httpMethodSchema,
-          requestOptions: requestOptionsSchema,
-        }),
-        otherwise: strip,
-      }),
-      session_token_path: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.array().of(yup.string()).min(1).required(REQUIRED_ERROR),
-        otherwise: strip,
-      }),
-      expiration_duration: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.string(),
-        otherwise: strip,
-      }),
-      request_authentication: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.object().shape({
-          inject_into: yup.mixed().when("type", {
-            is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
-            then: nonPathRequestOptionSchema,
-            otherwise: strip,
-          }),
-        }),
+      errorHandler: errorHandlerSchema,
+      httpMethod: httpMethodSchema,
+      requestOptions: requestOptionsSchema,
+    }),
+    otherwise: strip,
+  }),
+  session_token_path: yup.mixed().when("type", {
+    is: SESSION_TOKEN_AUTHENTICATOR,
+    then: yup.array().of(yup.string()).min(1).required(REQUIRED_ERROR),
+    otherwise: strip,
+  }),
+  expiration_duration: yup.mixed().when("type", {
+    is: SESSION_TOKEN_AUTHENTICATOR,
+    then: yup.string(),
+    otherwise: strip,
+  }),
+  request_authentication: yup.mixed().when("type", {
+    is: SESSION_TOKEN_AUTHENTICATOR,
+    then: yup.object().shape({
+      inject_into: yup.mixed().when("type", {
+        is: SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
+        then: nonPathRequestOptionSchema,
         otherwise: strip,
       }),
     }),
+    otherwise: strip,
   }),
-  streams: yup
-    .array()
-    .min(1)
-    .of(
-      yup.object().shape({
-        name: yup.string().required(REQUIRED_ERROR),
-        urlPath: yup.string().required(REQUIRED_ERROR),
-        fieldPointer: yup.array().of(yup.string()),
-        primaryKey: yup.array().of(yup.string()),
-        httpMethod: httpMethodSchema,
-        requestOptions: requestOptionsSchema,
-        schema: jsonString,
-        paginator: yup
-          .object()
-          .shape({
-            pageSizeOption: yup.mixed().when("strategy.page_size", {
-              is: (val: number) => Boolean(val),
-              then: nonPathRequestOptionSchema,
-              otherwise: strip,
-            }),
-            pageTokenOption: yup
-              .object()
-              .shape({
-                inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
-                field_name: yup.mixed().when("inject_into", {
-                  is: "path",
-                  then: strip,
-                  otherwise: yup.string().required(REQUIRED_ERROR),
-                }),
-              })
-              .notRequired()
-              .default(undefined),
-
-            strategy: yup
-              .object({
-                page_size: yupNumberOrEmptyString,
-                cursor: yup.mixed().when("type", {
-                  is: CURSOR_PAGINATION,
-                  then: yup.object().shape({
-                    cursor_value: yup.mixed().when("type", {
-                      is: "custom",
-                      then: yup.string().required(REQUIRED_ERROR),
-                      otherwise: strip,
-                    }),
-                    stop_condition: yup.mixed().when("type", {
-                      is: "custom",
-                      then: yup.string(),
-                      otherwise: strip,
-                    }),
-                    path: yup.mixed().when("type", {
-                      is: (val: string) => val !== "custom",
-                      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                      otherwise: strip,
-                    }),
-                  }),
-                  otherwise: strip,
-                }),
-                start_from_page: yup.mixed().when("type", {
-                  is: PAGE_INCREMENT,
-                  then: yupNumberOrEmptyString,
-                  otherwise: strip,
-                }),
-              })
-              .notRequired()
-              .default(undefined),
-          })
-          .notRequired()
-          .default(undefined),
-        partitionRouter: yup
-          .array(
-            yup.object().shape({
-              cursor_field: yup.mixed().when("type", {
-                is: (val: string) => val === LIST_PARTITION_ROUTER,
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-              values: yup.mixed().when("type", {
-                is: LIST_PARTITION_ROUTER,
-                then: yup.object().shape({
-                  value: yup.mixed().when("type", {
-                    is: "list",
-                    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                    otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-                  }),
-                }),
-                otherwise: strip,
-              }),
-              request_option: nonPathRequestOptionSchema,
-              parent_key: yup.mixed().when("type", {
-                is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-              parentStreamReference: yup.mixed().when("type", {
-                is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-              partition_field: yup.mixed().when("type", {
-                is: SUBSTREAM_PARTITION_ROUTER,
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-            })
-          )
-          .notRequired()
-          .default(undefined),
-        transformations: yup
-          .array(
-            yup.object().shape({
-              path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
-              value: yup.mixed().when("type", {
-                is: (val: string) => val === "add",
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-            })
-          )
-          .notRequired()
-          .default(undefined),
-        errorHandler: errorHandlerSchema,
-        incrementalSync: yup
-          .object()
-          .shape({
-            cursor_field: yup.string().required(REQUIRED_ERROR),
-            slicer: schemaIfNotDataFeed(
-              yup
-                .object()
-                .shape({
-                  cursor_granularity: yup.string().required(REQUIRED_ERROR),
-                  step: yup.string().required(REQUIRED_ERROR),
-                })
-                .default(undefined)
-            ),
-            start_datetime: yup.object().shape({
-              value: yup.mixed().when("type", {
-                is: (val: string) => val === "custom",
-                then: yup.string().required(REQUIRED_ERROR),
-                otherwise: strip,
-              }),
-            }),
-            end_datetime: schemaIfRangeFilter(
-              yup.object().shape({
-                value: yup.mixed().when("type", {
-                  is: (val: string) => val === "custom",
-                  then: yup.string().required(REQUIRED_ERROR),
-                  otherwise: strip,
-                }),
-              })
-            ),
-            datetime_format: yup.string().notRequired().default(undefined),
-            cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
-            start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
-            end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
-            stream_state_field_start: yup.string(),
-            stream_state_field_end: yup.string(),
-            lookback_window: yup.string(),
-          })
-          .notRequired()
-          .default(undefined),
-      })
-    ),
 });
+
+export const globalSchema = yup.object().shape({
+  urlBase: yup.string().required(REQUIRED_ERROR),
+  authenticator: authenticatorSchema,
+});
+
+export const streamSchema = yup.object().shape({
+  name: yup.string().required(REQUIRED_ERROR),
+  urlPath: yup.string().required(REQUIRED_ERROR),
+  fieldPointer: yup.array().of(yup.string()),
+  primaryKey: yup.array().of(yup.string()),
+  httpMethod: httpMethodSchema,
+  requestOptions: requestOptionsSchema,
+  schema: jsonString,
+  paginator: yup
+    .object()
+    .shape({
+      pageSizeOption: yup.mixed().when("strategy.page_size", {
+        is: (val: number) => Boolean(val),
+        then: nonPathRequestOptionSchema,
+        otherwise: strip,
+      }),
+      pageTokenOption: yup
+        .object()
+        .shape({
+          inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
+          field_name: yup.mixed().when("inject_into", {
+            is: "path",
+            then: strip,
+            otherwise: yup.string().required(REQUIRED_ERROR),
+          }),
+        })
+        .notRequired()
+        .default(undefined),
+      strategy: yup
+        .object({
+          page_size: yupNumberOrEmptyString,
+          cursor: yup.mixed().when("type", {
+            is: CURSOR_PAGINATION,
+            then: yup.object().shape({
+              cursor_value: yup.mixed().when("type", {
+                is: "custom",
+                then: yup.string().required(REQUIRED_ERROR),
+                otherwise: strip,
+              }),
+              stop_condition: yup.mixed().when("type", {
+                is: "custom",
+                then: yup.string(),
+                otherwise: strip,
+              }),
+              path: yup.mixed().when("type", {
+                is: (val: string) => val !== "custom",
+                then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                otherwise: strip,
+              }),
+            }),
+            otherwise: strip,
+          }),
+          start_from_page: yup.mixed().when("type", {
+            is: PAGE_INCREMENT,
+            then: yupNumberOrEmptyString,
+            otherwise: strip,
+          }),
+        })
+        .notRequired()
+        .default(undefined),
+    })
+    .notRequired()
+    .default(undefined),
+  partitionRouter: yup
+    .array(
+      yup.object().shape({
+        cursor_field: yup.mixed().when("type", {
+          is: (val: string) => val === LIST_PARTITION_ROUTER,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        values: yup.mixed().when("type", {
+          is: LIST_PARTITION_ROUTER,
+          then: yup.object().shape({
+            value: yup.mixed().when("type", {
+              is: "list",
+              then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+            }),
+          }),
+          otherwise: strip,
+        }),
+        request_option: nonPathRequestOptionSchema,
+        parent_key: yup.mixed().when("type", {
+          is: SUBSTREAM_PARTITION_ROUTER,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        parentStreamReference: yup.mixed().when("type", {
+          is: SUBSTREAM_PARTITION_ROUTER,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        partition_field: yup.mixed().when("type", {
+          is: SUBSTREAM_PARTITION_ROUTER,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+      })
+    )
+    .notRequired()
+    .default(undefined),
+  transformations: yup
+    .array(
+      yup.object().shape({
+        path: yup.array(yup.string()).min(1, REQUIRED_ERROR),
+        value: yup.mixed().when("type", {
+          is: (val: string) => val === "add",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+      })
+    )
+    .notRequired()
+    .default(undefined),
+  errorHandler: errorHandlerSchema,
+  incrementalSync: yup
+    .object()
+    .shape({
+      cursor_field: yup.string().required(REQUIRED_ERROR),
+      slicer: schemaIfNotDataFeed(
+        yup
+          .object()
+          .shape({
+            cursor_granularity: yup.string().required(REQUIRED_ERROR),
+            step: yup.string().required(REQUIRED_ERROR),
+          })
+          .default(undefined)
+      ),
+      start_datetime: yup.object().shape({
+        value: yup.mixed().when("type", {
+          is: (val: string) => val === "custom",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+      }),
+      end_datetime: schemaIfRangeFilter(
+        yup.object().shape({
+          value: yup.mixed().when("type", {
+            is: (val: string) => val === "custom",
+            then: yup.string().required(REQUIRED_ERROR),
+            otherwise: strip,
+          }),
+        })
+      ),
+      datetime_format: yup.string().notRequired().default(undefined),
+      cursor_datetime_formats: yup.array(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
+      start_time_option: schemaIfNotDataFeed(nonPathRequestOptionSchema),
+      end_time_option: schemaIfRangeFilter(nonPathRequestOptionSchema),
+      stream_state_field_start: yup.string(),
+      stream_state_field_end: yup.string(),
+      lookback_window: yup.string(),
+    })
+    .notRequired()
+    .default(undefined),
+});
+
+export const builderFormValidationSchema = yup.object().shape({
+  global: globalSchema,
+  streams: yup.array().min(1).of(streamSchema),
+});
+
+export const builderStateValidationSchema = yup.object().shape({
+  name: yup.string().required(REQUIRED_ERROR).max(256, "connectorBuilder.maxLength"),
+  mode: yup.mixed().oneOf(["ui", "yaml"]).required(REQUIRED_ERROR),
+  formValues: builderFormValidationSchema.required(REQUIRED_ERROR),
+  yaml: yup.string().required(REQUIRED_ERROR),
+  view: yup
+    .mixed()
+    .test(
+      "isValidView",
+      'Must be "global", "inputs", or a number',
+      (value) => typeof value === "number" || value === "global" || value === "inputs"
+    ),
+  testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
+});
+
+function splitUrl(url: string): { base: string; path: string } {
+  const lastSlashIndex = url.lastIndexOf("/");
+
+  if (lastSlashIndex === -1) {
+    // return a "/" for the path to avoid setting path to an empty string, which breaks validation
+    return { base: url, path: "/" };
+  }
+
+  const leftSide = url.substring(0, lastSlashIndex);
+  const rightSide = url.substring(lastSlashIndex + 1);
+
+  return { base: leftSide, path: rightSide || "/" };
+}
 
 function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["global"]): HttpRequesterAuthenticator {
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
@@ -944,12 +978,13 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   }
   if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
     const builderLoginRequester = globalSettings.authenticator.login_requester;
+    const { base, path } = splitUrl(builderLoginRequester.url);
     return {
       ...globalSettings.authenticator,
       login_requester: {
         type: "HttpRequester",
-        url_base: builderLoginRequester.url,
-        path: "",
+        url_base: base,
+        path,
         authenticator: builderLoginRequester.authenticator,
         error_handler: buildCompositeErrorHandler(builderLoginRequester.errorHandler),
         http_method: builderLoginRequester.httpMethod,
@@ -1348,14 +1383,12 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
 
-export const useBuilderWatch = <TPath extends FieldPath<BuilderFormValues>>(
-  path: TPath,
-  options?: { exact: boolean }
-) => useWatch<BuilderFormValues, TPath>({ name: path, ...options });
+export const useBuilderWatch = <TPath extends FieldPath<BuilderState>>(path: TPath, options?: { exact: boolean }) =>
+  useWatch<BuilderState, TPath>({ name: path, ...options });
 
-export type BuilderPathFn = <TPath extends FieldPath<BuilderFormValues>>(fieldPath: string) => TPath;
+export type BuilderPathFn = <TPath extends FieldPath<BuilderState>>(fieldPath: string) => TPath;
 
-export type StreamPathFn = <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
+export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
 
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;

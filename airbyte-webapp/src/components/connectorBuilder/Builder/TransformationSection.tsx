@@ -12,7 +12,7 @@ import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers"
 import { BuilderTransformation } from "../types";
 
 interface TransformationSectionProps {
-  streamFieldPath: <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
+  streamFieldPath: <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
   currentStreamIndex: number;
 }
 

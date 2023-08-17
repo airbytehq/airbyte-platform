@@ -39,6 +39,8 @@ $animation-size: -20px;
   background-color: colors.$blue-300;
   border-radius: 50%;
   z-index: 2;
+  transform: scale(0.5);
+  opacity: 0.3;
   animation: pulsate $animation-length infinite;
 }
 
@@ -52,6 +54,8 @@ $animation-size: -20px;
   background-color: colors.$blue-300;
   border-radius: 50%;
   z-index: 1;
+  transform: scale(0.1);
+  opacity: 0.3;
   animation: pulsate $animation-length infinite calc($animation-length/2);
 }
 

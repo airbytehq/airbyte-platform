@@ -26,7 +26,7 @@ export const StreamReferenceField: React.FC<StreamReferenceFieldProps> = ({
   currentStreamIndex,
   ...props
 }) => {
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   const { setValue } = useFormContext();
   const value = useWatch({ name: path });
   const { errors } = useFormState({ name: path });

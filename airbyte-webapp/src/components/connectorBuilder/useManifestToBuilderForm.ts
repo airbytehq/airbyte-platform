@@ -14,7 +14,6 @@ export const useManifestToBuilderForm = () => {
 export const convertToBuilderFormValues = async (
   resolve: (manifest: ConnectorManifest, projectId?: string) => Promise<ResolveManifest>,
   manifest: ConnectorManifest,
-  connectorName: string,
   projectId?: string
 ) => {
   let resolveResult: ResolveManifest;
@@ -39,5 +38,5 @@ export const convertToBuilderFormValues = async (
     );
   }
 
-  return convertToBuilderFormValuesSync(resolvedManifest, connectorName);
+  return convertToBuilderFormValuesSync(resolvedManifest);
 };
