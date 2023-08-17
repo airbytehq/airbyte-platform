@@ -43,7 +43,6 @@ public class AirbytePropertySourceLoader implements PropertySourceLoader {
     final Optional<InputStream> airbyteConfigFile = getAirbyteInputStream();
 
     if (airbyteConfigFile.isEmpty()) {
-      log.warn("Could not find airbyte.yml file.");
       return Optional.empty();
     }
 
