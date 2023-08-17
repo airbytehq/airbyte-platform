@@ -63,6 +63,9 @@ airbyte:
           bucket: ${STATE_STORAGE_S3_BUCKET_NAME:}
           region: ${STATE_STORAGE_S3_REGION:}
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
+  connector:
+    specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
+    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   connector-registry:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:`https://connectors.airbyte.com/`}
