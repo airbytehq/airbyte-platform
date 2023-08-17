@@ -47,7 +47,16 @@ export const UtcTimestampWithMillieconds: StoryObj<typeof DatePicker> = {
   args: {
     placeholder: "YYYY-MM-DDTHH:mm:ss.SSSZ",
     withTime: true,
-    withMilliseconds: true,
+    withPrecision: "milliseconds",
+  },
+  render: (args) => <Template {...args} />,
+};
+
+export const UtcTimestampWithMicroseconds: StoryObj<typeof DatePicker> = {
+  args: {
+    placeholder: "YYYY-MM-DDTHH:mm:ss.SSSSSSZ",
+    withTime: true,
+    withPrecision: "microseconds",
   },
   render: (args) => <Template {...args} />,
 };
