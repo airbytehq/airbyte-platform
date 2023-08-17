@@ -12,7 +12,7 @@ export const NameInput = () => {
   const {
     field,
     fieldState: { error },
-  } = useController({ name: "global.connectorName" });
+  } = useController({ name: "name" });
   const hasError = Boolean(error);
   const [showInput, setShowInput] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);

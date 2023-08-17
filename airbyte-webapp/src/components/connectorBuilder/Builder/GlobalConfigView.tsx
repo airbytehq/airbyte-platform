@@ -17,12 +17,12 @@ export const GlobalConfigView: React.FC = () => {
   return (
     <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })}>
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
-      <BuilderTitle path="global.connectorName" label="Connector Name" size="lg" />
+      <BuilderTitle path="name" label="Connector Name" size="lg" />
       <BuilderCard className={styles.content}>
         <BuilderFieldWithInputs
           type="string"
           manifestPath="HttpRequester.properties.url_base"
-          path="global.urlBase"
+          path="formValues.global.urlBase"
           onBlur={(value: string) => {
             if (value) {
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.API_URL_CREATE, {

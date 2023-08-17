@@ -15,7 +15,7 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import styles from "./BuilderCard.module.scss";
-import { BuilderStream, useBuilderWatch, BuilderFormValues } from "../types";
+import { BuilderStream, useBuilderWatch, BuilderState } from "../types";
 import { useCopyValueIncludingArrays } from "../utils";
 
 interface BuilderCardProps {
@@ -23,7 +23,7 @@ interface BuilderCardProps {
   label?: string;
   tooltip?: string;
   toggleConfig?: {
-    path: FieldPath<BuilderFormValues>;
+    path: FieldPath<BuilderState>;
     defaultValue: unknown;
   };
   copyConfig?: {
@@ -81,7 +81,7 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
 };
 
 interface ToggledChildrenProps {
-  path: FieldPath<BuilderFormValues>;
+  path: FieldPath<BuilderState>;
 }
 
 const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> = ({ children, path }) => {
@@ -93,7 +93,7 @@ const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> =
   return null;
 };
 
-const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderFormValues>; defaultValue: unknown }) => {
+const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; defaultValue: unknown }) => {
   const { setValue, clearErrors } = useFormContext();
   const value = useBuilderWatch(path);
 
@@ -118,9 +118,9 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const copyValueIncludingArrays = useCopyValueIncludingArrays();
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   const currentRelevantConfig = useWatch({
-    name: `streams.${copyConfig?.currentStreamIndex}.${copyConfig?.path}`,
+    name: `formValues.streams.${copyConfig?.currentStreamIndex}.${copyConfig?.path}`,
     disabled: !copyConfig,
   });
   if (streams.length <= 1 || !copyConfig) {
@@ -192,7 +192,7 @@ const CopyToModal: React.FC<{
   title: string;
   currentStreamIndex: number;
 }> = ({ onCancel, onApply, title, currentStreamIndex }) => {
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   const [selectMap, setSelectMap] = useState<Record<string, boolean>>({});
   return (
     <Modal size="sm" title={title} onClose={onCancel}>
@@ -240,7 +240,7 @@ const CopyFromModal: React.FC<{
   title: string;
   currentStreamIndex: number;
 }> = ({ onCancel, onSelect, title, currentStreamIndex }) => {
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   return (
     <Modal size="sm" title={title} onClose={onCancel}>
       <ModalBody className={styles.modalStreamListContainer}>

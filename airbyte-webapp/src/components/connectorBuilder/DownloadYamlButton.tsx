@@ -1,5 +1,6 @@
 import { faWarning } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { dump } from "js-yaml";
 import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
@@ -17,27 +18,33 @@ import { useBuilderErrors } from "./useBuilderErrors";
 
 interface DownloadYamlButtonProps {
   className?: string;
-  yaml: string;
-  yamlIsValid: boolean;
 }
 
-export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ className, yaml, yamlIsValid }) => {
+export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ className }) => {
   const analyticsService = useAnalyticsService();
-  const { editorView, formValuesValid } = useConnectorBuilderFormState();
   const { validateAndTouch } = useBuilderErrors();
-  const connectorNameField = useBuilderWatch("global.connectorName");
+  const connectorNameField = useBuilderWatch("name");
+  const { jsonManifest, yamlIsValid, formValuesValid } = useConnectorBuilderFormState();
+  const yaml = useBuilderWatch("yaml");
+  const mode = useBuilderWatch("mode");
 
   const downloadYaml = () => {
-    const file = new Blob([yaml], { type: FILE_TYPE_DOWNLOAD });
+    const yamlToDownload =
+      mode === "ui"
+        ? dump(jsonManifest, {
+            noRefs: true,
+          })
+        : yaml;
+    const file = new Blob([yamlToDownload], { type: FILE_TYPE_DOWNLOAD });
     downloadFile(file, connectorNameField ? `${snakeCase(connectorNameField)}.yaml` : "connector_builder.yaml");
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DOWNLOAD_YAML, {
       actionDescription: "User clicked the Download Config button to download the YAML manifest",
-      editor_view: editorView,
+      editor_view: mode,
     });
   };
 
   const handleClick = () => {
-    if (editorView === "yaml") {
+    if (mode === "yaml") {
       downloadYaml();
       return;
     }
@@ -49,13 +56,13 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (editorView === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && !yamlIsValid) {
     buttonDisabled = true;
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlDownload" />;
   }
 
-  if (editorView === "ui" && !formValuesValid) {
+  if (mode === "ui" && !formValuesValid) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsDownload" />;
   }
@@ -68,6 +75,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       disabled={buttonDisabled}
       icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
       data-testid="download-yaml-button"
+      type="button"
     >
       <FormattedMessage id="connectorBuilder.downloadYaml" />
     </Button>
@@ -78,7 +86,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       {tooltipContent !== undefined ? (
         <Tooltip
           control={downloadButton}
-          placement={editorView === "yaml" ? "left" : "top"}
+          placement={mode === "yaml" ? "left" : "top"}
           containerClassName={styles.tooltipContainer}
         >
           {tooltipContent}

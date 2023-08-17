@@ -7,61 +7,65 @@ import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState, BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamTestButton.module.scss";
+import { useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface StreamTestButtonProps {
   readStream: () => void;
   hasTestInputJsonErrors: boolean;
-  hasStreamListErrors: boolean;
   setTestInputOpen: (open: boolean) => void;
-  isFetchingStreamList: boolean;
+  isResolving: boolean;
+  hasResolveErrors: boolean;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   readStream,
   hasTestInputJsonErrors,
-  hasStreamListErrors,
   setTestInputOpen,
-  isFetchingStreamList,
+  isResolving,
+  hasResolveErrors,
 }) => {
-  const { editorView, yamlIsValid } = useConnectorBuilderFormState();
+  const { yamlIsValid } = useConnectorBuilderFormState();
+  const mode = useBuilderWatch("mode");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
+  const relevantViews: BuilderView[] = ["global", "inputs", testStreamIndex];
 
   const handleClick = () => {
     if (hasTestInputJsonErrors) {
       setTestInputOpen(true);
       return;
     }
-    if (editorView === "yaml") {
+    if (mode === "yaml") {
       readStream();
       return;
     }
 
-    validateAndTouch(readStream);
+    validateAndTouch(readStream, relevantViews);
   };
 
   let buttonDisabled = false;
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (isFetchingStreamList && editorView === "yaml") {
+  if (isResolving && mode === "yaml") {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
   }
 
-  if (editorView === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && !yamlIsValid) {
     buttonDisabled = true;
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((editorView === "ui" && hasErrors()) || hasTestInputJsonErrors) {
+  if ((mode === "ui" && hasErrors(relevantViews)) || hasTestInputJsonErrors) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
-  } else if (hasStreamListErrors) {
+  } else if (hasResolveErrors) {
     // only disable the button on stream list errors if there are no user-fixable errors
     buttonDisabled = true;
   }

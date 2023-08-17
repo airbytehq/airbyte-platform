@@ -68,8 +68,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       copyConfig={{
         path: "incrementalSync",
         currentStreamIndex,
-        copyFromLabel: formatMessage({ id: "connectorBuilder.copyToIncrementalTitle" }),
-        copyToLabel: formatMessage({ id: "connectorBuilder.copyFromIncrementalTitle" }),
+        copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromIncrementalTitle" }),
+        copyToLabel: formatMessage({ id: "connectorBuilder.copyToIncrementalTitle" }),
       }}
     >
       <CursorField streamFieldPath={streamFieldPath} />

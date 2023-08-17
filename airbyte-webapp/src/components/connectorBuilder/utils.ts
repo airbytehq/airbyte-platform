@@ -54,7 +54,7 @@ function orderKeys(obj: unknown): unknown {
 export const useCopyValueIncludingArrays = () => {
   const { getValues, setValue, control } = useFormContext();
 
-  const streamPath = (streamNum: number, pathInStream: string) => `streams.${streamNum}.${pathInStream}`;
+  const streamPath = (streamNum: number, pathInStream: string) => `formValues.streams.${streamNum}.${pathInStream}`;
 
   return (fromStream: number, toStream: number, pathInStream: string, setValueOptions: SetValueConfig) => {
     const valueToCopy = getValues(streamPath(fromStream, pathInStream));

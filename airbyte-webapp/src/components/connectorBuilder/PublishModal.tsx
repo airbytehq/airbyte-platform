@@ -11,7 +11,6 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
 import { useListBuilderProjectVersions } from "core/api";
-import { DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
@@ -28,10 +27,15 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { projectId, lastValidJsonManifest, currentProject, publishProject, releaseNewVersion } =
-    useConnectorBuilderFormState();
+  const {
+    projectId,
+    jsonManifest: manifest,
+    currentProject,
+    publishProject,
+    releaseNewVersion,
+  } = useConnectorBuilderFormState();
   const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
-  const connectorName = useBuilderWatch("global.connectorName");
+  const connectorName = useBuilderWatch("name");
   const { setValue } = useFormContext();
 
   const minVersion = versions && versions.length > 0 ? Math.max(...versions.map((version) => version.version)) + 1 : 1;
@@ -89,7 +93,6 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   }
 
   const handleSubmit = async (values: typeof initialValues) => {
-    const manifest = lastValidJsonManifest as DeclarativeComponentSchema;
     unregisterNotificationById(NOTIFICATION_ID);
     try {
       if (currentProject.sourceDefinitionId) {
@@ -120,7 +123,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       }
 
       // push name change upstream so it's updated
-      setValue("global.connectorName", values.name);
+      setValue("name", values.name);
 
       registerNotification({
         id: NOTIFICATION_ID,

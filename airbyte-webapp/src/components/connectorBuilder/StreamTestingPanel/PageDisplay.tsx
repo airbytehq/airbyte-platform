@@ -15,16 +15,14 @@ import {
   StreamReadSlicesItemPagesItem,
   StreamReadSlicesItemPagesItemRecordsItem,
 } from "core/api/types/ConnectorBuilderClient";
-import {
-  useConnectorBuilderFormState,
-  useConnectorBuilderTestRead,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
 import { RecordTable } from "./RecordTable";
 import { SchemaDiffView } from "./SchemaDiffView";
 import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
+import { useBuilderWatch } from "../types";
 import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {
@@ -36,14 +34,12 @@ interface PageDisplayProps {
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
-  const {
-    editorView,
-    builderFormValues: { streams: builderFormStreams },
-  } = useConnectorBuilderFormState();
+  const builderFormStreams = useBuilderWatch("formValues.streams");
+  const mode = useBuilderWatch("mode");
+  const testStreamIndex = useBuilderWatch("testStreamIndex");
   const {
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
-    testStreamIndex,
   } = useConnectorBuilderTestRead();
 
   const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
@@ -91,7 +87,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
             title: (
               <FlexContainer direction="row" justifyContent="center">
                 <FormattedMessage id="connectorBuilder.schemaTab" />
-                {editorView === "ui" && schemaDifferences && !autoImportSchema && (
+                {mode === "ui" && schemaDifferences && !autoImportSchema && (
                   <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
                 )}
               </FlexContainer>

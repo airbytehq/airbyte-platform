@@ -1,7 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
 import merge from "lodash/merge";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import React from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -13,14 +13,18 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
-import { useBuilderErrors } from "../useBuilderErrors";
+import {
+  BuilderStream,
+  DEFAULT_BUILDER_STREAM_VALUES,
+  DEFAULT_SCHEMA,
+  authenticatorSchema,
+  useBuilderWatch,
+} from "../types";
 
 interface AddStreamValues {
   streamName: string;
@@ -45,11 +49,10 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   modalTitle,
 }) => {
   const analyticsService = useAnalyticsService();
-  const { hasErrors } = useBuilderErrors();
-  const { builderFormValues } = useConnectorBuilderFormState();
+  const authenticator = useBuilderWatch("formValues.global.authenticator");
   const [isOpen, setIsOpen] = useState(false);
 
-  const streams = useBuilderWatch("streams");
+  const streams = useBuilderWatch("formValues.streams");
   const { setValue } = useFormContext();
   const numStreams = streams.length;
 
@@ -57,15 +60,15 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     setIsOpen(true);
   };
 
-  const shouldPulse =
-    numStreams === 0 && !hasErrors(["global"]) && builderFormValues.global.authenticator.type !== "NoAuth";
+  const authIsValid = useMemo(() => authenticatorSchema.isValidSync(authenticator), [authenticator]);
+  const shouldPulse = numStreams === 0 && authenticator.type !== "NoAuth" && authIsValid;
 
   const handleSubmit = (values: AddStreamValues) => {
     const otherStreamValues = values.copyOtherStream
       ? streams.find((stream) => stream.name === values.streamToCopy)
       : undefined;
     const id = uuid();
-    setValue("streams", [
+    setValue("formValues.streams", [
       ...streams,
       merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
         ...initialValues,

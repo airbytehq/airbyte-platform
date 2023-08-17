@@ -1,13 +1,17 @@
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { getInferredInputList, hasIncrementalSyncUserInput } from "./types";
 
 export const useInferredInputs = () => {
-  const {
-    builderFormValues: { global, inferredInputOverrides, streams },
-  } = useConnectorBuilderFormState();
+  const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!watch) {
+    throw new Error("rhf context not available");
+  }
+  const global = watch("formValues.global");
+  const inferredInputOverrides = watch("formValues.inferredInputOverrides");
+  const streams = watch("formValues.streams");
   const startDateInput = hasIncrementalSyncUserInput(streams, "start_datetime");
   const endDateInput = hasIncrementalSyncUserInput(streams, "end_datetime");
   return useMemo(

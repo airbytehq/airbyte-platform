@@ -29,8 +29,8 @@ const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const inputs = useBuilderWatch("inputs");
-  const storedInputOrder = useBuilderWatch("inputOrder");
+  const inputs = useBuilderWatch("formValues.inputs");
+  const storedInputOrder = useBuilderWatch("formValues.inputOrder");
   const { setValue } = useFormContext();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
   const inferredInputs = useInferredInputs();
@@ -53,7 +53,7 @@ export const InputsView: React.FC = () => {
     if (over !== null && active.id !== over.id) {
       const oldIndex = inputOrder.indexOf(active.id.toString());
       const newIndex = inputOrder.indexOf(over.id.toString());
-      setValue("inputOrder", arrayMove(inputOrder, oldIndex, newIndex));
+      setValue("formValues.inputOrder", arrayMove(inputOrder, oldIndex, newIndex));
     }
   };
 

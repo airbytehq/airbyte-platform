@@ -12,6 +12,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PublishModal } from "./PublishModal";
+import { useBuilderWatch } from "./types";
 
 interface PublishButtonProps {
   className?: string;
@@ -19,30 +20,31 @@ interface PublishButtonProps {
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const { editorView, currentProject, yamlIsValid, formValuesValid } = useConnectorBuilderFormState();
+  const { currentProject, yamlIsValid, formValuesValid } = useConnectorBuilderFormState();
+  const mode = useBuilderWatch("mode");
 
-  const { streamListErrorMessage } = useConnectorBuilderTestRead();
+  const { resolveErrorMessage } = useConnectorBuilderTestRead();
 
   let buttonDisabled = false;
   let showWarningIcon = false;
   let tooltipContent = undefined;
 
-  if (editorView === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && !yamlIsValid) {
     buttonDisabled = true;
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlPublish" />;
   }
 
-  if (editorView === "ui" && !formValuesValid) {
+  if (mode === "ui" && !formValuesValid) {
     showWarningIcon = true;
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsPublish" />;
   }
 
-  if (streamListErrorMessage) {
+  if (resolveErrorMessage) {
     buttonDisabled = true;
     showWarningIcon = true;
-    tooltipContent = <FormattedMessage id="connectorBuilder.listErrorPublish" />;
+    tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
   }
 
   const publishButton = (
@@ -56,6 +58,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       disabled={buttonDisabled}
       data-testid="publish-button"
       icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      type="button"
     >
       <FormattedMessage
         id={currentProject.sourceDefinitionId ? "connectorBuilder.releaseNewVersion" : "connectorBuilder.publish"}
@@ -66,7 +69,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   return (
     <div className={className}>
       {tooltipContent !== undefined ? (
-        <Tooltip control={publishButton} placement={editorView === "yaml" ? "left" : "top"}>
+        <Tooltip control={publishButton} placement={mode === "yaml" ? "left" : "top"}>
           {tooltipContent}
         </Tooltip>
       ) : (
