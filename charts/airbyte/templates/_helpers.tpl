@@ -212,7 +212,7 @@ Add environment variables to configure minio
 {{- end -}}
 
 {{- define "airbyte.s3PathStyleAccess" -}}
-{{- ternary "true" "" (or .Values.global.logs.minio.enabled .Values.global.logs.externalMinio.enabled) -}}
+{{- ternary "true" "" (or .Values.global.logs.minio.enabled .Values.global.logs.externalMinio.enabled .Values.global.logs.externalMinio.endpoint) -}}
 {{- end -}}
 
 {{/*
