@@ -6,8 +6,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useListCloudWorkspaces } from "core/api/cloud";
+import { WorkspaceItem } from "pages/workspaces/components/WorkspaceItem";
 
-import { CloudWorkspaceItem } from "./CloudWorkspaceItem";
 import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 
 export const CloudWorkspacesList: React.FC = () => {
@@ -18,7 +18,7 @@ export const CloudWorkspacesList: React.FC = () => {
       <CloudWorkspacesCreateControl />
       {workspaces.length ? (
         workspaces.map((workspace, index) => (
-          <CloudWorkspaceItem
+          <WorkspaceItem
             key={workspace.workspaceId}
             workspaceId={workspace.workspaceId}
             workspaceName={workspace.name ?? ""}

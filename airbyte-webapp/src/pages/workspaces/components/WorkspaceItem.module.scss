@@ -2,7 +2,7 @@
 @use "scss/mixins";
 @use "scss/variables";
 
-.button {
+.workspaceItem__button {
   @include mixins.shadow;
 
   background: colors.$foreground;
@@ -11,6 +11,7 @@
   padding: variables.$spacing-xl variables.$spacing-xl;
   width: 100%;
   min-height: 100px;
+  overflow-wrap: break-word;
 
   &:hover,
   &:focus-visible {
@@ -18,7 +19,22 @@
   }
 }
 
-.member {
+.workspaceItem__workspaceButtonTextContent {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+.workspaceItem__workspaceName {
+  flex: 1;
+  overflow-wrap: break-word;
+}
+
+.workspaceItem__workspaceButtonCaret {
+  flex-shrink: 0;
+}
+
+.workspaceItem__memberPill {
   background: colors.$green-30;
   border-radius: variables.$border-radius-pill;
   color: colors.$green-500;
@@ -26,7 +42,7 @@
   width: fit-content;
 }
 
-.admin {
+.workspaceItem__adminPill {
   background: colors.$blue-30;
   border-radius: variables.$border-radius-pill;
   color: colors.$green-500;

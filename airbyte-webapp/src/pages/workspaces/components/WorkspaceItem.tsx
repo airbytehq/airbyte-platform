@@ -35,9 +35,14 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
 
   return (
     <Link to={`/workspaces/${workspaceId}`} data-testid={testId} variant="primary">
-      <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.button}>
-        <FlexContainer direction="column" gap="sm">
-          <Heading as="h2" size="md">
+      <FlexContainer
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        className={styles.workspaceItem__button}
+      >
+        <FlexContainer direction="column" gap="sm" className={styles.workspaceItem__workspaceButtonTextContent}>
+          <Heading as="h2" size="md" className={styles.workspaceItem__workspaceName}>
             {workspaceName}
           </Heading>
           <FlexContainer alignItems="baseline">
@@ -52,8 +57,8 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
                 px="md"
                 mb="sm"
                 className={classNames({
-                  [styles.member]: permissions === "Member",
-                  [styles.admin]: permissions === "Admin",
+                  [styles.workspaceItem__memberPill]: permissions === "Member",
+                  [styles.workspaceItem__adminPill]: permissions === "Admin",
                 })}
               >
                 <Text size="sm" color={permissions === "Member" ? "green600" : "blue"}>
@@ -64,7 +69,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({
           </FlexContainer>
         </FlexContainer>
 
-        <Icon type="chevronRight" size="lg" color="affordance" />
+        <Icon type="chevronRight" size="lg" color="affordance" className={styles.workspaceItem__workspaceButtonCaret} />
       </FlexContainer>
     </Link>
   );
