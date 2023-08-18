@@ -49,14 +49,8 @@ import org.slf4j.LoggerFactory;
 public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
-  private static final String VERSION_LABEL = "sync-workflow";
-  private static final int CURRENT_VERSION = 3;
   private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
-  private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
-  private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
-  private static final String USE_NORMALIZATION_WITH_CONNECTION = "use_normalization_with_connection";
-  private static final int USE_NORMALIZATION_WITH_CONNECTION_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -88,31 +82,24 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
-    final int autoDetectSchemaVersion =
-        Workflow.getVersion(AUTO_DETECT_SCHEMA_TAG, Workflow.DEFAULT_VERSION,
-            AUTO_DETECT_SCHEMA_VERSION);
-
-    if (autoDetectSchemaVersion >= AUTO_DETECT_SCHEMA_VERSION) {
-      final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
-
-      if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
-        LOGGER.info("Refreshing source schema...");
-        try {
-          refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
-        } catch (final Exception e) {
-          ApmTraceUtils.addExceptionToTrace(e);
-          return SyncOutputProvider.getRefreshSchemaFailure(e);
-        }
+    final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
+    if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
+      LOGGER.info("Refreshing source schema...");
+      try {
+        refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
+      } catch (final Exception e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+        return SyncOutputProvider.getRefreshSchemaFailure(e);
       }
+    }
 
-      final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
-      if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
-        LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
-        final StandardSyncOutput output =
-            new StandardSyncOutput()
-                .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
-        return output;
-      }
+    final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
+    if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
+      LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
+      final StandardSyncOutput output =
+          new StandardSyncOutput()
+              .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
+      return output;
     }
 
     StandardSyncOutput syncOutput =
@@ -175,24 +162,10 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput,
                                                         final StandardSyncOutput syncOutput) {
-
-    final int version = Workflow.getVersion(USE_MINIMAL_NORM_INPUT, Workflow.DEFAULT_VERSION, USE_MINIMAL_NORM_INPUT_VERSION);
-    if (version == Workflow.DEFAULT_VERSION) {
-      return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
-    } else {
-      final int withConnectionVersion =
-          Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
-      if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
-        return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
-            syncOutput.getOutputCatalog(),
-            syncInput.getWorkspaceId());
-      } else {
-        return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
-            syncOutput.getOutputCatalog(),
-            syncInput.getWorkspaceId(),
-            syncInput.getConnectionId());
-      }
-    }
+    return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
+        syncOutput.getOutputCatalog(),
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId());
   }
 
 }
