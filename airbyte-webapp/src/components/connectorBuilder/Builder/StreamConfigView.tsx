@@ -33,6 +33,7 @@ import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream, StreamPathFn, isEmptyOrDefault, useBuilderWatch } from "../types";
+import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -141,6 +142,7 @@ const StreamControls = ({
   const { errors } = useFormState({ name: streamFieldPath("schema") });
   const error = get(errors, streamFieldPath("schema"));
   const hasSchemaErrors = Boolean(error);
+  const autoImportSchema = useAutoImportSchema(streamNum);
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -176,7 +178,7 @@ const StreamControls = ({
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
         showErrorIndicator={hasSchemaErrors}
-        showSchemaConflictIndicator={schemaDifferences && !streams[streamNum].autoImportSchema}
+        showSchemaConflictIndicator={schemaDifferences && !autoImportSchema}
         schemaErrors={incompatibleSchemaErrors}
       />
       <AddStreamButton

@@ -1694,7 +1694,7 @@ class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return the correct page of results with multiple pages of history")
     void testListJobsByPage() throws IOException {
-      final List<Long> ids = new ArrayList<Long>();
+      final List<Long> ids = new ArrayList<>();
       for (int i = 0; i < 50; i++) {
         final long jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG).orElseThrow();
         ids.add(jobId);
@@ -1708,12 +1708,11 @@ class DefaultJobPersistenceTest {
         // jobs for the desired connection
         jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG).orElseThrow();
       }
-      final int pagesize = 10;
-      final int offset = 3;
 
-      final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), pagesize, offset);
+      final int pagesize = 10;
+      final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), pagesize);
       assertEquals(pagesize, actualList.size());
-      assertEquals(ids.get(ids.size() - 1 - offset), actualList.get(0).getId());
+      assertEquals(ids.get(ids.size() - 1), actualList.get(0).getId());
     }
 
     @Test
@@ -1727,8 +1726,7 @@ class DefaultJobPersistenceTest {
         ids.add(jobId);
       }
       final int pagesize = 200;
-      final int offset = 0;
-      final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), pagesize, offset);
+      final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), pagesize);
       for (int i = 0; i < 100; i++) {
         assertEquals(ids.get(ids.size() - (i + 1)), actualList.get(i).getId(), "Job ids should have been in order but weren't.");
       }
@@ -1739,7 +1737,7 @@ class DefaultJobPersistenceTest {
     void testListJobs() throws IOException {
       final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
 
-      final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), 9999, 0);
+      final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
 
       final Job actual = actualList.get(0);
       final Job expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond());
@@ -1758,7 +1756,7 @@ class DefaultJobPersistenceTest {
       jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
 
       final List<Job> actualList =
-          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999, 0);
+          jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
 
       final List<Job> expectedList =
           List.of(createJob(checkJobId, CHECK_JOB_CONFIG, JobStatus.PENDING, Collections.emptyList(), NOW.getEpochSecond()),
@@ -1780,7 +1778,7 @@ class DefaultJobPersistenceTest {
 
       jobPersistence.succeedAttempt(jobId, attemptNumber1);
 
-      final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), 9999, 0);
+      final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
 
       final Job actual = actualList.get(0);
       final Job expected = createJob(
@@ -1815,7 +1813,7 @@ class DefaultJobPersistenceTest {
       final var job2Attempt1 = jobPersistence.createAttempt(jobId2, job2Attempt1LogPath);
       jobPersistence.succeedAttempt(jobId2, job2Attempt1);
 
-      final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), 9999, 0);
+      final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
 
       assertEquals(2, actualList.size());
       assertEquals(jobId2, actualList.get(0).getId());
@@ -2181,7 +2179,7 @@ class DefaultJobPersistenceTest {
 
       // Execute the job history purge and check what jobs are left.
       ((DefaultJobPersistence) jobPersistence).purgeJobHistory(fakeNow);
-      final List<Job> afterPurge = jobPersistence.listJobs(ConfigType.SYNC, currentScope, 9999, 0);
+      final List<Job> afterPurge = jobPersistence.listJobs(Set.of(ConfigType.SYNC), currentScope, 9999);
 
       // Test - contains expected number of jobs and no more than that
       assertEquals(expectedAfterPurge, afterPurge.size(), goalOfTestScenario + " - Incorrect number of jobs remain after deletion.");

@@ -238,7 +238,7 @@ public interface JobPersistence {
    * @return lists job in descending order by created_at
    * @throws IOException - what you do when you IO
    */
-  List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
+  List<Job> listJobs(Set<ConfigType> configTypes, String configId, int limit) throws IOException;
 
   /**
    * List jobs of a connection with filters. Pageable.
@@ -292,8 +292,6 @@ public interface JobPersistence {
    * @return List of jobs that have attempts after the provided timestamp
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
-
-  List<Job> listJobs(JobConfig.ConfigType configType, String configId, int limit, int offset) throws IOException;
 
   /**
    * List jobs with id.
