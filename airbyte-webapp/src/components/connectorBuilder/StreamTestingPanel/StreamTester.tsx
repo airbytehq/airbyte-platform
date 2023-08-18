@@ -23,6 +23,7 @@ import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
 import { useTestWarnings } from "./useTestWarnings";
 import { useBuilderWatch } from "../types";
+import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
@@ -47,10 +48,10 @@ export const StreamTester: React.FC<{
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage<boolean>("connectorBuilderLimitWarning", true);
   const mode = useBuilderWatch("mode");
-  const builderFormStreams = useBuilderWatch("formValues.streams");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();
   const auxiliaryRequests = streamReadData?.auxiliary_requests;
+  const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
   const resolvedStreams = resolvedManifest.streams;
   const streamName = resolvedStreams[testStreamIndex]?.name;
@@ -101,7 +102,6 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
-  const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
   useEffect(() => {
     if (mode === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
       setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
