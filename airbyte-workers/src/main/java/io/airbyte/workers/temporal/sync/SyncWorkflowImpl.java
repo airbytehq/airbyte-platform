@@ -108,10 +108,16 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
         if (standardSyncOperation.getOperatorType() == OperatorType.NORMALIZATION) {
-          if (syncInput.getNormalizeInDestinationContainer()) {
-            LOGGER.info("Not Running Normalization Container for connection {}, because it ran in destination", connectionId);
+          if (destinationLauncherConfig.getNormalizationDockerImage() == null
+              || destinationLauncherConfig.getNormalizationIntegrationType() == null) {
+            // In the case that this connection used to run normalization but the destination no longer supports
+            // it (destinations v1 -> v2)
+            LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because destination no longer supports normalization",
+                connectionId, jobRunConfig.getAttemptId());
+          } else if (syncInput.getNormalizeInDestinationContainer()) {
+            LOGGER.info("Not Running Normalization Container for connection {}, attempt id {}, because it ran in destination",
+                connectionId, jobRunConfig.getAttemptId());
           } else {
-            LOGGER.info("generating normalization input");
             final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
             final NormalizationSummary normalizationSummary =
                 normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);

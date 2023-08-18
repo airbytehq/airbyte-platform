@@ -92,6 +92,8 @@ class SyncWorkflowTest {
       .withAttemptId((long) ATTEMPT_ID);
   private static final String IMAGE_NAME1 = "hms invincible";
   private static final String IMAGE_NAME2 = "hms defiant";
+  private static final String NORMALIZATION_IMAGE1 = "hms normalize";
+  private static final String NORMALIZATION_TYPE = "postgres";
   private static final IntegrationLauncherConfig SOURCE_LAUNCHER_CONFIG = new IntegrationLauncherConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID)
@@ -99,7 +101,9 @@ class SyncWorkflowTest {
   private static final IntegrationLauncherConfig DESTINATION_LAUNCHER_CONFIG = new IntegrationLauncherConfig()
       .withJobId(String.valueOf(JOB_ID))
       .withAttemptId((long) ATTEMPT_ID)
-      .withDockerImage(IMAGE_NAME2);
+      .withDockerImage(IMAGE_NAME2)
+      .withNormalizationDockerImage(NORMALIZATION_IMAGE1)
+      .withNormalizationIntegrationType(NORMALIZATION_TYPE);
 
   private static final String SYNC_QUEUE = "SYNC";
 
