@@ -2,7 +2,7 @@
 
 FROM nginx:latest
 
-ARG VERSION=0.50.19
+ARG VERSION=0.50.20
 
 ENV APPLICATION airbyte-proxy
 ENV VERSION ${VERSION}

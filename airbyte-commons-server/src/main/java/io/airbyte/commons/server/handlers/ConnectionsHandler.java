@@ -859,7 +859,7 @@ public class ConnectionsHandler {
     List<ConnectionStatusRead> result = new ArrayList<>();
     for (UUID connectionId : connectionIds) {
       List<Job> jobs = jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(),
-          maxJobLookback, 0);
+          maxJobLookback);
       boolean isRunning = jobs.stream().anyMatch(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
 
       Optional<Job> lastJob = jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus())).findFirst();

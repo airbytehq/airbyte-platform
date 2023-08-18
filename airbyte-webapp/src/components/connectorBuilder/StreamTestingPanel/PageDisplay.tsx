@@ -23,6 +23,7 @@ import { SchemaDiffView } from "./SchemaDiffView";
 import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { useBuilderWatch } from "../types";
+import { useAutoImportSchema } from "../useAutoImportSchema";
 import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {
@@ -34,7 +35,6 @@ interface PageDisplayProps {
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
-  const builderFormStreams = useBuilderWatch("formValues.streams");
   const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const {
@@ -42,7 +42,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
 
-  const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
+  const autoImportSchema = useAutoImportSchema(testStreamIndex);
 
   const formattedRequest = useMemo(() => formatForDisplay(page.request), [page.request]);
   const formattedResponse = useMemo(() => formatForDisplay(page.response), [page.response]);

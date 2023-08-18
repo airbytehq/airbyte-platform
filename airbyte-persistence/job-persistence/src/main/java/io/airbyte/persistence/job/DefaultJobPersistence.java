@@ -92,23 +92,23 @@ public class DefaultJobPersistence implements JobPersistence {
   private final int jobHistoryExcessiveNumberOfJobs;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultJobPersistence.class);
-  public static final String ATTEMPT_NUMBER = "attempt_number";
+  private static final String ATTEMPT_NUMBER = "attempt_number";
   private static final String JOB_ID = "job_id";
   private static final String WHERE = "WHERE ";
   private static final String AND = " AND ";
   private static final String SCOPE_CLAUSE = "scope = ? AND ";
-  public static final String DEPLOYMENT_ID_KEY = "deployment_id";
-  public static final String METADATA_KEY_COL = "key";
-  public static final String METADATA_VAL_COL = "value";
+  private static final String DEPLOYMENT_ID_KEY = "deployment_id";
+  private static final String METADATA_KEY_COL = "key";
+  private static final String METADATA_VAL_COL = "value";
 
   @VisibleForTesting
   static final String BASE_JOB_SELECT_AND_JOIN = jobSelectAndJoin("jobs");
 
   private static final String AIRBYTE_METADATA_TABLE = "airbyte_metadata";
-  public static final String ORDER_BY_JOB_TIME_ATTEMPT_TIME =
+  private static final String ORDER_BY_JOB_TIME_ATTEMPT_TIME =
       "ORDER BY jobs.created_at DESC, jobs.id DESC, attempts.created_at ASC, attempts.id ASC ";
-  public static final String ORDER_BY_JOB_CREATED_AT_DESC = "ORDER BY jobs.created_at DESC ";
-  public static final String LIMIT_1 = "LIMIT 1 ";
+  private static final String ORDER_BY_JOB_CREATED_AT_DESC = "ORDER BY jobs.created_at DESC ";
+  private static final String LIMIT_1 = "LIMIT 1 ";
   private static final String JOB_STATUS_IS_NON_TERMINAL = String.format("status IN (%s) ",
       JobStatus.NON_TERMINAL_STATUSES.stream()
           .map(DefaultJobPersistence::toSqlName)
@@ -739,25 +739,19 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .fetchOne().into(Long.class));
   }
 
   @Override
-  public List<Job> listJobs(final ConfigType configType, final String configId, final int pagesize, final int offset) throws IOException {
-    return listJobs(Set.of(configType), configId, pagesize, offset);
-  }
-
-  @Override
-  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize, final int offset) throws IOException {
+  public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize) throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
-          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
           .and(JOBS.SCOPE.eq(configId))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
           .limit(pagesize)
-          .offset(offset)
           .getSQL(ParamType.INLINED) + ") AS jobs";
 
       return getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME));
@@ -779,7 +773,7 @@ public class DefaultJobPersistence implements JobPersistence {
       throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
-          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
           .and(JOBS.SCOPE.eq(configId))
           .and(status == null ? DSL.noCondition()
               : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(status.toString().toLowerCase())))
@@ -817,7 +811,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .on(Tables.CONNECTION.ID.eq(JOBS.SCOPE.cast(UUID.class)))
           .join(Tables.ACTOR)
           .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+          .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
           .and(Tables.ACTOR.WORKSPACE_ID.in(workspaceIds))
           .and(status == null ? DSL.noCondition()
               : JOBS.STATUS.eq(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.lookupLiteral(toSqlName(status))))
@@ -872,7 +866,7 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> listJobsIncludingId(final Set<ConfigType> configTypes, final String connectionId, final long includingJobId, final int pagesize)
       throws IOException {
     final Optional<OffsetDateTime> includingJobCreatedAt = jobDatabase.query(ctx -> ctx.select(JOBS.CREATED_AT).from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.ID.eq(includingJobId))
         .fetch()
@@ -885,14 +879,14 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     final int countIncludingJob = jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(configTypeSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.CREATED_AT.greaterOrEqual(includingJobCreatedAt.get()))
         .fetchOne().into(int.class));
 
     // calculate the multiple of `pagesize` that includes the target job
     final int pageSizeThatIncludesJob = (countIncludingJob / pagesize + 1) * pagesize;
-    return listJobs(configTypes, connectionId, pageSizeThatIncludesJob, 0);
+    return listJobs(configTypes, connectionId, pageSizeThatIncludesJob);
   }
 
   @Override
@@ -1189,8 +1183,8 @@ public class DefaultJobPersistence implements JobPersistence {
     return value.name().toLowerCase();
   }
 
-  private static <T extends Enum<T>> Set<String> toSqlNames(final Collection<T> values) {
-    return values.stream().map(DefaultJobPersistence::toSqlName).collect(Collectors.toSet());
+  private static <T extends Enum<T>> Set<String> configTypeSqlNames(final Set<ConfigType> configTypes) {
+    return configTypes.stream().map(DefaultJobPersistence::toSqlName).collect(Collectors.toSet());
   }
 
   @VisibleForTesting
