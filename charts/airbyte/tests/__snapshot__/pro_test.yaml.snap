@@ -1,0 +1,323 @@
+manifest should match snapshot:
+  1: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: RELEASE-NAME-db
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: airbyte-db-svc
+    spec:
+      ports:
+        - port: 5432
+          protocol: TCP
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: RELEASE-NAME-db
+      type: ClusterIP
+  2: |
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: RELEASE-NAME-db
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: airbyte-db
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: RELEASE-NAME-db
+      serviceName: airbyte-db-svc
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: RELEASE-NAME-db
+        spec:
+          containers:
+            - env:
+                - name: POSTGRES_DB
+                  value: db-airbyte
+                - name: POSTGRES_PASSWORD
+                  value: airbyte
+                - name: POSTGRES_USER
+                  value: airbyte
+                - name: PGDATA
+                  value: /var/lib/postgresql/data/pgdata
+              image: airbyte/db:0.50.19
+              name: airbyte-db-container
+              ports:
+                - containerPort: 5432
+              volumeMounts:
+                - mountPath: /var/lib/postgresql/data
+                  name: airbyte-volume-db
+      volumeClaimTemplates:
+        - metadata:
+            name: airbyte-volume-db
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 500Mi
+  3: |
+    apiVersion: v1
+    data:
+      fileContents: |2-
+        path
+    kind: ConfigMap
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: airbyte
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: RELEASE-NAME-airbyte-yml
+  4: |
+    apiVersion: v1
+    data:
+      ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
+      ACTIVITY_MAX_ATTEMPT: ""
+      ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
+      AIRBYTE_API_HOST: RELEASE-NAME-airbyte-api-server-svc:80
+      AIRBYTE_EDITION: pro
+      AIRBYTE_VERSION: 0.50.19
+      API_URL: /api/v1/
+      AUTO_DETECT_SCHEMA: "true"
+      CONFIG_ROOT: /configs
+      CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.35.15.001
+      CONNECTOR_BUILDER_API_HOST: RELEASE-NAME-airbyte-connector-builder-server-svc:80
+      CONNECTOR_BUILDER_API_URL: /connector-builder-api
+      CONTAINER_ORCHESTRATOR_ENABLED: "true"
+      CONTAINER_ORCHESTRATOR_IMAGE: ""
+      CRON_MICRONAUT_ENVIRONMENTS: control-plane
+      DATA_DOCKER_MOUNT: airbyte_data
+      DATABASE_DB: db-airbyte
+      DATABASE_HOST: airbyte-db-svc
+      DATABASE_PORT: "5432"
+      DATABASE_URL: jdbc:postgresql://airbyte-db-svc:5432/db-airbyte
+      DB_DOCKER_MOUNT: airbyte_db
+      GCS_LOG_BUCKET: ""
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+      INTERNAL_API_HOST: RELEASE-NAME-airbyte-server-svc:8001
+      JOB_MAIN_CONTAINER_CPU_LIMIT: ""
+      JOB_MAIN_CONTAINER_CPU_REQUEST: ""
+      JOB_MAIN_CONTAINER_MEMORY_LIMIT: ""
+      JOB_MAIN_CONTAINER_MEMORY_REQUEST: ""
+      JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.29.15.001
+      KEYCLOAK_HOSTNAME_URL: '%!s(<nil>)/auth'
+      KEYCLOAK_INTERNAL_HOST: RELEASE-NAME-airbyte-keycloak-svc:9000
+      KEYCLOAK_PORT: "9000"
+      LOCAL_ROOT: /tmp/airbyte_local
+      MAX_NOTIFY_WORKERS: "5"
+      METRIC_CLIENT: ""
+      OTEL_COLLECTOR_ENDPOINT: ""
+      RUN_DATABASE_MIGRATION_ON_STARTUP: "true"
+      S3_LOG_BUCKET: airbyte-dev-logs
+      S3_LOG_BUCKET_REGION: ""
+      S3_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      SHOULD_RUN_NOTIFY_WORKFLOWS: "true"
+      STATE_STORAGE_MINIO_BUCKET_NAME: airbyte-state-storage
+      STATE_STORAGE_MINIO_ENDPOINT: http://airbyte-minio-svc:9000
+      TEMPORAL_HOST: RELEASE-NAME-temporal:7233
+      TEMPORAL_WORKER_PORTS: 9001,9002,9003,9004,9005,9006,9007,9008,9009,9010,9011,9012,9013,9014,9015,9016,9017,9018,9019,9020,9021,9022,9023,9024,9025,9026,9027,9028,9029,9030,9031,9032,9033,9034,9035,9036,9037,9038,9039,9040
+      TRACKING_STRATEGY: segment
+      USE_STREAM_CAPABLE_STATE: "true"
+      WEBAPP_URL: http://RELEASE-NAME-airbyte-webapp-svc:80
+      WORKER_ENVIRONMENT: kubernetes
+      WORKER_LOGS_STORAGE_TYPE: MINIO
+      WORKER_STATE_STORAGE_TYPE: MINIO
+      WORKERS_MICRONAUT_ENVIRONMENTS: control-plane
+      WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: ""
+      WORKSPACE_DOCKER_MOUNT: airbyte_workspace
+      WORKSPACE_ROOT: /workspace
+    kind: ConfigMap
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: airbyte
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: RELEASE-NAME-airbyte-env
+  5: |
+    apiVersion: v1
+    data:
+      gcp.json: ""
+    kind: Secret
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: airbyte
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: RELEASE-NAME-gcs-log-creds
+    type: Opaque
+  6: |
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: RELEASE-NAME-minio
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: airbyte-minio
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: RELEASE-NAME-minio
+      serviceName: airbyte-minio-svc
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: RELEASE-NAME-minio
+        spec:
+          containers:
+            - args:
+                - server
+                - /storage
+              env:
+                - name: MINIO_ROOT_USER
+                  value: minio
+                - name: MINIO_ROOT_PASSWORD
+                  value: minio123
+              image: minio/minio:latest
+              name: airbyte-minio
+              ports:
+                - containerPort: 9000
+              volumeMounts:
+                - mountPath: /data
+                  name: airbyte-minio-pv-claim
+      volumeClaimTemplates:
+        - metadata:
+            name: airbyte-minio-pv-claim
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 500Mi
+  7: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: RELEASE-NAME-minio
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: airbyte-minio-svc
+    spec:
+      ports:
+        - port: 9000
+          protocol: TCP
+          targetPort: 9000
+      selector:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: RELEASE-NAME-minio
+  8: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-1"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: airbyte
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: RELEASE-NAME-airbyte-secrets
+    stringData:
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      DATABASE_PASSWORD: airbyte
+      DATABASE_USER: airbyte
+      KEYCLOAK_ADMIN_PASSWORD: keycloak123
+      KEYCLOAK_ADMIN_USER: airbyteAdmin
+      STATE_STORAGE_MINIO_ACCESS_KEY: minio
+      STATE_STORAGE_MINIO_SECRET_ACCESS_KEY: minio123
+    type: Opaque
+  9: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install,pre-upgrade
+        helm.sh/hook-weight: "-10"
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: airbyte
+        app.kubernetes.io/version: 0.50.19
+        helm.sh/chart: airbyte-0.47.26
+      name: airbyte-admin
+  10: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      name: airbyte-admin-role
+    rules:
+      - apiGroups:
+          - '*'
+        resources:
+          - jobs
+          - pods
+          - pods/log
+          - pods/exec
+          - pods/attach
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+  11: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: airbyte-admin-binding
+    roleRef:
+      apiGroup: ""
+      kind: Role
+      name: airbyte-admin-role
+    subjects:
+      - kind: ServiceAccount
+        name: airbyte-admin
