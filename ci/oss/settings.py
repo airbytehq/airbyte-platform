@@ -1,7 +1,6 @@
 from typing import Optional
 
 from aircmd.models.base import GlobalSettings
-from aircmd.models.utils import get_git_revision
 from pydantic import Field
 
 from .actions.utils import extract_engine_versions
@@ -14,8 +13,7 @@ class OssSettings(GlobalSettings):
      #docker_host: str = Field("tcp://docker:2375", env="DOCKER_HOST")                                                                                                        
      job_main_container_memory_request: Optional[str] = Field(None, env="JOB_MAIN_CONTAINER_MEMORY_REQUEST")                                                    
      job_main_container_memory_limit: Optional[str] = Field(None, env="JOB_MAIN_CONTAINER_MEMORY_LIMIT")                                                        
-     metric_client: Optional[str] = Field(None, env="METRIC_CLIENT")                                                                                            
-     version: str = Field(get_git_revision(), env="VERSION")                                                                                                                 
+     metric_client: Optional[str] = Field(None, env="METRIC_CLIENT")                                                                                                                                                                                                        
      database_user: str = Field("docker", env="DATABASE_USER")                                                                                                  
      database_password: str = Field("docker", env="DATABASE_PASSWORD")                                                                                          
      database_host: str = Field("db", env="DATABASE_HOST")                                                                                                      

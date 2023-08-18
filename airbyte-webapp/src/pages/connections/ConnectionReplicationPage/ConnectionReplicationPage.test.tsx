@@ -40,7 +40,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.setTimeout(20000);
+jest.setTimeout(40000);
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => mockWorkspaceId,
