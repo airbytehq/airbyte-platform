@@ -55,7 +55,7 @@ export interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   withTime?: boolean;
-  withMilliseconds?: boolean;
+  withPrecision?: "milliseconds" | "microseconds";
   disabled?: boolean;
   readOnly?: boolean;
   onBlur?: () => void;
@@ -85,6 +85,7 @@ DatepickerButton.displayName = "DatepickerButton";
 
 const ISO8601_NO_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss[Z]";
 const ISO8601_WITH_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss.SSS[Z]";
+const ISO8601_WITH_MICROSECONDS = "YYYY-MM-DDTHH:mm:ss.SSSSSS[Z]";
 const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -96,7 +97,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   placeholder,
   value = "",
   withTime = false,
-  withMilliseconds = false,
+  withPrecision,
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
@@ -113,8 +114,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const datetimeFormat = useMemo(
-    () => (withMilliseconds ? ISO8601_WITH_MILLISECONDS : ISO8601_NO_MILLISECONDS),
-    [withMilliseconds]
+    () =>
+      withPrecision === "milliseconds"
+        ? ISO8601_WITH_MILLISECONDS
+        : withPrecision === "microseconds"
+        ? ISO8601_WITH_MICROSECONDS
+        : ISO8601_NO_MILLISECONDS,
+    [withPrecision]
   );
 
   const handleDatepickerChange = useCallback(

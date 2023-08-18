@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -658,6 +659,41 @@ public class Jsons {
    */
   public static void setNestedValue(final JsonNode json, final List<String> keys, final JsonNode value) {
     setNested(json, keys, (node, finalKey) -> node.set(finalKey, value));
+  }
+
+  /**
+   * Serializes an object to a JSON string with keys sorted in alphabetical order.
+   *
+   * @param object the object to serialize
+   * @return the JSON string
+   * @throws IOException if there is an error serializing the object
+   */
+  public static String canonicalJsonSerialize(Object object) throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode objectNode = mapper.valueToTree(object);
+    ObjectNode sortedObjectNode = (ObjectNode) sortProperties(objectNode);
+    return mapper.writer().writeValueAsString(sortedObjectNode);
+  }
+
+  private static JsonNode sortProperties(JsonNode jsonNode) {
+    if (jsonNode.isObject()) {
+      ObjectNode objectNode = (ObjectNode) jsonNode;
+      ObjectNode sortedObjectNode = JsonNodeFactory.instance.objectNode();
+
+      StreamSupport.stream(Spliterators.spliteratorUnknownSize(objectNode.fields(), Spliterator.ORDERED), false)
+          .sorted(Map.Entry.comparingByKey())
+          .forEachOrdered(entry -> sortedObjectNode.set(entry.getKey(), sortProperties(entry.getValue())));
+
+      return sortedObjectNode;
+    } else if (jsonNode.isArray()) {
+      ArrayNode arrayNode = (ArrayNode) jsonNode;
+      ArrayNode sortedArrayNode = JsonNodeFactory.instance.arrayNode();
+      arrayNode.forEach(node -> sortedArrayNode.add(sortProperties(node)));
+
+      return sortedArrayNode;
+    } else {
+      return jsonNode;
+    }
   }
 
 }

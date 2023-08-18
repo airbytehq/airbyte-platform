@@ -6,6 +6,7 @@ import java.util.zip.ZipFile
 plugins {
     id "io.airbyte.gradle.jvm.app"
     id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 configurations {

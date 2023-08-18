@@ -9,6 +9,7 @@ export const enum Namespace {
   CONNECTOR_BUILDER = "ConnectorBuilder",
   SCHEMA = "Schema",
   ERD = "ERD",
+  SETTINGS = "Settings",
 }
 
 export const enum Action {
@@ -33,6 +34,8 @@ export const enum Action {
   INVITE = "Invite",
   OAUTH_ATTEMPT = "OAuthAttempt",
   OAUTH_SUCCESS = "OAuthSuccess",
+  DOWNLOAD_SERVER_LOGS = "DownloadServerLogs",
+  DOWNLOAD_SCHEDULER_LOGS = "DownloadSchedulerLogs",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

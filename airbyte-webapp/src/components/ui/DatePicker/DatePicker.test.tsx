@@ -141,7 +141,32 @@ describe(`${DatePicker.name}`, () => {
           }}
           value={mockValue}
           withTime
-          withMilliseconds
+          withPrecision="milliseconds"
+        />
+      </TestWrapper>
+    );
+
+    const datepicker = screen.getByLabelText("Open datepicker");
+    userEvent.click(datepicker);
+    const date = screen.getByText("12:00 PM");
+    userEvent.click(date);
+
+    expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
+  });
+
+  it("allows selecting a datetime with microseconds from the datepicker", async () => {
+    const MOCK_DESIRED_DATETIME = "2010-09-05T12:00:00.000000Z";
+    let mockValue = "";
+    render(
+      <TestWrapper>
+        <DatePicker
+          onChange={(value) => {
+            // necessary for controlled inputs https://github.com/testing-library/user-event/issues/387#issuecomment-819868799
+            mockValue = mockValue + value;
+          }}
+          value={mockValue}
+          withTime
+          withPrecision="microseconds"
         />
       </TestWrapper>
     );

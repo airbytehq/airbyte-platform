@@ -1,12 +1,12 @@
 import classNames from "classnames";
 
-import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { DropdownMenu, DropdownMenuOptionType, DropdownMenuOptions } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
 import styles from "./NavDropdown.module.scss";
 
 interface NavDropdownProps {
-  options: DropdownMenuOptionType[];
+  options: DropdownMenuOptions;
   label: React.ReactNode;
   icon: React.ReactNode;
   onChange?: (data: DropdownMenuOptionType) => false | void;

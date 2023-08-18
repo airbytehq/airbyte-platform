@@ -40,6 +40,9 @@ import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
+import io.airbyte.featureflag.CanonicalCatalogSchema;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Source;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -70,6 +73,7 @@ public class SourceHandler {
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   @Inject
   public SourceHandler(final ConfigRepository configRepository,
@@ -81,7 +85,8 @@ public class SourceHandler {
                        final JsonSecretsProcessor secretsProcessor,
                        final ConfigurationUpdate configurationUpdate,
                        final OAuthConfigSupplier oAuthConfigSupplier,
-                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                       final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -92,6 +97,7 @@ public class SourceHandler {
     this.secretsProcessor = secretsProcessor;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public SourceHandler(final ConfigRepository configRepository,
@@ -100,7 +106,8 @@ public class SourceHandler {
                        final JsonSchemaValidator integrationSchemaValidation,
                        final ConnectionsHandler connectionsHandler,
                        final OAuthConfigSupplier oAuthConfigSupplier,
-                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                       final FeatureFlagClient featureFlagClient) {
     this(
         configRepository,
         secretsRepositoryReader,
@@ -113,7 +120,7 @@ public class SourceHandler {
             .build(),
         new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper, featureFlagClient);
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -372,12 +379,35 @@ public class SourceHandler {
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
       throws JsonValidationException, IOException {
     final AirbyteCatalog persistenceCatalog = CatalogConverter.toProtocol(request.getCatalog());
-    final UUID catalogId = configRepository.writeActorCatalogFetchEvent(
+    UUID catalogId;
+
+    if (shouldWriteCanonicalActorCatalog(request)) {
+      catalogId = writeCanonicalActorCatalog(persistenceCatalog, request);
+    } else {
+      catalogId = writeActorCatalog(persistenceCatalog, request);
+    }
+
+    return new DiscoverCatalogResult().catalogId(catalogId);
+  }
+
+  private boolean shouldWriteCanonicalActorCatalog(SourceDiscoverSchemaWriteRequestBody request) {
+    return request.getSourceId() != null && featureFlagClient.boolVariation(CanonicalCatalogSchema.INSTANCE, new Source(request.getSourceId()));
+  }
+
+  private UUID writeCanonicalActorCatalog(AirbyteCatalog persistenceCatalog, SourceDiscoverSchemaWriteRequestBody request) throws IOException {
+    return configRepository.writeCanonicalActorCatalogFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
         request.getConnectorVersion(),
         request.getConfigurationHash());
-    return new DiscoverCatalogResult().catalogId(catalogId);
+  }
+
+  private UUID writeActorCatalog(AirbyteCatalog persistenceCatalog, SourceDiscoverSchemaWriteRequestBody request) throws IOException {
+    return configRepository.writeActorCatalogFetchEvent(
+        persistenceCatalog,
+        request.getSourceId(),
+        request.getConnectorVersion(),
+        request.getConfigurationHash());
   }
 
   private SourceRead buildSourceRead(final UUID sourceId)

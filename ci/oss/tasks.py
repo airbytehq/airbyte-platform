@@ -11,8 +11,8 @@ from aircmd.actions.environments import (
 )
 from aircmd.actions.pipelines import get_repo_dir
 from aircmd.models.base import PipelineContext
-from aircmd.models.utils import load_settings
-from dagger import CacheVolume, Client, Container
+from aircmd.models.settings import load_settings
+from dagger import Client, Container
 from prefect import task
 from prefect.artifacts import create_link_artifact
 
@@ -37,7 +37,7 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
     # This is the list of files needed to run. Keep this as minimal as possible to avoid accidentally invalidating the cache
     files_from_host=["airbyte-*/**/*"]
     
-    gradle_command = ["./gradlew", "assemble", "-x", "buildDockerImage", "-x", "dockerBuildImage", "publishtoMavenLocal", "--build-cache"]
+    gradle_command = ["./gradlew", "assemble", "-x", "buildDockerImage", "-x", "dockerBuildImage", "publishtoMavenLocal", "--build-cache", "--no-daemon"]
 
     # Now we execute the build inside the container. Each step is analagous to a layer in buildkit
     # Be careful what is passed in here, as anything like a timestamp will invalidate the whole cache.
@@ -46,21 +46,21 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
                 .with_(load_settings(settings))
                 .with_env_variable("VERSION", "dev")
                 .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
-                .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache"])
-                .with_exec(["pwd"])
+                .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache", "--no-daemon"])
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command)
-                .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"])
+                .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"]) #TODO: Move this to a context manager
         )
-    
+    await result.sync()
     if scan:
-        artifact = await create_link_artifact(
+        scan_file_contents: str = await result.file("/airbyte/oss/scan-journal.log").contents()
+        await create_link_artifact(
             key="gradle-build-scan",
-            link=result.file("/airbyte/oss/scan-journal.log").contents().split(' - ')[2].strip(),
+            link=scan_file_contents.split(' - ')[2].strip(),
             description="Gradle build scan",
         )
-        print(artifact)
 
-    return result.sync()
+
+    return result
 
 @task
 async def build_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, client: Client) -> Container:
@@ -75,7 +75,8 @@ async def build_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, c
                 .with_mounted_cache("./build/airbyte-repository", airbyte_repo_cache)
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "build"]))
-    return result.sync()
+    await result.sync()
+    return result
 
 @task
 async def test_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, client: Client) -> Container:
@@ -88,8 +89,8 @@ async def test_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, cl
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "run", "test:ci"]))
 
-
-    return result.sync()
+    await result.sync()
+    return result
 
 
 @task
@@ -102,8 +103,8 @@ async def test_oss_e2e_frontend_task(settings: OssSettings, ctx: PipelineContext
                 .with_(load_settings(settings))
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "run", "test:ci"]))
-
-    return result.sync()
+    result.sync()
+    return result
 
 @task
 async def build_storybook_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, client: Client) -> Container:
@@ -115,13 +116,13 @@ async def build_storybook_oss_frontend_task(settings: OssSettings, ctx: Pipeline
                 .with_(load_settings(settings))
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "run", "build:storybook"]))
-
-    return result.sync()
+    await result.sync()
+    return result
 
 
 @task
 async def test_oss_backend_task(client: Client, oss_build_result: Container, settings: OssSettings, ctx: PipelineContext, scan: bool) -> Container:
-
+    print(oss_build_result)
     files_from_result = [
                             "**/build.gradle", 
                             "**/gradle.properties", 
@@ -129,41 +130,77 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
                             "**/airbyte-*/**/*"
                             ]
     
-
-    ( # service binding for airbyte-proxy-test-container
-        client.container()
+    #TODO: There isn't a way to manage services lifecycle here yet. We need
+    # https://github.com/dagger/dagger/pull/5557. Once we get that, we can refactor this
+    # to reuse the same service container with start and stop commands. Until then we need
+    # to spin up 3 separate containers on different ports, which adds a fair amount of boilerplate
+    airbyte_proxy_service = ( # service binding for airbyte-proxy-test-container
+        client.container()  
         .from_("nginx:latest")
-        #.with_directory("/", oss_build_result.directory("airbyte-proxy"))
+        .with_directory("/", oss_build_result.directory("/airbyte/oss"), include="**/airbyte-proxy/**")
+        .with_workdir("airbyte-proxy")
+        .with_env_variable("BASIC_AUTH_PROXY_TIMEOUT", settings.basic_auth_proxy_timeout)
+        .with_exec(["apt-get", "update"])
+        .with_exec(["apt-get", "install", "-y", "apache2-utils"]) # needed for htpasswd
+        .with_exec(["mkdir", "-p", "/etc/nginx/templates"])
+        .with_exec(["cp", "401.html", "/etc/nginx/401.html"])
+        .with_exec(["chmod", "+x", "run.sh"])
+    )
+
+    airbyte_proxy_service_auth = (
+        airbyte_proxy_service
+        .with_env_variable("PROXY_TEST", "AUTH")
         .with_env_variable("BASIC_AUTH_USERNAME", settings.basic_auth_username)
         .with_env_variable("BASIC_AUTH_PASSWORD", settings.basic_auth_password)
-        .with_env_variable("BASIC_AUTH_PROXY_TIMEOUT", settings.basic_auth_proxy_timeout)
-        .with_env_variable("PROXY_PASS_WEB", "http://localhost")
-        .with_env_variable("PROXY_PASS_API", "http://localhost")
-        .with_env_variable("CONNECTOR_BUILDER_SERVER_API", "http://localhost")
-        .with_exposed_port(80)
+        .with_exposed_port(8000)
+        .with_exec(["cp", "nginx-test-auth.conf.template", "/etc/nginx/templates/nginx-test-auth.conf.template"])
+        .with_exec(["./run.sh"])
+    )
+
+    airbyte_proxy_service_newauth = (
+        airbyte_proxy_service
+        .with_env_variable("PROXY_TEST", "NEW_AUTH")
+        .with_env_variable("BASIC_AUTH_USERNAME", settings.basic_auth_username)
+        .with_env_variable("BASIC_AUTH_PASSWORD", settings.basic_auth_updated_password)
+        .with_exposed_port(8001)
+        .with_exec(["cp", "nginx-test-auth-newpass.conf.template", "/etc/nginx/templates/nginx-test-auth-newpass.conf.template"])
+        .with_exec(["./run.sh"])  
+    )
+
+    airbyte_proxy_service_noauth = (
+        airbyte_proxy_service
+        .with_env_variable("PROXY_TEST", "NO_AUTH")
+        .with_exposed_port(8002)
+        .with_exec(["cp", "nginx-test-no-auth.conf.template", "/etc/nginx/templates/nginx-test-no-auth.conf.template"])
+        .with_exec(["./run.sh"])
     )
     
-    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test", "-x", "buildDockerImage", "-x", "airbyte-proxy:bashTest", "-x", ":airbyte-metrics:metrics-lib:test", "--build-cache"]
+    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test", "-x", "buildDockerImage", "--build-cache", "--no-daemon"]
 
     result = (
                 with_gradle(client, ctx, settings, directory=base_dir)
-                #.with_service_binding("airbyte-proxy-test-container1", airbyte_proxy_service_1)
+                .with_service_binding("airbyte-proxy-test-container", airbyte_proxy_service_auth)
+                .with_service_binding("airbyte-proxy-test-container-newauth", airbyte_proxy_service_newauth)
+                .with_service_binding("airbyte-proxy-test-container-noauth", airbyte_proxy_service_noauth)
                 .with_directory("/root/.m2/repository", oss_build_result.directory("/root/.m2/repository")) # published jar files from mavenLocal
                 .with_directory("/airbyte/oss", oss_build_result.directory("/airbyte/oss"), include=files_from_result)
                 .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
                 .with_(load_settings(settings))
-                .with_env_variable("VERSION", "dev")
-                #TODO: Wire airbyte-proxy tests in with services
-                #TODO: Investigate the one failing test at :airbyte-metrics:metrics-lib:test
+                .with_env_variable("VERSION", "dev") 
+                .with_env_variable("METRIC_CLIENT", "") # override 'datadog' value for metrics-lib test
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command) 
+                .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"]) #TODO: Move this to a context manager
+
 
         )
-    
-        
+    await result.sync()
     if scan:
+        scan_file_contents: str = await result.file("/airbyte/oss/scan-journal.log").contents()
         await create_link_artifact(
             key="gradle-build-scan",
-            link=result.file("/airbyte/oss/scan-journal.log").contents().split(' - ')[2].strip(),
+            link=scan_file_contents.split(' - ')[2].strip(),
             description="Gradle build scan",
         )
-    return result.sync()
+
+
+    return result

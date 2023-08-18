@@ -52,6 +52,7 @@ import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -87,6 +88,7 @@ class SourceHandlerTest {
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private TestClient featureFlagClient;
 
   private static final String SHOES = "shoes";
   private static final String SKU = "sku";
@@ -109,6 +111,7 @@ class SourceHandlerTest {
     secretsProcessor = mock(JsonSecretsProcessor.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    featureFlagClient = mock(TestClient.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -139,7 +142,7 @@ class SourceHandlerTest {
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test

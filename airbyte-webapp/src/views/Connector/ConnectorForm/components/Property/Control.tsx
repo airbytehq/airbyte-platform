@@ -73,7 +73,13 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       <DatePicker
         error={error}
         withTime={property.format === "date-time"}
-        withMilliseconds={property.pattern?.endsWith(".[0-9]{3}Z$")}
+        withPrecision={
+          property.pattern?.endsWith(".[0-9]{3}Z$")
+            ? "milliseconds"
+            : property.pattern?.endsWith(".[0-9]{6}Z$")
+            ? "microseconds"
+            : undefined
+        }
         onChange={field.onChange}
         value={field.value}
         disabled={disabled}

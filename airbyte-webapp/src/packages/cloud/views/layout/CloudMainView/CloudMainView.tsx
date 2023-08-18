@@ -29,9 +29,8 @@ import SettingsIcon from "views/layout/SideBar/components/SettingsIcon";
 import { MainNavItems } from "views/layout/SideBar/MainNavItems";
 import { SideBar } from "views/layout/SideBar/SideBar";
 
+import { CloudHelpDropdown } from "./CloudHelpDropdown";
 import styles from "./CloudMainView.module.scss";
-import { CloudResourcesDropdown } from "./CloudResourcesDropdown";
-import { CloudSupportDropdown } from "./CloudSupportDropdown";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
@@ -83,7 +82,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                   (!cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD)
                 }
               />
-              <CloudResourcesDropdown /> <CloudSupportDropdown />
+              <CloudHelpDropdown />
               <NavItem
                 label={<FormattedMessage id="sidebar.settings" />}
                 icon={<SettingsIcon />}

@@ -37,6 +37,8 @@ const LAST_NAME = {
   fieldType: "input",
 };
 
+jest.setTimeout(20000);
+
 describe(`${Form.name}`, () => {
   it("should call onSubmit upon submission", async () => {
     const mockOnSubmit = jest.fn();

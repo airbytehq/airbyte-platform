@@ -144,7 +144,65 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSimpleInsertActorCatalog() throws IOException, SQLException {
+  void testReadActorCatalog() throws IOException, JsonValidationException, SQLException {
+    final String otherConfigHash = "OtherConfigHash";
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withSourceType(SourceType.DATABASE)
+        .withName("sourceDefinition");
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersionId(sourceDefinition.getDefaultVersionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+
+    final SourceConnection source = new SourceConnection()
+        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceId(UUID.randomUUID())
+        .withName("SomeConnector")
+        .withWorkspaceId(workspace.getWorkspaceId())
+        .withConfiguration(Jsons.deserialize("{}"));
+    configRepository.writeSourceConnectionNoSecrets(source);
+
+    final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
+        Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
+        Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
+    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+
+    final AirbyteCatalog secondCatalog = CatalogHelpers.createAirbyteCatalog("product",
+        Field.of("size", JsonSchemaType.NUMBER), Field.of("label", JsonSchemaType.STRING),
+        Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
+    configRepository.writeCanonicalActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
+
+    final String expectedCatalog =
+        "{"
+            + "\"streams\":["
+            + "{"
+            + "\"name\":\"product\","
+            + "\"json_schema\":{"
+            + "\"type\":\"object\","
+            + "\"properties\":{"
+            + "\"size\":{\"type\":\"number\"},"
+            + "\"color\":{\"type\":\"string\"},"
+            + "\"price\":{\"type\":\"number\"},"
+            + "\"label\":{\"type\":\"string\"}"
+            + "}"
+            + "},"
+            + "\"supported_sync_modes\":[\"full_refresh\"],"
+            + "\"default_cursor_field\":[],"
+            + "\"source_defined_primary_key\":[]"
+            + "}"
+            + "]"
+            + "}";
+
+    final Optional<ActorCatalog> catalogResult = configRepository.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    assertTrue(catalogResult.isPresent());
+    assertEquals(expectedCatalog, Jsons.serialize(catalogResult.get().getCatalog()));
+  }
+
+  @Test
+  void testSimpleInsertActorCatalog() throws IOException, JsonValidationException, SQLException {
     final String otherConfigHash = "OtherConfigHash";
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
 
