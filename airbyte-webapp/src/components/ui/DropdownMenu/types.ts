@@ -16,7 +16,12 @@ export interface DropdownMenuOptionBaseType {
   disabled?: boolean;
 }
 
+interface DropdownMenuSeparator {
+  as: "separator";
+}
+
 export type DropdownMenuOptionType = DropdownMenuOptionAnchorType | DropdownMenuOptionButtonType;
+export type DropdownMenuOptions = Array<DropdownMenuOptionType | DropdownMenuSeparator>;
 
 type DropdownMenuOptionButtonType = DropdownMenuOptionBaseType & { as?: "button" };
 
@@ -32,7 +37,7 @@ export interface MenuItemContentProps {
 }
 
 export interface DropdownMenuProps {
-  options: DropdownMenuOptionType[];
+  options: DropdownMenuOptions;
   children: ({ open }: { open: boolean }) => React.ReactNode;
   onChange?: (data: DropdownMenuOptionType) => void;
   placement?: Placement;
