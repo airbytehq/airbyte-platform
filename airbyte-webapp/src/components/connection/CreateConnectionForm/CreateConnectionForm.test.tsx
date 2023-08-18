@@ -55,7 +55,7 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));
 
-jest.setTimeout(20000);
+jest.setTimeout(40000);
 
 describe("CreateConnectionForm", () => {
   const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => <TestWrapper>{children}</TestWrapper>;

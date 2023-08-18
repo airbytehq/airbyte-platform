@@ -71,23 +71,28 @@ export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> 
               left: x ?? 0,
             }}
           >
-            {options.map((item, index) => (
-              <Menu.Item key={index} disabled={item.disabled}>
-                {({ active }) =>
-                  item.as === "a"
-                    ? React.createElement(
-                        item.internal ? Link : "a",
-                        { ...elementProps(item, active), ...anchorProps(item) },
-                        <MenuItemContent data={item} />
-                      )
-                    : React.createElement(
-                        item.as ?? "button",
-                        { ...elementProps(item, active) },
-                        <MenuItemContent data={item} />
-                      )
-                }
-              </Menu.Item>
-            ))}
+            {options.map((item, index) => {
+              if (item.as === "separator") {
+                return <div role="presentation" className={styles.separator} />;
+              }
+              return (
+                <Menu.Item key={index} disabled={item.disabled}>
+                  {({ active }) =>
+                    item.as === "a"
+                      ? React.createElement(
+                          item.internal ? Link : "a",
+                          { ...elementProps(item, active), ...anchorProps(item) },
+                          <MenuItemContent data={item} />
+                        )
+                      : React.createElement(
+                          item.as ?? "button",
+                          { ...elementProps(item, active) },
+                          <MenuItemContent data={item} />
+                        )
+                  }
+                </Menu.Item>
+              );
+            })}
           </Menu.Items>
         </>
       )}

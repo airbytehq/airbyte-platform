@@ -2339,6 +2339,61 @@ public class ConfigRepository {
   }
 
   /**
+   * This function will be used to gradually migrate the existing data in the database to use the
+   * canonical json serialization. It will first try to find the catalog using the canonical json
+   * serialization. If it fails, it will fallback to the old json serialization.
+   *
+   * @param airbyteCatalog the catalog to be cached
+   * @param context - db context
+   * @param timestamp - timestamp
+   * @return the db identifier for the cached catalog.
+   */
+  private UUID getOrInsertCanonicalActorCatalog(final AirbyteCatalog airbyteCatalog,
+                                                final DSLContext context,
+                                                final OffsetDateTime timestamp) {
+    final HashFunction hashFunction = Hashing.murmur3_32_fixed();
+
+    try {
+      final String catalogHash = hashFunction.hashBytes(Jsons.canonicalJsonSerialize(airbyteCatalog)
+          .getBytes(Charsets.UTF_8)).toString();
+
+      UUID catalogId = findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
+      if (catalogId != null) {
+        return catalogId;
+      }
+    } catch (IOException e) {
+      LOGGER.error("Failed to serialize AirbyteCatalog to canonical JSON", e);
+    }
+
+    // Fallback to the old json when canonical json serialization failed
+    String oldCatalogHash = hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
+
+    UUID oldCatalogId = findAndReturnCatalogId(oldCatalogHash, airbyteCatalog, context);
+    if (oldCatalogId != null) {
+      return oldCatalogId;
+    }
+
+    final UUID catalogId = UUID.randomUUID();
+    context.insertInto(ACTOR_CATALOG)
+        .set(ACTOR_CATALOG.ID, catalogId)
+        .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(airbyteCatalog)))
+        .set(ACTOR_CATALOG.CATALOG_HASH, oldCatalogHash)
+        .set(ACTOR_CATALOG.CREATED_AT, timestamp)
+        .set(ACTOR_CATALOG.MODIFIED_AT, timestamp).execute();
+    return catalogId;
+  }
+
+  private UUID findAndReturnCatalogId(final String catalogHash, final AirbyteCatalog airbyteCatalog, final DSLContext context) {
+    final Map<UUID, AirbyteCatalog> catalogs = findCatalogByHash(catalogHash, context);
+    for (final Map.Entry<UUID, AirbyteCatalog> entry : catalogs.entrySet()) {
+      if (entry.getValue().equals(airbyteCatalog)) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
+  /**
    * Get most actor catalog for source.
    *
    * @param actorId actor id
@@ -2469,6 +2524,39 @@ public class ConfigRepository {
     final UUID fetchEventID = UUID.randomUUID();
     return database.transaction(ctx -> {
       final UUID catalogId = getOrInsertActorCatalog(catalog, ctx, timestamp);
+      ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_CATALOG_ID, catalogId)
+          .set(ACTOR_CATALOG_FETCH_EVENT.CONFIG_HASH, configurationHash)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_VERSION, connectorVersion)
+          .set(ACTOR_CATALOG_FETCH_EVENT.MODIFIED_AT, timestamp)
+          .set(ACTOR_CATALOG_FETCH_EVENT.CREATED_AT, timestamp).execute();
+      return catalogId;
+    });
+  }
+
+  /**
+   * This function will be used to gradually transition to reading and writing canonical schemas.
+   * Eventually, the writeActorCatalogFetchEvent function will be removed and this function will be
+   * renamed to writeActorCatalogFetchEvent.
+   *
+   * @param catalog - catalog that was fetched.
+   * @param actorId - actor the catalog was fetched by
+   * @param connectorVersion - version of the connector when catalog was fetched
+   * @param configurationHash - hash of the config of the connector when catalog was fetched
+   * @return The identifier (UUID) of the fetch event inserted in the database
+   * @throws IOException - error while interacting with db
+   */
+  public UUID writeCanonicalActorCatalogFetchEvent(final AirbyteCatalog catalog,
+                                                   final UUID actorId,
+                                                   final String connectorVersion,
+                                                   final String configurationHash)
+      throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final UUID fetchEventID = UUID.randomUUID();
+    return database.transaction(ctx -> {
+      final UUID catalogId = getOrInsertCanonicalActorCatalog(catalog, ctx, timestamp);
       ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
           .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
           .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)

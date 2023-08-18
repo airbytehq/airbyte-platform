@@ -1,5 +1,6 @@
 plugins {
     id "io.airbyte.gradle.docker"
+    id "io.airbyte.gradle.publish"
 }
 
 airbyte {
@@ -21,9 +22,4 @@ def copyScripts = tasks.register("copyScripts", Copy) {
 tasks.named("dockerBuildImage") {
     dependsOn copyScripts
     dependsOn copyTheme
-}
-
-tasks.register("test")  {
-    description "dummy test task because `test` is part of the base jvm plugin, but there are no tests to run for this module." +
-            "Without this, running something like `build -x test` will fail because it can't find a test task to exclude."
 }

@@ -17,6 +17,11 @@
   }
 }
 
+.separator {
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  margin: variables.$spacing-xs variables.$spacing-xs;
+}
+
 .item {
   cursor: pointer;
   display: flex;

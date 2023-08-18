@@ -12,6 +12,7 @@ dependencies {
     implementation libs.bundles.apache
     implementation libs.google.cloud.storage
     implementation libs.bundles.log4j
+    implementation libs.airbyte.protocol
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok

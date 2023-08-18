@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.50.2
+airbyte-cdk==0.51.1
     # via -r requirements.in
 airbyte-protocol-models==0.4.0
     # via airbyte-cdk
@@ -29,7 +29,7 @@ deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.0.8
     # via airbyte-cdk
-exceptiongroup==1.1.2
+exceptiongroup==1.1.3
     # via cattrs
 genson==1.2.2
     # via airbyte-cdk
