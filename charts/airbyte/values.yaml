@@ -1,3 +1,4 @@
+---
 ### TEST FOR RELEASE WORKFLOW
 
 ## @section Global Parameters
@@ -1248,6 +1249,8 @@ temporal:
 ##  postgresql.containerSecurityContext.runAsNonRoot Ensures the container will run with a non-root user
 ##  postgresql.commonAnnotations.helm.sh/hook It will determine when the hook should be rendered
 ##  postgresql.commonAnnotations.helm.sh/hook-weight The order in which the hooks are executed. If weight is lower, it has higher priority
+##  postgresql.resources.limits [object] The resources limits for postgresql
+##  postgresql.resources.requests [object] The requested resources for postgresql
 ##
 postgresql:
   enabled: true
@@ -1268,6 +1271,23 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-1"
+
+  ## PostgreSQL resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ##  postgresql.resources.limits [object] The resources limits for postgresql
+  ##  postgresql.resources.requests [object] The requested resources for postgresql
+  resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
 ##  externalDatabase.host Database host
@@ -1289,11 +1309,14 @@ externalDatabase:
   port: 5432
   jdbcUrl: ""
 
+
 ## @section Logs parameters
 
 ## @section Minio chart overwrites
 ##  minio.accessKey.password Minio Access Key
 ##  minio.secretKey.password Minio Secret Key
+##  minio.resources.limits [object] The resources limits for minio
+##  minio.resources.requests [object] The requested resources for minio
 minio:
   enabled: true
 
@@ -1308,6 +1331,23 @@ minio:
     rootPassword: minio123
   storage:
     volumeClaimValue: 500Mi
+
+
+  ## Minio resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ##  minio.resources.limits [object] The resources limits for minio
+  ##  minio.resources.requests [object] The requested resources for minio
+  resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
 
 ## @section cron parameters
 

@@ -53,6 +53,8 @@ spec:
           volumeMounts:
             - name: airbyte-volume-db
               mountPath: /var/lib/postgresql/data
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}    
   volumeClaimTemplates:
   - metadata:
       name: airbyte-volume-db
