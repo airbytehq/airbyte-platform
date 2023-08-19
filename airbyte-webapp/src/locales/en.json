@@ -674,6 +674,7 @@
   "settings.workspaceSettings.deleteLabel": "Delete your workspace",
   "settings.generalSettings": "General Settings",
   "settings.organizationSettings": "Organization settings",
+  "settings.organizationSettings.organizationName": "Organization name",
   "settings.accountSettings": "Account Settings",
   "settings.accountSettings.logoutText": "Sign out",
   "settings.webhook": "Connection status Webhook",
