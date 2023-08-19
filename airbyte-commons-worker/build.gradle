@@ -29,9 +29,9 @@ dependencies {
     annotationProcessor libs.lombok
     implementation libs.bundles.apache
     implementation libs.bundles.log4j
-    implementation libs.aws.java.sdk.s3
     implementation libs.google.cloud.storage
     implementation libs.aws.java.sdk.s3
+    implementation libs.aws.java.sdk.sts
     implementation libs.s3
 
     implementation project(':airbyte-api')

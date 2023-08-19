@@ -1,0 +1,16 @@
+values:
+  - ../../test_resources/pro/values.yaml
+set:
+  airbyteYml: 'path'
+templates:
+  - airbyte-db.yaml
+  - airbyte-yml-configmap.yaml
+  - env-configmap.yaml
+  - gcs-log-creds-secret.yaml
+  - minio.yaml
+  - secret.yaml
+  - serviceaccount.yaml
+tests:
+  - it: manifest should match snapshot
+    asserts:
+      - matchSnapshot: {}

@@ -20,7 +20,7 @@ kotlin = "1.8.20"
 kubernetes-client = "6.5.1"
 log4j = "2.17.2"
 lombok = "1.18.24"
-micronaut = "3.10.0"
+micronaut = "3.9.4"
 micronaut-data = "3.10.0"
 micronaut-email = "1.5.0"
 micronaut-jaxrs = "3.4.0"
@@ -52,6 +52,7 @@ apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
+aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
