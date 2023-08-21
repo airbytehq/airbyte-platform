@@ -16,8 +16,6 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
-import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreamsInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
@@ -25,7 +23,6 @@ import io.airbyte.protocol.models.AirbyteRecordMessage;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +37,6 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   private static final String manifestKey = "__injected_declarative_manifest";
   private static final String recordLimitKey = "max_records";
   private static final String resolveManifestCommand = "resolve_manifest";
-  private static final String listStreamsCommand = "list_streams";
   private static final String readStreamCommand = "test_read";
   private static final String catalogTemplate = """
                                                 {
@@ -105,34 +101,6 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     final AirbyteRecordMessage record = request(manifest, CONFIG_NODE, resolveManifestCommand);
     return new ResolveManifest().manifest(record.getData().get("manifest"));
-  }
-
-  @Override
-  @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  public StreamsListRead listStreams(final JsonNode manifest, final JsonNode config)
-      throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
-    return new StreamsListRead().streams(
-        StreamSupport.stream(request(manifest, config, listStreamsCommand).getData().get("streams").spliterator(), false).map(this::adaptStream)
-            .toList());
-  }
-
-  private StreamsListReadStreamsInner adaptStream(final JsonNode stream) {
-    if (isNull(stream, "name")) {
-      throw new AirbyteCdkInvalidInputException(String.format(
-          "Unexpected fatal error: streams are expected to have field 'name' but could not find it in %s. Please open a GitHub issue with Airbyte",
-          stream));
-    }
-    if (isNull(stream, "url")) {
-      throw new AirbyteCdkInvalidInputException(String.format(
-          "Unexpected fatal error: streams are expected to have field 'url' but could not find it in %s. Please open a GitHub issue with Airbyte",
-          stream));
-    }
-
-    return new StreamsListReadStreamsInner().name(stream.get("name").asText()).url(stream.get("url").asText());
-  }
-
-  private static boolean isNull(final JsonNode jsonNode, final String fieldName) {
-    return jsonNode.get(fieldName) == null || jsonNode.get(fieldName).isNull();
   }
 
   /**

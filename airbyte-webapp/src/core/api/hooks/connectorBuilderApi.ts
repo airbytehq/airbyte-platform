@@ -4,14 +4,13 @@ import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types"
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 
-import { listStreams, readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
+import { readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
 import {
   ConnectorConfig,
   ConnectorManifest,
   ResolveManifestRequestBody,
   StreamRead,
   StreamReadRequestBody,
-  StreamsListRequestBody,
 } from "../types/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -41,21 +40,6 @@ export const useBuilderReadStream = (
     enabled: false,
     onSuccess,
   });
-};
-
-export const useBuilderListStreams = (params: StreamsListRequestBody, enabled = true) => {
-  const requestOptions = useRequestOptions();
-
-  return useQuery(
-    connectorBuilderKeys.list(params.manifest, params.config),
-    () => listStreams(params, requestOptions),
-    {
-      keepPreviousData: true,
-      cacheTime: 0,
-      retry: false,
-      enabled,
-    }
-  );
 };
 
 export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
