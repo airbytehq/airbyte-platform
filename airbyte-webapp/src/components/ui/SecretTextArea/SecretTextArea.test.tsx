@@ -52,31 +52,27 @@ describe("SecretTextArea", () => {
 
     const textarea = getByTestId("secretTextArea-textarea");
 
-    userEvent.type(textarea, value);
+    await userEvent.type(textarea, value);
 
     expect(onChange).toBeCalledTimes(value.length);
   });
 
-  // TODO: Requires newer user-event version to function
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip("renders on textarea when clicked visibility button", async () => {
+  it("renders on textarea when clicked visibility button", async () => {
     const value = "Here is my secret text";
     const { getByTestId, container } = await render(<SecretTextArea value={value} onChange={emptyFn} />);
 
-    userEvent.click(getByTestId("secretTextArea-visibilityButton"));
+    await userEvent.click(getByTestId("secretTextArea-visibilityButton"));
 
     expect(getByTestId("secretTextArea-textarea")).toHaveFocus();
     expect(getByTestId("secretTextArea-textarea")).toHaveValue(value);
     expect(container.querySelector('input[type="password"]')).not.toBeInTheDocument();
   });
 
-  // TODO: Requires newer user-event
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip("renders on password input when clicking away from visibility area", async () => {
+  it("renders on password input when clicking away from visibility area", async () => {
     const value = "Here is my secret text";
     const { queryByTestId, getByTestId, container } = await render(<SecretTextArea value={value} onChange={emptyFn} />);
 
-    userEvent.click(getByTestId("secretTextArea-visibilityButton"));
+    await userEvent.click(getByTestId("secretTextArea-visibilityButton"));
     expect(getByTestId("secretTextArea-textarea")).toHaveFocus();
 
     act(() => {

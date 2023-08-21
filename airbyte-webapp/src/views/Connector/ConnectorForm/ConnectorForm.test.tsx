@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { getByTestId, screen, waitFor } from "@testing-library/react";
+import { act, getByTestId, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
@@ -68,7 +68,7 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
 
   return async (name: string, price: string, originType: "city" | "country", origin: string) => {
     const addButton = getByTestId(priceList, "addItemButton");
-    await waitFor(() => userEvent.click(addButton));
+    await userEvent.click(addButton);
 
     const arrayOfObjectsEditModal = getByTestId(document.body, "arrayOfObjects-editModal");
     const getPriceListInput = (index: number, key: string) =>
@@ -76,20 +76,22 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
 
     // Type items into input
     const nameInput = getPriceListInput(index, "name");
-    userEvent.type(nameInput!, name);
+    await userEvent.type(nameInput!, name);
 
     const priceInput = getPriceListInput(index, "price");
-    userEvent.type(priceInput!, price);
+    await userEvent.type(priceInput!, price);
 
     const selectContainer = getByTestId(arrayOfObjectsEditModal, "connectionConfiguration.priceList.origin");
-    await selectEvent.select(selectContainer, originType, {
-      container: arrayOfObjectsEditModal,
+    await act(async () => {
+      await selectEvent.select(selectContainer, originType, {
+        container: arrayOfObjectsEditModal,
+      });
     });
 
     const originInput = arrayOfObjectsEditModal.querySelector(
       `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
     );
-    userEvent.type(originInput!, origin);
+    await userEvent.type(originInput!, origin);
 
     const doneButton = getByTestId(arrayOfObjectsEditModal, "done-button");
     await waitFor(() => userEvent.click(doneButton));
@@ -419,18 +421,18 @@ describe("Connector form", () => {
       expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
       expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
 
-      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(0)!));
+      await userEvent.click(screen.getAllByTestId("optional-fields").at(0)!);
 
       expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).toBeVisible();
 
-      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(1)!));
+      await userEvent.click(screen.getAllByTestId("optional-fields").at(1)!);
 
       expect(getInputByName(container, "connectionConfiguration.additional_same_group")).toBeVisible();
 
       const input1 = getInputByName(container, "connectionConfiguration.additional_same_group");
       const input2 = getInputByName(container, "connectionConfiguration.additional_separate_group");
-      userEvent.type(input1!, "input1");
-      userEvent.type(input2!, "input2");
+      await userEvent.type(input1!, "input1");
+      await userEvent.type(input2!, "input2");
 
       await submitForm(container);
 
@@ -462,7 +464,7 @@ describe("Connector form", () => {
         },
       });
 
-      userEvent.type(getInputByName(container, "connectionConfiguration.optional_always_show")!, "input1");
+      await userEvent.type(getInputByName(container, "connectionConfiguration.optional_always_show")!, "input1");
 
       await submitForm(container);
 
@@ -527,13 +529,13 @@ describe("Connector form", () => {
       expect(getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield")).toBeVisible();
 
       const input1 = getInputByName(container, "connectionConfiguration.optional_object.required_obj_subfield");
-      userEvent.type(input1!, "required obj subfield value");
+      await userEvent.type(input1!, "required obj subfield value");
       const input2 = getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield");
-      userEvent.type(input2!, "optional obj subfield value");
+      await userEvent.type(input2!, "optional obj subfield value");
       const input3 = getInputByName(container, "connectionConfiguration.optional_oneof.required_oneof_subfield");
-      userEvent.type(input3!, "required oneof subfield value");
+      await userEvent.type(input3!, "required oneof subfield value");
       const input4 = getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield");
-      userEvent.type(input4!, "optional oneof subfield value");
+      await userEvent.type(input4!, "optional oneof subfield value");
 
       await submitForm(container);
 
@@ -675,7 +677,7 @@ describe("Connector form", () => {
       const uri = container.querySelector(
         "input[name='connectionConfiguration.condition.nestedcondition.doublenestedinput']"
       );
-      userEvent.type(uri!, "doublenestedvalue");
+      await userEvent.type(uri!, "doublenestedvalue");
 
       await submitForm(container);
 
@@ -693,7 +695,7 @@ describe("Connector form", () => {
         },
       });
 
-      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "inp");
+      await userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "inp");
 
       await submitForm(container);
 
@@ -702,7 +704,7 @@ describe("Connector form", () => {
 
       expect(screen.getByText("The value must match the pattern input")).toBeInTheDocument();
 
-      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "ut");
+      await userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "ut");
 
       await waitFor(() => userEvent.click(getSubmitButton(container)!));
 
@@ -725,7 +727,7 @@ describe("Connector form", () => {
     it("should fill password", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, password: undefined } });
       const password = getInputByName(container, "connectionConfiguration.password");
-      userEvent.type(password!, "testword");
+      await userEvent.type(password!, "testword");
 
       await submitForm(container);
 
@@ -739,7 +741,7 @@ describe("Connector form", () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, password: "*****" } });
       await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")!));
       const password = getInputByName(container, "connectionConfiguration.password");
-      userEvent.type(password!, "testword");
+      await userEvent.type(password!, "testword");
 
       await submitForm(container);
 
@@ -752,7 +754,7 @@ describe("Connector form", () => {
     it("should fill right values in array of simple entity field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, emails: [] } });
       const emails = screen.getByTestId("tag-input").querySelector("input");
-      userEvent.type(emails!, "test1@test.com{enter}test2@test.com{enter}test3@test.com{enter}");
+      await userEvent.type(emails!, "test1@test.com{enter}test2@test.com{enter}test3@test.com{enter}");
 
       await submitForm(container);
 
@@ -765,7 +767,7 @@ describe("Connector form", () => {
     it("should extend right values in array of simple entity field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm } });
       const emails = screen.getByTestId("tag-input").querySelector("input");
-      userEvent.type(emails!, "another@test.com{enter}");
+      await userEvent.type(emails!, "another@test.com{enter}");
 
       await submitForm(container);
 
@@ -778,7 +780,12 @@ describe("Connector form", () => {
     it("should fill right values in array with items list field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, workTime: undefined } });
       const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
-      userEvent.type(workTime!.querySelector("input")!, "day{enter}abc{enter}ni{enter}");
+      await userEvent.type(workTime!.querySelector("input")!, "day");
+      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
+      await userEvent.type(workTime!.querySelector("input")!, "abc");
+      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
+      await userEvent.type(workTime!.querySelector("input")!, "ni");
+      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
 
       await submitForm(container);
 
@@ -788,7 +795,8 @@ describe("Connector form", () => {
     it("should add values in array with items list field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm } });
       const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
-      userEvent.type(workTime!.querySelector("input")!, "ni{enter}");
+      await userEvent.type(workTime!.querySelector("input")!, "ni");
+      await userEvent.click(workTime!.querySelector(".rw-popup [role='option']")!);
 
       await submitForm(container);
 
@@ -811,7 +819,7 @@ describe("Connector form", () => {
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       expect(uri).toBeInTheDocument();
 
-      userEvent.type(uri!, "def");
+      await userEvent.type(uri!, "def");
 
       await submitForm(container);
 
@@ -832,7 +840,7 @@ describe("Connector form", () => {
       );
 
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
-      userEvent.type(uri!, "test-uri");
+      await userEvent.type(uri!, "test-uri");
 
       await submitForm(container);
 
@@ -848,7 +856,7 @@ describe("Connector form", () => {
       });
 
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
-      userEvent.type(uri!, "def");
+      await userEvent.type(uri!, "def");
 
       await submitForm(container);
 

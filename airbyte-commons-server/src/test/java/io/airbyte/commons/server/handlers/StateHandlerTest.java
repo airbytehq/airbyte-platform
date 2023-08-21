@@ -5,18 +5,24 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
+import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.GlobalState;
+import io.airbyte.api.model.generated.JobRead;
 import io.airbyte.api.model.generated.StreamState;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.SyncIsRunningException;
 import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.persistence.StatePersistence;
@@ -41,11 +47,13 @@ class StateHandlerTest {
 
   private StateHandler stateHandler;
   private StatePersistence statePersistence;
+  private JobHistoryHandler jobHistoryHandler;
 
   @BeforeEach
   void setup() {
     statePersistence = mock(StatePersistence.class);
-    stateHandler = new StateHandler(statePersistence);
+    jobHistoryHandler = mock(JobHistoryHandler.class);
+    stateHandler = new StateHandler(statePersistence, jobHistoryHandler);
   }
 
   @Test
@@ -134,6 +142,33 @@ class StateHandlerTest {
     assertEquals(AirbyteStateType.GLOBAL, Enums.convertTo(ConnectionStateType.GLOBAL, AirbyteStateType.class));
     assertEquals(AirbyteStateType.STREAM, Enums.convertTo(ConnectionStateType.STREAM, AirbyteStateType.class));
     assertEquals(AirbyteStateType.LEGACY, Enums.convertTo(ConnectionStateType.LEGACY, AirbyteStateType.class));
+  }
+
+  @Test
+  void testCreateOrUpdateState() throws IOException {
+    final ConnectionStateCreateOrUpdate input = new ConnectionStateCreateOrUpdate().connectionId(CONNECTION_ID)
+        .connectionState(new ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB));
+    stateHandler.createOrUpdateState(input);
+    verify(statePersistence, times(1)).updateOrCreateState(CONNECTION_ID,
+        new StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null));
+  }
+
+  @Test
+  void testCreateOrUpdateStateSafe() throws IOException {
+    final ConnectionStateCreateOrUpdate input = new ConnectionStateCreateOrUpdate().connectionId(CONNECTION_ID)
+        .connectionState(new ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB));
+    when(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.empty());
+    stateHandler.createOrUpdateStateSafe(input);
+    verify(statePersistence, times(1)).updateOrCreateState(CONNECTION_ID,
+        new StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null));
+  }
+
+  @Test
+  void testCreateOrUpdateStateSafeThrowsWhenSyncRunning() throws IOException {
+    final ConnectionStateCreateOrUpdate input = new ConnectionStateCreateOrUpdate().connectionId(CONNECTION_ID)
+        .connectionState(new ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB));
+    when(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.of(new JobRead()));
+    assertThrows(SyncIsRunningException.class, () -> stateHandler.createOrUpdateStateSafe(input));
   }
 
 }

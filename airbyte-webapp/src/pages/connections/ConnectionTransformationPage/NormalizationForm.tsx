@@ -24,7 +24,7 @@ const normalizationFormSchema: SchemaOf<NormalizationFormValues> = yup.object().
   normalization: yup.mixed().oneOf([NormalizationType.raw, NormalizationType.basic]),
 });
 
-export const NormalizationHookForm: React.FC = () => {
+export const NormalizationForm: React.FC = () => {
   const { formatMessage } = useIntl();
 
   const { workspaceId } = useCurrentWorkspace();

@@ -1993,6 +1993,31 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/state/create_or_update_safe:
+    post:
+      tags:
+        - state
+      summary: Create or update the state for a connection. Throws error if a sync is currently running when this is called.
+      operationId: createOrUpdateStateSafe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStateCreateOrUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionState"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+        "423":
+          $ref: "#/components/responses/ExceptionResponse"
   /v1/connections/search:
     post:
       tags:

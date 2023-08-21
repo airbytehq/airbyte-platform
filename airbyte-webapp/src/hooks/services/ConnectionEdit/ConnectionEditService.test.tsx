@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react-hooks";
+import { act, renderHook } from "@testing-library/react";
 import React from "react";
 
 import { mockCatalogDiff } from "test-utils/mock-data/mockCatalogDiff";
@@ -60,9 +60,11 @@ jest.mock("../useConnectionHook", () => ({
 }));
 
 describe("ConnectionEditService", () => {
-  const Wrapper: React.FC<Parameters<typeof ConnectionEditServiceProvider>[0]> = ({ children, ...props }) => (
+  const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
-      <ConnectionEditServiceProvider {...props}>{children}</ConnectionEditServiceProvider>
+      <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
+        {children}
+      </ConnectionEditServiceProvider>
     </TestWrapper>
   );
 
@@ -75,9 +77,6 @@ describe("ConnectionEditService", () => {
   it("should load a Connection from a connectionId", async () => {
     const { result } = renderHook(useConnectionEditService, {
       wrapper: Wrapper,
-      initialProps: {
-        connectionId: mockConnection.connectionId,
-      },
     });
 
     expect(result.current.connection).toEqual(mockConnection);
@@ -86,9 +85,6 @@ describe("ConnectionEditService", () => {
   it("should update a connection and set the current connection object to the updated connection", async () => {
     const { result } = renderHook(useConnectionEditService, {
       wrapper: Wrapper,
-      initialProps: {
-        connectionId: mockConnection.connectionId,
-      },
     });
 
     const mockUpdateConnection: WebBackendConnectionUpdate = {
@@ -113,9 +109,6 @@ describe("ConnectionEditService", () => {
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,
-      initialProps: {
-        connectionId: mockConnection.connectionId,
-      },
     });
 
     const mockUpdateConnection: WebBackendConnectionUpdate = {
@@ -147,9 +140,6 @@ describe("ConnectionEditService", () => {
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,
-      initialProps: {
-        connectionId: mockConnection.connectionId,
-      },
     });
 
     const connectionUpdate = {
@@ -186,9 +176,6 @@ describe("ConnectionEditService", () => {
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,
-      initialProps: {
-        connectionId: mockConnection.connectionId,
-      },
     });
 
     const connectionUpdate: WebBackendConnectionUpdate = {

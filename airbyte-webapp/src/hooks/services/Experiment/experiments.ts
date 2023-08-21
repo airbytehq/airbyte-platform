@@ -32,5 +32,4 @@ export interface Experiments {
   "connector.airbyteCloudIpAddresses": string;
   "connector.updateMethodSelection": boolean;
   "workspaces.newWorkspacesUI": boolean;
-  "form.reactHookForm": boolean;
 }

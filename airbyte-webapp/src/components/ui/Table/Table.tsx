@@ -1,7 +1,16 @@
-import { ColumnDef, flexRender, useReactTable, getCoreRowModel, VisibilityState, Row } from "@tanstack/react-table";
+import {
+  ColumnDef,
+  flexRender,
+  useReactTable,
+  VisibilityState,
+  Row,
+  getSortedRowModel,
+  getCoreRowModel,
+} from "@tanstack/react-table";
 import classNames from "classnames";
 import { Fragment, PropsWithChildren } from "react";
 
+import { SortableTableHeader } from "./SortableTableHeader";
 import styles from "./Table.module.scss";
 import { ColumnMeta } from "./types";
 
@@ -12,11 +21,6 @@ export type TableColumns<T> = Array<ColumnDef<T, any>>;
 export interface TableProps<T> {
   className?: string;
   columns: TableColumns<T>;
-  /**
-   * If the table data is sorted outside this component you can pass the id of the column by which its sorted
-   * to apply the correct sorting style to that column.
-   */
-  sortedByColumn?: string;
   data: T[];
   variant?: "default" | "light" | "white" | "inBlock";
   onClickRow?: (data: T) => void;
@@ -25,6 +29,7 @@ export interface TableProps<T> {
   expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
   testId?: string;
   columnVisibility?: VisibilityState;
+  sorting?: boolean;
   getRowClassName?: (data: T) => string | undefined;
 }
 
@@ -39,8 +44,8 @@ export const Table = <T,>({
   getIsRowExpanded,
   expandedRow,
   columnVisibility,
-  sortedByColumn,
   getRowClassName,
+  sorting = true,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -49,8 +54,10 @@ export const Table = <T,>({
       columnVisibility,
     },
     getCoreRowModel: getCoreRowModel<T>(),
+    getSortedRowModel: getSortedRowModel<T>(),
     getRowCanExpand,
     getIsRowExpanded,
+    enableSorting: sorting,
   });
 
   return (
@@ -65,7 +72,7 @@ export const Table = <T,>({
           <tr key={`table-header-${headerGroup.id}}`}>
             {headerGroup.headers.map((header) => {
               const meta = header.column.columnDef.meta as ColumnMeta | undefined;
-              const isSorted = (sortedByColumn && sortedByColumn === header.column.id) || header.column.getIsSorted();
+              const isSorted = header.column.getIsSorted();
               return (
                 <th
                   colSpan={header.colSpan}
@@ -82,7 +89,17 @@ export const Table = <T,>({
                   )}
                   key={`table-column-${headerGroup.id}-${header.id}`}
                 >
-                  {flexRender(header.column.columnDef.header, header.getContext())}
+                  {header.column.getCanSort() === true ? (
+                    <SortableTableHeader
+                      onClick={() => header.column.toggleSorting()}
+                      isActive={header.column.getIsSorted() !== false}
+                      isAscending={header.column.getIsSorted() === "asc"}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </SortableTableHeader>
+                  ) : (
+                    flexRender(header.column.columnDef.header, header.getContext())
+                  )}
                 </th>
               );
             })}

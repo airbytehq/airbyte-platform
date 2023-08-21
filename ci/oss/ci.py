@@ -3,7 +3,11 @@ from typing import List, Optional
 
 from aircmd.actions.asyncutils import gather
 from aircmd.models.base import PipelineContext
-from aircmd.models.click_commands import ClickCommandMetadata, ClickFlag, ClickGroup
+from aircmd.models.click_commands import (
+    ClickCommandMetadata,
+    ClickFlag,
+    ClickGroup,
+)
 from aircmd.models.click_params import ParameterType
 from aircmd.models.click_utils import LazyPassDecorator
 from aircmd.models.plugins import DeveloperPlugin
@@ -50,8 +54,7 @@ class BackendBuildCommand(ClickCommandMetadata):
     flags: List[ClickFlag] = [ClickFlag(name = "--scan", 
                                         type = ParameterType.BOOL,
                                         help = "Enables gradle scanning", 
-                                        default = False)]
-    
+                                        default = False)]    
 
 class BackendTestCommand(ClickCommandMetadata):
     command_name: str = "test"
@@ -60,6 +63,8 @@ class BackendTestCommand(ClickCommandMetadata):
                                         type = ParameterType.BOOL,
                                         help = "Enables gradle scanning", 
                                         default = False)]
+    #options: List[ClickOption] = [ClickOption(name = "--event",type=ParameterType.STRING,help="GHA Event to simulate locally"),]
+
 
 class FrontendBuildCommand(ClickCommandMetadata):
     command_name: str = "build"
@@ -90,7 +95,7 @@ async def build(settings: OssSettings, ctx: PipelineContext, client: Optional[Cl
 async def backend_build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     backend_build_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name)
     backend_build_result = await build_oss_backend_task.submit(settings, ctx, backend_build_client, scan)
-    return [backend_build_result]
+    return [backend_build_result] # we wrap this in a list to make it composable with gather upstream so we don't mix Container with List[Container]
 
 @frontend_group.command(FrontendBuildCommand())
 @pass_global_settings
@@ -115,7 +120,7 @@ async def test(settings: OssSettings, ctx: PipelineContext, client: Optional[Cli
     build_results = await build(scan=scan, client=test_client)
     test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
     # TODO: add cypress E2E tests here
-    return [test_results]
+    return [test_results] 
 
 @backend_group.command(BackendTestCommand())
 @pass_global_settings
@@ -124,7 +129,7 @@ async def test(settings: OssSettings, ctx: PipelineContext, client: Optional[Cli
 async def backend_test(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> Container:
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     build_results = await backend_build(scan=scan, client=test_client)
-    test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results, settings=settings, ctx=quote(ctx), scan=scan)
+    test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0], settings=settings, ctx=quote(ctx), scan=scan)
     return test_results
 
 @oss_group.command(CICommand())

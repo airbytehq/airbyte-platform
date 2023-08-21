@@ -239,7 +239,7 @@ describe("catalog diff modal", () => {
     expect(removedStreamsTable).not.toBeInTheDocument();
   });
 
-  it("changed streams accordion opens/closes on clicking the description row", () => {
+  it("changed streams accordion opens/closes on clicking the description row", async () => {
     mockCatalogDiff.transforms.push(...addedItems, ...updatedItems);
 
     render(
@@ -263,11 +263,11 @@ describe("catalog diff modal", () => {
     const nullAccordionBody = screen.queryByRole("table", { name: /removed fields/ });
     expect(nullAccordionBody).not.toBeInTheDocument();
 
-    userEvent.click(accordionHeader);
+    await userEvent.click(accordionHeader);
     const openAccordionBody = screen.getByRole("table", { name: /removed fields/ });
     expect(openAccordionBody).toBeInTheDocument();
 
-    userEvent.click(accordionHeader);
+    await userEvent.click(accordionHeader);
     const nullAccordionBodyAgain = screen.queryByRole("table", { name: /removed fields/ });
     expect(nullAccordionBodyAgain).not.toBeInTheDocument();
     mockCatalogDiff.transforms = [];

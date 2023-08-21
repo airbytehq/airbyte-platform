@@ -12,9 +12,9 @@ export const FormChangeTrackerService: React.FC<React.PropsWithChildren<unknown>
   const blocker = useCallback(
     (blocker: Blocker) => {
       openConfirmationModal({
-        title: "form.discardChanges",
-        text: "form.discardChangesConfirmation",
-        submitButtonText: "form.discardChanges",
+        title: "form.unsavedChangesTitle",
+        text: "form.unsavedChangesMessage",
+        submitButtonText: "form.leavePage",
         onSubmit: () => {
           clearAllFormChanges();
           closeConfirmationModal();

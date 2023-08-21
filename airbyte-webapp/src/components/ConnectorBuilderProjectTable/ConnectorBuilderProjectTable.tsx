@@ -6,13 +6,11 @@ import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { SortOrderEnum } from "components/EntityTable/types";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
-import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -175,15 +173,9 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
 
 export const ConnectorBuilderProjectTable = ({
   projects,
-  onSortClick,
-  sortBy,
-  sortOrder,
   basePath,
 }: {
   projects: BuilderProject[];
-  onSortClick?: (field: string) => void;
-  sortBy?: string;
-  sortOrder?: SortOrderEnum;
   basePath?: string;
 }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -194,18 +186,7 @@ export const ConnectorBuilderProjectTable = ({
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
-        header: () =>
-          onSortClick ? (
-            <SortableTableHeader
-              onClick={() => onSortClick("name")}
-              isActive={sortBy === "name"}
-              isAscending={sortOrder === SortOrderEnum.ASC}
-            >
-              <FormattedMessage id="connectorBuilder.listPage.name" />
-            </SortableTableHeader>
-          ) : (
-            <FormattedMessage id="connectorBuilder.listPage.name" />
-          ),
+        header: () => <FormattedMessage id="connectorBuilder.listPage.name" />,
         cell: (props) => (
           <FlexContainer alignItems="center">
             {/* TODO: replace with custom logos once available */}
@@ -292,14 +273,11 @@ export const ConnectorBuilderProjectTable = ({
       closeConfirmationModal,
       deleteProject,
       navigate,
-      onSortClick,
       openConfirmationModal,
       registerNotification,
-      sortBy,
-      sortOrder,
       unregisterNotificationById,
     ]
   );
 
-  return <Table columns={columns} data={projects} className={styles.table} />;
+  return <Table columns={columns} data={projects} className={styles.table} sorting={false} />;
 };

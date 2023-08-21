@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 
 import "react-reflex/styles.css";
 import { isCloudApp } from "core/utils/app";
@@ -20,7 +20,6 @@ if (isCloudApp()) {
 const CloudApp = lazy(() => import(`packages/cloud/App`));
 const App = lazy(() => import(`./App`));
 
-ReactDOM.render(
-  <Suspense fallback={null}>{isCloudApp() ? <CloudApp /> : <App />}</Suspense>,
-  document.getElementById("root")
-);
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const root = createRoot(document.getElementById("root")!);
+root.render(<Suspense fallback={null}>{isCloudApp() ? <CloudApp /> : <App />}</Suspense>);

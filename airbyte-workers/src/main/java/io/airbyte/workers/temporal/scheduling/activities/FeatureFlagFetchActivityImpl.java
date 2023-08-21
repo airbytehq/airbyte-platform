@@ -8,15 +8,8 @@ import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
-import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
-import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Flag;
-import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,12 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
   private final WorkspaceApi workspaceApi;
-  private final FeatureFlagClient featureFlagClient;
 
-  public FeatureFlagFetchActivityImpl(final WorkspaceApi workspaceApi,
-                                      final FeatureFlagClient featureFlagClient) {
+  public FeatureFlagFetchActivityImpl(final WorkspaceApi workspaceApi) {
     this.workspaceApi = workspaceApi;
-    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -53,17 +43,9 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
   @Override
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
-    final UUID workspaceId = getWorkspaceId(input.getConnectionId());
-
     // No feature flags are currently in use.
     // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    final List<Flag<Boolean>> workspaceFlags = List.of(CheckConnectionUseApiEnabled.INSTANCE, CheckConnectionUseChildWorkflowEnabled.INSTANCE);
-    final Map<String, Boolean> featureFlags = new HashMap<>();
-    for (final Flag<Boolean> flag : workspaceFlags) {
-      featureFlags.put(flag.getKey(), featureFlagClient.boolVariation(flag, new Workspace(workspaceId)));
-    }
-
-    return new FeatureFlagFetchOutput(featureFlags);
+    return new FeatureFlagFetchOutput(new HashMap<>());
   }
 
 }

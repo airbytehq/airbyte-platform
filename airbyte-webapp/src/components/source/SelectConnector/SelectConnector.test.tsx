@@ -32,7 +32,7 @@ describe(`${SelectConnector.name}`, () => {
     );
 
     const connectorButton = getByText(mockSourceDefinition.name);
-    userEvent.click(connectorButton);
+    await userEvent.click(connectorButton);
 
     expect(mockTrackSelectConnector).toHaveBeenCalledTimes(1);
   });

@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ReactNode, useEffect } from "react";
-import { useForm, FormProvider, DeepPartial, useFormState, KeepStateOptions } from "react-hook-form";
+import { useForm, FormProvider, KeepStateOptions, DefaultValues } from "react-hook-form";
 import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
@@ -20,7 +20,7 @@ interface FormProps<T extends FormValues> {
   onSuccess?: (values: T) => void;
   onError?: (e: Error, values: T) => void;
   schema: SchemaOf<T>;
-  defaultValues: DeepPartial<T>;
+  defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
   /**
@@ -32,11 +32,6 @@ interface FormProps<T extends FormValues> {
    */
   disabled?: boolean;
 }
-
-const HookFormDirtyTracker = () => {
-  const { isDirty } = useFormState();
-  return <FormChangeTracker changed={isDirty} />;
-};
 
 export const Form = <T extends FormValues>({
   children,
@@ -83,7 +78,7 @@ export const Form = <T extends FormValues>({
   return (
     <FormProvider {...methods}>
       <FormDevTools />
-      {trackDirtyChanges && <HookFormDirtyTracker />}
+      {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
       <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>
         <fieldset disabled={disabled} className={styles.fieldset}>
           {children}

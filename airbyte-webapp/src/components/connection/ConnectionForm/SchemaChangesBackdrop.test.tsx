@@ -31,7 +31,7 @@ const renderComponent = () =>
 const { SchemaChangeBackdrop } = require("./SchemaChangeBackdrop");
 
 describe("SchemaChangesBackdrop", () => {
-  it("renders with breaking changes and prevents background interaction", () => {
+  it("renders with breaking changes and prevents background interaction", async () => {
     mockUseConnectionEditService.mockReturnValue({
       connection: { mockConnection, schemaChange: SchemaChange.breaking },
       schemaHasBeenRefreshed: false,
@@ -41,11 +41,11 @@ describe("SchemaChangesBackdrop", () => {
     const { getByTestId } = renderComponent();
 
     expect(getByTestId("schemaChangesBackdrop")).toMatchSnapshot();
-    userEvent.click(getByTestId("bg-button"));
+    await userEvent.click(getByTestId("bg-button"));
     expect(buttonSpy).not.toHaveBeenCalled();
   });
 
-  it("does not render if there are non-breaking changes", () => {
+  it("does not render if there are non-breaking changes", async () => {
     mockUseConnectionEditService.mockReturnValue({
       connection: { mockConnection, schemaChange: SchemaChange.non_breaking },
       schemaHasBeenRefreshed: false,
@@ -56,11 +56,11 @@ describe("SchemaChangesBackdrop", () => {
 
     expect(queryByTestId("schemaChangesBackdrop")).toBeFalsy();
 
-    userEvent.click(getByTestId("bg-button"));
+    await userEvent.click(getByTestId("bg-button"));
     expect(buttonSpy).not.toHaveBeenCalled();
   });
 
-  it("does not render if there are no changes", () => {
+  it("does not render if there are no changes", async () => {
     mockUseConnectionEditService.mockReturnValue({
       connection: { mockConnection, schemaChange: SchemaChange.no_change },
       schemaHasBeenRefreshed: false,
@@ -71,11 +71,11 @@ describe("SchemaChangesBackdrop", () => {
 
     expect(queryByTestId("schemaChangesBackdrop")).toBeFalsy();
 
-    userEvent.click(getByTestId("bg-button"));
+    await userEvent.click(getByTestId("bg-button"));
     expect(buttonSpy).not.toHaveBeenCalled();
   });
 
-  it("does not render if schema has been refreshed", () => {
+  it("does not render if schema has been refreshed", async () => {
     mockUseConnectionEditService.mockReturnValue({
       connection: mockConnection,
       schemaHasBeenRefreshed: true,
@@ -85,7 +85,7 @@ describe("SchemaChangesBackdrop", () => {
     const { queryByTestId, getByTestId } = renderComponent();
     expect(queryByTestId("schemaChangesBackdrop")).toBeFalsy();
 
-    userEvent.click(getByTestId("bg-button"));
+    await userEvent.click(getByTestId("bg-button"));
     expect(buttonSpy).not.toHaveBeenCalled();
   });
 });

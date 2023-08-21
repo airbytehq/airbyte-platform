@@ -473,7 +473,7 @@ function useBlockOnSavingState(savingState: SavingState) {
       if (savingState === "invalid" || savingState === "error") {
         setBlockedOnInvalidState(true);
         openConfirmationModal({
-          title: "form.discardChanges",
+          title: "form.unsavedChangesTitle",
           text: "connectorBuilder.discardChangesConfirmation",
           submitButtonText: "form.discardChanges",
           onSubmit: () => {
