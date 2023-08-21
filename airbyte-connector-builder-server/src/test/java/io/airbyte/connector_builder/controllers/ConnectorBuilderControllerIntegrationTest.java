@@ -16,8 +16,6 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.command_runner.MockSynchronousPythonCdkCommandRunner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
@@ -28,7 +26,6 @@ import io.airbyte.connector_builder.file_writer.MockAirbyteFileWriterImpl;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
-import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -62,7 +59,6 @@ class ConnectorBuilderControllerIntegrationTest {
   private HealthHandler healthHandler;
   static String cdkException;
   static String streamRead;
-  static String streamsList;
   static String recordManifestResolve;
   static String traceManifestResolve;
   static JsonNode validManifest;
@@ -81,7 +77,6 @@ class ConnectorBuilderControllerIntegrationTest {
     final String relativeDir = "src/test/java/io/airbyte/connector_builder/fixtures";
     validManifest = new ObjectMapper().readTree(readContents(String.format("%s/ValidManifest.json", relativeDir)));
     streamRead = readContents(String.format("%s/RecordStreamRead.json", relativeDir));
-    streamsList = readContents(String.format("%s/RecordStreamsList.json", relativeDir));
     recordManifestResolve = readContents(String.format("%s/RecordManifestResolve.json", relativeDir));
     traceManifestResolve = readContents(String.format("%s/TraceManifestResolve.json", relativeDir));
     cdkException = readContents(String.format("%s/CdkException.txt", relativeDir));
@@ -101,8 +96,7 @@ class ConnectorBuilderControllerIntegrationTest {
     final SynchronousCdkCommandRunner commandRunner = new MockSynchronousPythonCdkCommandRunner(
         this.writer, this.streamFactory, shouldThrow, exitCode, inputStream, errorStream, outputStream);
     final AirbyteCdkRequesterImpl requester = new AirbyteCdkRequesterImpl(commandRunner);
-    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester),
-        new StreamsHandler(requester));
+    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester));
   }
 
   @Test
@@ -120,20 +114,6 @@ class ConnectorBuilderControllerIntegrationTest {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(traceManifestResolve);
     Assertions.assertThrows(AirbyteCdkInvalidInputException.class,
         () -> controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM)));
-  }
-
-  @Test
-  void testStreamsList() {
-    final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamsList);
-    final StreamsListRead streamsListRead = controller.listStreams(new StreamsListRequestBody().config(A_CONFIG).manifest(A_MANIFEST));
-    assertTrue(streamsListRead.getStreams().size() > 0);
-  }
-
-  @Test
-  void givenTraceMessageWhenStreamsListThenThrowException() {
-    final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(traceManifestResolve);
-    Assertions.assertThrows(AirbyteCdkInvalidInputException.class,
-        () -> controller.listStreams(new StreamsListRequestBody().config(A_CONFIG).manifest(A_MANIFEST)));
   }
 
   @Test

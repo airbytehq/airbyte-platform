@@ -20,8 +20,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
-import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreamsInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -32,13 +30,11 @@ import org.mockito.ArgumentCaptor;
 
 class AirbyteCdkRequesterImplTest {
 
-  private static final String LIST_STREAMS_COMMAND = "list_streams";
   private static final String READ_STREAM_COMMAND = "test_read";
   private static final JsonNode A_CONFIG;
   private static final JsonNode A_MANIFEST;
   private static final String A_STREAM = "test";
   private static final Integer A_LIMIT = 1;
-  private static final String EMPTY_CATALOG = "";
 
   static {
     try {
@@ -56,37 +52,6 @@ class AirbyteCdkRequesterImplTest {
   void setUp() {
     commandRunner = mock(SynchronousCdkCommandRunner.class);
     requester = new AirbyteCdkRequesterImpl(commandRunner);
-  }
-
-  @Test
-  void whenListStreamsThenReturnAdaptedCommandRunnerResponse() throws Exception {
-    final ArgumentCaptor<String> configCaptor = ArgumentCaptor.forClass(String.class);
-    when(commandRunner.runCommand(eq(LIST_STREAMS_COMMAND), configCaptor.capture(), eq(EMPTY_CATALOG)))
-        .thenReturn(new AirbyteRecordMessage().withData(new ObjectMapper()
-            .readTree("{\"streams\":[{\"name\":\"a name\", \"url\": \"a url\"}, {\"name\":\"another name\", \"url\": \"another url\"}]}")));
-
-    final StreamsListRead streamsListRead = requester.listStreams(A_MANIFEST, A_CONFIG);
-
-    // assert returned object
-    assertEquals(2, streamsListRead.getStreams().size());
-    assertEquals(new StreamsListReadStreamsInner().name("a name").url("a url"), streamsListRead.getStreams().get(0));
-    assertEquals(new StreamsListReadStreamsInner().name("another name").url("another url"), streamsListRead.getStreams().get(1));
-
-    assertRunCommandArgs(configCaptor, LIST_STREAMS_COMMAND);
-  }
-
-  @Test
-  void givenNameIsNullWhenListStreamsThenThrowException() throws Exception {
-    when(commandRunner.runCommand(eq(LIST_STREAMS_COMMAND), any(), any()))
-        .thenReturn(new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"url\": \"missing name\"}]}")));
-    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
-  }
-
-  @Test
-  void givenUrlIsNullWhenListStreamsThenThrowException() throws Exception {
-    when(commandRunner.runCommand(eq(LIST_STREAMS_COMMAND), any(), any()))
-        .thenReturn(new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing url\", \"url\": null}]}")));
-    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
   }
 
   ArgumentCaptor<String> testReadStreamSuccess(final Integer limit) throws Exception {

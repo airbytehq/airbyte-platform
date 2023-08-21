@@ -44,7 +44,7 @@ public class ResolveManifestHandler {
           resolveManifestRequestBody.getWorkspaceId(), resolveManifestRequestBody.getProjectId());
       return this.requester.resolveManifest(resolveManifestRequestBody.getManifest());
     } catch (final IOException exc) {
-      LOGGER.error("Error handling list_streams request.", exc);
+      LOGGER.error("Error handling resolve_manifest request.", exc);
       throw new ConnectorBuilderException("Error handling resolve_manifest request.", exc);
     }
   }
