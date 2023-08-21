@@ -1,13 +1,8 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import queryString from "query-string";
-import React, { useCallback } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import { Table } from "components/ui/Table";
-import { SortableTableHeader } from "components/ui/Table";
-
-import { useQuery } from "hooks/useQuery";
 
 import AllConnectionsStatusCell from "./components/AllConnectionsStatusCell";
 import ConnectEntitiesCell from "./components/ConnectEntitiesCell";
@@ -15,7 +10,7 @@ import { ConnectorNameCell } from "./components/ConnectorNameCell";
 import { EntityNameCell } from "./components/EntityNameCell";
 import { LastSyncCell } from "./components/LastSyncCell";
 import styles from "./ImplementationTable.module.scss";
-import { EntityTableDataItem, SortOrderEnum } from "./types";
+import { EntityTableDataItem } from "./types";
 
 interface IProps {
   data: EntityTableDataItem[];
@@ -24,78 +19,20 @@ interface IProps {
 }
 
 const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => {
-  const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
-  const navigate = useNavigate();
-  const sortBy = query.sortBy || "entity";
-  const sortOrder = query.order || SortOrderEnum.ASC;
-
-  const onSortClick = useCallback(
-    (field: string) => {
-      const order =
-        sortBy !== field ? SortOrderEnum.ASC : sortOrder === SortOrderEnum.ASC ? SortOrderEnum.DESC : SortOrderEnum.ASC;
-      navigate({
-        search: queryString.stringify(
-          {
-            sortBy: field,
-            order,
-          },
-          { skipNull: true }
-        ),
-      });
-    },
-    [navigate, sortBy, sortOrder]
-  );
-
-  const sortData = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (a: any, b: any) => {
-      let result;
-      if (sortBy === "lastSync") {
-        result = b[sortBy] - a[sortBy];
-      } else {
-        result = a[`${sortBy}Name`].toLowerCase().localeCompare(b[`${sortBy}Name`].toLowerCase());
-      }
-
-      if (sortOrder === SortOrderEnum.DESC) {
-        return -1 * result;
-      }
-
-      return result;
-    },
-    [sortBy, sortOrder]
-  );
-
-  const sortingData = React.useMemo(() => data.sort(sortData), [sortData, data]);
-
   const columnHelper = createColumnHelper<EntityTableDataItem>();
 
   const columns = React.useMemo(
     () => [
       columnHelper.accessor("entityName", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("entity")}
-            isActive={sortBy === "entity"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.name" />
-          </SortableTableHeader>
-        ),
+        header: () => <FormattedMessage id="tables.name" />,
         meta: {
           thClassName: styles.thEntityName,
         },
         cell: (props) => <EntityNameCell value={props.cell.getValue()} enabled={props.row.original.enabled} />,
+        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("connectorName", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("connector")}
-            isActive={sortBy === "connector"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.connector" />
-          </SortableTableHeader>
-        ),
+        header: () => <FormattedMessage id="tables.connector" />,
         cell: (props) => (
           <ConnectorNameCell
             value={props.cell.getValue()}
@@ -103,23 +40,17 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
             enabled={props.row.original.enabled}
           />
         ),
+        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("connectEntities", {
         header: () => <FormattedMessage id={`tables.${entity}ConnectWith`} />,
         cell: (props) => (
           <ConnectEntitiesCell values={props.cell.getValue()} entity={entity} enabled={props.row.original.enabled} />
         ),
+        enableSorting: false,
       }),
       columnHelper.accessor("lastSync", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("lastSync")}
-            isActive={sortBy === "lastSync"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.lastSync" />
-          </SortableTableHeader>
-        ),
+        header: () => <FormattedMessage id="tables.lastSync" />,
         cell: (props) => (
           <LastSyncCell timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
         ),
@@ -128,20 +59,13 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
         header: () => <FormattedMessage id="sources.status" />,
         id: "status",
         cell: (props) => <AllConnectionsStatusCell connectEntities={props.cell.getValue()} />,
+        enableSorting: false,
       }),
     ],
-    [columnHelper, entity, onSortClick, sortBy, sortOrder]
+    [columnHelper, entity]
   );
 
-  return (
-    <Table
-      columns={columns}
-      data={sortingData}
-      onClickRow={onClickRow}
-      testId={`${entity}sTable`}
-      sortedByColumn={sortBy === "lastSync" ? "lastSync" : `${sortBy}Name`}
-    />
-  );
+  return <Table columns={columns} data={data} onClickRow={onClickRow} testId={`${entity}sTable`} />;
 };
 
 export default ImplementationTable;

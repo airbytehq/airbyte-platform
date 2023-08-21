@@ -1,15 +1,11 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import queryString from "query-string";
-import React, { useCallback } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
-import { SortableTableHeader } from "components/ui/Table";
 import { Table } from "components/ui/Table";
 
 import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useQuery } from "hooks/useQuery";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";
 import { ConnectionStatusCell } from "./components/ConnectionStatusCell";
@@ -19,7 +15,7 @@ import { LastSyncCell } from "./components/LastSyncCell";
 import { StatusCell } from "./components/StatusCell";
 import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
-import { ConnectionTableDataItem, SortOrderEnum } from "./types";
+import { ConnectionTableDataItem } from "./types";
 
 interface ConnectionTableProps {
   data: ConnectionTableDataItem[];
@@ -28,51 +24,8 @@ interface ConnectionTableProps {
 }
 
 const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClickRow }) => {
-  const navigate = useNavigate();
-  const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
   const streamCentricUIEnabled = false;
-
-  const sortBy = query.sortBy || "entityName";
-  const sortOrder = query.order || SortOrderEnum.ASC;
-
-  const onSortClick = useCallback(
-    (field: string) => {
-      const order =
-        sortBy !== field ? SortOrderEnum.ASC : sortOrder === SortOrderEnum.ASC ? SortOrderEnum.DESC : SortOrderEnum.ASC;
-      navigate({
-        search: queryString.stringify(
-          {
-            sortBy: field,
-            order,
-          },
-          { skipNull: true }
-        ),
-      });
-    },
-    [navigate, sortBy, sortOrder]
-  );
-
-  const sortData = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (a: any, b: any) => {
-      let result;
-      if (sortBy === "lastSync") {
-        result = b[sortBy] - a[sortBy];
-      } else {
-        result = a[sortBy].toLowerCase().localeCompare(b[sortBy].toLowerCase());
-      }
-
-      if (sortOrder === SortOrderEnum.DESC) {
-        return -1 * result;
-      }
-
-      return result;
-    },
-    [sortBy, sortOrder]
-  );
-
-  const sortingData = React.useMemo(() => data.sort(sortData), [sortData, data]);
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
 
@@ -84,15 +37,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         size: 170,
       }),
       columnHelper.accessor("name", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("name")}
-            isActive={sortBy === "name"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.name" />
-          </SortableTableHeader>
-        ),
+        header: () => <FormattedMessage id="tables.name" />,
         meta: {
           thClassName: styles.width30,
           responsive: true,
@@ -104,18 +49,13 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             enabled={props.row.original.enabled}
           />
         ),
+        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("entityName", {
         header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("entityName")}
-            isActive={sortBy === "entityName"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage
-              id={entity === "connection" ? "tables.destinationConnectionToName" : `tables.${entity}ConnectionToName`}
-            />
-          </SortableTableHeader>
+          <FormattedMessage
+            id={entity === "connection" ? "tables.destinationConnectionToName" : `tables.${entity}ConnectionToName`}
+          />
         ),
         meta: {
           thClassName: styles.width30,
@@ -129,16 +69,11 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             hideIcon={entity !== "connection"}
           />
         ),
+        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("connectorName", {
         header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("connectorName")}
-            isActive={sortBy === "connectorName"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id={entity === "connection" ? "tables.sourceConnectionToName" : "tables.connector"} />
-          </SortableTableHeader>
+          <FormattedMessage id={entity === "connection" ? "tables.sourceConnectionToName" : "tables.connector"} />
         ),
         meta: {
           thClassName: styles.width30,
@@ -151,9 +86,11 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             enabled={props.row.original.enabled}
           />
         ),
+        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("scheduleData", {
         header: () => <FormattedMessage id="tables.frequency" />,
+        enableSorting: false,
         cell: (props) => (
           <FrequencyCell
             value={props.cell.getValue()}
@@ -163,15 +100,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         ),
       }),
       columnHelper.accessor("lastSync", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("lastSync")}
-            isActive={sortBy === "lastSync"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.lastSync" />
-          </SortableTableHeader>
-        ),
+        header: () => <FormattedMessage id="tables.lastSync" />,
         cell: (props) => <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />,
         meta: {
           thClassName: styles.width20,
@@ -193,6 +122,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             hasBreakingChange={allowAutoDetectSchema && props.row.original.schemaChange === SchemaChange.breaking}
           />
         ),
+        enableSorting: false,
       }),
       columnHelper.accessor("connectionId", {
         header: "",
@@ -200,19 +130,19 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
           thClassName: styles.thConnectionSettings,
         },
         cell: (props) => <ConnectionSettingsCell id={props.cell.getValue()} />,
+        enableSorting: false,
       }),
     ],
-    [columnHelper, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]
+    [columnHelper, entity, allowAutoDetectSchema]
   );
 
   return (
     <Table
       columns={columns}
-      data={sortingData}
+      data={data}
       onClickRow={onClickRow}
       testId="connectionsTable"
       columnVisibility={{ "stream-status": streamCentricUIEnabled }}
-      sortedByColumn={sortBy}
       className={styles.connectionsTable}
     />
   );
