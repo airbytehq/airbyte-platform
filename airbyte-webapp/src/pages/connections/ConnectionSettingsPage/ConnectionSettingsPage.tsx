@@ -157,7 +157,7 @@ export const ConnectionSettingsPage: React.FC = () => {
             </Disclosure.Button>
             <Disclosure.Panel className={styles.advancedPanel}>
               <React.Suspense fallback={<Spinner />}>
-                <StateBlock connectionId={connection.connectionId} />
+                <StateBlock connectionId={connection.connectionId} syncCatalog={connection.syncCatalog} />
               </React.Suspense>
             </Disclosure.Panel>
           </>

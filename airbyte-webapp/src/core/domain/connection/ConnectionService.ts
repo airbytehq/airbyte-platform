@@ -6,6 +6,8 @@ import {
   getStateType,
   ConnectionStream,
   resetConnectionStream,
+  createOrUpdateStateSafe,
+  ConnectionState,
 } from "../../request/AirbyteClient";
 import { AirbyteRequestService } from "../../request/AirbyteRequestService";
 
@@ -32,5 +34,9 @@ export class ConnectionService extends AirbyteRequestService {
 
   public getStateType(connectionId: string) {
     return getStateType({ connectionId }, this.requestOptions);
+  }
+
+  public createOrUpdateState(connectionId: string, state: ConnectionState) {
+    return createOrUpdateStateSafe({ connectionId, connectionState: state }, this.requestOptions);
   }
 }

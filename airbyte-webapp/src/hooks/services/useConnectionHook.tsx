@@ -1,6 +1,6 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useInvalidateWorkspaceStateQuery, useSuspenseQuery } from "core/api";
@@ -19,6 +19,7 @@ import { useConfig } from "../../config";
 import {
   ConnectionScheduleData,
   ConnectionScheduleType,
+  ConnectionStateCreateOrUpdate,
   ConnectionStatus,
   ConnectionStream,
   DestinationRead,
@@ -344,6 +345,42 @@ const useGetConnectionState = (connectionId: string) => {
   const service = useConnectionService();
 
   return useSuspenseQuery(connectionsKeys.getState(connectionId), () => service.getState(connectionId));
+};
+
+export const useCreateOrUpdateState = () => {
+  const service = useConnectionService();
+  const queryClient = useQueryClient();
+  const analyticsService = useAnalyticsService();
+  const { trackError } = useAppMonitoringService();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(
+    ({ connectionId, connectionState }: ConnectionStateCreateOrUpdate) =>
+      service.createOrUpdateState(connectionId, connectionState),
+    {
+      onSuccess: (updatedState) => {
+        analyticsService.track(Namespace.CONNECTION, Action.CREATE_OR_UPDATE_STATE, {
+          actionDescription: "Connection state created or updated",
+          connection_id: updatedState.connectionId,
+          state_type: updatedState.stateType,
+        });
+        queryClient.setQueryData(connectionsKeys.getState(updatedState.connectionId), updatedState);
+        registerNotification({
+          id: `connection.stateUpdateSuccess.${updatedState.connectionId}`,
+          text: <FormattedMessage id="connection.state.success" />,
+          type: "success",
+        });
+      },
+      onError: (error: Error) => {
+        trackError(error);
+        registerNotification({
+          id: `connection.stateUpdateError.${error.message}`,
+          text: error.message,
+          type: "error",
+        });
+      },
+    }
+  );
 };
 
 export {

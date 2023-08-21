@@ -585,6 +585,21 @@
   "connection.customTransformations.successMessage": "Custom transformation settings were updated successfully!",
   "connection.customTransformations.errorMessage": "There was an error during updating your custom transformation settings",
 
+  "connection.state.title": "Connection state",
+  "connection.state.noIncremental": "This connection contains no incremental streams, so it cannot have state.",
+  "connection.state.warning": "Updates to connection state should be handled with extreme care. Make changes only as directed by the Airbyte team.",
+  "connection.state.update": "Update state",
+  "connection.state.confirm.title": "Confirm connection state update",
+  "connection.state.confirm.message": "Are you sure you want to modify the state of this connection?",
+  "connection.state.confirm.shapeChanged": "<b>You have changed the shape of the state object.</b>\n\nThis may cause issues with your connection.\n\nAre you sure you want to modify the state of this connection?",
+  "connection.state.success": "Connection state updated successfully",
+  "connection.state.error.invalidJson": "The connection state must be valid JSON.",
+  "connection.state.error.isSyncing": "The connection state cannot be modified while a sync is running.",
+  "connection.state.error.invalidStreamStateArray": "Each item in the stream state array must have a \"streamDescriptor\" containing a \"name\".",
+  "connection.state.error.invalidStreamStates": "The \"streamStates\" field must be set to an array",
+  "connection.state.revert": "Revert changes",
+  "connection.state.copyTitle": "Copy connection state",
+
   "tables.name": "Name",
   "tables.connector": "Connector",
   "tables.connections": "Connections",
@@ -621,8 +636,6 @@
   "tables.destinationDeleteModalText": "Deleting a destination cannot be undone. No existing data in the destination will be altered.",
   "tables.affectedConnectionsOnDeletion": "The following {count, plural, one {connection} other {connections}} will be deleted:\n",
   "tables.connectionDeleteModalText": "Deleting a connection cannot be undone without a full re-sync. Note that:\n  - All past logs and configurations will be deleted\n  - Updates of new data will stop\n  - No existing data in the destination will be altered",
-  "tables.connectionState.title": "Connection State",
-  "tables.connectionState.noConnectionState": "This connection doesn‘t have a state (yet).",
 
   "admin.destinations": "Destinations",
   "admin.sources": "Sources",
@@ -1055,5 +1068,7 @@
 
   "auth.authError": "An error occured during authentication: {errorMessage}",
 
-  "modal.closeButtonLabel": "Close dialog"
+  "modal.closeButtonLabel": "Close dialog",
+
+  "copyButton.title": "Copy"
 }

@@ -7,12 +7,12 @@
   number: colors.$orange-600;
   delimiter: colors.$inverse;
   keyword: colors.$green-600;
-  lineNumber: colors.$dark-blue-300;
-  lineNumberActive: colors.$dark-blue;
-  line: colors.$grey-100;
+  lineNumber: colors.$grey-300;
+  lineNumberActive: colors.$grey-900;
+  line: colors.$grey-50;
   scrollShadow: colors.$grey-100;
   comment: colors.$grey-400;
   cursor: colors.$inverse;
-  selection: colors.$blue-100;
-  inactiveSelection: colors.$blue-50;
+  selection: colors.$dark-blue-50;
+  inactiveSelection: colors.$dark-blue-40;
 }

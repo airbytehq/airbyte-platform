@@ -4,6 +4,7 @@ import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
@@ -34,17 +35,20 @@ export const ConnectorTitleBlock = <T extends Connector>({
       />
     );
   return (
-    <FlexContainer alignItems="center">
-      <ConnectorIcon icon={connector.icon} className={styles.icon} />
-      <FlexContainer direction="column" gap="sm">
-        <Heading as="h1" size="md">
-          {connector.name}
-        </Heading>
-        <FlexContainer alignItems="center">
-          <Text color="grey">{titleInfo}</Text>
-          <ReleaseStageBadge stage={connectorDefinition.releaseStage} />
+    <FlexContainer direction="column" gap="lg">
+      <FlexContainer alignItems="center">
+        <ConnectorIcon icon={connector.icon} className={styles.icon} />
+        <FlexContainer direction="column" gap="sm">
+          <Heading as="h1" size="md">
+            {connector.name}
+          </Heading>
+          <FlexContainer alignItems="center">
+            <Text color="grey">{titleInfo}</Text>
+            <ReleaseStageBadge stage={connectorDefinition.releaseStage} />
+          </FlexContainer>
         </FlexContainer>
       </FlexContainer>
+      {actorDefinitionVersion.breakingChanges && <Message type="warning" text="Test" />}
     </FlexContainer>
   );
 };

@@ -5,6 +5,7 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.StateApi;
@@ -37,6 +38,14 @@ public class StateApiController implements StateApi {
   @Override
   public ConnectionState createOrUpdateState(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) {
     return ApiHelper.execute(() -> stateHandler.createOrUpdateState(connectionStateCreateOrUpdate));
+  }
+
+  @Post("/create_or_update_safe")
+  @Secured({EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public ConnectionState createOrUpdateStateSafe(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) {
+    return ApiHelper.execute(() -> stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate));
   }
 
   @Post("/get")
