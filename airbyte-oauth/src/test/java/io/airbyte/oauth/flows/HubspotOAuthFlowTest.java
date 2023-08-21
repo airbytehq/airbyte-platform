@@ -21,7 +21,7 @@ public class HubspotOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   void testGetSourceConsentUrlEmptyOAuthSpec() {}
-  
+
   @Override
   void testGetSourceConsentUrl() {}
 
@@ -30,4 +30,5 @@ public class HubspotOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   void testGetDestinationConsentUrlEmptyOAuthSpec() {}
+
 }

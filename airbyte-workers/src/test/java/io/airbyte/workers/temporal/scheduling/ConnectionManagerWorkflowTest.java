@@ -31,8 +31,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
-import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
@@ -48,7 +46,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.GetMaxAttemptOutput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
-import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivityImpl;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
@@ -98,7 +95,6 @@ import io.temporal.worker.Worker;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -246,10 +242,6 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
     when(mRouteToSyncTaskQueueActivity.routeToCheckConnection(Mockito.any()))
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.CHECK_CONNECTION.name()));
-
-    when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
-        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckConnectionUseApiEnabled.INSTANCE.getKey(), false,
-            CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey(), true)));
 
     when(mCheckRunProgressActivity.checkProgress(Mockito.any()))
         .thenReturn(new CheckRunProgressActivity.Output(false)); // false == complete failure
