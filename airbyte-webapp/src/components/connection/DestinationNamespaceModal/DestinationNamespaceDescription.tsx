@@ -8,11 +8,11 @@ import { Text } from "components/ui/Text";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
 
-import { DestinationNamespaceFormValueType } from "./DestinationNamespaceModal";
+import { DestinationNamespaceFormValues } from "./DestinationNamespaceModal";
 import { ExampleSettingsTable } from "./ExampleSettingsTable";
 
 export const DestinationNamespaceDescription = () => {
-  const { watch } = useFormContext<DestinationNamespaceFormValueType>();
+  const { watch } = useFormContext<DestinationNamespaceFormValues>();
   const watchedNamespaceDefinition = watch("namespaceDefinition");
 
   return (

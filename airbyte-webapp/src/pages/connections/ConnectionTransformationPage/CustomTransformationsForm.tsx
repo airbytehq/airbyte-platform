@@ -24,7 +24,7 @@ const customTransformationsValidationSchema: SchemaOf<CustomTransformationsFormV
   transformations: yup.array().of(dbtOperationReadOrCreateSchema),
 });
 
-export const CustomTransformationsHookForm: React.FC = () => {
+export const CustomTransformationsForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   const { registerNotification } = useNotificationService();

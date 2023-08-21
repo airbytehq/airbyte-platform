@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react-hooks";
+import { renderHook } from "@testing-library/react";
 import * as formik from "formik";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";

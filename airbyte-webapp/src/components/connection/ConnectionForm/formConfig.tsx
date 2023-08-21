@@ -9,7 +9,6 @@ import { useCurrentWorkspace } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
-  isDbtTransformationOld,
   isNormalizationTransformation,
   isWebhookTransformation,
   NormalizationType,
@@ -304,10 +303,6 @@ export function mapFormPropsToOperation(
  */
 export const getInitialTransformations = (operations: OperationRead[]): DbtOperationRead[] =>
   operations?.filter(isDbtTransformation) ?? [];
-
-// TODO: remove after NormalizationHookFormCard and CustomTransformationsHookFormCard form migration
-export const getInitialTransformationsOld = (operations: OperationCreate[]): OperationRead[] =>
-  operations?.filter(isDbtTransformationOld) ?? [];
 
 export const getInitialNormalization = (
   operations?: Array<OperationRead | OperationCreate>,

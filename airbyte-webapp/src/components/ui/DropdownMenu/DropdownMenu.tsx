@@ -21,7 +21,7 @@ const MenuItemContent: React.FC<React.PropsWithChildren<MenuItemContentProps>> =
   );
 };
 
-export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> = ({
+export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   options,
   children,
   onChange,

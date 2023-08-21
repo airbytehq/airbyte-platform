@@ -30,15 +30,15 @@ describe("OAuthLogin", () => {
     mockLoginWithOAuth.mockReturnValue(EMPTY);
   });
 
-  it("should call auth service for Google", () => {
+  it("should call auth service for Google", async () => {
     const { getByTestId } = render(<OAuthLogin />, { wrapper: TestWrapper });
-    userEvents.click(getByTestId("googleOauthLogin"));
+    await userEvents.click(getByTestId("googleOauthLogin"));
     expect(mockLoginWithOAuth).toHaveBeenCalledWith("google");
   });
 
-  it("should call auth service for GitHub", () => {
+  it("should call auth service for GitHub", async () => {
     const { getByTestId } = render(<OAuthLogin />, { wrapper: TestWrapper });
-    userEvents.click(getByTestId("githubOauthLogin"));
+    await userEvents.click(getByTestId("githubOauthLogin"));
     expect(mockLoginWithOAuth).toHaveBeenCalledWith("github");
   });
 });

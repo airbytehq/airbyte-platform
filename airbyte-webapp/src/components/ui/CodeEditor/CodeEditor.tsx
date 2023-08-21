@@ -16,6 +16,7 @@ interface CodeEditorProps {
   lineNumberCharacterWidth?: number;
   onMount?: (editor: editor.IStandaloneCodeEditor) => void;
   automaticLayout?: boolean;
+  showSuggestions?: boolean;
 }
 
 function hslToHex(hue: number, saturation: number, lightness: number) {
@@ -49,6 +50,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   lineNumberCharacterWidth,
   onMount,
   automaticLayout,
+  showSuggestions = true,
 }) => {
   const monaco = useMonaco();
   const { theme: airbyteTheme } = useAirbyteTheme();
@@ -105,6 +107,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         minimap: {
           enabled: false,
         },
+        suggestOnTriggerCharacters: showSuggestions,
       }}
     />
   );

@@ -125,6 +125,7 @@ export const StreamsList = () => {
               variant="inBlock"
               className={styles.table}
               getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
+              sorting={false}
             />
 
             {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}

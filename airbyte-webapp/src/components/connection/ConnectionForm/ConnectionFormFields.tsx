@@ -45,7 +45,9 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
   // If the source doesn't select any streams by default, the initial untouched state
   // won't validate that at least one is selected. In this case, a user could submit the form
   // without selecting any streams, which would trigger an error and cause a lousy UX.
-  useEffectOnce(() => validateForm && validateForm());
+  useEffectOnce(() => {
+    validateForm?.();
+  });
 
   const isEditMode = mode === "edit";
 

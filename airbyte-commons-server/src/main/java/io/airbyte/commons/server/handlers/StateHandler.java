@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.commons.converters.StateConverter;
+import io.airbyte.commons.server.errors.SyncIsRunningException;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.persistence.StatePersistence;
 import jakarta.inject.Singleton;
@@ -23,9 +24,11 @@ import java.util.UUID;
 public class StateHandler {
 
   private final StatePersistence statePersistence;
+  private final JobHistoryHandler jobHistoryHandler;
 
-  public StateHandler(final StatePersistence statePersistence) {
+  public StateHandler(final StatePersistence statePersistence, final JobHistoryHandler jobHistoryHandler) {
     this.statePersistence = statePersistence;
+    this.jobHistoryHandler = jobHistoryHandler;
   }
 
   public ConnectionState getState(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
@@ -42,6 +45,14 @@ public class StateHandler {
     final Optional<StateWrapper> newInternalState = statePersistence.getCurrentState(connectionId);
 
     return StateConverter.toApi(connectionId, newInternalState.orElse(null));
+  }
+
+  public ConnectionState createOrUpdateStateSafe(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) throws IOException {
+    if (jobHistoryHandler.getLatestRunningSyncJob(connectionStateCreateOrUpdate.getConnectionId()).isPresent()) {
+      throw new SyncIsRunningException("State cannot be updated while a sync is running for this connection.");
+    }
+
+    return createOrUpdateState(connectionStateCreateOrUpdate);
   }
 
 }

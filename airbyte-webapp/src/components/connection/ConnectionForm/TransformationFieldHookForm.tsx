@@ -6,7 +6,7 @@ import { ArrayOfObjectsHookFormEditor } from "components/ArrayOfObjectsEditor";
 
 import { isDefined } from "core/utils/common";
 import { useModalService } from "hooks/services/Modal";
-import { CustomTransformationsFormValues } from "pages/connections/ConnectionTransformationPage/CustomTransformationsHookForm";
+import { CustomTransformationsFormValues } from "pages/connections/ConnectionTransformationPage/CustomTransformationsForm";
 
 import { useDefaultTransformation } from "./formConfig";
 import { DbtOperationReadOrCreate, TransformationHookForm } from "../TransformationHookForm";

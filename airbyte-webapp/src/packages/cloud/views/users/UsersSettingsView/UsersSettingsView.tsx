@@ -88,21 +88,10 @@ export const UsersTable: React.FC = () => {
         header: () => <FormattedMessage id="userSettings.table.column.email" />,
         cell: (props) => props.cell.getValue(),
       }),
-      // TEMP: Currently all cloud users are admins.
-      // Remove when there is more than role
-      // {
-      //   Header: (
-      //     <>
-      //       <FormattedMessage id="userSettings.table.column.role" />
-      //       <RoleToolTip />
-      //     </>
-      //   ),
-      //   headerHighlighted: true,
-      //   accessor: "userId",
-      //   Cell: (_: CellProps<User>) => "Admin",
-      // },
+
       columnHelper.accessor("status", {
         header: () => <FormattedMessage id="userSettings.table.column.action" />,
+        enableSorting: false,
         cell: (props) =>
           [
             user?.userId !== props.row.original.userId ? (

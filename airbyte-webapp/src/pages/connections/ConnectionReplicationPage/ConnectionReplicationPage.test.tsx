@@ -136,13 +136,13 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
       const renderResult = await render();
 
-      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
+      await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
       const cronExpressionInput = renderResult.getByTestId("cronExpression");
 
-      userEvent.clear(cronExpressionInput);
+      await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
       const errorMessage = renderResult.getByText(/must contain at least 6 fields/);
@@ -155,13 +155,14 @@ describe("ConnectionReplicationPage", () => {
 
       const renderResult = await render();
 
-      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
+      await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
       const cronExpressionField = renderResult.getByTestId("cronExpression");
 
-      await userEvent.type(cronExpressionField, `{selectall}${CRON_EXPRESSION_EVERY_MINUTE}`, { delay: 1 });
+      await userEvent.clear(cronExpressionField);
+      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
       const errorMessage = renderResult.queryByTestId("cronExpressionError");
 
@@ -181,13 +182,14 @@ describe("ConnectionReplicationPage", () => {
         </TestWrapper>
       );
 
-      userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
+      await userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
 
       const cronExpressionField = container.getByTestId("cronExpression");
 
-      await userEvent.type(cronExpressionField, `{selectall}${CRON_EXPRESSION_EVERY_MINUTE}`, { delay: 1 });
+      await userEvent.clear(cronExpressionField);
+      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
       const errorMessage = container.getByTestId("cronExpressionError");
 

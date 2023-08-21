@@ -1,0 +1,11 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.title {
+  flex-shrink: 0;
+}
+
+.stateEditor {
+  min-height: 400px;
+  flex: 1 1 0;
+}

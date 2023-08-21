@@ -8,7 +8,6 @@ from .actions.utils import extract_engine_versions
 
 class OssSettings(GlobalSettings):   
      version: str = Field("dev", env="VERSION")     
-     dagger: bool = Field(True, env="DAGGER")  
      testcontainers_ryuk_disabled: str = Field("true", env="TESTCONTAINERS_RYUK_DISABLED")     
      #docker_host: str = Field("tcp://docker:2375", env="DOCKER_HOST")                                                                                                        
      job_main_container_memory_request: Optional[str] = Field(None, env="JOB_MAIN_CONTAINER_MEMORY_REQUEST")                                                    

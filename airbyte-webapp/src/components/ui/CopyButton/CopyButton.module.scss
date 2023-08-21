@@ -1,0 +1,15 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.button {
+  padding: variables.$spacing-lg;
+}
+
+.success {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  top: -13px;
+  right: -15px;
+  background-color: colors.$foreground;
+}

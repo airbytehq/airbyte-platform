@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react-hooks";
+import { act, renderHook } from "@testing-library/react";
 import React from "react";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
@@ -39,7 +39,10 @@ jest.mock("core/api", () => ({
 }));
 
 describe("ConnectionFormService", () => {
-  const Wrapper: React.FC<Parameters<typeof ConnectionFormServiceProvider>[0]> = ({ children, ...props }) => (
+  const Wrapper: React.FC<React.PropsWithChildren<Parameters<typeof ConnectionFormServiceProvider>[0]>> = ({
+    children,
+    ...props
+  }) => (
     <TestWrapper>
       <ConnectionFormServiceProvider {...props}>{children}</ConnectionFormServiceProvider>
     </TestWrapper>
@@ -58,12 +61,11 @@ describe("ConnectionFormService", () => {
       destination: mockConnection.destination,
     };
     const { result } = renderHook(useConnectionFormService, {
-      wrapper: Wrapper,
-      initialProps: {
-        connection: partialConnection,
-        mode: "create",
-        refreshSchema,
-      },
+      wrapper: ({ children }) => (
+        <Wrapper connection={partialConnection} mode="create" refreshSchema={refreshSchema}>
+          {children}
+        </Wrapper>
+      ),
     });
 
     expect(result.current.connection).toEqual(partialConnection);
@@ -71,12 +73,11 @@ describe("ConnectionFormService", () => {
 
   it("should take a full Connection", async () => {
     const { result } = renderHook(useConnectionFormService, {
-      wrapper: Wrapper,
-      initialProps: {
-        connection: mockConnection,
-        mode: "create",
-        refreshSchema,
-      },
+      wrapper: ({ children }) => (
+        <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          {children}
+        </Wrapper>
+      ),
     });
 
     expect(result.current.connection).toEqual(mockConnection);
@@ -85,12 +86,11 @@ describe("ConnectionFormService", () => {
   describe("Error Message Generation", () => {
     it("should return an error message if the form is invalid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       expect(result.current.getErrorMessage(false)).toBe(
@@ -100,12 +100,11 @@ describe("ConnectionFormService", () => {
 
     it("should not return an error message if the form is valid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       expect(result.current.getErrorMessage(true)).toBe(null);
@@ -113,12 +112,11 @@ describe("ConnectionFormService", () => {
 
     it("should return an error message if the form is invalid and not dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       expect(result.current.getErrorMessage(false)).toBe(
@@ -128,12 +126,11 @@ describe("ConnectionFormService", () => {
 
     it("should return an error message when given a submit error", () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       const errMsg = "asdf";
@@ -149,12 +146,11 @@ describe("ConnectionFormService", () => {
 
     it("should return an error message if the streams field is invalid", async () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       const errors = {
@@ -168,12 +164,11 @@ describe("ConnectionFormService", () => {
 
     it("should not return an error message if the form is valid", async () => {
       const { result } = renderHook(useConnectionFormService, {
-        wrapper: Wrapper,
-        initialProps: {
-          connection: mockConnection,
-          mode: "create",
-          refreshSchema,
-        },
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
       });
 
       const errors = {

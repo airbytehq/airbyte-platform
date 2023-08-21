@@ -93,9 +93,9 @@ describe("Unsaved changes modal on create source page", () => {
     openHomepage();
 
     cy.get("[data-testid='confirmationModal']").should("exist");
-    cy.get("[data-testid='confirmationModal']").contains("Discard changes");
+    cy.get("[data-testid='confirmationModal']").contains("Unsaved changes will be lost");
     cy.get("[data-testid='confirmationModal']").contains(
-      "There are unsaved changes. Are you sure you want to discard your changes?"
+      "Your changes will be lost if you navigate away from this page. Are you sure you want to leave?"
     );
   });
 
@@ -112,9 +112,9 @@ describe("Unsaved changes modal on create source page", () => {
     openHomepage();
 
     cy.get("[data-testid='confirmationModal']").should("exist");
-    cy.get("[data-testid='confirmationModal']").contains("Discard changes");
+    cy.get("[data-testid='confirmationModal']").contains("Unsaved changes will be lost");
     cy.get("[data-testid='confirmationModal']").contains(
-      "There are unsaved changes. Are you sure you want to discard your changes?"
+      "Your changes will be lost if you navigate away from this page. Are you sure you want to leave?"
     );
   });
 });

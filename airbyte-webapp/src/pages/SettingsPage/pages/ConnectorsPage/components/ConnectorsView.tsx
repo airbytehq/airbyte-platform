@@ -87,6 +87,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         meta: {
           thClassName: styles.thName,
         },
+
         cell: (props) => (
           <ConnectorCell
             connectorName={props.cell.getValue()}
@@ -103,6 +104,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         meta: {
           thClassName: styles.thDockerRepository,
         },
+
         cell: (props) => <ImageCell imageName={props.cell.getValue()} link={props.row.original.documentationUrl} />,
       }),
       columnHelper.accessor("dockerImageTag", {
@@ -190,13 +192,13 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   if (usedConnectorsDefinitions.length > 0) {
     sections.push({
       title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
-      content: <Table columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} />,
+      content: <Table columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} sorting={false} />,
     });
   }
 
   sections.push({
     title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
-    content: <Table columns={definitionColumns} data={filteredConnectorsDefinitions} />,
+    content: <Table columns={definitionColumns} data={filteredConnectorsDefinitions} sorting={false} />,
   });
 
   return (
