@@ -12,9 +12,6 @@ micronaut:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
   endpoints:
-    v1/list/streams:
-      enabled: true
-      sensitive: true
     v1/manifest_template:
       enable: true
       sensitive: false

@@ -12,12 +12,9 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
-import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
-import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
@@ -39,16 +36,13 @@ public class ConnectorBuilderController implements V1Api {
   private final HealthHandler healthHandler;
   private final StreamHandler streamHandler;
   private final ResolveManifestHandler resolveManifestHandler;
-  private final StreamsHandler streamsHandler;
 
   public ConnectorBuilderController(final HealthHandler healthHandler,
                                     final ResolveManifestHandler resolveManifestHandler,
-                                    final StreamHandler streamHandler,
-                                    final StreamsHandler streamsHandler) {
+                                    final StreamHandler streamHandler) {
     this.healthHandler = healthHandler;
     this.streamHandler = streamHandler;
     this.resolveManifestHandler = resolveManifestHandler;
-    this.streamsHandler = streamsHandler;
   }
 
   @Override
@@ -58,15 +52,6 @@ public class ConnectorBuilderController implements V1Api {
   @ExecuteOn(TaskExecutors.IO)
   public HealthCheckRead getHealthCheck() {
     return healthHandler.getHealthCheck();
-  }
-
-  @Override
-  @Post(uri = "/streams/list",
-        produces = MediaType.APPLICATION_JSON)
-  @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
-  public StreamsListRead listStreams(final StreamsListRequestBody streamsListRequestBody) {
-    return streamsHandler.listStreams(streamsListRequestBody);
   }
 
   @Override

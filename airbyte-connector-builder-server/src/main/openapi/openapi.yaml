@@ -37,27 +37,6 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/streams/list:
-    post:
-      summary: List all streams present in the connector manifest, along with their specific request URLs
-      operationId: listStreams
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StreamsListRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StreamsListRead"
-        "400":
-          $ref: "#/components/responses/ExceptionResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/manifest/resolve:
     post:
       summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
@@ -251,48 +230,6 @@ components:
     # --- Commenting out for now since they do not work with our orval openapi client generator ---
     # AirbyteProtocol:
     #   $ref: ../../../../airbyte-protocol/protocol-models/src/main/resources/airbyte_protocol/airbyte_protocol.yaml
-    StreamsListRequestBody:
-      type: object
-      required:
-        - config
-        - manifest
-      properties:
-        config:
-          $ref: "#/components/schemas/ConnectorConfig"
-        manifest:
-          $ref: "#/components/schemas/ConnectorManifest"
-        workspace_id:
-          type: string
-          description: ID of the workspace where the request is coming from
-        project_id:
-          type: string
-          description: ID of the project where the request is coming from
-    StreamsListRead:
-      type: object
-      required:
-        - streams
-      properties:
-        streams:
-          type: array
-          items:
-            type: object
-            description: The stream names present in the connector manifest
-            required:
-              - name
-              - url
-            properties:
-              name:
-                type: string
-                description: The name of the stream
-              url:
-                type: string
-                description: The URL to which read requests will be made for this stream
-              # --- Potential addition for a later phase ---
-              # slices:
-              #   type: array
-              #   description: list of slices that will be retrieved for this stream
-              #   items:
-              #     type: object
     ResolveManifestRequestBody:
       type: object
       required:
