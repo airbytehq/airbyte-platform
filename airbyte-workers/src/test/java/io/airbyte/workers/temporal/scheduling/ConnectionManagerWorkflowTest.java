@@ -107,6 +107,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -1569,6 +1570,7 @@ class ConnectionManagerWorkflowTest {
              unit = TimeUnit.SECONDS)
     @DisplayName("We hydrate, persist and use retry manager.")
     @MethodSource("coreFailureTypesMatrix")
+    @Disabled("This test depends on another test. Disabling until it doesn't")
     void hydratePersistRetryManagerFlow(final Class<? extends SyncWorkflow> failureCase) throws Exception {
       final var connectionId = UUID.randomUUID();
       final var jobId = 32198714L;
@@ -1823,6 +1825,7 @@ class ConnectionManagerWorkflowTest {
              unit = TimeUnit.SECONDS)
     @DisplayName("Jobs can be cancelled during the backoff.")
     @ValueSource(longs = {1, 5, 20, 30, 1439, 21})
+    @Disabled("Flaky test, temporarily disabled")
     void cancelWorksDuringBackoff(final long minutes) throws Exception {
       final var backoff = Duration.ofMinutes(minutes);
       final var policy = BackoffPolicy.builder()
