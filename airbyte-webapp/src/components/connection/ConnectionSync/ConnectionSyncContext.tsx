@@ -145,7 +145,7 @@ export const useConnectionSyncContext = () => {
   return context;
 };
 
-export const ConnectionSyncContextProvider: React.FC = ({ children }) => {
+export const ConnectionSyncContextProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { connection } = useConnectionEditService();
   const context = useConnectionSyncContextInit(connection);
 

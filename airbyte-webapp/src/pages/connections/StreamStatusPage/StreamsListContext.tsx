@@ -42,7 +42,7 @@ export const useStreamsListContext = () => {
   return context;
 };
 
-export const StreamsListContextProvider: React.FC = ({ children }) => {
+export const StreamsListContextProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { connection } = useConnectionEditService();
   const streamsContext = useStreamsContextInit(connection.connectionId);
 

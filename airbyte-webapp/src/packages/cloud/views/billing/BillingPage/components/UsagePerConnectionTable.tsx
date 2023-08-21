@@ -57,7 +57,8 @@ export const UsagePerConnectionTable: React.FC = () => {
   );
 
   const sortData = useCallback(
-    (a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any, b: any) => {
       let result;
       if (sortBy === "totalUsage") {
         result = a.totalUsage - b.totalUsage;

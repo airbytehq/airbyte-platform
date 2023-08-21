@@ -51,9 +51,9 @@ describe(`${NotificationSettingsForm.name}`, () => {
       [FeatureItem.EmailNotifications]
     );
     const sendOnSuccessToggle = getByTestId("sendOnConnectionUpdate.email");
-    userEvent.click(sendOnSuccessToggle);
+    await userEvent.click(sendOnSuccessToggle);
     const submitButton = getByText(messages["form.saveChanges"]);
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
     await waitFor(() => expect(mockUpdateNotificationSettings).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(mockUpdateNotificationSettings).toHaveBeenCalledWith({

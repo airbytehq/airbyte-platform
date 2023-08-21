@@ -47,7 +47,8 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
   );
 
   const sortData = useCallback(
-    (a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any, b: any) => {
       let result;
       if (sortBy === "lastSync") {
         result = b[sortBy] - a[sortBy];

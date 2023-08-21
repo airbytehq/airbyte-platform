@@ -19,43 +19,43 @@ describe("<TagInput />", () => {
   });
 
   describe("delimiters and keypress events create tags", () => {
-    it("adds a tag when user types a tag and hits enter", () => {
+    it("adds a tag when user types a tag and hits enter", async () => {
       render(<TagInputWithWrapper />);
       const input = screen.getByRole("combobox");
-      userEvent.type(input, "tag3{enter}");
+      await userEvent.type(input, "tag3{enter}");
       const tag3 = screen.getByText("tag3");
       expect(tag3).toBeInTheDocument();
     });
-    it("adds a tag when user types a tag and hits tab", () => {
+    it("adds a tag when user types a tag and hits tab", async () => {
       render(<TagInputWithWrapper />);
       const input = screen.getByRole("combobox");
-      userEvent.type(input, "tag3{Tab}");
+      await userEvent.type(input, "tag3{Tab}");
       const tag3 = screen.getByText("tag3");
       expect(tag3).toBeInTheDocument();
     });
 
-    it("adds multiple tags when a user enters a string with commas", () => {
+    it("adds multiple tags when a user enters a string with commas", async () => {
       render(<TagInputWithWrapper />);
       const input = screen.getByRole("combobox");
-      userEvent.type(input, "tag3, tag4,");
+      await userEvent.type(input, "tag3, tag4,");
       const tag3 = screen.getByText("tag3");
       expect(tag3).toBeInTheDocument();
       const tag4 = screen.getByText("tag4");
       expect(tag4).toBeInTheDocument();
     });
-    it("adds multiple tags when a user enters a string with semicolons", () => {
+    it("adds multiple tags when a user enters a string with semicolons", async () => {
       render(<TagInputWithWrapper />);
       const input = screen.getByRole("combobox");
-      userEvent.type(input, "tag3; tag4;");
+      await userEvent.type(input, "tag3; tag4;");
       const tag3 = screen.getByText("tag3");
       expect(tag3).toBeInTheDocument();
       const tag4 = screen.getByText("tag4");
       expect(tag4).toBeInTheDocument();
     });
-    it("handles a combination of methods at once", () => {
+    it("handles a combination of methods at once", async () => {
       render(<TagInputWithWrapper />);
       const input = screen.getByRole("combobox");
-      userEvent.type(input, "tag3; tag4{Tab} tag5, tag6{enter}");
+      await userEvent.type(input, "tag3; tag4{Tab} tag5, tag6{enter}");
       const tag3 = screen.getByText("tag3");
       expect(tag3).toBeInTheDocument();
       const tag4 = screen.getByText("tag4");
@@ -67,7 +67,7 @@ describe("<TagInput />", () => {
     });
   });
 
-  it("correctly removes a tag when user clicks its Remove button", () => {
+  it("correctly removes a tag when user clicks its Remove button", async () => {
     render(<TagInputWithWrapper />);
     const tag1 = screen.getByText("tag1");
     expect(tag1).toBeInTheDocument();
@@ -76,11 +76,11 @@ describe("<TagInput />", () => {
     expect(tag2).toBeInTheDocument();
 
     const input = screen.getByRole("combobox");
-    userEvent.type(input, "tag3{enter}");
+    await userEvent.type(input, "tag3{enter}");
     const tag3 = screen.getByText("tag3");
     expect(tag3).toBeInTheDocument();
     const removeTag2Button = screen.getByRole("button", { name: "Remove tag2" });
-    userEvent.click(removeTag2Button);
+    await userEvent.click(removeTag2Button);
 
     const tag1again = screen.getByText("tag1");
     expect(tag1again).toBeInTheDocument();

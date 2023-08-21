@@ -87,7 +87,7 @@ describe("<SchemaChangesDetected />", () => {
     expect(getByTestId("schemaChangesDetected")).toHaveTextContent(en["connection.schemaChange.nonBreaking"]);
   });
 
-  it("calls refresh schema after review button click", () => {
+  it("calls refresh schema after review button click", async () => {
     mockUseConnectionEditService.mockReturnValue({
       connection: { mockConnection, schemaChange: SchemaChange.non_breaking },
       schemaHasBeenRefreshed: false,
@@ -98,7 +98,7 @@ describe("<SchemaChangesDetected />", () => {
 
     const { getByRole } = renderComponent();
 
-    userEvent.click(getByRole("button"));
+    await userEvent.click(getByRole("button"));
 
     expect(mockedNavigate).toHaveBeenCalledWith("replication", { state: { triggerRefreshSchema: true } });
   });

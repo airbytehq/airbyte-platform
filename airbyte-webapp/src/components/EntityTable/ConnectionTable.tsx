@@ -54,7 +54,8 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   );
 
   const sortData = useCallback(
-    (a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any, b: any) => {
       let result;
       if (sortBy === "lastSync") {
         result = b[sortBy] - a[sortBy];

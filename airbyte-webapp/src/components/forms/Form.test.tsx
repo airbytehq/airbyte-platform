@@ -54,11 +54,11 @@ describe(`${Form.name}`, () => {
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+    await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledWith({ firstName: "John", lastName: "Doe" }));
   });
@@ -78,11 +78,11 @@ describe(`${Form.name}`, () => {
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+    await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnSuccess).toHaveBeenCalledTimes(1));
   });
@@ -103,11 +103,11 @@ describe(`${Form.name}`, () => {
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+    await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
-    userEvent.click(submitButton);
+    await userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnError).toHaveBeenCalledTimes(1));
   });
@@ -151,7 +151,7 @@ describe(`${Form.name}`, () => {
     it("does not reinitialize default values by default", async () => {
       await render(<MockReinitializeForm />);
 
-      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+      await userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
 
       await waitFor(() =>
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(mockStartDefaultValues.firstName)
@@ -161,7 +161,7 @@ describe(`${Form.name}`, () => {
     it("reinitializes default values when reinitializeDefaultValues is true", async () => {
       await render(<MockReinitializeForm reinitializeDefaultValues />);
 
-      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+      await userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
 
       await waitFor(() => expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(mockEndDefaultValues.firstName));
     });
@@ -171,10 +171,11 @@ describe(`${Form.name}`, () => {
 
       await render(<MockReinitializeForm reinitializeDefaultValues />);
 
-      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+      await userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
 
       // By making the form dirty, reinitialization of default values should not occur
-      userEvent.type(screen.getByLabelText(FIRST_NAME.label), `{selectall}${NEW_FIRST_NAME}`);
+      await userEvent.clear(screen.getByLabelText(FIRST_NAME.label));
+      await userEvent.type(screen.getByLabelText(FIRST_NAME.label), NEW_FIRST_NAME);
 
       await waitFor(() => expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(NEW_FIRST_NAME));
     });
@@ -213,8 +214,8 @@ describe(`${Form.name}`, () => {
 
       await render(<TestForm onSubmit={onSubmit} />);
 
-      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+      await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
@@ -224,7 +225,7 @@ describe(`${Form.name}`, () => {
       const submitButton = screen
         .getAllByRole("button")
         .filter((button) => button.getAttribute("type") === "submit")[0];
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("");
@@ -242,8 +243,8 @@ describe(`${Form.name}`, () => {
 
       await render(<TestForm onSubmit={onSubmit} />);
 
-      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+      await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
@@ -253,7 +254,7 @@ describe(`${Form.name}`, () => {
       const submitButton = screen
         .getAllByRole("button")
         .filter((button) => button.getAttribute("type") === "submit")[0];
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("Jane");
@@ -271,8 +272,8 @@ describe(`${Form.name}`, () => {
 
       await render(<TestForm onSubmit={onSubmit} />);
 
-      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
-      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+      await userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      await userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
@@ -282,7 +283,7 @@ describe(`${Form.name}`, () => {
       const submitButton = screen
         .getAllByRole("button")
         .filter((button) => button.getAttribute("type") === "submit")[0];
-      userEvent.click(submitButton);
+      await userEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");

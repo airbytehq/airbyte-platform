@@ -44,7 +44,8 @@ export const ConnectorBuilderListPage: React.FC = () => {
   );
 
   const sortData = useCallback(
-    (a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any, b: any) => {
       const result = a[sortBy].toLowerCase().localeCompare(b[sortBy].toLowerCase());
 
       if (sortOrder === SortOrderEnum.DESC) {

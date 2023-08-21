@@ -1,5 +1,4 @@
-import { render } from "@testing-library/react";
-import { act, renderHook } from "@testing-library/react-hooks";
+import { render, renderHook, act } from "@testing-library/react";
 import React from "react";
 import { FormattedMessage, IntlConfig, useIntl } from "react-intl";
 

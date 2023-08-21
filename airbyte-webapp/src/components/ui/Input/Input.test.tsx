@@ -1,4 +1,5 @@
 import { fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { act } from "react-dom/test-utils";
 
 import { render } from "test-utils/testutils";
@@ -40,7 +41,7 @@ describe("<Input />", () => {
     const value = "eight888";
     const { getByTestId, getByRole } = await render(<Input type="password" defaultValue={value} />);
 
-    getByTestId("toggle-password-visibility-button")?.click();
+    await userEvent.click(getByTestId("toggle-password-visibility-button"));
 
     const inputEl = getByTestId("input") as HTMLInputElement;
 

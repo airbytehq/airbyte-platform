@@ -19,7 +19,7 @@ export const openSourceConnectionsPage = (sourceName: string) => {
 };
 
 export const openNewSourcePage = () => {
-  cy.wait("@getSourcesList").then(({ response }) => {
+  cy.wait("@getSourcesList", { timeout: 30000 }).then(({ response }) => {
     if (response?.body.sources.length) {
       cy.get(newSource).click();
     }

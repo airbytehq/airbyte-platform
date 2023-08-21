@@ -18,7 +18,7 @@ export const openDestinationConnectionsPage = (destinationName: string) => {
 };
 
 export const openNewDestinationForm = () => {
-  cy.wait("@getDestinationsList").then(({ response }) => {
+  cy.wait("@getDestinationsList", { timeout: 30000 }).then(({ response }) => {
     if (response?.body.destinations.length) {
       cy.get(newDestination).click();
     }

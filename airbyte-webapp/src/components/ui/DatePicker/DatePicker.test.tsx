@@ -52,11 +52,16 @@ describe(`${toEquivalentLocalTime.name}`, () => {
 });
 
 describe(`${DatePicker.name}`, () => {
+  let user: ReturnType<(typeof userEvent)["setup"]>;
+
   beforeAll(() => {
+    // Since we're using jest's fake timers we need to make sure userEvent understands how to advance them
+    user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     jest.useFakeTimers().setSystemTime(new Date("2010-09-05T00:00:00"));
   });
 
   afterAll(() => {
+    jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
@@ -76,8 +81,7 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const input = screen.getByTestId("input");
-    // Important: input delay was removed here because it conflicts with jest.useFakeTimers() in user-event < 14.0.0
-    userEvent.type(input, MOCK_DESIRED_DATETIME);
+    await user.type(input, MOCK_DESIRED_DATETIME);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
   });
@@ -98,9 +102,9 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const datepicker = screen.getByLabelText("Open datepicker");
-    userEvent.click(datepicker);
+    await user.click(datepicker);
     const date = screen.getByLabelText("Choose Sunday, September 12th, 2010");
-    userEvent.click(date);
+    await user.click(date);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATE);
   });
@@ -122,9 +126,9 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const datepicker = screen.getByLabelText("Open datepicker");
-    userEvent.click(datepicker);
+    await user.click(datepicker);
     const date = screen.getByText("12:00 PM");
-    userEvent.click(date);
+    await user.click(date);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
   });
@@ -147,9 +151,9 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const datepicker = screen.getByLabelText("Open datepicker");
-    userEvent.click(datepicker);
+    await user.click(datepicker);
     const date = screen.getByText("12:00 PM");
-    userEvent.click(date);
+    await user.click(date);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
   });
@@ -172,9 +176,9 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const datepicker = screen.getByLabelText("Open datepicker");
-    userEvent.click(datepicker);
+    await user.click(datepicker);
     const date = screen.getByText("12:00 PM");
-    userEvent.click(date);
+    await user.click(date);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
   });
@@ -188,9 +192,9 @@ describe(`${DatePicker.name}`, () => {
     );
 
     const datepicker = screen.getByLabelText("Open datepicker");
-    userEvent.click(datepicker);
+    await user.click(datepicker);
     const date = screen.getByLabelText("Choose Sunday, September 12th, 2010");
-    userEvent.click(date);
+    await user.click(date);
 
     const input = screen.getByTestId("input");
 

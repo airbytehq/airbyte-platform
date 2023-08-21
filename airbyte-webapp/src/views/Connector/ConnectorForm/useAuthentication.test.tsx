@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react-hooks";
+import { renderHook } from "@testing-library/react";
 import get from "lodash/get";
 import { FieldError, useFormContext } from "react-hook-form";
 
@@ -46,7 +46,7 @@ const mockContext = ({ connector, values, submitCount, fieldMeta = {} }: MockPar
 const useAuthentication = (withOauthFeature = true) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { result } = renderHook(() => useAuthenticationHook(), {
-    wrapper: ({ children }) => (
+    wrapper: ({ children }: React.PropsWithChildren) => (
       <FeatureService features={withOauthFeature ? [FeatureItem.AllowOAuthConnector] : []}>{children}</FeatureService>
     ),
   });

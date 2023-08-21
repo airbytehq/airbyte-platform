@@ -127,7 +127,7 @@ describe("CreateConnectionForm", () => {
 
       const cronExpressionInput = container.getByTestId("cronExpression");
 
-      userEvent.clear(cronExpressionInput);
+      await userEvent.clear(cronExpressionInput);
       await userEvent.type(cronExpressionInput, INVALID_CRON_EXPRESSION, { delay: 1 });
 
       const errorMessage = container.getByText(/must contain at least 6 fields/);
@@ -148,7 +148,8 @@ describe("CreateConnectionForm", () => {
 
       const cronExpressionField = container.getByTestId("cronExpression");
 
-      await userEvent.type(cronExpressionField, `{selectall}${CRON_EXPRESSION_EVERY_MINUTE}`, { delay: 1 });
+      await userEvent.clear(cronExpressionField);
+      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
       const errorMessage = container.queryByTestId("cronExpressionError");
 
@@ -170,7 +171,8 @@ describe("CreateConnectionForm", () => {
 
       const cronExpressionField = container.getByTestId("cronExpression");
 
-      await userEvent.type(cronExpressionField, `{selectall}${CRON_EXPRESSION_EVERY_MINUTE}`, { delay: 1 });
+      await userEvent.clear(cronExpressionField);
+      await userEvent.type(cronExpressionField, CRON_EXPRESSION_EVERY_MINUTE, { delay: 1 });
 
       const errorMessage = container.getByTestId("cronExpressionError");
 

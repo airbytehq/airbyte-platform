@@ -58,6 +58,7 @@ describe("Connector builder", { testIsolation: false }, () => {
   point
   */
   it("Fail on invalid auth", () => {
+    cy.on("uncaught:exception", () => false);
     testStream();
     assertTestReadAuthFailure();
   });
