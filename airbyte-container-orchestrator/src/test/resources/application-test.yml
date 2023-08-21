@@ -1,6 +1,6 @@
 micronaut:
   server:
-    port: 9000
+    port: -1
 
 airbyte:
   deployment-mode: OSS
