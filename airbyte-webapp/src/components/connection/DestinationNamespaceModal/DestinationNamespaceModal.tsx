@@ -1,26 +1,49 @@
-import { Field, FieldProps, Form, Formik } from "formik";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useFormContext } from "react-hook-form";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { LabeledRadioButton } from "components";
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import { Form, FormControl } from "components/forms";
+import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
-import { Input } from "components/ui/Input";
+import { FlexContainer } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
-import { Text } from "components/ui/Text";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
-import { links } from "core/utils/links";
 
+import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";
-import { ExampleSettingsTable } from "./ExampleSettingsTable";
+import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
+
+export interface DestinationNamespaceFormValues {
+  namespaceDefinition: NamespaceDefinitionType;
+  namespaceFormat?: string;
+}
+
+const NameSpaceCustomFormatInput: React.FC = () => {
+  const { formatMessage } = useIntl();
+  const { watch } = useFormContext<DestinationNamespaceFormValues>();
+  const watchedNamespaceDefinition = watch("namespaceDefinition");
+
+  return (
+    <FormControl
+      name="namespaceFormat"
+      fieldType="input"
+      type="text"
+      placeholder={formatMessage({
+        id: "connectionForm.modal.destinationNamespace.input.placeholder",
+      })}
+      data-testid="namespace-definition-custom-format-input"
+      disabled={watchedNamespaceDefinition !== NamespaceDefinitionType.customformat}
+    />
+  );
+};
 
 const destinationNamespaceValidationSchema = yup.object().shape({
   namespaceDefinition: yup
-    .string()
-    .oneOf([NamespaceDefinitionType.destination, NamespaceDefinitionType.source, NamespaceDefinitionType.customformat])
+    .mixed<NamespaceDefinitionType>()
+    .oneOf(Object.values(NamespaceDefinitionType))
     .required("form.empty.error"),
   namespaceFormat: yup.string().when("namespaceDefinition", {
     is: NamespaceDefinitionType.customformat,
@@ -28,16 +51,12 @@ const destinationNamespaceValidationSchema = yup.object().shape({
   }),
 });
 
-export interface DestinationNamespaceFormValueType {
-  namespaceDefinition: NamespaceDefinitionType;
-  namespaceFormat: string;
-}
-
 interface DestinationNamespaceModalProps {
   initialValues: Pick<FormikConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
   onCloseModal: () => void;
-  onSubmit: (values: DestinationNamespaceFormValueType) => void;
+  onSubmit: (values: DestinationNamespaceFormValues) => void;
 }
+
 export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps> = ({
   initialValues,
   onCloseModal,
@@ -45,147 +64,60 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
 }) => {
   const { formatMessage } = useIntl();
 
+  const onSubmitCallback = async (values: DestinationNamespaceFormValues) => {
+    onCloseModal();
+    onSubmit(values);
+  };
   return (
-    <Formik
-      initialValues={{
+    <Form
+      defaultValues={{
         namespaceDefinition: initialValues?.namespaceDefinition ?? NamespaceDefinitionType.destination,
         namespaceFormat: initialValues.namespaceFormat,
       }}
-      enableReinitialize
-      validateOnBlur
-      validateOnChange
-      validationSchema={destinationNamespaceValidationSchema}
-      onSubmit={(values: DestinationNamespaceFormValueType) => {
-        onCloseModal();
-        onSubmit(values);
-      }}
+      schema={destinationNamespaceValidationSchema}
+      onSubmit={onSubmitCallback}
     >
-      {({ dirty, isValid, errors, values }) => (
-        <Form>
-          <ModalBody className={styles.content} padded={false}>
-            <div className={styles.actions}>
-              <Field name="namespaceDefinition">
-                {({ field }: FieldProps<string>) => (
-                  <LabeledRadioButton
-                    {...field}
-                    className={styles.radioButton}
-                    id="destinationNamespace.destination"
-                    label={
-                      <Text as="span">
-                        <FormattedMessage id="connectionForm.modal.destinationNamespace.option.destination" />
-                      </Text>
-                    }
-                    value={NamespaceDefinitionType.destination}
-                    checked={field.value === NamespaceDefinitionType.destination}
-                    data-testid="namespace-definition-destination-radio"
-                  />
-                )}
-              </Field>
-              <Field name="namespaceDefinition">
-                {({ field }: FieldProps<string>) => (
-                  <LabeledRadioButton
-                    {...field}
-                    className={styles.radioButton}
-                    id="destinationNamespace.source"
-                    label={
-                      <Text as="span">
-                        <FormattedMessage id="connectionForm.modal.destinationNamespace.option.source" />
-                      </Text>
-                    }
-                    value={NamespaceDefinitionType.source}
-                    checked={field.value === NamespaceDefinitionType.source}
-                    data-testid="namespace-definition-source-radio"
-                  />
-                )}
-              </Field>
-              <Field name="namespaceDefinition">
-                {({ field }: FieldProps<string>) => (
-                  <LabeledRadioButton
-                    {...field}
-                    className={styles.radioButton}
-                    id="destinationNamespace.customFormat"
-                    label={
-                      <Text as="span">
-                        <FormattedMessage id="connectionForm.modal.destinationNamespace.option.customFormat" />
-                      </Text>
-                    }
-                    value={NamespaceDefinitionType.customformat}
-                    checked={field.value === NamespaceDefinitionType.customformat}
-                    data-testid="namespace-definition-custom-format-radio"
-                  />
-                )}
-              </Field>
-              <div className={styles.input}>
-                <Field name="namespaceFormat">
-                  {({ field, meta }: FieldProps<string>) => (
-                    <Input
-                      {...field}
-                      disabled={values.namespaceDefinition !== NamespaceDefinitionType.customformat}
-                      placeholder={formatMessage({
-                        id: "connectionForm.modal.destinationNamespace.input.placeholder",
-                      })}
-                      error={!!meta.error && meta.touched}
-                      data-testid="namespace-definition-custom-format-input"
-                    />
-                  )}
-                </Field>
-                {!!errors.namespaceFormat && (
-                  <Text className={styles.errorMessage} size="sm">
-                    <FormattedMessage id={errors.namespaceFormat} defaultMessage={errors.namespaceFormat} />
-                  </Text>
-                )}
-              </div>
-            </div>
-            <div className={styles.description}>
-              <FormattedMessage
-                id={`connectionForm.modal.destinationNamespace.option.${
-                  values.namespaceDefinition === NamespaceDefinitionType.customformat
-                    ? "customFormat"
-                    : values.namespaceDefinition
-                }.description`}
-              />
-              <Box py="lg">
-                <Text color="grey">
-                  <FormattedMessage id="connectionForm.modal.destinationNamespace.description" />
-                </Text>
-              </Box>
-              {values.namespaceDefinition === NamespaceDefinitionType.source && (
-                <Box pb="lg">
-                  <Text color="grey">
-                    <FormattedMessage id="connectionForm.modal.destinationNamespace.description.emptySource" />
-                  </Text>
-                </Box>
-              )}
-              {values.namespaceDefinition === NamespaceDefinitionType.customformat && (
-                <Box pb="lg">
-                  <Text color="grey">
-                    <FormattedMessage id="connectionForm.modal.destinationNamespace.description.emptyCustom" />
-                  </Text>
-                </Box>
-              )}
-              <ExampleSettingsTable namespaceDefinitionType={values.namespaceDefinition} />
-              <a className={styles.namespaceLink} href={links.namespaceLink} target="_blank" rel="noreferrer">
-                <Text className={styles.text} size="xs">
-                  <FormattedMessage id="connectionForm.modal.destinationNamespace.learnMore.link" />
-                </Text>
-              </a>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCloseModal}
-              data-testid="namespace-definition-cancel-button"
-            >
-              <FormattedMessage id="form.cancel" />
-            </Button>
-            <Button type="submit" disabled={!dirty || !isValid} data-testid="namespace-definition-apply-button">
-              <FormattedMessage id="form.apply" />
-            </Button>
-          </ModalFooter>
-        </Form>
-      )}
-    </Formik>
+      <>
+        <ModalBody className={styles.content} padded={false}>
+          <FlexContainer direction="column" gap="xl" className={styles.actions}>
+            <LabeledRadioButtonFormControl
+              name="namespaceDefinition"
+              controlId="destinationNamespace.destination"
+              label={formatMessage({ id: "connectionForm.modal.destinationNamespace.option.destination" })}
+              value={NamespaceDefinitionType.destination}
+              data-testid="namespace-definition-destination-radio"
+            />
+            <LabeledRadioButtonFormControl
+              name="namespaceDefinition"
+              controlId="destinationNamespace.source"
+              label={formatMessage({ id: "connectionForm.modal.destinationNamespace.option.source" })}
+              value={NamespaceDefinitionType.source}
+              data-testid="namespace-definition-source-radio"
+            />
+            <LabeledRadioButtonFormControl
+              name="namespaceDefinition"
+              controlId="destinationNamespace.customFormat"
+              label={formatMessage({ id: "connectionForm.modal.destinationNamespace.option.customFormat" })}
+              value={NamespaceDefinitionType.customformat}
+              data-testid="namespace-definition-custom-format-radio"
+            />
+            <Box ml="xl">
+              <NameSpaceCustomFormatInput />
+            </Box>
+          </FlexContainer>
+          <FlexContainer direction="column" className={styles.description}>
+            <DestinationNamespaceDescription />
+          </FlexContainer>
+        </ModalBody>
+        <ModalFooter>
+          <ModalFormSubmissionButtons
+            submitKey="form.apply"
+            onCancelClickCallback={onCloseModal}
+            additionalCancelButtonProps={{ "data-testid": "namespace-definition-cancel-button" }}
+            additionalSubmitButtonProps={{ "data-testid": "namespace-definition-apply-button" }}
+          />
+        </ModalFooter>
+      </>
+    </Form>
   );
 };

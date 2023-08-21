@@ -1,31 +1,51 @@
-import { Field, FieldProps, Form, Formik } from "formik";
 import React from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { LabeledRadioButton } from "components";
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { Button } from "components/ui/Button";
-import { Input } from "components/ui/Input";
+import { Form, FormControl } from "components/forms";
+import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
+import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import styles from "./DestinationStreamNamesModal.module.scss";
+import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export const enum StreamNameDefinitionValueType {
   Mirror = "mirror",
   Prefix = "prefix",
 }
 
-export interface DestinationStreamNamesFormValueType {
+export interface DestinationStreamNamesFormValues {
   streamNameDefinition: StreamNameDefinitionValueType;
-  prefix: string;
+  prefix?: string;
 }
+
+const StreamNamePrefixInput: React.FC = () => {
+  const { formatMessage } = useIntl();
+  const { watch } = useFormContext<DestinationStreamNamesFormValues>();
+  const watchedStreamNameDefinition = watch("streamNameDefinition");
+
+  return (
+    <FormControl
+      name="prefix"
+      fieldType="input"
+      type="text"
+      placeholder={formatMessage({
+        id: "connectionForm.modal.destinationStreamNames.input.placeholder",
+      })}
+      data-testid="destination-stream-names-prefix-input"
+      disabled={watchedStreamNameDefinition !== StreamNameDefinitionValueType.Prefix}
+    />
+  );
+};
 
 const destinationStreamNamesValidationSchema = yup.object().shape({
   streamNameDefinition: yup
-    .string()
+    .mixed<StreamNameDefinitionValueType>()
     .oneOf([StreamNameDefinitionValueType.Mirror, StreamNameDefinitionValueType.Prefix])
     .required("form.empty.error"),
   prefix: yup.string().when("streamNameDefinition", {
@@ -37,7 +57,7 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
 interface DestinationStreamNamesModalProps {
   initialValues: Pick<FormikConnectionFormValues, "prefix">;
   onCloseModal: () => void;
-  onSubmit: (value: DestinationStreamNamesFormValueType) => void;
+  onSubmit: (value: DestinationStreamNamesFormValues) => void;
 }
 
 export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalProps> = ({
@@ -47,102 +67,66 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
 }) => {
   const { formatMessage } = useIntl();
 
+  const onSubmitCallback = async (values: DestinationStreamNamesFormValues) => {
+    onCloseModal();
+    onSubmit(values);
+  };
+
   return (
-    <Formik
-      initialValues={{
+    <Form
+      defaultValues={{
         streamNameDefinition: initialValues.prefix
           ? StreamNameDefinitionValueType.Prefix
           : StreamNameDefinitionValueType.Mirror,
         prefix: initialValues.prefix ?? "",
       }}
-      enableReinitialize
-      validateOnBlur
-      validateOnChange
-      validationSchema={destinationStreamNamesValidationSchema}
-      onSubmit={(values: DestinationStreamNamesFormValueType) => {
-        onCloseModal();
-        onSubmit(values);
-      }}
+      schema={destinationStreamNamesValidationSchema}
+      onSubmit={onSubmitCallback}
     >
-      {({ dirty, isValid, errors, values }) => (
-        <Form>
-          <ModalBody className={styles.content} maxHeight={400} padded={false}>
-            <Text className={styles.description}>
+      <ModalBody padded>
+        <FlexContainer direction="column">
+          <Box mb="xl">
+            <Text color="grey300">
               <FormattedMessage id="connectionForm.modal.destinationStreamNames.description" />
             </Text>
-            <Field name="streamNameDefinition">
-              {({ field }: FieldProps<string>) => (
-                <LabeledRadioButton
-                  {...field}
-                  className={styles.radioButton}
-                  id="destinationStreamNames.mirror"
-                  label={
-                    <Text as="span">
-                      <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />
-                    </Text>
-                  }
-                  value={StreamNameDefinitionValueType.Mirror}
-                  checked={field.value === StreamNameDefinitionValueType.Mirror}
-                  data-testid="destination-stream-names-mirror-radio"
-                />
-              )}
-            </Field>
-            <Field name="streamNameDefinition">
-              {({ field }: FieldProps<string>) => (
-                <LabeledRadioButton
-                  {...field}
-                  className={styles.radioButton}
-                  id="destinationStreamNames.prefix"
-                  label={
-                    <Text as="span">
-                      <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.prefix" />
-                      <InfoTooltip placement="top-start">
-                        <FormattedMessage id="connectionForm.modal.destinationStreamNames.prefix.message" />
-                      </InfoTooltip>
-                    </Text>
-                  }
-                  value={StreamNameDefinitionValueType.Prefix}
-                  checked={field.value === StreamNameDefinitionValueType.Prefix}
-                  data-testid="destination-stream-names-prefix-radio"
-                />
-              )}
-            </Field>
-            <div className={styles.input}>
-              <Field name="prefix">
-                {({ field, meta }: FieldProps<string>) => (
-                  <Input
-                    {...field}
-                    disabled={values.streamNameDefinition !== StreamNameDefinitionValueType.Prefix}
-                    placeholder={formatMessage({
-                      id: "connectionForm.modal.destinationStreamNames.input.placeholder",
-                    })}
-                    error={!!meta.error && meta.touched}
-                    data-testid="destination-stream-names-prefix-input"
-                  />
-                )}
-              </Field>
-              {!!errors.prefix && (
-                <Text className={styles.errorMessage} size="sm">
-                  <FormattedMessage id={errors.prefix} defaultMessage={errors.prefix} />
-                </Text>
-              )}
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCloseModal}
-              data-testid="destination-stream-names-cancel-button"
-            >
-              <FormattedMessage id="form.cancel" />
-            </Button>
-            <Button type="submit" disabled={!dirty || !isValid} data-testid="destination-stream-names-apply-button">
-              <FormattedMessage id="form.apply" />
-            </Button>
-          </ModalFooter>
-        </Form>
-      )}
-    </Formik>
+          </Box>
+          <FlexContainer direction="column" gap="xl">
+            <LabeledRadioButtonFormControl
+              name="streamNameDefinition"
+              controlId="destinationStreamNames.mirror"
+              label={formatMessage({ id: "connectionForm.modal.destinationStreamNames.radioButton.mirror" })}
+              value={StreamNameDefinitionValueType.Mirror}
+              data-testid="destination-stream-names-mirror-radio"
+            />
+            <LabeledRadioButtonFormControl
+              name="streamNameDefinition"
+              controlId="destinationStreamNames.prefix"
+              label={
+                <>
+                  <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.prefix" />
+                  <InfoTooltip placement="top-start">
+                    <FormattedMessage id="connectionForm.modal.destinationStreamNames.prefix.message" />
+                  </InfoTooltip>
+                </>
+              }
+              value={StreamNameDefinitionValueType.Prefix}
+              data-testid="destination-stream-names-prefix-radio"
+            />
+
+            <Box ml="xl">
+              <StreamNamePrefixInput />
+            </Box>
+          </FlexContainer>
+        </FlexContainer>
+      </ModalBody>
+      <ModalFooter>
+        <ModalFormSubmissionButtons
+          submitKey="form.apply"
+          onCancelClickCallback={onCloseModal}
+          additionalCancelButtonProps={{ "data-testid": "destination-stream-names-cancel-button" }}
+          additionalSubmitButtonProps={{ "data-testid": "destination-stream-names-apply-button" }}
+        />
+      </ModalFooter>
+    </Form>
   );
 };

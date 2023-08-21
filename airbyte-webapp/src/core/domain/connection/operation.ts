@@ -10,10 +10,6 @@ export enum NormalizationType {
 export const isDbtTransformation = (op: OperationRead): op is DbtOperationRead => {
   return op.operatorConfiguration.operatorType === OperatorType.dbt;
 };
-// TODO: remove after NormalizationHookFormCard and CustomTransformationsHookFormCard form migration
-export const isDbtTransformationOld = (op: OperationCreate): op is OperationRead => {
-  return op.operatorConfiguration.operatorType === OperatorType.dbt;
-};
 
 export const isNormalizationTransformation = (op: OperationCreate): op is OperationRead => {
   return op.operatorConfiguration.operatorType === OperatorType.normalization;

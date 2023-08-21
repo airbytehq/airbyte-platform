@@ -9,42 +9,24 @@ import { Text } from "components/ui/Text";
 import { TextInputContainer } from "components/ui/TextInputContainer";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import { FormikConnectionFormValues } from "./formConfig";
 import { FormFieldLayout } from "./FormFieldLayout";
 import {
-  DestinationStreamNamesHookFormModal,
-  DestinationStreamNamesHookFormValueType,
-  StreamNameDefinitionValueHookFormType,
-} from "../DestinationStreamNamesModal/DestinationStreamNamesHookFormModal";
-import {
-  DestinationStreamNamesFormValueType,
   DestinationStreamNamesModal,
+  DestinationStreamNamesFormValues,
   StreamNameDefinitionValueType,
-} from "../DestinationStreamNamesModal/DestinationStreamNamesModal";
+} from "../DestinationStreamNamesModal";
 
 export const DestinationStreamPrefixName = () => {
   const { mode } = useConnectionFormService();
   const { formatMessage } = useIntl();
   const { openModal, closeModal } = useModalService();
-  const doUseReactHookForm = useExperiment("form.reactHookForm", false);
   const formikProps = useFormikContext<FormikConnectionFormValues>();
 
   const destinationStreamNamesHookFormChange = useCallback(
-    (value: DestinationStreamNamesHookFormValueType) => {
-      formikProps.setFieldValue(
-        "prefix",
-        value.streamNameDefinition === StreamNameDefinitionValueHookFormType.Prefix ? value.prefix : ""
-      );
-    },
-    [formikProps]
-  );
-
-  // TODO: remove after DestinationStreamNamesModal migration
-  const destinationStreamNamesChange = useCallback(
-    (value: DestinationStreamNamesFormValueType) => {
+    (value: DestinationStreamNamesFormValues) => {
       formikProps.setFieldValue(
         "prefix",
         value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : ""
@@ -58,33 +40,17 @@ export const DestinationStreamPrefixName = () => {
       openModal({
         size: "sm",
         title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-        content: () =>
-          doUseReactHookForm ? (
-            <DestinationStreamNamesHookFormModal
-              initialValues={{
-                prefix: formikProps.values.prefix,
-              }}
-              onCloseModal={closeModal}
-              onSubmit={destinationStreamNamesHookFormChange}
-            />
-          ) : (
-            <DestinationStreamNamesModal
-              initialValues={{
-                prefix: formikProps.values.prefix,
-              }}
-              onCloseModal={closeModal}
-              onSubmit={destinationStreamNamesChange}
-            />
-          ),
+        content: () => (
+          <DestinationStreamNamesModal
+            initialValues={{
+              prefix: formikProps.values.prefix,
+            }}
+            onCloseModal={closeModal}
+            onSubmit={destinationStreamNamesHookFormChange}
+          />
+        ),
       }),
-    [
-      closeModal,
-      destinationStreamNamesChange,
-      destinationStreamNamesHookFormChange,
-      doUseReactHookForm,
-      formikProps.values.prefix,
-      openModal,
-    ]
+    [closeModal, destinationStreamNamesHookFormChange, formikProps.values.prefix, openModal]
   );
   return (
     <Field name="prefix">
