@@ -29,7 +29,6 @@ export function createUserContext(user: UserRead | null, locale: string): LDSing
     key: user.userId,
     email: user.email,
     name: user.name,
-    intercomHash: user.intercomHash,
     locale,
   };
 }

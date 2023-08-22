@@ -21,7 +21,6 @@ describe(`${createUserContext.name}`, () => {
       userId: uuidV4(),
       name: "John Doe",
       email: "john.doe@airbyte.io",
-      intercomHash: "intercom_hash_string",
       authUserId: "auth_user_id_string",
       authProvider: "google_identity_platform",
       defaultWorkspaceId: "123",
@@ -33,7 +32,6 @@ describe(`${createUserContext.name}`, () => {
       key: mockUser.userId,
       email: mockUser.email,
       name: mockUser.name,
-      intercomHash: mockUser.intercomHash,
       locale: mockLocale,
     });
   });
