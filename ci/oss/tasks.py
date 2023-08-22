@@ -13,7 +13,7 @@ from aircmd.actions.environments import (
 from aircmd.actions.pipelines import get_repo_dir
 from aircmd.models.base import PipelineContext
 from aircmd.models.settings import GithubActionsInputSettings, load_settings
-from dagger import CacheVolume, Client, Container
+from dagger import CacheSharingMode, CacheVolume, Client, Container
 from prefect import task
 from prefect.artifacts import create_link_artifact
 
@@ -74,7 +74,7 @@ async def build_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, c
                 .with_mounted_directory("/airbyte", get_repo_dir(client, settings, ".", include=frontend_files))
                 .with_workdir("/airbyte/oss/airbyte-webapp" if base_dir == "oss" else "/airbyte/airbyte-webapp")
                 .with_(load_settings(client, settings))
-                .with_mounted_cache("./build/airbyte-repository", airbyte_repo_cache)
+                .with_mounted_cache("./build/airbyte-repository", airbyte_repo_cache, sharing=CacheSharingMode.LOCKED)
                 .with_exec(["pnpm", "install"])
                 .with_exec(["pnpm", "build"]))
     await result.sync()
