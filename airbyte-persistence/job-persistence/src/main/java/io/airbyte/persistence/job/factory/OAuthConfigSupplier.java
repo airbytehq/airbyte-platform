@@ -70,22 +70,21 @@ public class OAuthConfigSupplier {
    * Mask secrets in OAuth params.
    *
    * @param sourceDefinitionId source definition id
-   * @param sourceId source id
    * @param workspaceId workspace id
    * @param sourceConnectorConfig config to mask
+   * @param sourceConnectorSpec source connector specification
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
   public JsonNode maskSourceOAuthParameters(final UUID sourceDefinitionId,
-                                            final UUID sourceId,
                                             final UUID workspaceId,
-                                            final JsonNode sourceConnectorConfig)
+                                            final JsonNode sourceConnectorConfig,
+                                            final ConnectorSpecification sourceConnectorSpec)
       throws IOException {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
       MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
-          .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceConnectorConfig));
+          .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceConnectorSpec, sourceConnectorConfig));
       return sourceConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
       throw new IOException(e);
@@ -96,23 +95,21 @@ public class OAuthConfigSupplier {
    * Mask secrets in OAuth params.
    *
    * @param destinationDefinitionId destination definition id
-   * @param destinationId destination id
    * @param workspaceId workspace id
    * @param destinationConnectorConfig config to mask
+   * @param destinationConnectorSpec destination connector specification
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
   public JsonNode maskDestinationOAuthParameters(final UUID destinationDefinitionId,
-                                                 final UUID destinationId,
                                                  final UUID workspaceId,
-                                                 final JsonNode destinationConnectorConfig)
+                                                 final JsonNode destinationConnectorConfig,
+                                                 final ConnectorSpecification destinationConnectorSpec)
       throws IOException {
     try {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-      final ActorDefinitionVersion destinationVersion =
-          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
       MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
-          .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationVersion.getSpec(),
+          .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationConnectorSpec,
               destinationConnectorConfig));
       return destinationConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {

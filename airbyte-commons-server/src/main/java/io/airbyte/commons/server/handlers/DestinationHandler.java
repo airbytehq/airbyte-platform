@@ -357,7 +357,7 @@ public class DestinationHandler {
                                             final ConnectorSpecification spec)
       throws JsonValidationException, IOException {
     final JsonNode oAuthMaskedConfigurationJson =
-        oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, destinationId, workspaceId, configurationJson);
+        oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
     final DestinationConnection destinationConnection = new DestinationConnection()
         .withName(name)
         .withDestinationDefinitionId(destinationDefinitionId)

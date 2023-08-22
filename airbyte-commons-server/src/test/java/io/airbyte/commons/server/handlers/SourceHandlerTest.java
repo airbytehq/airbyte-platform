@@ -159,9 +159,9 @@ class SourceHandlerTest {
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
-        sourceCreate.getConnectionConfiguration())).thenReturn(sourceCreate.getConnectionConfiguration());
+        sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec())).thenReturn(sourceCreate.getConnectionConfiguration());
     when(secretsProcessor.prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(sourceCreate.getConnectionConfiguration());
@@ -175,8 +175,8 @@ class SourceHandlerTest {
 
     verify(secretsProcessor).prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
-        sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration());
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+        sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec());
     verify(secretsRepositoryWriter).writeSourceConnection(sourceConnection, connectorSpecification);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
@@ -203,9 +203,9 @@ class SourceHandlerTest {
             .thenReturn(newConfiguration);
     when(secretsProcessor.prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
         .thenReturn(newConfiguration);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
-        newConfiguration)).thenReturn(newConfiguration);
+        newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
@@ -225,8 +225,8 @@ class SourceHandlerTest {
     assertEquals(expectedSourceRead, actualSourceRead);
 
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
-        sourceConnection.getWorkspaceId(), newConfiguration);
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+        sourceConnection.getWorkspaceId(), newConfiguration, sourceDefinitionVersion.getSpec());
     verify(secretsRepositoryWriter).writeSourceConnection(expectedSourceConnection, connectorSpecification);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
@@ -429,9 +429,9 @@ class SourceHandlerTest {
     when(secretsRepositoryReader.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
-        newConfiguration)).thenReturn(newConfiguration);
+        newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
