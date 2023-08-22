@@ -131,6 +131,9 @@ public class ConfigWriter {
                 standardDestinationDefinition.getTombstone() != null && standardDestinationDefinition.getTombstone())
             .set(Tables.ACTOR_DEFINITION.PUBLIC, standardDestinationDefinition.getPublic())
             .set(Tables.ACTOR_DEFINITION.CUSTOM, standardDestinationDefinition.getCustom())
+            .set(Tables.ACTOR_DEFINITION.RESOURCE_REQUIREMENTS,
+                standardDestinationDefinition.getResourceRequirements() == null ? null
+                    : JSONB.valueOf(Jsons.serialize(standardDestinationDefinition.getResourceRequirements())))
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
             .execute();
