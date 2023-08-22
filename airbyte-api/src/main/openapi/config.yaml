@@ -7668,6 +7668,7 @@ components:
       required:
         - userId
         - email
+        - permissionId
         - permissionType
         - workspaceId
       properties:
@@ -7711,6 +7712,7 @@ components:
       required:
         - userId
         - email
+        - permissionId
         - permissionType
         - organizationId
       properties:

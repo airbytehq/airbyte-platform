@@ -202,7 +202,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.PERMISSION_TYPE)
+    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -213,7 +213,7 @@ public class PermissionPersistence {
   }
 
   private List<UserPermission> listPermissionsForOrganization(final DSLContext ctx, final UUID organizationId) {
-    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.PERMISSION_TYPE)
+    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
@@ -233,6 +233,7 @@ public class PermissionPersistence {
                 .withDefaultWorkspaceId(record.get(USER.DEFAULT_WORKSPACE_ID)))
         .withPermission(
             new Permission()
+                .withPermissionId(record.get(PERMISSION.ID))
                 .withPermissionType(Enums.toEnum(record.get(PERMISSION.PERMISSION_TYPE).toString(), PermissionType.class).get()));
   }
 
