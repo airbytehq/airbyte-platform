@@ -96,11 +96,12 @@ class UserHandlerTest {
     final UUID userId = UUID.randomUUID();
 
     when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(new UserPermission().withUser(
-        new User().withUserId(userId).withEmail(userEmail)).withPermission(new Permission().withPermissionType(PermissionType.ORGANIZATION_ADMIN))));
+        new User().withName(userName).withUserId(userId).withEmail(userEmail))
+        .withPermission(new Permission().withPermissionType(PermissionType.ORGANIZATION_ADMIN))));
 
     var expectedListResult =
         new OrganizationUserReadList()
-            .users(List.of(new OrganizationUserRead().userId(userId).email(userEmail).organizationId(organizationId).permissionType(
+            .users(List.of(new OrganizationUserRead().name(userName).userId(userId).email(userEmail).organizationId(organizationId).permissionType(
                 io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)));
 
     var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
@@ -114,15 +115,15 @@ class UserHandlerTest {
 
     when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(
         new UserPermission()
-            .withUser(new User().withUserId(userId).withEmail(userEmail))
+            .withUser(new User().withName(userName).withUserId(userId).withEmail(userEmail))
             .withPermission(new Permission().withPermissionType(PermissionType.ORGANIZATION_ADMIN)),
         new UserPermission()
-            .withUser(new User().withUserId(userId).withEmail(userEmail))
+            .withUser(new User().withName(userName).withUserId(userId).withEmail(userEmail))
             .withPermission(new Permission().withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
     var expectedListResult =
         new OrganizationUserReadList()
-            .users(List.of(new OrganizationUserRead().userId(userId).email(userEmail).organizationId(organizationId).permissionType(
+            .users(List.of(new OrganizationUserRead().name(userName).userId(userId).email(userEmail).organizationId(organizationId).permissionType(
                 io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
 
     var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
@@ -135,11 +136,13 @@ class UserHandlerTest {
     final UUID userId = UUID.randomUUID();
 
     when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(new UserPermission().withUser(
-        new User().withUserId(userId).withEmail(userEmail)).withPermission(new Permission().withPermissionType(PermissionType.WORKSPACE_ADMIN))));
+        new User().withUserId(userId).withEmail(userEmail).withName(userName).withDefaultWorkspaceId(workspaceId))
+        .withPermission(new Permission().withPermissionType(PermissionType.WORKSPACE_ADMIN))));
 
     var expectedListResult =
-        new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead().userId(userId).email(userEmail).workspaceId(workspaceId).permissionType(
-            io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
+        new WorkspaceUserReadList().users(List.of(
+            new WorkspaceUserRead().userId(userId).name(userName).isDefaultWorkspace(true).email(userEmail).workspaceId(workspaceId).permissionType(
+                io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
 
     var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
     assertEquals(expectedListResult, result);
@@ -152,15 +155,16 @@ class UserHandlerTest {
 
     when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(
         new UserPermission()
-            .withUser(new User().withUserId(userId).withEmail(userEmail))
+            .withUser(new User().withUserId(userId).withEmail(userEmail).withName(userName).withDefaultWorkspaceId(workspaceId))
             .withPermission(new Permission().withPermissionType(PermissionType.WORKSPACE_ADMIN)),
         new UserPermission()
-            .withUser(new User().withUserId(userId).withEmail(userEmail))
+            .withUser(new User().withUserId(userId).withEmail(userEmail).withName(userName).withDefaultWorkspaceId(workspaceId))
             .withPermission(new Permission().withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
     var expectedListResult =
-        new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead().userId(userId).email(userEmail).workspaceId(workspaceId).permissionType(
-            io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
+        new WorkspaceUserReadList().users(List.of(
+            new WorkspaceUserRead().name(userName).isDefaultWorkspace(true).userId(userId).email(userEmail).workspaceId(workspaceId).permissionType(
+                io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
 
     var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
     assertEquals(expectedListResult, result);

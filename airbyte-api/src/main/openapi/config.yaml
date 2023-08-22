@@ -7667,9 +7667,7 @@ components:
       type: object
       required:
         - userId
-        - isDefaultWorkspace
         - email
-        - permissionId
         - permissionType
         - workspaceId
       properties:
@@ -7713,7 +7711,6 @@ components:
       required:
         - userId
         - email
-        - permissionId
         - permissionType
         - organizationId
       properties:
@@ -7722,8 +7719,6 @@ components:
           type: string
         userId:
           $ref: "#/components/schemas/UserId"
-        isDefaultWorkspace:
-          type: boolean
         email:
           type: string
           format: email

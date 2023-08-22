@@ -54,6 +54,7 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
         cell: (props) => (
           <LastSyncCell timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
         ),
+        sortUndefined: 1,
       }),
       columnHelper.accessor("connectEntities", {
         header: () => <FormattedMessage id="sources.status" />,
@@ -65,7 +66,15 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
     [columnHelper, entity]
   );
 
-  return <Table columns={columns} data={data} onClickRow={onClickRow} testId={`${entity}sTable`} />;
+  return (
+    <Table
+      columns={columns}
+      data={data}
+      onClickRow={onClickRow}
+      testId={`${entity}sTable`}
+      initialSortBy={[{ id: "connectorName", desc: false }]}
+    />
+  );
 };
 
 export default ImplementationTable;

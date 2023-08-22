@@ -31,6 +31,8 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
+import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricTags;
@@ -42,6 +44,7 @@ import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
+import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.CheckConnectionInput;
 import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogInput;
@@ -112,12 +115,15 @@ import lombok.extern.slf4j.Slf4j;
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
 
   private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
+  private static final String CHECK_WITH_API_TAG = "check_with_api";
+  private static final String CHECK_WITH_CHILD_WORKFLOW_TAG = "check_with_child_workflow";
   private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
   private static final String CHECK_RUN_PROGRESS_TAG = "check_run_progress";
   private static final String NEW_RETRIES_TAG = "new_retries";
   private static final String APPEND_ATTEMPT_LOG_TAG = "append_attempt_log";
   private static final String DONT_FAIL_FOR_BACKOFF_SCHEDULE_CONFLICT_TAG = "dont_fail_for_backoff_schedule_conflict";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
+  private static final int CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION = 1;
   private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
   private static final int CHECK_RUN_PROGRESS_VERSION = 1;
   private static final int NEW_RETRIES_VERSION = 1;
@@ -130,6 +136,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private static final String GET_FEATURE_FLAGS_TAG = "get_feature_flags";
   private static final int GET_FEATURE_FLAGS_CURRENT_VERSION = 1;
+  private static final int CHECK_WITH_API_CURRENT_VERSION = 1;
 
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private GenerateInputActivity getSyncInputActivity;
@@ -295,7 +302,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs);
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlags);
         if (syncCheckConnectionResult.isFailed()) {
           final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
@@ -510,6 +517,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION;
   }
 
+  private ConnectorJobOutput getCheckResponse(final CheckConnectionInput checkInput) {
+    return runMandatoryActivityWithOutput(checkActivity::runWithJobOutput, checkInput);
+  }
+
   private SyncJobCheckConnectionInputs getCheckConnectionInputFromSync(final JobInput jobInputs) {
     final StandardSyncInput syncInput = jobInputs.getSyncInput();
     final JsonNode sourceConfig = syncInput.getSourceConfiguration();
@@ -535,7 +546,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
-                                                     @Nullable final JobInput jobInputs) {
+                                                     @Nullable final JobInput jobInputs,
+                                                     final Map<String, Boolean> featureFlags) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
@@ -564,11 +576,29 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     } else {
       log.info("SOURCE CHECK: Starting");
       final ConnectorJobOutput sourceCheckResponse;
-      sourceCheckResponse = runCheckInChildWorkflow(jobRunConfig, sourceLauncherConfig, new StandardCheckConnectionInput()
-          .withActorType(ActorType.SOURCE)
-          .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
-          .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration())
-          .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements()));
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+      final int checkWithChildWorkflowVersion =
+          Workflow.getVersion(CHECK_WITH_CHILD_WORKFLOW_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION);
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        sourceCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToSource,
+            checkInputs.getSourceCheckConnectionInput().getActorId());
+      } else if (checkWithChildWorkflowVersion >= CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION
+          && featureFlags.get(CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey())) {
+        // Retrieve source definition;
+
+        sourceCheckResponse = runCheckInChildWorkflow(jobRunConfig, sourceLauncherConfig, new StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
+            .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration())
+            .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements()));
+      } else {
+        final CheckConnectionInput checkSourceInput = new CheckConnectionInput(
+            jobRunConfig,
+            sourceLauncherConfig,
+            checkInputs.getSourceCheckConnectionInput());
+        sourceCheckResponse = getCheckResponse(checkSourceInput);
+      }
 
       if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
@@ -584,11 +614,27 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     } else {
       log.info("DESTINATION CHECK: Starting");
       final ConnectorJobOutput destinationCheckResponse;
-      destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, checkInputs.getDestinationLauncherConfig(),
-          new StandardCheckConnectionInput()
-              .withActorType(ActorType.DESTINATION)
-              .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
-              .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration()));
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+      final int checkWithChildWorkflowVersion =
+          Workflow.getVersion(CHECK_WITH_CHILD_WORKFLOW_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION);
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        destinationCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToDestination,
+            checkInputs.getDestinationCheckConnectionInput().getActorId());
+      } else if (checkWithChildWorkflowVersion >= CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION
+          && featureFlags.get(CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey())) {
+        destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, checkInputs.getDestinationLauncherConfig(),
+            new StandardCheckConnectionInput()
+                .withActorType(ActorType.DESTINATION)
+                .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
+                .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration()));
+      } else {
+        final CheckConnectionInput checkDestinationInput = new CheckConnectionInput(
+            jobRunConfig,
+            checkInputs.getDestinationLauncherConfig(),
+            checkInputs.getDestinationCheckConnectionInput());
+        destinationCheckResponse = getCheckResponse(checkDestinationInput);
+      }
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);

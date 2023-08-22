@@ -31,6 +31,7 @@ export interface TableProps<T> {
   columnVisibility?: VisibilityState;
   sorting?: boolean;
   getRowClassName?: (data: T) => string | undefined;
+  initialSortBy?: [{ id: string; desc: boolean }];
 }
 
 export const Table = <T,>({
@@ -46,12 +47,14 @@ export const Table = <T,>({
   columnVisibility,
   getRowClassName,
   sorting = true,
+  initialSortBy,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
     data,
     initialState: {
       columnVisibility,
+      sorting: initialSortBy,
     },
     getCoreRowModel: getCoreRowModel<T>(),
     getSortedRowModel: getSortedRowModel<T>(),

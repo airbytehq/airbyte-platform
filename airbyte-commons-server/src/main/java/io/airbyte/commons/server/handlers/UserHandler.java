@@ -270,6 +270,8 @@ public class UserHandler {
             .map((Entry<User, Permission.PermissionType> entry) -> new WorkspaceUserRead()
                 .userId(entry.getKey().getUserId())
                 .email(entry.getKey().getEmail())
+                .name(entry.getKey().getName())
+                .isDefaultWorkspace(workspaceId.equals(entry.getKey().getDefaultWorkspaceId()))
                 .workspaceId(workspaceId)
                 .permissionType(Enums.toEnum(entry.getValue().toString(), io.airbyte.api.model.generated.PermissionType.class).get()))
             .collect(Collectors.toList()));
@@ -281,6 +283,7 @@ public class UserHandler {
         .map((Entry<User, PermissionType> entry) -> new OrganizationUserRead()
             .userId(entry.getKey().getUserId())
             .email(entry.getKey().getEmail())
+            .name(entry.getKey().getName())
             .organizationId(organizationId)
             .permissionType(Enums.toEnum(entry.getValue().toString(), io.airbyte.api.model.generated.PermissionType.class).get()))
         .collect(Collectors.toList()));

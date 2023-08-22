@@ -74,6 +74,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
+    truncateAllTables();
     configRepository = spy(new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);

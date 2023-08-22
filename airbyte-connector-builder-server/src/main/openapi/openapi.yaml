@@ -164,28 +164,32 @@ components:
         - stream
         - config
       properties:
+        config:
+          $ref: "#/components/schemas/ConnectorConfig"
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
         stream:
           type: string
           description: Name of the stream to read
-        config:
-          $ref: "#/components/schemas/ConnectorConfig"
-        state:
-          type: object
-          description: The AirbyteStateMessage object to use as the starting state for this read
-          # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteStateMessage"
+        form_generated_manifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
         record_limit:
           type: integer
           minimum: 1
           maximum: 1000
           description: Number of records that will be returned to the client from the connector builder (max of 1000)
+        state:
+          type: object
+          description: The AirbyteStateMessage object to use as the starting state for this read
+          # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteStateMessage"
         workspace_id:
           type: string
           description: ID of the workspace where the request is coming from
-        project_id:
-          type: string
-          description: ID of the project where the request is coming from
         # --- Potential addition for a later phase ---
         # numPages:
         #   type: integer
@@ -237,12 +241,16 @@ components:
       properties:
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
-        workspace_id:
-          type: string
-          description: ID of the workspace where the request is coming from
+        form_generated_manifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
         project_id:
           type: string
           description: ID of the project where the request is coming from
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
     ResolveManifest:
       type: object
       required:

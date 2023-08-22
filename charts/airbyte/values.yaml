@@ -1569,7 +1569,7 @@ connector-builder-server:
     port: 80
 
 airbyte-api-server:
-  enabled: false
+  enabled: true
   ##  airbyte-api-server.replicaCount Number of airbyte-api-server replicas
   replicaCount: 1
 
