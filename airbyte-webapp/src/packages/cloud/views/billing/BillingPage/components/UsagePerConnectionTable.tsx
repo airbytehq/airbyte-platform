@@ -192,7 +192,12 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <Table variant="white" columns={columns} data={freeAndPaidUsageByConnection} />
+      <Table
+        variant="white"
+        columns={columns}
+        data={freeAndPaidUsageByConnection}
+        initialSortBy={[{ id: "connection.connectionName", desc: false }]}
+      />
     </div>
   );
 };
