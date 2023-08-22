@@ -24,6 +24,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SER
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
+import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -471,7 +472,7 @@ public class DbConverter {
         .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))
         .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SPEC).data(), ConnectorSpecification.class))
         .withDocumentationUrl(record.get(ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL))
-        .withProtocolVersion(record.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))
+        .withProtocolVersion(AirbyteProtocolVersion.getWithDefault(record.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)).serialize())
         .withReleaseStage(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null ? null

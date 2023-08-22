@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
@@ -28,6 +30,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Tests for interacting with the actor_definition_version table.
@@ -189,6 +193,66 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
             "0.4.0",
             "0.5.0"),
         protocolVersions);
+  }
+
+  @Test
+  void testListActorDefinitionVersionsForDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition otherSourceDef = new StandardSourceDefinition()
+        .withName("Some other source")
+        .withSourceDefinitionId(UUID.randomUUID());
+    final ActorDefinitionVersion otherActorDefVersion = baseActorDefinitionVersion().withActorDefinitionId(otherSourceDef.getSourceDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(otherSourceDef, otherActorDefVersion);
+
+    final UUID otherActorDefVersionId = configRepository.getStandardSourceDefinition(otherSourceDef.getSourceDefinitionId()).getDefaultVersionId();
+
+    final List<ActorDefinitionVersion> actorDefinitionVersions = List.of(
+        baseActorDefinitionVersion().withDockerImageTag("1.0.0"),
+        baseActorDefinitionVersion().withDockerImageTag("2.0.0"),
+        baseActorDefinitionVersion().withDockerImageTag("3.0.0"));
+
+    final List<UUID> expectedVersionIds = new ArrayList<>();
+    for (final ActorDefinitionVersion actorDefVersion : actorDefinitionVersions) {
+      expectedVersionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+    }
+
+    final UUID defaultVersionId = configRepository.getStandardSourceDefinition(ACTOR_DEFINITION_ID).getDefaultVersionId();
+    expectedVersionIds.add(defaultVersionId);
+
+    final List<ActorDefinitionVersion> actorDefinitionVersionsForDefinition =
+        configRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
+    assertEquals(expectedVersionIds, actorDefinitionVersionsForDefinition.stream().map(ActorDefinitionVersion::getVersionId).toList());
+    assertFalse(
+        actorDefinitionVersionsForDefinition.stream().anyMatch(actorDefVersion -> actorDefVersion.getVersionId().equals(otherActorDefVersionId)));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "SUPPORTED, DEPRECATED",
+    "SUPPORTED, UNSUPPORTED",
+    "DEPRECATED, SUPPORTED",
+    "DEPRECATED, UNSUPPORTED",
+    "UNSUPPORTED, SUPPORTED",
+    "UNSUPPORTED, DEPRECATED",
+  })
+  void testSetActorDefinitionVersionSupportStates(final String initialSupportStateStr, final String targetSupportStateStr) throws IOException {
+    final SupportState initialSupportState = SupportState.valueOf(initialSupportStateStr);
+    final SupportState targetSupportState = SupportState.valueOf(targetSupportStateStr);
+
+    final List<ActorDefinitionVersion> actorDefinitionVersions = List.of(
+        baseActorDefinitionVersion().withDockerImageTag("1.0.0").withSupportState(initialSupportState),
+        baseActorDefinitionVersion().withDockerImageTag("2.0.0").withSupportState(initialSupportState));
+
+    final List<UUID> versionIds = new ArrayList<>();
+    for (final ActorDefinitionVersion actorDefVersion : actorDefinitionVersions) {
+      versionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+    }
+
+    configRepository.setActorDefinitionVersionSupportStates(versionIds, targetSupportState);
+
+    final List<ActorDefinitionVersion> updatedActorDefinitionVersions = configRepository.getActorDefinitionVersions(versionIds);
+    for (final ActorDefinitionVersion updatedActorDefinitionVersion : updatedActorDefinitionVersions) {
+      assertEquals(targetSupportState, updatedActorDefinitionVersion.getSupportState());
+    }
   }
 
 }
