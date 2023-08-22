@@ -564,6 +564,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       manifest,
       workspace_id: workspaceId,
       project_id: projectId,
+      form_generated_manifest: mode === "ui",
     },
     // don't need to resolve manifest in UI mode since it doesn't use $refs or $parameters
     mode === "yaml"
@@ -597,6 +598,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       record_limit: 1000,
       workspace_id: workspaceId,
       project_id: projectId,
+      form_generated_manifest: mode === "ui",
     },
     (data) => {
       if (data.latest_config_update) {

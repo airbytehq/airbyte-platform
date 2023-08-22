@@ -279,5 +279,13 @@ export const ConnectorBuilderProjectTable = ({
     ]
   );
 
-  return <Table columns={columns} data={projects} className={styles.table} sorting={false} />;
+  return (
+    <Table
+      columns={columns}
+      data={projects}
+      className={styles.table}
+      sorting={false}
+      initialSortBy={[{ id: "name", desc: false }]}
+    />
+  );
 };

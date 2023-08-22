@@ -105,6 +105,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         meta: {
           thClassName: styles.width20,
         },
+        sortUndefined: 1,
       }),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
@@ -144,6 +145,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
       testId="connectionsTable"
       columnVisibility={{ "stream-status": streamCentricUIEnabled }}
       className={styles.connectionsTable}
+      initialSortBy={[{ id: "entityName", desc: false }]}
     />
   );
 };

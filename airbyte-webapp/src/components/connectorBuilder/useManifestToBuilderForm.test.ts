@@ -323,6 +323,34 @@ describe("Conversion successfully results in", () => {
     ]);
   });
 
+  it("spec conversion not failing on no required property", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      spec: {
+        type: "Spec",
+        connection_specification: {
+          $schema: "http://json-schema.org/draft-07/schema#",
+          type: "object",
+          properties: {
+            api_key: {
+              type: "string",
+              title: "API Key",
+              airbyte_secret: true,
+            },
+          },
+        },
+      },
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.inputs).toEqual([
+      {
+        key: "api_key",
+        required: false,
+        definition: manifest.spec?.connection_specification.properties.api_key,
+      },
+    ]);
+  });
+
   it("spec properties converted to input overrides on matching auth keys", async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,

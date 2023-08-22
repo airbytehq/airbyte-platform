@@ -110,6 +110,17 @@ class ConnectorBuilderControllerIntegrationTest {
   }
 
   @Test
+  void testStreamReadWithOptionalInputs() {
+    final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(streamRead);
+    final StreamRead streamRead =
+        controller.readStream(new StreamReadRequestBody().config(A_CONFIG).manifest(A_MANIFEST).stream(A_STREAM).formGeneratedManifest(true));
+    assertTrue(streamRead.getLogs().size() > 0);
+    assertTrue(streamRead.getSlices().size() > 0);
+    assertNotNull(streamRead.getInferredSchema());
+    assertFalse(streamRead.getTestReadLimitReached());
+  }
+
+  @Test
   void givenTraceMessageWhenStreamReadThenThrowException() {
     final ConnectorBuilderController controller = givenAirbyteCdkReturnMessage(traceManifestResolve);
     Assertions.assertThrows(AirbyteCdkInvalidInputException.class,

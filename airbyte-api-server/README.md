@@ -27,7 +27,5 @@ user and password supplied in the .env files.
 
 If you are running an instance of Airbyte locally using kubernetes, you can access the Airbyte API of the local instance by:
 
-1. Enabling the airbyte-api-server pod though helm with `helm install %release_name% charts/airbyte --set airbyte-api-server.enabled=true`
-   or `helm upgrade %release_name% charts/airbyte --set airbyte-api-server.enabled=true` if you already have an instance running.
-2. Setting up a port forward to the airbyte-api-server kube svc by running `kubectl port-forward svc/airbyte-airbyte-api-server-svc 8006:80 &`
-3. Making a call to `http://localhost:8006/v1/<endpoint>` or the health endpoint at `http://localhost:8006/health`.
+1. Setting up a port forward to the airbyte-api-server kube svc by running `kubectl port-forward svc/airbyte-airbyte-api-server-svc 8006:80 &`
+2. Making a call to `http://localhost:8006/v1/<endpoint>` or the health endpoint at `http://localhost:8006/health`.

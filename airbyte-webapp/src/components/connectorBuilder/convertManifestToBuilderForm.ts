@@ -724,7 +724,7 @@ function manifestSpecAndAuthToBuilder(
     return result;
   }
 
-  const required = manifestSpec.connection_specification.required as string[];
+  const required = manifestSpec.connection_specification.required as string[] | undefined;
 
   Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>)
     .sort(([_keyA, valueA], [_keyB, valueB]) => {
@@ -747,7 +747,7 @@ function manifestSpecAndAuthToBuilder(
         result.inputs.push({
           key: specKey,
           definition: specDefinition,
-          required: required.includes(specKey),
+          required: required?.includes(specKey) || false,
         });
       }
       if (specDefinition.order !== undefined) {
