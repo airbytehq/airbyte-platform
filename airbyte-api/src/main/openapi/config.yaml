@@ -4903,11 +4903,14 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportState
+        - isActorDefaultVersion
       properties:
         dockerRepository:
           type: string
         dockerImageTag:
           type: string
+        isActorDefaultVersion:
+          type: boolean
         supportState:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:

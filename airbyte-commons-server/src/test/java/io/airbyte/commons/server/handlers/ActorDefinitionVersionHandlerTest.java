@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ActorDefinitionVersionHandlerTest {
 
@@ -67,13 +69,22 @@ class ActorDefinitionVersionHandlerTest {
         .withDocumentationUrl("https://docs.airbyte.io");
   }
 
-  @Test
-  void testGetActorDefinitionVersionForSource() throws JsonValidationException, ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @CsvSource({"true", "false"})
+  void testGetActorDefinitionVersionForSource(final boolean isSourceVersionDefault)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceId = UUID.randomUUID();
     final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionVersion();
+    final SourceConnection sourceConnection = new SourceConnection()
+        .withSourceId(sourceId)
+        .withWorkspaceId(WORKSPACE_ID);
+
+    if (isSourceVersionDefault) {
+      sourceConnection.withDefaultVersionId(actorDefinitionVersion.getVersionId());
+    }
 
     when(mConfigRepository.getSourceConnection(sourceId))
-        .thenReturn(new SourceConnection().withSourceId(sourceId).withWorkspaceId(WORKSPACE_ID));
+        .thenReturn(sourceConnection);
     when(mConfigRepository.getSourceDefinitionFromSource(sourceId))
         .thenReturn(SOURCE_DEFINITION);
     when(mActorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, sourceId))
@@ -83,6 +94,7 @@ class ActorDefinitionVersionHandlerTest {
     final ActorDefinitionVersionRead actorDefinitionVersionRead =
         actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(sourceIdRequestBody);
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
+        .isActorDefaultVersion(isSourceVersionDefault)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
@@ -96,13 +108,22 @@ class ActorDefinitionVersionHandlerTest {
     verifyNoMoreInteractions(mActorDefinitionVersionHelper);
   }
 
-  @Test
-  void testGetActorDefinitionVersionForDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  @ParameterizedTest
+  @CsvSource({"true", "false"})
+  void testGetActorDefinitionVersionForDestination(final boolean isDestinationVersionDefault)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID destinationId = UUID.randomUUID();
     final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionVersion();
+    final DestinationConnection destinationConnection = new DestinationConnection()
+        .withDestinationId(destinationId)
+        .withWorkspaceId(WORKSPACE_ID);
+
+    if (isDestinationVersionDefault) {
+      destinationConnection.withDefaultVersionId(actorDefinitionVersion.getVersionId());
+    }
 
     when(mConfigRepository.getDestinationConnection(destinationId))
-        .thenReturn(new DestinationConnection().withDestinationId(destinationId).withWorkspaceId(WORKSPACE_ID));
+        .thenReturn(destinationConnection);
     when(mConfigRepository.getDestinationDefinitionFromDestination(destinationId))
         .thenReturn(DESTINATION_DEFINITION);
     when(mActorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId))
@@ -112,6 +133,7 @@ class ActorDefinitionVersionHandlerTest {
     final ActorDefinitionVersionRead actorDefinitionVersionRead =
         actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(destinationIdRequestBody);
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
+        .isActorDefaultVersion(isDestinationVersionDefault)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
@@ -145,9 +167,10 @@ class ActorDefinitionVersionHandlerTest {
     when(mConfigRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)).thenReturn(breakingChanges);
 
     final ActorDefinitionVersionRead actorDefinitionVersionRead =
-        actorDefinitionVersionHandler.createActorDefinitionVersionRead(actorDefinitionVersion);
+        actorDefinitionVersionHandler.createActorDefinitionVersionRead(actorDefinitionVersion, true);
 
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
+        .isActorDefaultVersion(true)
         .supportState(io.airbyte.api.model.generated.SupportState.DEPRECATED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())

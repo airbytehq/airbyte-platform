@@ -60,7 +60,8 @@ public class ActorDefinitionVersionHandler {
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId());
     final ActorDefinitionVersion actorDefinitionVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
-    return createActorDefinitionVersionRead(actorDefinitionVersion);
+    final boolean isActorDefaultVersion = actorDefinitionVersion.getVersionId().equals(sourceConnection.getDefaultVersionId());
+    return createActorDefinitionVersionRead(actorDefinitionVersion, isActorDefaultVersion);
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
@@ -70,15 +71,18 @@ public class ActorDefinitionVersionHandler {
         configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
     final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
-    return createActorDefinitionVersionRead(actorDefinitionVersion);
+    final boolean isActorDefaultVersion = actorDefinitionVersion.getVersionId().equals(destinationConnection.getDefaultVersionId());
+    return createActorDefinitionVersionRead(actorDefinitionVersion, isActorDefaultVersion);
   }
 
   @VisibleForTesting
-  ActorDefinitionVersionRead createActorDefinitionVersionRead(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
+  ActorDefinitionVersionRead createActorDefinitionVersionRead(final ActorDefinitionVersion actorDefinitionVersion, final boolean isActorDefault)
+      throws IOException {
     final ActorDefinitionVersionRead advRead = new ActorDefinitionVersionRead()
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()));
+        .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
+        .isActorDefaultVersion(isActorDefault);
 
     final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
 
