@@ -92,11 +92,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final VoidCallable onReplicationRunning) {
+                                  final VoidCallable onReplicationRunning,
+                                  final boolean useNewStateMessageProcessing) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, useNewStateMessageProcessing);
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
