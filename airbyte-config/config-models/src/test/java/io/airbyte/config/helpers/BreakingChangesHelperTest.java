@@ -5,6 +5,7 @@
 package io.airbyte.config.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
@@ -54,6 +55,31 @@ class BreakingChangesHelperTest {
             .withMigrationDocumentationUrl("https://docs.airbyte.io/migration-guides/2.0.0"));
     assertEquals(expectation,
         BreakingChangesHelper.shouldUpdateActorsDefaultVersionsDuringUpgrade(initialImageTag, upgradeImageTag, breakingChangesForDef));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    // version increases
+    "1.0.0, 1.0.1",
+    "1.0.0, 1.1.0",
+    "1.0.1, 1.1.0",
+    "1.0.0, 2.0.0",
+    "1.0.1, 2.0.0",
+    "1.0.0, 2.0.1",
+    "1.0.1, 2.0.1",
+    "2.0.0, 2.0.0",
+    // version decreases - should always be true
+    "1.0.1, 1.0.0",
+    "1.1.0, 1.0.0",
+    "1.1.0, 1.0.1",
+    "2.0.0, 1.0.0",
+    "2.0.0, 1.0.1",
+    "2.0.1, 1.0.0",
+    "2.0.1, 1.0.1",
+    "2.0.0, 2.0.0",
+  })
+  void testShouldUpgradeActorsWithNoBreakingChangesIsAlwaysTrue(final String initialImageTag, final String upgradeImageTag) {
+    assertTrue(BreakingChangesHelper.shouldUpdateActorsDefaultVersionsDuringUpgrade(initialImageTag, upgradeImageTag, List.of()));
   }
 
 }
