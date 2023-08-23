@@ -17,4 +17,5 @@ export const defaultCloudFeatures = [
   FeatureItem.EmailNotifications,
   FeatureItem.ShowInviteUsersHint,
   FeatureItem.RestrictAdminInForeignWorkspace,
+  FeatureItem.ConnectorBreakingChangeDeadlines,
 ];

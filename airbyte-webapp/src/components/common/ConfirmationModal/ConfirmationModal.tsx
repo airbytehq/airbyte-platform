@@ -11,12 +11,13 @@ export interface ConfirmationModalProps {
   onClose: () => void;
   title: string;
   text: string;
-  textValues?: Record<string, string>;
+  textValues?: Record<string, string | number>;
   submitButtonText: string;
   onSubmit: () => void;
   submitButtonDataId?: string;
   cancelButtonText?: string;
   additionalContent?: React.ReactNode;
+  submitButtonVariant?: "danger" | "primary";
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -29,6 +30,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   submitButtonText,
   submitButtonDataId,
   cancelButtonText,
+  submitButtonVariant = "danger",
 }) => {
   const { isLoading, startAction } = useLoadingState();
   const onSubmitBtnClick = () => startAction({ action: async () => onSubmit() });
@@ -48,7 +50,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           >
             <FormattedMessage id={cancelButtonText ?? "form.cancel"} />
           </Button>
-          <Button variant="danger" onClick={onSubmitBtnClick} data-id={submitButtonDataId} isLoading={isLoading}>
+          <Button
+            variant={submitButtonVariant}
+            onClick={onSubmitBtnClick}
+            data-id={submitButtonDataId}
+            isLoading={isLoading}
+          >
             <FormattedMessage id={submitButtonText} />
           </Button>
         </div>
