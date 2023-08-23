@@ -58,7 +58,7 @@ airbyte:
     datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   connector-registry:
     remote:
-      base-url: ${CONNECTOR_REGISTRY_BASE_URL:`https://connectors.airbyte.com/`}
+      base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   container:
     orchestrator:

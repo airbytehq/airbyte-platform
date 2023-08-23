@@ -60,6 +60,7 @@ class OAuthConfigSupplierTest {
   private UUID sourceDefinitionId;
   private StandardSourceDefinition testSourceDefinition;
   private ActorDefinitionVersion testSourceVersion;
+  private ConnectorSpecification testConnectorSpecification;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
@@ -77,9 +78,13 @@ class OAuthConfigSupplierTest {
         .withDockerImageTag("dev")
         .withSpec(null);
 
-    setupStandardDefinitionMock(createAdvancedAuth()
+    final AdvancedAuth advancedAuth = createAdvancedAuth()
         .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
-        .withPredicateValue(OAUTH));
+        .withPredicateValue(OAUTH);
+
+    testConnectorSpecification = createConnectorSpecification(advancedAuth);
+
+    setupStandardDefinitionMock(advancedAuth);
   }
 
   @Test
@@ -96,8 +101,8 @@ class OAuthConfigSupplierTest {
   void testNoAuthMaskingBecauseEmptyParams() throws IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig =
+        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), testConnectorSpecification);
     assertEquals(config, actualConfig);
   }
 
@@ -130,15 +135,14 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testNoOAuthMaskingBecauseWrongPredicateValue() throws IOException, JsonValidationException, ConfigNotFoundException {
-    setupStandardDefinitionMock(createAdvancedAuth()
-        .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
-        .withPredicateValue("wrong_auth_type"));
+  void testNoOAuthMaskingBecauseWrongPredicateValue() throws IOException, JsonValidationException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
+    final ConnectorSpecification spec = createConnectorSpecification(createAdvancedAuth()
+        .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
+        .withPredicateValue("wrong_auth_type"));
     setupOAuthParamMocks(generateOAuthParameters());
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), spec);
     assertEquals(config, actualConfig);
   }
 
@@ -159,10 +163,10 @@ class OAuthConfigSupplierTest {
   void testOAuthMasking() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
     setupOAuthParamMocks(oauthParameters);
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig =
+        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), testConnectorSpecification);
     final JsonNode expectedConfig = getExpectedNode(MoreOAuthParameters.SECRET_MASK);
     assertEquals(expectedConfig, actualConfig);
   }
@@ -184,16 +188,15 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthMaskingWithoutPredicate() throws JsonValidationException, IOException, ConfigNotFoundException {
-    setupStandardDefinitionMock(createAdvancedAuth()
-        .withPredicateKey(null)
-        .withPredicateValue(null));
+  void testOAuthMaskingWithoutPredicate() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
+    final ConnectorSpecification spec = createConnectorSpecification(createAdvancedAuth()
+        .withPredicateKey(null)
+        .withPredicateValue(null));
     final Map<String, Object> oauthParameters = generateOAuthParameters();
     setupOAuthParamMocks(oauthParameters);
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), spec);
     final JsonNode expectedConfig = getExpectedNode(MoreOAuthParameters.SECRET_MASK);
     assertEquals(expectedConfig, actualConfig);
   }
@@ -215,16 +218,15 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthMaskingWithoutPredicateValue() throws JsonValidationException, IOException, ConfigNotFoundException {
-    setupStandardDefinitionMock(createAdvancedAuth()
-        .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
-        .withPredicateValue(""));
+  void testOAuthMaskingWithoutPredicateValue() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
+    final ConnectorSpecification spec = createConnectorSpecification(createAdvancedAuth()
+        .withPredicateKey(List.of(CREDENTIALS, AUTH_TYPE))
+        .withPredicateValue(""));
     final Map<String, Object> oauthParameters = generateOAuthParameters();
     setupOAuthParamMocks(oauthParameters);
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), spec);
     final JsonNode expectedConfig = getExpectedNode(MoreOAuthParameters.SECRET_MASK);
     assertEquals(expectedConfig, actualConfig);
   }
@@ -247,14 +249,12 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(workspaceId), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
     setupOAuthParamMocks(oauthParameters);
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), null);
     assertEquals(config, actualConfig);
   }
 
@@ -282,7 +282,7 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthFullInjectionBecauseNoOAuthSpecNestedParameters() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthFullInjectionBecauseNoOAuthSpecNestedParameters() throws JsonValidationException, IOException {
     // Until https://github.com/airbytehq/airbyte/issues/7624 is solved, we need to handle nested oauth
     // parameters
     final JsonNode config = generateJsonConfig();
@@ -322,10 +322,10 @@ class OAuthConfigSupplierTest {
     // parameters
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateNestedOAuthParameters();
     setupOAuthParamMocks(oauthParameters);
-    final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode actualConfig =
+        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, Jsons.clone(config), testConnectorSpecification);
     final JsonNode expectedConfig = getExpectedNode(MoreOAuthParameters.SECRET_MASK);
     assertEquals(expectedConfig, actualConfig);
   }
@@ -343,6 +343,10 @@ class OAuthConfigSupplierTest {
     assertEquals(expectedConfig, actualConfig);
   }
 
+  private static ConnectorSpecification createConnectorSpecification(final AdvancedAuth advancedAuth) {
+    return new ConnectorSpecification().withAdvancedAuth(advancedAuth);
+  }
+
   private static AdvancedAuth createAdvancedAuth() {
     return new AdvancedAuth()
         .withAuthFlowType(AuthFlowType.OAUTH_2_0)
@@ -356,7 +360,7 @@ class OAuthConfigSupplierTest {
   private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth) throws JsonValidationException, ConfigNotFoundException, IOException {
     when(configRepository.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(testSourceVersion
-        .withSpec(new ConnectorSpecification().withAdvancedAuth(advancedAuth)));
+        .withSpec(createConnectorSpecification(advancedAuth)));
   }
 
   private void setupOAuthParamMocks(final Map<String, Object> oauthParameters) throws JsonValidationException, IOException {

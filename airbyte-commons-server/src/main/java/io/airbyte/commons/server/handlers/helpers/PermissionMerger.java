@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import java.util.Map;
 
@@ -26,8 +27,8 @@ public class PermissionMerger {
   /**
    * Merge two permissions. Always pick the higher permission.
    */
-  public static PermissionType pickHigherPermission(PermissionType permission1, PermissionType permission2) {
-    if (PERMISSION_RANKING_REFERENCE.get(permission1) > PERMISSION_RANKING_REFERENCE.get(permission2)) {
+  public static Permission pickHigherPermission(Permission permission1, Permission permission2) {
+    if (PERMISSION_RANKING_REFERENCE.get(permission1.getPermissionType()) > PERMISSION_RANKING_REFERENCE.get(permission2.getPermissionType())) {
       return permission1;
     } else {
       return permission2;

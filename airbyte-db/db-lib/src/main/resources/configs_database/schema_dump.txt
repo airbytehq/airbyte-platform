@@ -147,7 +147,7 @@ create table "public"."connection" (
   "catalog" jsonb not null,
   "status" "public"."status_type",
   "schedule" jsonb,
-  "manual" boolean not null,
+  "manual" boolean,
   "resource_requirements" jsonb,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,

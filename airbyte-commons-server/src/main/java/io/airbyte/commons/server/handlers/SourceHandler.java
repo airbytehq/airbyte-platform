@@ -379,7 +379,7 @@ public class SourceHandler {
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
       throws JsonValidationException, IOException {
     final AirbyteCatalog persistenceCatalog = CatalogConverter.toProtocol(request.getCatalog());
-    UUID catalogId;
+    final UUID catalogId;
 
     if (shouldWriteCanonicalActorCatalog(request)) {
       catalogId = writeCanonicalActorCatalog(persistenceCatalog, request);
@@ -390,11 +390,12 @@ public class SourceHandler {
     return new DiscoverCatalogResult().catalogId(catalogId);
   }
 
-  private boolean shouldWriteCanonicalActorCatalog(SourceDiscoverSchemaWriteRequestBody request) {
+  private boolean shouldWriteCanonicalActorCatalog(final SourceDiscoverSchemaWriteRequestBody request) {
     return request.getSourceId() != null && featureFlagClient.boolVariation(CanonicalCatalogSchema.INSTANCE, new Source(request.getSourceId()));
   }
 
-  private UUID writeCanonicalActorCatalog(AirbyteCatalog persistenceCatalog, SourceDiscoverSchemaWriteRequestBody request) throws IOException {
+  private UUID writeCanonicalActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request)
+      throws IOException {
     return configRepository.writeCanonicalActorCatalogFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
@@ -402,7 +403,7 @@ public class SourceHandler {
         request.getConfigurationHash());
   }
 
-  private UUID writeActorCatalog(AirbyteCatalog persistenceCatalog, SourceDiscoverSchemaWriteRequestBody request) throws IOException {
+  private UUID writeActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request) throws IOException {
     return configRepository.writeActorCatalogFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
@@ -474,7 +475,7 @@ public class SourceHandler {
                                        final ConnectorSpecification spec)
       throws JsonValidationException, IOException {
     final JsonNode oAuthMaskedConfigurationJson =
-        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, configurationJson);
+        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
     final SourceConnection sourceConnection = new SourceConnection()
         .withName(name)
         .withSourceDefinitionId(sourceDefinitionId)

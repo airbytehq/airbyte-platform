@@ -957,8 +957,6 @@ components:
           format: email
         news:
           type: boolean
-        intercomHash:
-          type: string
     UserReadList:
       type: object
       required:

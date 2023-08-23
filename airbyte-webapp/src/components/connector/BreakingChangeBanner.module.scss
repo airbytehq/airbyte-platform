@@ -1,0 +1,19 @@
+@use "scss/variables";
+
+.additionalContent {
+  margin-top: variables.$spacing-md;
+}
+
+.connectionsContainer {
+  padding-left: variables.$spacing-xl;
+}
+
+.connectionsList {
+  margin: 0;
+  padding-inline-start: variables.$spacing-xl;
+}
+
+.moreConnections {
+  width: fit-content;
+  margin-left: variables.$spacing-sm;
+}
