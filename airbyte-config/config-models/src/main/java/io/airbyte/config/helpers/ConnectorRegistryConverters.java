@@ -183,7 +183,7 @@ public class ConnectorRegistryConverters {
     try {
       new Version(dockerImageTag);
     } catch (final IllegalArgumentException e) {
-      throw new IllegalArgumentException("dockerImageTag must parseable into a Version object. ", e);
+      throw new IllegalArgumentException("Invalid Semver version for docker image tag: " + dockerImageTag, e);
     }
   }
 

@@ -140,11 +140,19 @@ public class DestinationDefinitionsHandler {
         Exceptions.swallowWithDefault(remoteDefinitionsProvider::getDestinationDefinitions, Collections.emptyList());
     final List<StandardDestinationDefinition> destinationDefs =
         latestDestinations.stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
+
     final Map<UUID, ActorDefinitionVersion> destinationDefVersions =
         latestDestinations.stream().collect(Collectors.toMap(
             ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
-            ConnectorRegistryConverters::toActorDefinitionVersion));
-    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersions);
+            destination -> Exceptions.swallowWithDefault(
+                () -> ConnectorRegistryConverters.toActorDefinitionVersion(destination), null)));
+
+    // filter out any destination definitions with no corresponding version
+    final List<StandardDestinationDefinition> validDestinationDefs = destinationDefs.stream()
+        .filter(d -> destinationDefVersions.get(d.getDestinationDefinitionId()) != null)
+        .toList();
+
+    return toDestinationDefinitionReadList(validDestinationDefs, destinationDefVersions);
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

@@ -126,7 +126,8 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testNewConnectorIsWritten(final boolean updateAll) throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testNewConnectorIsWritten(final boolean updateAll)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES));
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3));
 
@@ -148,7 +149,8 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll) throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testConnectorIsUpdatedIfItIsNotInUse(final boolean updateAll)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     mockSeedInitialDefinitions();
     when(configRepository.getActorDefinitionIdsInUse()).thenReturn(Set.of());
 
@@ -205,7 +207,8 @@ class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void testDefinitionsFiltering(final boolean updateAll) throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testDefinitionsFiltering(final boolean updateAll)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     when(jobPersistence.getCurrentProtocolVersionRange())
         .thenReturn(Optional.of(new AirbyteProtocolVersionRange(new Version("2.0.0"), new Version("3.0.0"))));
     final ConnectorRegistrySourceDefinition postgresWithOldProtocolVersion =

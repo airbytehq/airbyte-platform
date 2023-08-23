@@ -145,11 +145,19 @@ public class SourceDefinitionsHandler {
     final List<ConnectorRegistrySourceDefinition> latestSources =
         Exceptions.swallowWithDefault(remoteDefinitionsProvider::getSourceDefinitions, Collections.emptyList());
     final List<StandardSourceDefinition> sourceDefs = latestSources.stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList();
-    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap = latestSources
-        .stream().collect(Collectors.toMap(
+
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
+        latestSources.stream().collect(Collectors.toMap(
             ConnectorRegistrySourceDefinition::getSourceDefinitionId,
-            ConnectorRegistryConverters::toActorDefinitionVersion));
-    return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap);
+            destination -> Exceptions.swallowWithDefault(
+                () -> ConnectorRegistryConverters.toActorDefinitionVersion(destination), null)));
+
+    // filter out any destination definitions with no corresponding version
+    final List<StandardSourceDefinition> validSourceDefs = sourceDefs.stream()
+        .filter(s -> sourceDefVersionMap.get(s.getSourceDefinitionId()) != null)
+        .toList();
+
+    return toSourceDefinitionReadList(validSourceDefs, sourceDefVersionMap);
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

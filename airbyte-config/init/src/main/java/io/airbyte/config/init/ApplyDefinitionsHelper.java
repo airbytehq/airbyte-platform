@@ -113,9 +113,20 @@ public class ApplyDefinitionsHelper {
                                      final Set<UUID> actorDefinitionIdsInUse,
                                      final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardSourceDefinition newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef);
-    final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+
+    // Skip and log if unable to parse is registry entry.
+    final StandardSourceDefinition newSourceDef;
+    final ActorDefinitionVersion newADV;
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef;
+    try {
+      newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef);
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+    } catch (final IllegalArgumentException e) {
+      LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      return;
+    }
+
     allBreakingChanges.addAll(breakingChangesForDef);
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
@@ -146,9 +157,20 @@ public class ApplyDefinitionsHelper {
                                           final Set<UUID> actorDefinitionIdsInUse,
                                           final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardDestinationDefinition newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef);
-    final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+
+    // Skip and log if unable to parse is registry entry.
+    final StandardDestinationDefinition newDestinationDef;
+    final ActorDefinitionVersion newADV;
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef;
+    try {
+      newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef);
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+    } catch (final IllegalArgumentException e) {
+      LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      return;
+    }
+
     allBreakingChanges.addAll(breakingChangesForDef);
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
