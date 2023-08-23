@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import io.airbyte.commons.server.ServerConstants;
 import io.airbyte.commons.server.converters.SpecFetcher;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
@@ -21,11 +19,7 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.IngestBreakingChanges;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -47,22 +41,16 @@ public class ActorDefinitionHandlerHelper {
   private final SynchronousSchedulerClient synchronousSchedulerClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
   private final ActorDefinitionVersionResolver actorDefinitionVersionResolver;
-  private final ConfigRepository configRepository;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
-  private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionHandlerHelper(final SynchronousSchedulerClient synchronousSchedulerClient,
                                       final AirbyteProtocolVersionRange airbyteProtocolVersionRange,
                                       final ActorDefinitionVersionResolver actorDefinitionVersionResolver,
-                                      final ConfigRepository configRepository,
-                                      final RemoteDefinitionsProvider remoteDefinitionsProvider,
-                                      final FeatureFlagClient featureFlagClient) {
+                                      final RemoteDefinitionsProvider remoteDefinitionsProvider) {
     this.synchronousSchedulerClient = synchronousSchedulerClient;
     this.protocolVersionRange = airbyteProtocolVersionRange;
     this.actorDefinitionVersionResolver = actorDefinitionVersionResolver;
-    this.configRepository = configRepository;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
-    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -175,11 +163,8 @@ public class ActorDefinitionHandlerHelper {
    * @param actorType - the actor type
    * @throws IOException - if there is an error persisting the breaking changes
    */
-  public void persistBreakingChanges(final ActorDefinitionVersion actorDefinitionVersion, final ActorType actorType)
+  public List<ActorDefinitionBreakingChange> getBreakingChanges(final ActorDefinitionVersion actorDefinitionVersion, final ActorType actorType)
       throws IOException {
-    if (!featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      return;
-    }
 
     final String connectorRepository = actorDefinitionVersion.getDockerRepository();
     // We always want the most up-to-date version of the list breaking changes, in case they've been
@@ -200,9 +185,7 @@ public class ActorDefinitionHandlerHelper {
       default -> throw new IllegalArgumentException("Actor type not supported: " + actorType);
     }
 
-    if (breakingChanges.isPresent()) {
-      configRepository.writeActorDefinitionBreakingChanges(breakingChanges.get());
-    }
+    return breakingChanges.orElse(List.of());
   }
 
 }

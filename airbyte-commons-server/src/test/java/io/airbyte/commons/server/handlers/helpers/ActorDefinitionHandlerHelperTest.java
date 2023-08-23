@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +23,7 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.BreakingChanges;
@@ -33,11 +33,7 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.featureflag.IngestBreakingChanges;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.http.uri.UriBuilder;
 import java.io.IOException;
@@ -58,9 +54,6 @@ class ActorDefinitionHandlerHelperTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private ActorDefinitionVersionResolver actorDefinitionVersionResolver;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
-  private ConfigRepository configRepository;
-  private TestClient featureFlagClient;
-
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final String DOCKER_REPOSITORY = "source-test";
@@ -94,14 +87,10 @@ class ActorDefinitionHandlerHelperTest {
     synchronousSchedulerClient = spy(SynchronousSchedulerClient.class);
     final AirbyteProtocolVersionRange protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
     actorDefinitionVersionResolver = mock(ActorDefinitionVersionResolver.class);
-    configRepository = mock(ConfigRepository.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
-    featureFlagClient = mock(TestClient.class);
     actorDefinitionHandlerHelper =
-        new ActorDefinitionHandlerHelper(synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, configRepository,
-            remoteDefinitionsProvider, featureFlagClient);
+        new ActorDefinitionHandlerHelper(synchronousSchedulerClient, protocolVersionRange, actorDefinitionVersionResolver, remoteDefinitionsProvider);
 
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   @Nested
@@ -129,7 +118,7 @@ class ActorDefinitionHandlerHelperTest {
       assertEquals(expectedNewVersion, newVersion);
 
       verifyNoMoreInteractions(synchronousSchedulerClient);
-      verifyNoInteractions(actorDefinitionVersionResolver, configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider);
     }
 
     @Test
@@ -145,7 +134,7 @@ class ActorDefinitionHandlerHelperTest {
       verify(synchronousSchedulerClient).createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID);
 
       verifyNoMoreInteractions(synchronousSchedulerClient);
-      verifyNoInteractions(actorDefinitionVersionResolver, configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider);
     }
 
   }
@@ -187,7 +176,7 @@ class ActorDefinitionHandlerHelperTest {
       assertEquals(newValidProtocolVersion, newVersion.getProtocolVersion());
 
       verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
-      verifyNoInteractions(configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(remoteDefinitionsProvider);
     }
 
     @ParameterizedTest
@@ -205,7 +194,7 @@ class ActorDefinitionHandlerHelperTest {
       assertEquals(previousDefaultVersion, newVersion);
 
       verifyNoMoreInteractions(actorDefinitionVersionResolver);
-      verifyNoInteractions(synchronousSchedulerClient, configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(synchronousSchedulerClient, remoteDefinitionsProvider);
     }
 
     @ParameterizedTest
@@ -233,7 +222,7 @@ class ActorDefinitionHandlerHelperTest {
       verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, null);
 
       verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
-      verifyNoInteractions(configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(remoteDefinitionsProvider);
     }
 
     @ParameterizedTest
@@ -254,7 +243,7 @@ class ActorDefinitionHandlerHelperTest {
       verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, null);
 
       verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
-      verifyNoInteractions(configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(remoteDefinitionsProvider);
     }
 
     @ParameterizedTest
@@ -279,16 +268,16 @@ class ActorDefinitionHandlerHelperTest {
       assertEquals(oldExistingADV, newVersion);
 
       verifyNoMoreInteractions(actorDefinitionVersionResolver);
-      verifyNoInteractions(synchronousSchedulerClient, configRepository, remoteDefinitionsProvider, featureFlagClient);
+      verifyNoInteractions(synchronousSchedulerClient, remoteDefinitionsProvider);
     }
 
   }
 
   @Nested
-  class TestPersistBreakingChange {
+  class TestGetBreakingChanges {
 
     @Test
-    void testPersistBreakingChanges() throws IOException {
+    void testGetBreakingChanges() throws IOException {
       final BreakingChanges registryBreakingChanges =
           new BreakingChanges().withAdditionalProperty("1.0.0", new VersionBreakingChange().withMessage("A breaking change was made")
               .withUpgradeDeadline("2000-01-01").withMigrationDocumentationUrl("https://docs.airbyte.io/migration"));
@@ -298,53 +287,44 @@ class ActorDefinitionHandlerHelperTest {
       when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST))
           .thenReturn(Optional.of(sourceDefWithBreakingChanges));
 
-      actorDefinitionHandlerHelper.persistBreakingChanges(actorDefinitionVersion, ActorType.SOURCE);
-      verify(featureFlagClient).boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS));
-      verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
-      verify(configRepository)
-          .writeActorDefinitionBreakingChanges(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(sourceDefWithBreakingChanges));
+      final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionHandlerHelper.getBreakingChanges(actorDefinitionVersion,
+          ActorType.SOURCE);
+      assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(sourceDefWithBreakingChanges), breakingChanges);
 
-      verifyNoMoreInteractions(configRepository, featureFlagClient, remoteDefinitionsProvider);
+      verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
+
+      verifyNoMoreInteractions(remoteDefinitionsProvider);
       verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
     }
 
-    @Test
-    void testPersistNoBreakingChanges() throws IOException {
-      when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST))
-          .thenReturn(Optional.of(connectorRegistrySourceDefinition));
+  }
 
-      actorDefinitionHandlerHelper.persistBreakingChanges(actorDefinitionVersion, ActorType.SOURCE);
-      verify(featureFlagClient).boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS));
-      verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
-      verify(configRepository).writeActorDefinitionBreakingChanges(List.of());
+  @Test
+  void testGetNoBreakingChangesAvailable() throws IOException {
+    when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST))
+        .thenReturn(Optional.of(connectorRegistrySourceDefinition));
 
-      verifyNoMoreInteractions(configRepository, featureFlagClient, remoteDefinitionsProvider);
-      verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
-    }
+    final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionHandlerHelper.getBreakingChanges(actorDefinitionVersion,
+        ActorType.SOURCE);
+    assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(connectorRegistrySourceDefinition), breakingChanges);
 
-    @Test
-    void testBreakingChangesAreNotPersistedIfDefinitionNotFound() throws IOException {
-      when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
+    verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
 
-      actorDefinitionHandlerHelper.persistBreakingChanges(actorDefinitionVersion, ActorType.SOURCE);
-      verify(featureFlagClient).boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS));
-      verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
+    verifyNoMoreInteractions(remoteDefinitionsProvider);
+    verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
+  }
 
-      verifyNoMoreInteractions(configRepository, featureFlagClient, remoteDefinitionsProvider);
-      verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
-    }
+  @Test
+  void testGetBreakingChangesIfDefinitionNotFound() throws IOException {
+    when(remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)).thenReturn(Optional.empty());
 
-    @Test
-    void testTurnOffBreakingChangesFeatureFlag() throws IOException {
-      when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
+    final List<ActorDefinitionBreakingChange> breakingChanges = actorDefinitionHandlerHelper.getBreakingChanges(actorDefinitionVersion,
+        ActorType.SOURCE);
+    verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST);
+    assertEquals(List.of(), breakingChanges);
 
-      actorDefinitionHandlerHelper.persistBreakingChanges(actorDefinitionVersion, ActorType.SOURCE);
-      verify(featureFlagClient).boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS));
-
-      verifyNoMoreInteractions(featureFlagClient);
-      verifyNoInteractions(configRepository, synchronousSchedulerClient, actorDefinitionVersionResolver, remoteDefinitionsProvider);
-    }
-
+    verifyNoMoreInteractions(remoteDefinitionsProvider);
+    verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
   }
 
   private String getDockerImageForTag(final String dockerImageTag) {

@@ -9,9 +9,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -374,10 +376,18 @@ public class MockData {
 
   public static ActorDefinitionVersion actorDefinitionVersion() {
     return new ActorDefinitionVersion()
-        .withDockerImageTag("tag-4")
+        .withDockerImageTag("0.0.1")
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
         .withProtocolVersion("0.2.0");
+  }
+
+  public static ActorDefinitionBreakingChange actorDefinitionBreakingChange(final String version) {
+    return new ActorDefinitionBreakingChange()
+        .withVersion(new Version(version))
+        .withMessage("This is a breaking change for version " + version)
+        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#" + version)
+        .withUpgradeDeadline("2020-01-01");
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
@@ -672,7 +682,7 @@ public class MockData {
         .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync5 = new StandardSync()
-        .withOperationIds(Arrays.asList(OPERATION_ID_3))
+        .withOperationIds(List.of(OPERATION_ID_3))
         .withConnectionId(CONNECTION_ID_5)
         .withSourceId(SOURCE_ID_3)
         .withDestinationId(DESTINATION_ID_3)
@@ -692,7 +702,7 @@ public class MockData {
         .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync6 = new StandardSync()
-        .withOperationIds(Arrays.asList())
+        .withOperationIds(List.of())
         .withConnectionId(CONNECTION_ID_6)
         .withSourceId(SOURCE_ID_3)
         .withDestinationId(DESTINATION_ID_3)
@@ -855,7 +865,7 @@ public class MockData {
         .withServiceAccountEmail("a1e5ac98-7531-48e1-943b-b46636@random-gcp-project.abc.abcdefghijklmno.com")
         .withJsonCredential(Jsons.deserialize(MOCK_SERVICE_ACCOUNT_1));
 
-    return Arrays.asList(workspaceServiceAccount);
+    return Collections.singletonList(workspaceServiceAccount);
   }
 
   public static DeclarativeManifest declarativeManifest() {

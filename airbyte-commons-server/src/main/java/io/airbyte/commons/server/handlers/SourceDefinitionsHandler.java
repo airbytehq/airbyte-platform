@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate;
@@ -24,6 +26,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -36,6 +39,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
@@ -266,8 +270,12 @@ public class SourceDefinitionsHandler {
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
         currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
 
-    actorDefinitionHandlerHelper.persistBreakingChanges(newVersion, ActorType.SOURCE);
-    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
+    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion, breakingChangesForDef);
+
+    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
+      configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    }
     return buildSourceDefinitionRead(newSource, newVersion);
   }
 
