@@ -61,12 +61,23 @@ public class V0_50_5_003__NotificationSettingsSendOnFailureBackfill extends Base
 
       final var notificationSetting =
           Jsons.deserialize(workspaceRecord.get(NOTIFICATION_SETTINGS_COLUMN).data(), new TypeReference<NotificationSettings>() {});
+      if (notificationSetting == null) {
+        return;
+      }
 
       // By default the following notifactions are all sent via emails. At this moment customers do not
       // have an option to turn
       // it off.
       NotificationItem item = notificationSetting.getSendOnFailure();
+
+      if (item == null) {
+        return;
+      }
       List<NotificationType> existingType = item.getNotificationType();
+
+      if (existingType == null) {
+        return;
+      }
       if (existingType.contains(NotificationType.CUSTOMERIO)) {
         // They already have CUSTOMERIO enabled for sendOnFailure; skip operation.
         return;
