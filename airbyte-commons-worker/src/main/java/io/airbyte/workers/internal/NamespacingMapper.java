@@ -103,8 +103,8 @@ public class NamespacingMapper implements AirbyteMapper {
   }
 
   /**
-   * if you are making changes in this method please read the documentation in {@link #mapMessage}
-   * first
+   * If you are making changes in this method please read the documentation in {@link #mapMessage}
+   * first.
    */
   AirbyteMessage mapMessageOld(final AirbyteMessage message) {
     if (message.getType() == Type.RECORD) {
@@ -123,8 +123,8 @@ public class NamespacingMapper implements AirbyteMapper {
   }
 
   /**
-   * if you are making changes in this method please read the documentation in {@link #mapMessage}
-   * first
+   * If you are making changes in this method please read the documentation in {@link #mapMessage}
+   * first.
    */
   AirbyteMessage mapMessageNew(final AirbyteMessage message) {
     if (message.getType() == Type.RECORD) {

@@ -227,8 +227,8 @@ class ReplicationWorkerHelper {
   }
 
   /**
-   * if you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first
+   * If you are making changes in this method please read the documentation in
+   * {@link #processMessageFromSource} first.
    */
   Optional<AirbyteMessage> processMessageFromSourceNew(final AirbyteMessage sourceRawMessage) {
     final AirbyteMessage processedMessage = internalProcessMessageFromSource(sourceRawMessage);
@@ -240,8 +240,8 @@ class ReplicationWorkerHelper {
   }
 
   /**
-   * if you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first
+   * If you are making changes in this method please read the documentation in
+   * {@link #processMessageFromSource} first.
    */
   private Optional<AirbyteMessage> processMessageFromSourceOld(final AirbyteMessage airbyteMessage) {
     fieldSelector.filterSelectedFields(airbyteMessage);
