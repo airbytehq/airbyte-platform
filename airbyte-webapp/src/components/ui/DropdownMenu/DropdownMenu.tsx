@@ -73,7 +73,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           >
             {options.map((item, index) => {
               if (item.as === "separator") {
-                return <div role="presentation" className={styles.separator} />;
+                return <div role="presentation" className={styles.separator} key={index} />;
               }
               return (
                 <Menu.Item key={index} disabled={item.disabled}>
