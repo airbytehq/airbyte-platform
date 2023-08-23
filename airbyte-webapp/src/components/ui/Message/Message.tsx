@@ -40,6 +40,17 @@ const STYLES_BY_TYPE: Readonly<Record<MessageType, string>> = {
   info: styles.info,
 };
 
+const MESSAGE_SEVERITY_LEVELS: Readonly<Record<MessageType, number>> = {
+  error: 3,
+  warning: 2,
+  info: 1,
+  success: 0,
+};
+
+export const isHigherSeverity = (messageTypeA: MessageType, messageTypeB: MessageType): boolean => {
+  return MESSAGE_SEVERITY_LEVELS[messageTypeA] > MESSAGE_SEVERITY_LEVELS[messageTypeB];
+};
+
 export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   type = "info",
   onAction,
