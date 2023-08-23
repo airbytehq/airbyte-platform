@@ -11,7 +11,7 @@ airbyte:
   connector-registry:
     seed-provider: ${CONNECTOR_REGISTRY_SEED_PROVIDER:local}
     remote:
-      base-url: ${CONNECTOR_REGISTRY_BASE_URL:`https://connectors.airbyte.com/`}
+      base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   cron:
     update-definitions:

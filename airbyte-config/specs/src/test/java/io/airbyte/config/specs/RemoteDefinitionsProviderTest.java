@@ -172,7 +172,7 @@ class RemoteDefinitionsProviderTest {
   @ParameterizedTest
   @CsvSource({"OSS", "CLOUD"})
   void testGetRegistryUrl(final String deploymentMode) {
-    final String baseUrl = "https://connectors.airbyte.com/";
+    final String baseUrl = "https://connectors.airbyte.com/files/";
     final RemoteDefinitionsProvider definitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
     final URI registryUrl = definitionsProvider.getRegistryUrl();
@@ -183,7 +183,7 @@ class RemoteDefinitionsProviderTest {
   @ParameterizedTest
   @CsvSource({"OSS", "CLOUD"})
   void testGetRegistryEntryUrl(final String deploymentMode) {
-    final String baseUrl = "https://connectors.airbyte.com/";
+    final String baseUrl = "https://connectors.airbyte.com/files/";
     final String connectorName = "airbyte/source-github";
     final String version = "1.0.0";
     final RemoteDefinitionsProvider definitionsProvider =
