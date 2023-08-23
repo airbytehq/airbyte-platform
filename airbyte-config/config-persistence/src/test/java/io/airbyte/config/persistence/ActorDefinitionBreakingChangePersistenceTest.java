@@ -141,6 +141,14 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   }
 
   @Test
+  void testListBreakingChanges() throws IOException {
+    final List<ActorDefinitionBreakingChange> breakingChanges = List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4);
+    assertEquals(0, configRepository.listBreakingChanges().size());
+    configRepository.writeActorDefinitionBreakingChanges(breakingChanges);
+    assertEquals(breakingChanges, configRepository.listBreakingChanges());
+  }
+
+  @Test
   void testListBreakingChangesForVersion() throws IOException {
     assertEquals(0, configRepository.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1).size());
     configRepository.writeActorDefinitionBreakingChanges(List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

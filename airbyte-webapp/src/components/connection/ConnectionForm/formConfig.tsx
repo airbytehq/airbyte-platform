@@ -329,7 +329,7 @@ export const useInitialValues = (
   const { catalogDiff } = connection;
 
   const defaultNonBreakingChangesPreference = autoPropagationEnabled
-    ? NonBreakingChangesPreference.propagate_fully
+    ? NonBreakingChangesPreference.propagate_columns
     : NonBreakingChangesPreference.ignore;
 
   // used to determine if we should calculate optimal sync mode

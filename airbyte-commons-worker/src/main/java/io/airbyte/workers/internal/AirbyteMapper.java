@@ -17,4 +17,6 @@ public interface AirbyteMapper {
 
   AirbyteMessage mapMessage(AirbyteMessage message);
 
+  AirbyteMessage revertMap(AirbyteMessage message);
+
 }

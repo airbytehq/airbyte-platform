@@ -2357,18 +2357,18 @@ public class ConfigRepository {
       final String catalogHash = hashFunction.hashBytes(Jsons.canonicalJsonSerialize(airbyteCatalog)
           .getBytes(Charsets.UTF_8)).toString();
 
-      UUID catalogId = findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
+      final UUID catalogId = findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
       if (catalogId != null) {
         return catalogId;
       }
-    } catch (IOException e) {
+    } catch (final IOException e) {
       LOGGER.error("Failed to serialize AirbyteCatalog to canonical JSON", e);
     }
 
     // Fallback to the old json when canonical json serialization failed
-    String oldCatalogHash = hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
+    final String oldCatalogHash = hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
 
-    UUID oldCatalogId = findAndReturnCatalogId(oldCatalogHash, airbyteCatalog, context);
+    final UUID oldCatalogId = findAndReturnCatalogId(oldCatalogHash, airbyteCatalog, context);
     if (oldCatalogId != null) {
       return oldCatalogId;
     }
@@ -3495,9 +3495,7 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion)
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()));
+        .map(DbConverter::buildActorDefinitionVersion);
   }
 
   /**
@@ -3517,6 +3515,22 @@ public class ConfigRepository {
   }
 
   /**
+   * List all actor definition versions for a given actor definition.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @return list of actor definition versions
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionVersion> listActorDefinitionVersionsForDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
+        .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionVersion)
+        .collect(Collectors.toList()));
+  }
+
+  /**
    * Get actor definition versions by ID.
    *
    * @param actorDefinitionVersionIds - actor definition version ids
@@ -3529,8 +3543,6 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .map(DbConverter::buildActorDefinitionVersion)
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()))
         .collect(Collectors.toList());
   }
 
@@ -3610,6 +3622,22 @@ public class ConfigRepository {
   }
 
   /**
+   * Set the support state for a list of actor definition versions.
+   *
+   * @param actorDefinitionVersionIds - actor definition version ids to update
+   * @param supportState - support state to update to
+   * @throws IOException - you never know when you io
+   */
+  public void setActorDefinitionVersionSupportStates(final List<UUID> actorDefinitionVersionIds,
+                                                     final ActorDefinitionVersion.SupportState supportState)
+      throws IOException {
+    database.query(ctx -> ctx.update(Tables.ACTOR_DEFINITION_VERSION)
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE, Enums.toEnum(supportState.value(), SupportState.class).orElseThrow())
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
+        .execute());
+  }
+
+  /**
    * Get the list of breaking changes available affecting an actor definition version.
    * <p>
    * "Affecting" breaking changes are those between the provided version (non-inclusive) and the actor
@@ -3635,6 +3663,20 @@ public class ConfigRepository {
             && latestVersion.greaterThanOrEqualTo(breakingChange.getVersion()))
         .sorted((v1, v2) -> v1.getVersion().versionCompareTo(v2.getVersion()))
         .toList();
+  }
+
+  /**
+   * List all breaking changes.
+   *
+   * @return list of breaking changes
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionBreakingChange> listBreakingChanges() throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionBreakingChange)
+        .collect(Collectors.toList()));
   }
 
 }

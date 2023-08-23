@@ -14,12 +14,17 @@ import io.airbyte.workers.internal.AirbyteMapper;
 public class StubAirbyteMapper implements AirbyteMapper {
 
   @Override
-  public ConfiguredAirbyteCatalog mapCatalog(ConfiguredAirbyteCatalog catalog) {
+  public ConfiguredAirbyteCatalog mapCatalog(final ConfiguredAirbyteCatalog catalog) {
     return null;
   }
 
   @Override
-  public AirbyteMessage mapMessage(AirbyteMessage message) {
+  public AirbyteMessage mapMessage(final AirbyteMessage message) {
+    return message;
+  }
+
+  @Override
+  public AirbyteMessage revertMap(final AirbyteMessage message) {
     return message;
   }
 

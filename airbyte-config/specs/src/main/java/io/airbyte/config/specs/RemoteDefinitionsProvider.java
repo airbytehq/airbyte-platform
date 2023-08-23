@@ -7,6 +7,7 @@ package io.airbyte.config.specs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorType;
@@ -48,22 +49,29 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   private final DeploymentMode deploymentMode;
   private final Duration timeout;
 
-  public RemoteDefinitionsProvider(@Value("${airbyte.connector-registry.remote.base-url}") final String remoteRegistryBaseUrl,
-                                   final DeploymentMode deploymentMode,
-                                   @Value("${airbyte.connector-registry.remote.timeout-ms}") final long remoteCatalogTimeoutMs) {
-    LOGGER.info("Creating remote definitions provider for URL '{}' and registry '{}'...", remoteRegistryBaseUrl, deploymentMode);
-    if (remoteRegistryBaseUrl == null || remoteRegistryBaseUrl.isEmpty()) {
-      throw new IllegalArgumentException("Remote connector registry URL cannot be null or empty.");
-    }
-
+  private URI parsedRemoteRegistryBaseUrlOrDefault(final String remoteRegistryBaseUrl) {
     try {
-      this.remoteRegistryBaseUrl = new URI(remoteRegistryBaseUrl);
-      this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
-      this.deploymentMode = deploymentMode;
+      if (remoteRegistryBaseUrl == null || remoteRegistryBaseUrl.isEmpty()) {
+        LOGGER.error("Remote connector registry base URL cannot be null or empty. Falling back to default");
+        return new URI(AirbyteCatalogConstants.REMOTE_REGISTRY_BASE_URL);
+      } else {
+        return new URI(remoteRegistryBaseUrl);
+      }
     } catch (final URISyntaxException e) {
       LOGGER.error("Invalid remote registry base URL: {}", remoteRegistryBaseUrl);
       throw new IllegalArgumentException("Remote connector registry base URL must be a valid URI.", e);
     }
+  }
+
+  public RemoteDefinitionsProvider(@Value("${airbyte.connector-registry.remote.base-url}") final String remoteRegistryBaseUrl,
+                                   final DeploymentMode deploymentMode,
+                                   @Value("${airbyte.connector-registry.remote.timeout-ms}") final long remoteCatalogTimeoutMs) {
+    final URI remoteRegistryBaseUrlUri = parsedRemoteRegistryBaseUrlOrDefault(remoteRegistryBaseUrl);
+    LOGGER.info("Creating remote definitions provider for URL '{}' and registry '{}'...", remoteRegistryBaseUrlUri, deploymentMode);
+
+    this.remoteRegistryBaseUrl = remoteRegistryBaseUrlUri;
+    this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
+    this.deploymentMode = deploymentMode;
   }
 
   private Map<UUID, ConnectorRegistrySourceDefinition> getSourceDefinitionsMap() {
@@ -137,12 +145,12 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   @VisibleForTesting
   URI getRegistryUrl() {
-    return remoteRegistryBaseUrl.resolve(String.format("files/registries/v0/%s_registry.json", getRegistryName()));
+    return remoteRegistryBaseUrl.resolve(String.format("registries/v0/%s_registry.json", getRegistryName()));
   }
 
   @VisibleForTesting
   URI getRegistryEntryUrl(final String connectorName, final String version) {
-    return remoteRegistryBaseUrl.resolve(String.format("files/metadata/%s/%s/%s.json", connectorName, version, getRegistryName()));
+    return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/%s.json", connectorName, version, getRegistryName()));
   }
 
   /**

@@ -37,6 +37,7 @@ export const enum Action {
   CREATE_OR_UPDATE_STATE = "CreateOrUpdateState",
   DOWNLOAD_SERVER_LOGS = "DownloadServerLogs",
   DOWNLOAD_SCHEDULER_LOGS = "DownloadSchedulerLogs",
+  UPGRADE_VERSION = "UpgradeVersion",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

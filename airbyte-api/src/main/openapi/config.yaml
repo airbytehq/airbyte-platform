@@ -4903,11 +4903,14 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportState
+        - isActorDefaultVersion
       properties:
         dockerRepository:
           type: string
         dockerImageTag:
           type: string
+        isActorDefaultVersion:
+          type: boolean
         supportState:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
@@ -7668,6 +7671,7 @@ components:
       required:
         - userId
         - email
+        - permissionId
         - permissionType
         - workspaceId
       properties:
@@ -7711,6 +7715,7 @@ components:
       required:
         - userId
         - email
+        - permissionId
         - permissionType
         - organizationId
       properties:

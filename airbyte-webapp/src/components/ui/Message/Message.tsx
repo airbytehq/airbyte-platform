@@ -23,6 +23,7 @@ export interface MessageProps {
   onClose?: () => void;
   "data-testid"?: string;
   hideIcon?: boolean;
+  iconOverride?: keyof typeof ICON_MAPPING;
 }
 
 const ICON_MAPPING = {
@@ -52,6 +53,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   className,
   childrenClassName,
   children,
+  iconOverride,
 }) => {
   const mainMessage = (
     <div
@@ -62,7 +64,10 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
     >
       {!hideIcon && (
         <div className={classNames(styles.iconContainer)}>
-          <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
+          <FontAwesomeIcon
+            icon={iconOverride ? ICON_MAPPING[iconOverride] : ICON_MAPPING[type]}
+            className={styles.messageIcon}
+          />
         </div>
       )}
       <div className={styles.textContainer}>
