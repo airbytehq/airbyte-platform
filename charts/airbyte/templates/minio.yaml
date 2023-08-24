@@ -29,6 +29,10 @@ spec:
         {{ include "airbyte.minioSelectorLabels" . | nindent 8 }}
     spec:
       # Refer to the PVC created earlier
+{{- if $.Values.global.jobs.kube.main_container_image_pull_secret }}
+      imagePullSecrets:
+        - name: "{{ .Values.global.jobs.kube.main_container_image_pull_secret }}"
+{{- end }}
       containers:
         - name: airbyte-minio
           # Pulls the default Minio image from Docker Hub
