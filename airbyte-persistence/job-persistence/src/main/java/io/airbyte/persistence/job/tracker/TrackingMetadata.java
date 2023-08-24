@@ -142,89 +142,94 @@ public class TrackingMetadata {
    */
   public static Map<String, Object> generateJobAttemptMetadata(final Job job) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
-    if (job != null) {
-      final List<Attempt> attempts = job.getAttempts();
-      if (attempts != null && !attempts.isEmpty()) {
-        final Attempt lastAttempt = attempts.get(attempts.size() - 1);
-        if (lastAttempt.getOutput() != null && lastAttempt.getOutput().isPresent()) {
-          final JobOutput jobOutput = lastAttempt.getOutput().get();
-          if (jobOutput.getSync() != null) {
-            final StandardSyncSummary syncSummary = jobOutput.getSync().getStandardSyncSummary();
-            final SyncStats totalStats = syncSummary.getTotalStats();
-            final NormalizationSummary normalizationSummary = jobOutput.getSync().getNormalizationSummary();
+    // Early returns in case we're missing the relevant stats.
+    if (job == null) {
+      return metadata.build();
+    }
+    final List<Attempt> attempts = job.getAttempts();
+    if (attempts == null || attempts.isEmpty()) {
+      return metadata.build();
+    }
+    final Attempt lastAttempt = attempts.get(attempts.size() - 1);
+    if (lastAttempt.getOutput() == null || lastAttempt.getOutput().isEmpty()) {
+      return metadata.build();
+    }
+    final JobOutput jobOutput = lastAttempt.getOutput().get();
+    if (jobOutput.getSync() == null) {
+      return metadata.build();
+    }
+    final StandardSyncSummary syncSummary = jobOutput.getSync().getStandardSyncSummary();
+    final SyncStats totalStats = syncSummary.getTotalStats();
+    final NormalizationSummary normalizationSummary = jobOutput.getSync().getNormalizationSummary();
 
-            if (syncSummary.getStartTime() != null) {
-              metadata.put("sync_start_time", syncSummary.getStartTime());
-            }
-            if (syncSummary.getEndTime() != null && syncSummary.getStartTime() != null) {
-              metadata.put("duration", Math.round((syncSummary.getEndTime() - syncSummary.getStartTime()) / 1000.0));
-            }
-            if (syncSummary.getBytesSynced() != null) {
-              metadata.put("volume_mb", syncSummary.getBytesSynced());
-            }
-            if (syncSummary.getRecordsSynced() != null) {
-              metadata.put("volume_rows", syncSummary.getRecordsSynced());
-            }
-            if (totalStats.getSourceStateMessagesEmitted() != null) {
-              metadata.put("count_state_messages_from_source", syncSummary.getTotalStats().getSourceStateMessagesEmitted());
-            }
-            if (totalStats.getDestinationStateMessagesEmitted() != null) {
-              metadata.put("count_state_messages_from_destination", syncSummary.getTotalStats().getDestinationStateMessagesEmitted());
-            }
-            if (totalStats.getMaxSecondsBeforeSourceStateMessageEmitted() != null) {
-              metadata.put("max_seconds_before_source_state_message_emitted",
-                  totalStats.getMaxSecondsBeforeSourceStateMessageEmitted());
-            }
-            if (totalStats.getMeanSecondsBeforeSourceStateMessageEmitted() != null) {
-              metadata.put("mean_seconds_before_source_state_message_emitted",
-                  totalStats.getMeanSecondsBeforeSourceStateMessageEmitted());
-            }
-            if (totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted() != null) {
-              metadata.put("max_seconds_between_state_message_emit_and_commit",
-                  totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
-            }
-            if (totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted() != null) {
-              metadata.put("mean_seconds_between_state_message_emit_and_commit",
-                  totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
-            }
+    if (syncSummary.getStartTime() != null) {
+      metadata.put("sync_start_time", syncSummary.getStartTime());
+    }
+    if (syncSummary.getEndTime() != null && syncSummary.getStartTime() != null) {
+      metadata.put("duration", Math.round((syncSummary.getEndTime() - syncSummary.getStartTime()) / 1000.0));
+    }
+    if (syncSummary.getBytesSynced() != null) {
+      metadata.put("volume_mb", syncSummary.getBytesSynced());
+    }
+    if (syncSummary.getRecordsSynced() != null) {
+      metadata.put("volume_rows", syncSummary.getRecordsSynced());
+    }
+    if (totalStats.getSourceStateMessagesEmitted() != null) {
+      metadata.put("count_state_messages_from_source", syncSummary.getTotalStats().getSourceStateMessagesEmitted());
+    }
+    if (totalStats.getDestinationStateMessagesEmitted() != null) {
+      metadata.put("count_state_messages_from_destination", syncSummary.getTotalStats().getDestinationStateMessagesEmitted());
+    }
+    if (totalStats.getMaxSecondsBeforeSourceStateMessageEmitted() != null) {
+      metadata.put("max_seconds_before_source_state_message_emitted",
+          totalStats.getMaxSecondsBeforeSourceStateMessageEmitted());
+    }
+    if (totalStats.getMeanSecondsBeforeSourceStateMessageEmitted() != null) {
+      metadata.put("mean_seconds_before_source_state_message_emitted",
+          totalStats.getMeanSecondsBeforeSourceStateMessageEmitted());
+    }
+    if (totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted() != null) {
+      metadata.put("max_seconds_between_state_message_emit_and_commit",
+          totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
+    }
+    if (totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted() != null) {
+      metadata.put("mean_seconds_between_state_message_emit_and_commit",
+          totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
+    }
 
-            if (totalStats.getReplicationStartTime() != null) {
-              metadata.put("replication_start_time", totalStats.getReplicationStartTime());
-            }
-            if (totalStats.getReplicationEndTime() != null) {
-              metadata.put("replication_end_time", totalStats.getReplicationEndTime());
-            }
-            if (totalStats.getSourceReadStartTime() != null) {
-              metadata.put("source_read_start_time", totalStats.getSourceReadStartTime());
-            }
-            if (totalStats.getSourceReadEndTime() != null) {
-              metadata.put("source_read_end_time", totalStats.getSourceReadEndTime());
-            }
-            if (totalStats.getDestinationWriteStartTime() != null) {
-              metadata.put("destination_write_start_time", totalStats.getDestinationWriteStartTime());
-            }
-            if (totalStats.getDestinationWriteEndTime() != null) {
-              metadata.put("destination_write_end_time", totalStats.getDestinationWriteEndTime());
-            }
+    if (totalStats.getReplicationStartTime() != null) {
+      metadata.put("replication_start_time", totalStats.getReplicationStartTime());
+    }
+    if (totalStats.getReplicationEndTime() != null) {
+      metadata.put("replication_end_time", totalStats.getReplicationEndTime());
+    }
+    if (totalStats.getSourceReadStartTime() != null) {
+      metadata.put("source_read_start_time", totalStats.getSourceReadStartTime());
+    }
+    if (totalStats.getSourceReadEndTime() != null) {
+      metadata.put("source_read_end_time", totalStats.getSourceReadEndTime());
+    }
+    if (totalStats.getDestinationWriteStartTime() != null) {
+      metadata.put("destination_write_start_time", totalStats.getDestinationWriteStartTime());
+    }
+    if (totalStats.getDestinationWriteEndTime() != null) {
+      metadata.put("destination_write_end_time", totalStats.getDestinationWriteEndTime());
+    }
 
-            if (normalizationSummary != null) {
-              if (normalizationSummary.getStartTime() != null) {
-                metadata.put("normalization_start_time", normalizationSummary.getStartTime());
+    if (normalizationSummary != null) {
+      if (normalizationSummary.getStartTime() != null) {
+        metadata.put("normalization_start_time", normalizationSummary.getStartTime());
 
-              }
-              if (normalizationSummary.getEndTime() != null) {
-                metadata.put("normalization_end_time", normalizationSummary.getEndTime());
-              }
-            }
-          }
-        }
-
-        final List<FailureReason> failureReasons = failureReasonsList(attempts);
-        if (!failureReasons.isEmpty()) {
-          metadata.put("failure_reasons", failureReasonsListAsJson(failureReasons).toString());
-          metadata.put("main_failure_reason", failureReasonAsJson(failureReasons.get(0)).toString());
-        }
       }
+      if (normalizationSummary.getEndTime() != null) {
+        metadata.put("normalization_end_time", normalizationSummary.getEndTime());
+      }
+    }
+
+    final List<FailureReason> failureReasons = failureReasonsList(attempts);
+    if (!failureReasons.isEmpty()) {
+      metadata.put("failure_reasons", failureReasonsListAsJson(failureReasons).toString());
+      metadata.put("main_failure_reason", failureReasonAsJson(failureReasons.get(0)).toString());
     }
     return metadata.build();
   }
