@@ -213,6 +213,7 @@
   "connectionForm.nonBreakingChangesPreference.autopropagation.disable": "Pause connection",
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns": "Propagate column changes only",
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Propagate all changes",
+  "connectionForm.nonBreakingChangesPreference.autopropagtion.message": "Auto-propagation will start with your next scheduled sync. To apply immediately, run a manual sync after saving the connection.",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.jobHistory": "Job History",
   "connectionForm.update.success": "Connection update succeeded",
