@@ -74,6 +74,7 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
         .withActorDefinitionId(def.getSourceDefinitionId())
         .withDockerRepository(def.getDockerRepository())
@@ -96,6 +97,7 @@ public class ConnectorRegistryConverters {
       return null;
     }
 
+    validateDockerImageTag(def.getDockerImageTag());
     return new ActorDefinitionVersion()
         .withActorDefinitionId(def.getDestinationDefinitionId())
         .withDockerRepository(def.getDockerRepository())
@@ -172,6 +174,17 @@ public class ConnectorRegistryConverters {
 
   private static String getProtocolVersion(final ConnectorSpecification spec) {
     return AirbyteProtocolVersion.getWithDefault(spec != null ? spec.getProtocolVersion() : null).serialize();
+  }
+
+  private static void validateDockerImageTag(final String dockerImageTag) {
+    if (dockerImageTag == null) {
+      throw new IllegalArgumentException("dockerImageTag cannot be null");
+    }
+    try {
+      new Version(dockerImageTag);
+    } catch (final IllegalArgumentException e) {
+      throw new IllegalArgumentException("Invalid Semver version for docker image tag: " + dockerImageTag, e);
+    }
   }
 
 }

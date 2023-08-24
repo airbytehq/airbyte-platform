@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
@@ -23,6 +25,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -36,6 +39,7 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
@@ -136,11 +140,19 @@ public class DestinationDefinitionsHandler {
         Exceptions.swallowWithDefault(remoteDefinitionsProvider::getDestinationDefinitions, Collections.emptyList());
     final List<StandardDestinationDefinition> destinationDefs =
         latestDestinations.stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
+
     final Map<UUID, ActorDefinitionVersion> destinationDefVersions =
         latestDestinations.stream().collect(Collectors.toMap(
             ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
-            ConnectorRegistryConverters::toActorDefinitionVersion));
-    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersions);
+            destination -> Exceptions.swallowWithDefault(
+                () -> ConnectorRegistryConverters.toActorDefinitionVersion(destination), null)));
+
+    // filter out any destination definitions with no corresponding version
+    final List<StandardDestinationDefinition> validDestinationDefs = destinationDefs.stream()
+        .filter(d -> destinationDefVersions.get(d.getDestinationDefinitionId()) != null)
+        .toList();
+
+    return toDestinationDefinitionReadList(validDestinationDefs, destinationDefVersions);
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -262,11 +274,16 @@ public class DestinationDefinitionsHandler {
         .withCustom(currentDestination.getCustom())
         .withResourceRequirements(updatedResourceReqs);
 
-    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(currentVersion,
-        ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+    final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
 
-    actorDefinitionHandlerHelper.persistBreakingChanges(newVersion, ActorType.DESTINATION);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion);
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion, breakingChangesForDef);
+
+    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
+      configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    }
     return buildDestinationDefinitionRead(newDestination, newVersion);
   }
 

@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
-import { ConnectorDefinition } from "core/domain/connector";
+import { shouldDisplayBreakingChangeBanner, ConnectorDefinition } from "core/domain/connector";
 import { DestinationRead, SourceRead, ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 
 import { BreakingChangeBanner } from "./BreakingChangeBanner";
@@ -48,22 +48,19 @@ export const ConnectorTitleBlock = <T extends Connector>({
           </FlexContainer>
         </FlexContainer>
       </FlexContainer>
-      {actorDefinitionVersion.breakingChanges &&
-        actorDefinitionVersion.breakingChanges.upcomingBreakingChanges.length > 0 &&
-        actorDefinitionVersion.isActorDefaultVersion && (
-          <BreakingChangeBanner
-            breakingChanges={actorDefinitionVersion.breakingChanges}
-            supportState={actorDefinitionVersion.supportState}
-            connectorId={"sourceId" in connector ? connector.sourceId : connector.destinationId}
-            connectorName={connector.name}
-            connectorType={"sourceDefinitionId" in connectorDefinition ? "source" : "destination"}
-            connectorDefinitionId={
-              "sourceDefinitionId" in connectorDefinition
-                ? connectorDefinition.sourceDefinitionId
-                : connectorDefinition.destinationDefinitionId
-            }
-          />
-        )}
+      {shouldDisplayBreakingChangeBanner(actorDefinitionVersion) && (
+        <BreakingChangeBanner
+          actorDefinitionVersion={actorDefinitionVersion}
+          connectorId={"sourceId" in connector ? connector.sourceId : connector.destinationId}
+          connectorName={connector.name}
+          connectorType={"sourceDefinitionId" in connectorDefinition ? "source" : "destination"}
+          connectorDefinitionId={
+            "sourceDefinitionId" in connectorDefinition
+              ? connectorDefinition.sourceDefinitionId
+              : connectorDefinition.destinationDefinitionId
+          }
+        />
+      )}
     </FlexContainer>
   );
 };

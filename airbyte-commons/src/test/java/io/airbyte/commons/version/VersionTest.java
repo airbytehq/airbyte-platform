@@ -51,4 +51,11 @@ class VersionTest {
     assertTrue(LOWER_VERSION.lessThan(HIGHER_VERSION));
   }
 
+  @Test
+  void testLessThanOrEqualTo() {
+    assertTrue(LOWER_VERSION.lessThanOrEqualTo(LOWER_VERSION));
+    assertFalse(HIGHER_VERSION.lessThanOrEqualTo(LOWER_VERSION));
+    assertTrue(LOWER_VERSION.lessThanOrEqualTo(HIGHER_VERSION));
+  }
+
 }

@@ -5,10 +5,18 @@ import { useNavigate } from "react-router-dom";
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
-import { Message } from "components/ui/Message";
+import { Message, MessageProps, MessageType, isHigherSeverity } from "components/ui/Message";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { FailureOrigin, FailureType, JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
+import {
+  ActorDefinitionVersionRead,
+  FailureOrigin,
+  FailureType,
+  JobWithAttemptsRead,
+} from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -30,6 +38,43 @@ const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   return null;
 };
 
+const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[] => {
+  // get the highest error type of all the messages e.g. error > warning > everything else
+  const defaultMessageLevel = "info";
+  const highestSeverityLevel = messages.reduce<MessageType>((highestSeverity: MessageType, message: MessageProps) => {
+    const messageType = message.type ?? defaultMessageLevel;
+    if (isHigherSeverity(messageType, highestSeverity)) {
+      return messageType;
+    }
+    return highestSeverity;
+  }, defaultMessageLevel);
+
+  // filter out all messages that are not the highest severity level
+  return messages.filter((message) => message.type === highestSeverityLevel);
+};
+
+/**
+ * Get the error message to display for a given actor definition version
+ * @param actorDefinitionVersion The actor definition version to get the error message for
+ * @returns An array containing id of the message to display and the type of error
+ */
+const getBreakingChangeErrorMessage = (
+  actorDefinitionVersion: ActorDefinitionVersionRead,
+  connectorBreakingChangeDeadlinesEnabled: boolean
+): {
+  errorMessageId: string;
+  errorType: MessageType;
+} => {
+  // On OSS we do not pause connections for breaking changes, so we do not care about deadlines or unsupported versions
+  if (!connectorBreakingChangeDeadlinesEnabled) {
+    return { errorMessageId: "connectionForm.breakingChange.deprecatedNoDeadline.message", errorType: "warning" };
+  }
+
+  return actorDefinitionVersion.supportState === "unsupported"
+    ? { errorMessageId: "connectionForm.breakingChange.unsupported.message", errorType: "error" }
+    : { errorMessageId: "connectionForm.breakingChange.deprecated.message", errorType: "warning" };
+};
+
 export const ErrorMessage: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
@@ -38,13 +83,13 @@ export const ErrorMessage: React.FC = () => {
   const { connection } = useConnectionEditService();
   const { lastCompletedSyncJob } = useConnectionSyncContext();
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
+  const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
+  const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
-  const calloutDetails = useMemo<{
-    errorMessage: string;
-    errorAction: () => void;
-    buttonMessage: string;
-    variant: "error" | "warning";
-  } | null>(() => {
+  const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
+    const errorMessages: MessageProps[] = [];
+
     const { jobId, attemptId, errorMessage, failureType, failureOrigin } =
       getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
     // If we have an error message and no breaking schema changes, show the error message
@@ -56,36 +101,105 @@ export const ErrorMessage: React.FC = () => {
       if (isConfigError && (isSourceError || isDestinationError)) {
         const targetRoute = isSourceError ? RoutePaths.Source : RoutePaths.Destination;
         const targetRouteId = isSourceError ? connection.sourceId : connection.destinationId;
-        return {
-          errorMessage,
-          errorAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
-          buttonMessage: formatMessage({ id: "connection.stream.status.gotoSettings" }),
-          variant: "warning",
-        };
-      }
+        const configError = {
+          text: errorMessage,
+          onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${targetRoute}/${targetRouteId}`),
+          actionBtnText: formatMessage({ id: "connection.stream.status.gotoSettings" }),
+          type: "warning",
+        } as const;
 
-      return {
-        errorMessage,
-        errorAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
-        buttonMessage: formatMessage({ id: "connection.stream.status.seeLogs" }),
-        variant: "warning",
-      };
+        errorMessages.push(configError);
+      } else {
+        const goToLogError = {
+          text: errorMessage,
+          onAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
+          actionBtnText: formatMessage({ id: "connection.stream.status.seeLogs" }),
+          type: "warning",
+        } as const;
+        errorMessages.push(goToLogError);
+      }
     }
 
     // If we have schema changes, show the correct message
     if (hasSchemaChanges) {
-      return {
-        errorMessage: formatMessage({
+      const schemaChangeWarning = {
+        text: formatMessage({
           id: `connection.schemaChange.${hasBreakingSchemaChange ? "breaking" : "nonBreaking"}`,
         }),
-        errorAction: () =>
-          navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
-        buttonMessage: formatMessage({ id: "connection.schemaChange.reviewAction" }),
-        variant: hasBreakingSchemaChange ? "error" : "warning",
-      };
+        onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
+        actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
+        type: hasBreakingSchemaChange ? "error" : "warning",
+      } as const;
+      errorMessages.push(schemaChangeWarning);
     }
 
-    return null;
+    // Warn the user of any breaking changes in the source definition
+    const breakingChangeErrorMessages: MessageProps[] = [];
+    if (shouldDisplayBreakingChangeBanner(sourceActorDefinitionVersion)) {
+      const { errorMessageId, errorType } = getBreakingChangeErrorMessage(
+        sourceActorDefinitionVersion,
+        connectorBreakingChangeDeadlinesEnabled
+      );
+
+      const sourceDefinitionWarning = {
+        text: formatMessage(
+          { id: errorMessageId },
+          {
+            actor_name: connection.source.name,
+            actor_definition_name: connection.source.sourceName,
+            actor_type: "source",
+            connection_name: connection.name,
+            upgrade_deadline: getHumanReadableUpgradeDeadline(sourceActorDefinitionVersion),
+          }
+        ),
+        onAction: () =>
+          navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${connection.sourceId}`),
+        actionBtnText: formatMessage({
+          id: "connectionForm.breakingChange.source.buttonLabel",
+        }),
+        type: errorType,
+        iconOverride: "warning",
+      } as const;
+
+      breakingChangeErrorMessages.push(sourceDefinitionWarning);
+    }
+
+    // Warn the user of any breaking changes in the destination definition
+    if (shouldDisplayBreakingChangeBanner(destinationActorDefinitionVersion)) {
+      const { errorMessageId, errorType } = getBreakingChangeErrorMessage(
+        destinationActorDefinitionVersion,
+        connectorBreakingChangeDeadlinesEnabled
+      );
+
+      const destinationDefinitionWarning = {
+        text: formatMessage(
+          { id: errorMessageId },
+          {
+            actor_name: connection.destination.name,
+            actor_definition_name: connection.destination.destinationName,
+            actor_type: "destination",
+            connection_name: connection.name,
+            upgrade_deadline: getHumanReadableUpgradeDeadline(destinationActorDefinitionVersion),
+          }
+        ),
+        onAction: () =>
+          navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${connection.destinationId}`),
+        actionBtnText: formatMessage({
+          id: "connectionForm.breakingChange.destination.buttonLabel",
+        }),
+        type: errorType,
+        iconOverride: "warning",
+      } as const;
+
+      breakingChangeErrorMessages.push(destinationDefinitionWarning);
+    }
+
+    // If we have both source and destination breaking changes, with different error levels, we only
+    // want to show the highest level error message
+    const onlyHighLevelBreakingChangeErrorMessages = reduceToHighestSeverityMessage(breakingChangeErrorMessages);
+    errorMessages.push(...onlyHighLevelBreakingChangeErrorMessages);
+
+    return errorMessages;
   }, [
     formatMessage,
     hasBreakingSchemaChange,
@@ -95,19 +209,23 @@ export const ErrorMessage: React.FC = () => {
     connection.sourceId,
     connection.destinationId,
     workspaceId,
+    sourceActorDefinitionVersion,
+    destinationActorDefinitionVersion,
+    connection.name,
+    connection.source.name,
+    connection.destination.name,
+    connection.source.sourceName,
+    connection.destination.destinationName,
+    connectorBreakingChangeDeadlinesEnabled,
   ]);
 
-  if (calloutDetails) {
+  if (errorMessagesToDisplay.length > 0) {
     return (
       <Box p="lg">
-        <FlexContainer>
-          <Message
-            text={calloutDetails.errorMessage}
-            actionBtnText={calloutDetails.buttonMessage}
-            type={calloutDetails.variant}
-            onAction={calloutDetails.errorAction}
-            className={styles.error}
-          />
+        <FlexContainer direction="column">
+          {errorMessagesToDisplay.map((message, index) => (
+            <Message key={index} className={styles.error} {...message} />
+          ))}
         </FlexContainer>
       </Box>
     );

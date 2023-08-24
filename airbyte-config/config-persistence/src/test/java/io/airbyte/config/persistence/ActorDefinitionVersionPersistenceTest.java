@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -56,7 +57,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final ActorDefinitionVersion initialActorDefinitionVersion = new ActorDefinitionVersion()
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
-      .withDockerImageTag("overwrite me")
+      .withDockerImageTag("0.0.0")
       .withDockerRepository("overwrite me")
       .withSpec(new ConnectorSpecification().withAdditionalProperty("overwrite", "me").withProtocolVersion("0.0.0"));
 
@@ -220,7 +221,8 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<ActorDefinitionVersion> actorDefinitionVersionsForDefinition =
         configRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
-    assertEquals(expectedVersionIds, actorDefinitionVersionsForDefinition.stream().map(ActorDefinitionVersion::getVersionId).toList());
+    assertThat(expectedVersionIds)
+        .containsExactlyInAnyOrderElementsOf(actorDefinitionVersionsForDefinition.stream().map(ActorDefinitionVersion::getVersionId).toList());
     assertFalse(
         actorDefinitionVersionsForDefinition.stream().anyMatch(actorDefVersion -> actorDefVersion.getVersionId().equals(otherActorDefVersionId)));
   }

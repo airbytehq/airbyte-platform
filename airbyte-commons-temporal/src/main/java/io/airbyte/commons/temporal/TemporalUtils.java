@@ -9,7 +9,6 @@ import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
-import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -34,11 +33,9 @@ import io.temporal.workflow.Functions;
 import jakarta.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -65,6 +62,7 @@ public class TemporalUtils {
   public static final String DEFAULT_NAMESPACE = "default";
   public static final Duration SEND_HEARTBEAT_INTERVAL = Duration.ofSeconds(20);
   public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(30);
+  public static final Duration HEARTBEAT_SHUTDOWN_GRACE_PERIOD = Duration.ofSeconds(30);
   public static final RetryOptions NO_RETRY = RetryOptions.newBuilder().setMaximumAttempts(1).build();
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
@@ -199,19 +197,6 @@ public class TemporalUtils {
   }
 
   /**
-   * Temporal Job Creator.
-   *
-   * @param <T> type o input config.
-   */
-  // todo (cgardens) - unused?
-  @FunctionalInterface
-  public interface TemporalJobCreator<T extends Serializable> {
-
-    UUID create(WorkflowClient workflowClient, long jobId, int attempt, T config);
-
-  }
-
-  /**
    * Allows running a given temporal workflow stub asynchronously. This method only works for
    * workflows that take one argument. Because of the iface that Temporal supplies, in order to handle
    * other method signatures, if we need to support them, we will need to add another helper with that
@@ -291,31 +276,21 @@ public class TemporalUtils {
   }
 
   /**
-   * Runs the code within the supplier while heartbeating in the backgroud. Also makes sure to shut
-   * down the heartbeat server after the fact.
+   * Run a callable. If while it is running the temporal activity is cancelled, the provided callback
+   * is triggered.
+   *
+   * It manages this by regularly calling back to temporal in order to check whether the activity has
+   * been cancelled. If it is cancelled it calls the callback.
+   *
+   * @param callable callable to run with cancellation
+   * @param activityContext context used to check whether the activity has been cancelled
+   * @param <T> type of variable returned by the callable
+   * @return if the callable succeeds without being cancelled, returns the value returned by the
+   *         callable
    */
   public <T> T withBackgroundHeartbeat(final Callable<T> callable,
                                        final Supplier<ActivityExecutionContext> activityContext) {
-    final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    try {
-      scheduledExecutor.scheduleAtFixedRate(
-          () -> new CancellationHandler.TemporalCancellationHandler(activityContext.get()).checkAndHandleCancellation(() -> {}),
-          0, SEND_HEARTBEAT_INTERVAL.toSeconds(), TimeUnit.SECONDS);
-
-      return callable.call();
-    } catch (final RetryableException e) {
-      log.warn("The activity encounter a retryable exception, it will retry");
-      throw e;
-    } catch (final ActivityCompletionException e) {
-      log.warn("Job either timed out or was cancelled.");
-      throw new RuntimeException(e);
-    } catch (final Exception e) {
-      throw new RuntimeException(e);
-    } finally {
-      log.info("Stopping temporal heartbeating...");
-      scheduledExecutor.shutdown();
-    }
+    return withBackgroundHeartbeat(null, callable, activityContext);
   }
 
   /**
@@ -362,7 +337,24 @@ public class TemporalUtils {
       throw new RuntimeException(e);
     } finally {
       log.info("Stopping temporal heartbeating...");
-      scheduledExecutor.shutdown();
+      // At this point we are done, we should try to stop all heartbeat ASAP.
+      // We can safely ignore the list of tasks that didn't start since we are exiting regardless.
+      scheduledExecutor.shutdownNow();
+
+      try {
+        // Making sure the heartbeat executor is terminated to avoid heartbeat attempt after we're done with
+        // the activity.
+        if (scheduledExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+          log.info("Temporal heartbeating stopped.");
+        } else {
+          // Heartbeat thread failed to stop, we may leak a thread if this happens.
+          // We should not fail the execution because of this.
+          log.info("Temporal heartbeating didn't stop within {} seconds, continuing the shutdown.", HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds());
+        }
+      } catch (InterruptedException e) {
+        // We got interrupted while attempting to shutdown the executor. Not much more we can do.
+        log.info("Interrupted while stopping the Temporal heartbeating, continuing the shutdown.");
+      }
     }
   }
 

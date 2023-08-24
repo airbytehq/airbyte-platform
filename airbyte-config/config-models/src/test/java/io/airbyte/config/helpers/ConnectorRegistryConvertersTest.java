@@ -4,7 +4,9 @@
 
 package io.airbyte.config.helpers;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
@@ -29,6 +31,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ConnectorRegistryConvertersTest {
 
@@ -178,6 +182,23 @@ class ConnectorRegistryConvertersTest {
     registryDestinationDef =
         new ConnectorRegistryDestinationDefinition().withReleases(new ConnectorReleases().withBreakingChanges(new BreakingChanges()));
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"0.0.1, true", "dev, true", "test, false", "1.9.1-dev.33a53e6236, true", "97b69a76-1f06-4680-8905-8beda74311d0, false"})
+  void testDockerImageValidation(final String dockerImageTag, final boolean isValid) {
+    final ConnectorRegistrySourceDefinition registrySourceDefinition = new ConnectorRegistrySourceDefinition()
+        .withDockerImageTag(dockerImageTag);
+    final ConnectorRegistryDestinationDefinition registryDestinationDefinition = new ConnectorRegistryDestinationDefinition()
+        .withDockerImageTag(dockerImageTag);
+
+    if (isValid) {
+      assertDoesNotThrow(() -> ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
+      assertDoesNotThrow(() -> ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDefinition));
+    } else {
+      assertThrows(IllegalArgumentException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
+      assertThrows(IllegalArgumentException.class, () -> ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDefinition));
+    }
   }
 
 }
