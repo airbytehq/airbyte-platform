@@ -65,6 +65,8 @@ object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useA
 
 object IngestBreakingChanges : Temporary<Boolean>(key = "connectors.ingestBreakingChanges", default = true)
 
+object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
+
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
