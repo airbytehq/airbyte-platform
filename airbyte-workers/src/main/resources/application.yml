@@ -18,6 +18,7 @@ airbyte:
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
     check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
+    discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:5}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

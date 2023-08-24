@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -38,6 +39,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -53,6 +56,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
+import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
@@ -72,6 +76,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceDefinitionsHandlerTest {
 
@@ -134,6 +140,16 @@ class SourceDefinitionsHandlerTest {
         .withReleaseDate(TODAY_DATE_STRING)
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")))
         .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("stream1", "stream2")));
+  }
+
+  private List<ActorDefinitionBreakingChange> generateBreakingChangesFromSourceDefinition(final StandardSourceDefinition sourceDefinition) {
+    final ActorDefinitionBreakingChange breakingChange = new ActorDefinitionBreakingChange()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersion(new Version("1.0.0"))
+        .withMessage("This is a breaking change")
+        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
+        .withUpgradeDeadline("2025-01-21");
+    return List.of(breakingChange);
   }
 
   private ActorDefinitionVersion generateCustomVersionFromSourceDefinition(final StandardSourceDefinition sourceDefinition) {
@@ -630,9 +646,12 @@ class SourceDefinitionsHandlerTest {
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testUpdateSource(final boolean ingestBreakingChangesFF) throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(ingestBreakingChangesFF);
+
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
     when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
         .thenReturn(sourceDefinitionVersion);
@@ -650,8 +669,10 @@ class SourceDefinitionsHandlerTest {
             .withDockerImageTag(newDockerImageTag);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
-        sourceDefinition.getCustom()))
-            .thenReturn(updatedSourceDefVersion);
+        sourceDefinition.getCustom())).thenReturn(updatedSourceDefVersion);
+
+    final List<ActorDefinitionBreakingChange> breakingChanges = generateBreakingChangesFromSourceDefinition(updatedSource);
+    when(actorDefinitionHandlerHelper.getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE)).thenReturn(breakingChanges);
 
     final SourceDefinitionRead sourceRead =
         sourceDefinitionsHandler.updateSourceDefinition(
@@ -661,9 +682,11 @@ class SourceDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, sourceRead.getDockerImageTag());
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
-    verify(actorDefinitionHandlerHelper).persistBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource,
-        updatedSourceDefVersion);
+    verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion, breakingChanges);
+    if (ingestBreakingChangesFF) {
+      verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    }
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }

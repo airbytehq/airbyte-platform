@@ -1,4 +1,3 @@
-import { format, parseISO } from "date-fns";
 import { PropsWithChildren, ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +9,8 @@ import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
 import { useUpgradeConnectorVersion } from "core/api";
-import { ActorDefinitionVersionBreakingChanges, SupportState } from "core/request/AirbyteClient";
+import { getHumanReadableUpgradeDeadline } from "core/domain/connector";
+import { ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -22,8 +22,7 @@ import styles from "./BreakingChangeBanner.module.scss";
 const MAX_CONNECTION_NAMES = 5;
 
 interface BreakingChangeBannerProps {
-  breakingChanges: ActorDefinitionVersionBreakingChanges;
-  supportState: SupportState;
+  actorDefinitionVersion: ActorDefinitionVersionRead;
   connectorId: string;
   connectorName: string;
   connectorType: "source" | "destination";
@@ -31,8 +30,7 @@ interface BreakingChangeBannerProps {
 }
 
 export const BreakingChangeBanner = ({
-  breakingChanges,
-  supportState,
+  actorDefinitionVersion,
   connectorId,
   connectorName,
   connectorType,
@@ -47,7 +45,16 @@ export const BreakingChangeBanner = ({
   const { registerNotification } = useNotificationService();
   const connectorBreakingChangeDeadlines = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
-  const formattedUpgradeDeadline = format(parseISO(breakingChanges.minUpgradeDeadline), "MMMM d, yyyy");
+  const supportState = actorDefinitionVersion.supportState;
+
+  // Do not render if no breaking changes are found.
+  const breakingChanges = actorDefinitionVersion?.breakingChanges;
+  if (!breakingChanges) {
+    return null;
+  }
+
+  const formattedUpgradeDeadline = getHumanReadableUpgradeDeadline(actorDefinitionVersion);
+
   // there should always be at least one breaking change, or else this banner wouldn't be shown
   const migrationGuideUrl = breakingChanges.upcomingBreakingChanges[0].migrationDocumentationUrl;
 

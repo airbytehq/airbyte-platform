@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -13,6 +14,8 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -32,12 +35,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
+
+  private static final String UPDATED_IMAGE_TAG = "0.0.2";
 
   private ConfigRepository configRepository;
 
@@ -338,7 +344,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     // Updating an existing source definition/version
     final StandardSourceDefinition sourceDefinition2 = sourceDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
-        createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag("test");
+        createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(UPDATED_IMAGE_TAG);
     configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition2, actorDefinitionVersion2);
 
     sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
@@ -377,7 +383,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     // Updating an existing destination definition/version
     final StandardDestinationDefinition destinationDefinition2 = destinationDefinition.withName("updated name");
     final ActorDefinitionVersion actorDefinitionVersion2 =
-        createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag("test");
+        createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(UPDATED_IMAGE_TAG);
     configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition2, actorDefinitionVersion2);
 
     destinationDefinitionFromDB = configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
@@ -390,6 +396,75 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertNotEquals(firstVersionId, newADVId);
     assertEquals(newADVId, destinationDefinitionFromDB.getDefaultVersionId());
     assertEquals(destinationDefinition2.withDefaultVersionId(newADVId), destinationDefinitionFromDB);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"})
+  void testCustomImageTagsDoNotBreakCustomConnectorUpgrade(final String dockerImageTag) throws IOException {
+    // Initial insert
+    final StandardSourceDefinition customSourceDefinition = createBaseSourceDef().withCustom(true);
+    final StandardDestinationDefinition customDestinationDefinition = createBaseDestDef().withCustom(true);
+    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId());
+    final ActorDefinitionVersion destinationActorDefinitionVersion =
+        createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(customSourceDefinition, sourceActorDefinitionVersion);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(customDestinationDefinition, destinationActorDefinitionVersion);
+
+    // Update
+    assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(customSourceDefinition,
+        createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
+    assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(customDestinationDefinition,
+        createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"})
+  void testImageTagExpectationsNorNonCustomConnectorUpgradesWithoutBreakingChanges(final String dockerImageTag) throws IOException {
+    // Initial insert
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+    final ActorDefinitionVersion destinationActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, sourceActorDefinitionVersion);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, destinationActorDefinitionVersion);
+
+    // Update
+    assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
+        createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
+    assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
+        createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"0.0.1, true", "dev, true", "test, false", "1.9.1-dev.33a53e6236, true", "97b69a76-1f06-4680-8905-8beda74311d0, false"})
+  void testImageTagExpectationsNorNonCustomConnectorUpgradesWithBreakingChanges(final String dockerImageTag, final boolean upgradeShouldSucceed)
+      throws IOException {
+    // Initial insert
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
+    final ActorDefinitionVersion destinationActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, sourceActorDefinitionVersion);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, destinationActorDefinitionVersion);
+
+    final List<ActorDefinitionBreakingChange> sourceBreakingChanges = createBreakingChangesForDef(sourceDefinition.getSourceDefinitionId());
+    final List<ActorDefinitionBreakingChange> destinationBreakingChanges =
+        createBreakingChangesForDef(destinationDefinition.getDestinationDefinitionId());
+
+    // Update
+    if (upgradeShouldSucceed) {
+      assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
+          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
+      assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
+          createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+          destinationBreakingChanges));
+    } else {
+      assertThrows(IllegalArgumentException.class, () -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
+          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
+      assertThrows(IllegalArgumentException.class, () -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
+          createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+          destinationBreakingChanges));
+    }
   }
 
   @Test
@@ -493,6 +568,15 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withProtocolVersion("0.2.0");
+  }
+
+  private List<ActorDefinitionBreakingChange> createBreakingChangesForDef(final UUID actorDefId) {
+    return List.of(new ActorDefinitionBreakingChange()
+        .withActorDefinitionId(actorDefId)
+        .withVersion(new Version("1.0.0"))
+        .withMessage("This is a breaking change")
+        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
+        .withUpgradeDeadline("2025-01-21"));
   }
 
   private static StandardSourceDefinition createBaseSourceDefWithoutMaxSecondsBetweenMessages() {

@@ -53,6 +53,7 @@ public class ApplyDefinitionsHelper {
   private final FeatureFlagClient featureFlagClient;
   private int newConnectorCount;
   private int changedConnectorCount;
+  private List<ActorDefinitionBreakingChange> allBreakingChanges;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
 
   public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
@@ -89,20 +90,18 @@ public class ApplyDefinitionsHelper {
     final Map<UUID, ActorDefinitionVersion> actorDefinitionIdsToDefaultVersionsMap = configRepository.getActorDefinitionIdsToDefaultVersionsMap();
     final Set<UUID> actorDefinitionIdsInUse = configRepository.getActorDefinitionIdsInUse();
 
-    final List<ActorDefinitionBreakingChange> breakingChanges = new ArrayList<>();
-
     newConnectorCount = 0;
     changedConnectorCount = 0;
+    allBreakingChanges = new ArrayList<>();
+
     for (final ConnectorRegistrySourceDefinition def : protocolCompatibleSourceDefinitions) {
       applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
-      breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(def));
     }
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
-      breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(def));
     }
     if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(breakingChanges);
+      configRepository.writeActorDefinitionBreakingChanges(allBreakingChanges);
     }
 
     LOGGER.info("New connectors added: {}", newConnectorCount);
@@ -114,14 +113,27 @@ public class ApplyDefinitionsHelper {
                                      final Set<UUID> actorDefinitionIdsInUse,
                                      final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardSourceDefinition newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef);
-    final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+
+    // Skip and log if unable to parse is registry entry.
+    final StandardSourceDefinition newSourceDef;
+    final ActorDefinitionVersion newADV;
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef;
+    try {
+      newSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(newDef);
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+    } catch (final IllegalArgumentException e) {
+      LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      return;
+    }
+
+    allBreakingChanges.addAll(breakingChangesForDef);
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV);
+      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -134,7 +146,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV);
+      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardSourceDefinition(newSourceDef);
     }
@@ -145,14 +157,27 @@ public class ApplyDefinitionsHelper {
                                           final Set<UUID> actorDefinitionIdsInUse,
                                           final boolean updateAll)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardDestinationDefinition newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef);
-    final ActorDefinitionVersion newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+
+    // Skip and log if unable to parse is registry entry.
+    final StandardDestinationDefinition newDestinationDef;
+    final ActorDefinitionVersion newADV;
+    final List<ActorDefinitionBreakingChange> breakingChangesForDef;
+    try {
+      newDestinationDef = ConnectorRegistryConverters.toStandardDestinationDefinition(newDef);
+      newADV = ConnectorRegistryConverters.toActorDefinitionVersion(newDef);
+      breakingChangesForDef = ConnectorRegistryConverters.toActorDefinitionBreakingChanges(newDef);
+    } catch (final IllegalArgumentException e) {
+      LOGGER.error("Failed to convert source definition: {}", newDef.getName(), e);
+      return;
+    }
+
+    allBreakingChanges.addAll(breakingChangesForDef);
 
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -165,7 +190,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardDestinationDefinition(newDestinationDef);
     }

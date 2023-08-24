@@ -33,6 +33,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
@@ -53,7 +54,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws Exception {
     configRepository = spy(new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
     workspacePersistence = new WorkspacePersistence(database);
-    OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
+    final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
     truncateAllTables();
     for (final Organization organization : MockData.organizations()) {
@@ -124,7 +125,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
-        .withDockerImageTag(UUID.randomUUID().toString()) // random tag to force new ADV creation in the DB, since ADVs are not updated when writing
+        .withDockerImageTag("0.0.1")
         .withReleaseStage(releaseStage);
   }
 
@@ -133,19 +134,6 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withTombstone(false)
         .withName("destination-definition-a");
-  }
-
-  private void persistConnectorsWithReleaseStages(final ReleaseStage sourceReleaseStage,
-                                                  final ReleaseStage destinationReleaseStage)
-      throws IOException {
-    configRepository.writeSourceDefinitionAndDefaultVersion(
-        createSourceDefinition(),
-        createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
-    configRepository.writeDestinationDefinitionAndDefaultVersion(
-        createDestinationDefinition(),
-        createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
-    configRepository.writeSourceConnectionNoSecrets(createBaseSource());
-    configRepository.writeDestinationConnectionNoSecrets(createBaseDestination());
   }
 
   void assertReturnsWorkspace(final StandardWorkspace workspace) throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -201,27 +189,35 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     assertTrue(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone());
   }
 
-  @Test
-  void testWorkspaceHasAlphaOrBetaConnector() throws JsonValidationException, IOException {
+  @ParameterizedTest
+  @CsvSource({
+    "GENERALLY_AVAILABLE, GENERALLY_AVAILABLE, false",
+    "ALPHA, GENERALLY_AVAILABLE, true",
+    "GENERALLY_AVAILABLE, BETA, true",
+    "CUSTOM, CUSTOM, false",
+  })
+  void testWorkspaceHasAlphaOrBetaConnector(final ReleaseStage sourceReleaseStage,
+                                            final ReleaseStage destinationReleaseStage,
+                                            final boolean expectation)
+      throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
-
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
 
-    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, ReleaseStage.GENERALLY_AVAILABLE);
-    assertFalse(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
+    configRepository.writeSourceDefinitionAndDefaultVersion(
+        createSourceDefinition(),
+        createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
+    configRepository.writeDestinationDefinitionAndDefaultVersion(
+        createDestinationDefinition(),
+        createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
 
-    persistConnectorsWithReleaseStages(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
-    assertTrue(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
+    configRepository.writeSourceConnectionNoSecrets(createBaseSource());
+    configRepository.writeDestinationConnectionNoSecrets(createBaseDestination());
 
-    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, ReleaseStage.BETA);
-    assertTrue(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
-
-    persistConnectorsWithReleaseStages(ReleaseStage.CUSTOM, ReleaseStage.CUSTOM);
-    assertFalse(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
+    assertEquals(expectation, configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
   }
 
   @Test
-  void testListWorkspacesInOrgNoKeyword() throws JsonValidationException, IOException, Exception {
+  void testListWorkspacesInOrgNoKeyword() throws Exception {
 
     final StandardWorkspace workspace = createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1);
@@ -240,7 +236,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testListWorkspacesInOrgWithPagination() throws JsonValidationException, IOException, Exception {
+  void testListWorkspacesInOrgWithPagination() throws Exception {
     final StandardWorkspace workspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
@@ -259,7 +255,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testListWorkspacesInOrgWithKeyword() throws JsonValidationException, IOException, Exception {
+  void testListWorkspacesInOrgWithKeyword() throws Exception {
     final StandardWorkspace workspace = createBaseStandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_1)

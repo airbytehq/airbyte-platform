@@ -38,6 +38,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
+import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
@@ -73,6 +75,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DestinationDefinitionsHandlerTest {
 
@@ -145,6 +149,16 @@ class DestinationDefinitionsHandlerTest {
         .withReleaseDate(TODAY_DATE_STRING)
 
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")));
+  }
+
+  private List<ActorDefinitionBreakingChange> generateBreakingChangesFromDestinationDefinition(final StandardDestinationDefinition destDef) {
+    final ActorDefinitionBreakingChange breakingChange = new ActorDefinitionBreakingChange()
+        .withActorDefinitionId(destDef.getDestinationDefinitionId())
+        .withVersion(new Version("1.0.0"))
+        .withMessage("This is a breaking change")
+        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
+        .withUpgradeDeadline("2025-01-21");
+    return List.of(breakingChange);
   }
 
   private ActorDefinitionVersion generateCustomVersionFromDestinationDefinition(final StandardDestinationDefinition destinationDefinition) {
@@ -699,9 +713,12 @@ class DestinationDefinitionsHandlerTest {
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
-  void testUpdateDestination() throws ConfigNotFoundException, IOException, JsonValidationException {
+  void testUpdateDestination(final boolean ingestBreakingChangesFF) throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(ingestBreakingChangesFF);
+
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
     when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -719,8 +736,10 @@ class DestinationDefinitionsHandlerTest {
             .withDockerImageTag(newDockerImageTag);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
-        destinationDefinition.getCustom()))
-            .thenReturn(updatedDestinationDefVersion);
+        destinationDefinition.getCustom())).thenReturn(updatedDestinationDefVersion);
+
+    final List<ActorDefinitionBreakingChange> breakingChanges = generateBreakingChangesFromDestinationDefinition(updatedDestination);
+    when(actorDefinitionHandlerHelper.getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION)).thenReturn(breakingChanges);
 
     final DestinationDefinitionRead destinationRead =
         destinationDefinitionsHandler.updateDestinationDefinition(
@@ -730,10 +749,11 @@ class DestinationDefinitionsHandlerTest {
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(actorDefinitionHandlerHelper).persistBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
-
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination,
-        updatedDestinationDefVersion);
+    verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination, updatedDestinationDefVersion, breakingChanges);
+    if (ingestBreakingChangesFF) {
+      verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    }
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }

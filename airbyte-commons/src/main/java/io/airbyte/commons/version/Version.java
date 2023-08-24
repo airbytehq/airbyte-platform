@@ -114,6 +114,16 @@ public class Version {
   }
 
   /**
+   * Test if a provided version is less than or equal to another version.
+   *
+   * @param other version to compare
+   * @return true if this version is less than or equal to the other, otherwise false.
+   */
+  public boolean lessThanOrEqualTo(final Version other) {
+    return versionCompareTo(other) <= 0;
+  }
+
+  /**
    * Compares two Versions to check if they are equivalent.
    *
    * @param another version to compare

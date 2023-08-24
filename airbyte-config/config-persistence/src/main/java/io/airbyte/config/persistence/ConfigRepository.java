@@ -68,6 +68,7 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.config.helpers.BreakingChangesHelper;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
@@ -761,22 +762,40 @@ public class ConfigRepository {
    *
    * @param sourceDefinition standard source definition
    * @param actorDefinitionVersion actor definition version
+   * @param breakingChangesForDefinition - list of breaking changes for the definition
+   * @throws IOException - you never know when you IO
+   */
+  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                     final ActorDefinitionVersion actorDefinitionVersion,
+                                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it (if not
+   * pre-existing) to the DB, setting the default version on the StandardSourceDefinition. Assumes the
+   * definition has no breaking changes.
+   *
+   * @param sourceDefinition standard source definition
+   * @param actorDefinitionVersion actor definition version
    * @throws IOException - you never know when you IO
    */
   public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
                                                      final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
-    database.transaction(ctx -> {
-      writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, ctx);
-      return null;
-    });
+    writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, List.of());
   }
 
   private void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
                                                       final ActorDefinitionVersion actorDefinitionVersion,
+                                                      final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
                                                       final DSLContext ctx) {
     ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   /**
@@ -805,7 +824,7 @@ public class ConfigRepository {
                                                            final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
-      writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
+      writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, List.of(), ctx);
       writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
@@ -971,22 +990,40 @@ public class ConfigRepository {
    *
    * @param destinationDefinition standard destination definition
    * @param actorDefinitionVersion actor definition version
+   * @param breakingChangesForDefinition - list of breaking changes for the definition
+   * @throws IOException - you never know when you IO
+   */
+  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
+                                                          final ActorDefinitionVersion actorDefinitionVersion,
+                                                          final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it (if not
+   * pre-existing) to the DB, setting the default version on the StandardDestinationDefinition.
+   * Assumes the definition has no breaking changes.
+   *
+   * @param destinationDefinition standard destination definition
+   * @param actorDefinitionVersion actor definition version
    * @throws IOException - you never know when you IO
    */
   public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                           final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
-    database.transaction(ctx -> {
-      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, ctx);
-      return null;
-    });
+    writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, List.of());
   }
 
   private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                            final ActorDefinitionVersion actorDefinitionVersion,
+                                                           final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
                                                            final DSLContext ctx) {
     ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
-    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, ctx);
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
   /**
@@ -997,26 +1034,53 @@ public class ConfigRepository {
    * @param actorDefinitionVersion new actor definition version
    * @throws IOException - you never know when you IO
    */
-  private void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
+  private void setActorDefinitionVersionForTagAsDefault(final ActorDefinitionVersion actorDefinitionVersion,
+                                                        final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                                        final DSLContext ctx) {
     final Optional<ActorDefinitionVersion> existingADV =
         getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
 
     if (existingADV.isPresent()) {
-      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), ctx);
+      setActorDefinitionVersionAsDefaultVersion(existingADV.get(), breakingChangesForDefinition, ctx);
     } else {
       final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setActorDefinitionVersionAsDefaultVersion(insertedADV, ctx);
+      setActorDefinitionVersionAsDefaultVersion(insertedADV, breakingChangesForDefinition, ctx);
     }
   }
 
-  private static void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
+  private void setActorDefinitionVersionAsDefaultVersion(final ActorDefinitionVersion actorDefinitionVersion,
+                                                         final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                                         final DSLContext ctx) {
     if (actorDefinitionVersion.getVersionId() == null) {
       throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
     }
 
+    final Optional<ActorDefinitionVersion> currentDefaultVersion =
+        getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersion.getActorDefinitionId(), ctx);
+
+    currentDefaultVersion
+        .ifPresent(currentDefault -> {
+          final boolean shouldUpdateActorDefaultVersions = BreakingChangesHelper.shouldUpdateActorsDefaultVersionsDuringUpgrade(
+              currentDefault.getDockerImageTag(), actorDefinitionVersion.getDockerImageTag(), breakingChangesForDefinition);
+          if (shouldUpdateActorDefaultVersions) {
+            updateDefaultVersionIdForActorsOnVersion(currentDefault.getVersionId(), actorDefinitionVersion.getVersionId(), ctx);
+          }
+        });
+
+    updateActorDefinitionDefaultVersionId(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getVersionId(), ctx);
+  }
+
+  private void updateDefaultVersionIdForActorsOnVersion(final UUID previousDefaultVersionId, final UUID newDefaultVersionId, final DSLContext ctx) {
+    ctx.update(ACTOR)
+        .set(Tables.ACTOR.DEFAULT_VERSION_ID, newDefaultVersionId)
+        .where(Tables.ACTOR.DEFAULT_VERSION_ID.eq(previousDefaultVersionId))
+        .execute();
+  }
+
+  private void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId, final DSLContext ctx) {
     ctx.update(ACTOR_DEFINITION)
-        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
-        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionVersion.getActorDefinitionId()))
+        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+        .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
         .execute();
   }
 
@@ -1034,7 +1098,7 @@ public class ConfigRepository {
                                                                 final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
-      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
+      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, List.of(), ctx);
       writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
@@ -3594,6 +3658,16 @@ public class ConfigRepository {
   }
 
   private ActorDefinitionVersion getDefaultVersionForActorDefinitionId(final UUID actorDefinitionId, final DSLContext ctx) {
+    return getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId, ctx).orElseThrow();
+  }
+
+  /**
+   * Get an optional ADV for an actor definition's default version. The optional will be empty if the
+   * defaultVersionId of the actor definition is set to null in the DB. The only time this should be
+   * the case is if we are in the process of inserting and have already written the source definition,
+   * but not yet set its default version.
+   */
+  private Optional<ActorDefinitionVersion> getDefaultVersionForActorDefinitionIdOptional(final UUID actorDefinitionId, final DSLContext ctx) {
     return ctx.select(Tables.ACTOR_DEFINITION_VERSION.asterisk())
         .from(ACTOR_DEFINITION)
         .join(ACTOR_DEFINITION_VERSION).on(Tables.ACTOR_DEFINITION_VERSION.ID.eq(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID))
@@ -3601,8 +3675,7 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion)
-        .orElseThrow();
+        .map(DbConverter::buildActorDefinitionVersion);
   }
 
   /**
@@ -3613,12 +3686,16 @@ public class ConfigRepository {
    * @throws IOException - you never know when you io
    */
   public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId) throws IOException {
-    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+    return database.query(ctx -> listBreakingChangesForActorDefinition(actorDefinitionId, ctx));
+  }
+
+  private List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId, final DSLContext ctx) {
+    return ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
         .where(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .fetch()
         .stream()
         .map(DbConverter::buildActorDefinitionBreakingChange)
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList());
   }
 
   /**
