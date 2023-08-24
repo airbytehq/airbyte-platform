@@ -25,8 +25,6 @@ flags:
     serve: ""
   - name: platform.add-scheduling-jitter
     serve: false
-  - name: connectors.ingestBreakingChanges
-    serve: false
   - name: check-replication-progress
     serve: true
   - name: use-new-retries
