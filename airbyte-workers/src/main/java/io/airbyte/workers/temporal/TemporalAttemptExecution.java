@@ -165,6 +165,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
       }
     } catch (final Exception e) {
       throw Activity.wrap(e);
+    } finally {
+      mdcSetter.accept(null);
     }
   }
 
@@ -197,6 +199,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
       } catch (final Throwable e) {
         LOGGER.info("Completing future exceptionally...", e);
         outputFuture.completeExceptionally(e);
+      } finally {
+        mdcSetter.accept(null);
       }
     });
   }
@@ -244,6 +248,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         cancellationHandler.checkAndHandleCancellation(onCancellationCallback);
       } catch (final Exception e) {
         LOGGER.debug("Cancellation checker exception", e);
+      } finally {
+        mdcSetter.accept(null);
       }
     };
   }
