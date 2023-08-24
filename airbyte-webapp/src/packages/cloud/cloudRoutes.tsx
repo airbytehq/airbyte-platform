@@ -8,9 +8,10 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
+import { useAuthService } from "core/services/auth";
+import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
@@ -124,7 +125,8 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
+  const { login, requirePasswordReset } = useAuthService();
+  const { user, inited, providers, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
 
@@ -144,8 +146,8 @@ export const Routing: React.FC = () => {
   );
 
   const userTraits = useMemo(
-    () => (user ? { providers, email: user.email, isCorporate: hasCorporateEmail() } : {}),
-    [hasCorporateEmail, providers, user]
+    () => (user ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email) } : {}),
+    [providers, user]
   );
 
   useAnalyticsRegisterValues(analyticsContext);
@@ -173,9 +175,14 @@ export const Routing: React.FC = () => {
                   <AuthLayout>
                     <Suspense fallback={<LoadingPage />}>
                       <Routes>
-                        <Route path={CloudRoutes.Login} element={<LoginPage />} />
+                        {login && <Route path={CloudRoutes.Login} element={<LoginPage login={login} />} />}
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                        <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
+                        {requirePasswordReset && (
+                          <Route
+                            path={CloudRoutes.ResetPassword}
+                            element={<ResetPasswordPage requirePasswordReset={requirePasswordReset} />}
+                          />
+                        )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
                         <Route
                           path="*"

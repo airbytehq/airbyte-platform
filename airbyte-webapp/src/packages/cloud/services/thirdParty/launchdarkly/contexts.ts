@@ -1,6 +1,6 @@
 import { LDMultiKindContext, LDSingleKindContext } from "launchdarkly-js-client-sdk";
 
-import { UserRead } from "core/api/types/CloudApi";
+import { CommonUserRead } from "core/services/auth";
 import { ContextKind } from "hooks/services/Experiment";
 
 export function createLDContext(kind: ContextKind, key: string): LDSingleKindContext {
@@ -10,7 +10,7 @@ export function createLDContext(kind: ContextKind, key: string): LDSingleKindCon
   };
 }
 
-export function createUserContext(user: UserRead | null, locale: string): LDSingleKindContext {
+export function createUserContext(user: CommonUserRead | null, locale: string): LDSingleKindContext {
   const kind = "user";
 
   if (!user) {

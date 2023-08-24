@@ -11,6 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 import { trackPageview } from "core/utils/fathom";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
@@ -33,6 +34,7 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
 };
 
 const SignupPage: React.FC<SignupPageProps> = () => {
+  const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
 
   useEffect(() => {
@@ -67,14 +69,14 @@ const SignupPage: React.FC<SignupPageProps> = () => {
       </FlexContainer>
       {searchParams.get("method") === "email" ? (
         <>
-          <SignupForm />
+          {signUp && <SignupForm signUp={signUp} />}
           <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faGoogle} />}>
             <FormattedMessage id="signup.method.oauth" />
           </Button>
         </>
       ) : (
         <>
-          <OAuthLogin />{" "}
+          {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} />}
           <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faEnvelope} />}>
             <FormattedMessage id="signup.method.email" />
           </Button>

@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-rou
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
-import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
+import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
@@ -105,6 +105,7 @@ export const AutoSelectFirstWorkspace: React.FC = () => {
 };
 
 const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) => {
+  const { initialSetupComplete } = useGetInstanceConfiguration();
   const workspace = useCurrentWorkspace();
   useAddAnalyticsContextForWorkspace(workspace);
   useApiHealthPoll();
@@ -112,7 +113,7 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
   // invalidate everything in the workspace scope when the workspaceId changes
   useInvalidateAllWorkspaceScopeOnChange(workspace.workspaceId);
 
-  return workspace.initialSetupComplete ? element ?? <MainViewRoutes /> : <PreferencesRoutes />;
+  return initialSetupComplete ? element ?? <MainViewRoutes /> : <PreferencesRoutes />;
 };
 
 export const Routing: React.FC = () => {

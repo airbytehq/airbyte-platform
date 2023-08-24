@@ -7,9 +7,10 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Card } from "components/ui/Card";
 
+import { AuthUpdatePassword, useCurrentUser } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { FirebaseAuthMessageId, useAuthService, useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { FirebaseAuthMessageId } from "packages/cloud/services/auth/AuthService";
 import { passwordSchema } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 
 type AuthErrorCodesNames = (typeof AuthErrorCodes)[keyof typeof AuthErrorCodes];
@@ -46,16 +47,15 @@ export interface PasswordFormValues {
   passwordConfirmation: string;
 }
 
-export const PasswordSection: React.FC = () => {
+interface PasswordSectionProps {
+  updatePassword: AuthUpdatePassword;
+}
+
+export const PasswordSection: React.FC<PasswordSectionProps> = ({ updatePassword }) => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const { email } = useCurrentUser();
-  const { updatePassword, hasPasswordLogin } = useAuthService();
-
-  if (!hasPasswordLogin()) {
-    return null;
-  }
 
   const defaultFormValues: PasswordFormValues = {
     currentPassword: "",

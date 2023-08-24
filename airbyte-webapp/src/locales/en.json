@@ -48,6 +48,8 @@
   "form.error.missing": "missing",
   "form.yourEmail": "Your email",
   "form.email.placeholder": "you@company.com",
+  "form.organizationName": "Organization name",
+  "form.organizationName.placeholder": "ACME Corp",
   "form.email.error": "Enter a valid email",
   "form.empty.error": "Required",
   "form.selectValue": "Select a value",

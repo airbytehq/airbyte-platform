@@ -1,5 +1,3 @@
-import type { OAuthProviders } from "./AuthProviders";
-
 import {
   Auth,
   User,
@@ -23,6 +21,7 @@ import {
   reload,
 } from "firebase/auth";
 
+import type { OAuthProviders } from "core/services/auth";
 import {
   EmailLinkErrorCodes,
   ResetPasswordConfirmErrorCodes,

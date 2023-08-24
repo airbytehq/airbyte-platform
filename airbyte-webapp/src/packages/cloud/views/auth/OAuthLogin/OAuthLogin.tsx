@@ -6,8 +6,7 @@ import { Subscription } from "rxjs";
 import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
-import { OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
 
 import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
@@ -31,9 +30,12 @@ const GoogleButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   );
 };
 
-export const OAuthLogin: React.FC = () => {
+interface OAuthLoginProps {
+  loginWithOAuth: AuthOAuthLogin;
+}
+
+export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const { formatMessage } = useIntl();
-  const { loginWithOAuth } = useAuthService();
   const stateSubscription = useRef<Subscription>();
   const [errorCode, setErrorCode] = useState<string>();
   const [isLoading, setLoading] = useState(false);

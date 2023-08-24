@@ -6,6 +6,9 @@ package io.airbyte.bootloader.config;
 
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
@@ -145,6 +148,21 @@ public class DatabaseBeanFactory {
   public DatabaseMigrator jobsDatabaseMigrator(@Named("jobsDatabase") final Database jobsDatabase,
                                                @Named("jobsFlyway") final Flyway jobsFlyway) {
     return new JobsDatabaseMigrator(jobsDatabase, jobsFlyway);
+  }
+
+  @Singleton
+  public UserPersistence userPersistence(@Named("configDatabase") final Database configDatabase) {
+    return new UserPersistence(configDatabase);
+  }
+
+  @Singleton
+  public OrganizationPersistence organizationPersistence(@Named("configDatabase") final Database configDatabase) {
+    return new OrganizationPersistence(configDatabase);
+  }
+
+  @Singleton
+  public WorkspacePersistence workspacePersistence(@Named("configDatabase") final Database configDatabase) {
+    return new WorkspacePersistence(configDatabase);
   }
 
 }
