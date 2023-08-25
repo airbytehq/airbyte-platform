@@ -66,7 +66,7 @@ create table "public"."actor_definition_breaking_change" (
   "version" varchar(256) not null,
   "migration_documentation_url" varchar(256) not null,
   "upgrade_deadline" date not null,
-  "message" varchar(256) not null,
+  "message" text not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "actor_definition_breaking_change_pkey"
