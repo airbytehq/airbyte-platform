@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Workflow state change listener for testing. Used to verify the behavior of event signals in
@@ -25,7 +26,7 @@ public class TestStateListener implements WorkflowStateChangedListener {
   @Override
   public Queue<ChangedStateEvent> events(final UUID testId) {
     if (!events.containsKey(testId)) {
-      return new LinkedList<>();
+      return new ConcurrentLinkedQueue<>();
     }
 
     return events.get(testId);

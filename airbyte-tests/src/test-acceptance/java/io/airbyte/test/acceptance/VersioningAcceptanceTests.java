@@ -16,16 +16,13 @@ import io.airbyte.api.client2.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client2.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.client2.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client2.model.generated.SourceDefinitionRead;
-import io.airbyte.test.utils.AcceptanceTestHarness;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
+import java.time.Duration;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
+import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,30 +34,17 @@ class VersioningAcceptanceTests {
   private static AirbyteApiClient2 apiClient2;
   private static UUID workspaceId;
 
-  private static AcceptanceTestHarness testHarness;
-
   @BeforeAll
-  static void init() throws URISyntaxException, IOException, InterruptedException {
-    testHarness = new AcceptanceTestHarness(null, workspaceId);
-    RetryPolicy<okhttp3.Response> policy = RetryPolicy.ofDefaults();
-    apiClient2 = new AirbyteApiClient2("http://localhost:8001/api", policy);
+  static void init() throws IOException {
+    RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
+        .handle(Throwable.class)
+        .withMaxAttempts(5)
+        .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(10)).build();
+
+    OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(20)).build();
+    apiClient2 = new AirbyteApiClient2("http://localhost:8001/api", policy, client);
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
-  }
-
-  @AfterAll
-  static void afterAll() {
-    testHarness.stopDbAndContainers();
-  }
-
-  @BeforeEach
-  void setup() throws SQLException, URISyntaxException, IOException {
-    testHarness.setup();
-  }
-
-  @AfterEach
-  void tearDown() {
-    testHarness.cleanup();
   }
 
   @ParameterizedTest
