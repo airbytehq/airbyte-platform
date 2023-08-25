@@ -6,9 +6,9 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Card } from "components/ui/Card";
 
+import { AuthChangeName, useCurrentUser } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAuthService, useCurrentUser } from "packages/cloud/services/auth/AuthService";
 
 const nameFormSchema = yup.object({
   name: yup.string().required("form.empty.error"),
@@ -18,10 +18,13 @@ interface NameFormValues {
   name: string;
 }
 
-export const NameSection: React.FC = () => {
+interface NameSectionProps {
+  updateName: AuthChangeName;
+}
+
+export const NameSection: React.FC<NameSectionProps> = ({ updateName }) => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
-  const { updateName } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
 

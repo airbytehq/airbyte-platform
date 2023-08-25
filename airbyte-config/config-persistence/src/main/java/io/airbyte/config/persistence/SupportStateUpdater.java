@@ -20,8 +20,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Updates the support state of actor definition versions according to breaking changes.
@@ -49,6 +52,7 @@ public class SupportStateUpdater {
   }
 
   private final ConfigRepository configRepository;
+  private static final Logger LOGGER = LoggerFactory.getLogger(SupportStateUpdater.class);
 
   public SupportStateUpdater(final ConfigRepository configRepository) {
     this.configRepository = configRepository;
@@ -135,9 +139,11 @@ public class SupportStateUpdater {
    */
   public void updateSupportStatesForSourceDefinition(final StandardSourceDefinition sourceDefinition) throws ConfigNotFoundException, IOException {
     if (!sourceDefinition.getCustom()) {
+      LOGGER.info("Updating support states for source definition: {}", sourceDefinition.getName());
       final ActorDefinitionVersion defaultActorDefinitionVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
       final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
       updateSupportStatesForActorDefinition(sourceDefinition.getSourceDefinitionId(), currentDefaultVersion);
+      LOGGER.info("Finished updating support states for source definition: {}", sourceDefinition.getName());
     }
   }
 
@@ -147,10 +153,12 @@ public class SupportStateUpdater {
   public void updateSupportStatesForDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
       throws ConfigNotFoundException, IOException {
     if (!destinationDefinition.getCustom()) {
+      LOGGER.info("Updating support states for destination definition: {}", destinationDefinition.getName());
       final ActorDefinitionVersion defaultActorDefinitionVersion =
           configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
       final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
       updateSupportStatesForActorDefinition(destinationDefinition.getDestinationDefinitionId(), currentDefaultVersion);
+      LOGGER.info("Finished updating support states for destination definition: {}", destinationDefinition.getName());
     }
   }
 
@@ -174,9 +182,21 @@ public class SupportStateUpdater {
    * Updates the version support states for all source and destination definitions.
    */
   public void updateSupportStates() throws IOException {
+    updateSupportStates(LocalDate.now());
+  }
+
+  /**
+   * Updates the version support states for all source and destination definitions based on a
+   * reference date.
+   */
+  @VisibleForTesting
+  void updateSupportStates(final LocalDate referenceDate) throws IOException {
+    LOGGER.info("Updating support states for all definitions");
     final List<StandardSourceDefinition> sourceDefinitions = configRepository.listPublicSourceDefinitions(false);
     final List<StandardDestinationDefinition> destinationDefinitions = configRepository.listPublicDestinationDefinitions(false);
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChanges();
+    final List<ActorDefinitionBreakingChange> allBreakingChanges = configRepository.listBreakingChanges();
+    final Map<UUID, List<ActorDefinitionBreakingChange>> breakingChangesMap = allBreakingChanges.stream()
+        .collect(Collectors.groupingBy(ActorDefinitionBreakingChange::getActorDefinitionId));
 
     SupportStateUpdate comboSupportStateUpdate = new SupportStateUpdate(List.of(), List.of(), List.of());
 
@@ -184,10 +204,11 @@ public class SupportStateUpdater {
       final List<ActorDefinitionVersion> actorDefinitionVersions =
           configRepository.listActorDefinitionVersionsForDefinition(sourceDefinition.getSourceDefinitionId());
       final Version currentDefaultVersion = getVersionTag(actorDefinitionVersions, sourceDefinition.getDefaultVersionId());
+      final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+          breakingChangesMap.getOrDefault(sourceDefinition.getSourceDefinitionId(), List.of());
 
       final SupportStateUpdate supportStateUpdate =
-          getSupportStateUpdate(currentDefaultVersion, LocalDate.now(), breakingChanges, actorDefinitionVersions);
-
+          getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions);
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate);
     }
 
@@ -195,14 +216,16 @@ public class SupportStateUpdater {
       final List<ActorDefinitionVersion> actorDefinitionVersions =
           configRepository.listActorDefinitionVersionsForDefinition(destinationDefinition.getDestinationDefinitionId());
       final Version currentDefaultVersion = getVersionTag(actorDefinitionVersions, destinationDefinition.getDefaultVersionId());
+      final List<ActorDefinitionBreakingChange> breakingChangesForDef =
+          breakingChangesMap.getOrDefault(destinationDefinition.getDestinationDefinitionId(), List.of());
 
       final SupportStateUpdate supportStateUpdate =
-          getSupportStateUpdate(currentDefaultVersion, LocalDate.now(), breakingChanges, actorDefinitionVersions);
-
+          getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions);
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate);
     }
 
     executeSupportStateUpdate(comboSupportStateUpdate);
+    LOGGER.info("Finished updating support states for all definitions");
   }
 
   /**

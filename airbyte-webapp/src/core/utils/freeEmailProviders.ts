@@ -3750,3 +3750,6 @@ export const FREE_EMAIL_SERVICE_PROVIDERS = [
   "zzn.com",
   "zzom.co.uk",
 ] as const;
+
+export const isCorporateEmail = (email: string) =>
+  !FREE_EMAIL_SERVICE_PROVIDERS.some((provider) => email?.endsWith(`@${provider}`));

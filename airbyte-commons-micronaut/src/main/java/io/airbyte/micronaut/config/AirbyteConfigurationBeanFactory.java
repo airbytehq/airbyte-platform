@@ -5,6 +5,7 @@
 package io.airbyte.micronaut.config;
 
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
@@ -31,6 +32,14 @@ public class AirbyteConfigurationBeanFactory {
   @Singleton
   public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
     return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
+  }
+
+  /**
+   * Fetch the configured edition of the Airbyte instance. Defaults to COMMUNITY.
+   */
+  @Singleton
+  public AirbyteEdition airbyteEdition(@Value("${airbyte.edition:COMMUNITY}") final String airbyteEdition) {
+    return convertToEnum(airbyteEdition.toUpperCase(), AirbyteEdition::valueOf, AirbyteEdition.COMMUNITY);
   }
 
 }

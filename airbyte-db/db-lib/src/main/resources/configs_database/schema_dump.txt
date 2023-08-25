@@ -20,7 +20,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "default_version_id" uuid,
+  "default_version_id" uuid not null,
   constraint "actor_pkey"
     primary key ("id")
 );

@@ -12,7 +12,6 @@ import { Heading } from "components/ui/Heading";
 import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { EmailLinkErrorCodes } from "packages/cloud/services/auth/types";
 
 import { Disclaimer } from "./auth/components/Disclaimer";
@@ -33,14 +32,17 @@ const acceptEmailInviteSchema: SchemaOf<AcceptEmailInviteFormValues> = yup.objec
   news: yup.boolean().required(),
 });
 
-export const AcceptEmailInvite: React.FC = () => {
+interface AcceptEmailInviteProps {
+  signUpWithEmailLink: (values: AcceptEmailInviteFormValues) => Promise<void>;
+}
+
+export const AcceptEmailInvite: React.FC<AcceptEmailInviteProps> = ({ signUpWithEmailLink }) => {
   const { formatMessage } = useIntl();
-  const authService = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
 
   const onSubmit = async (values: AcceptEmailInviteFormValues) => {
-    await authService.signUpWithEmailLink(values);
+    await signUpWithEmailLink(values);
   };
 
   const onError = (e: Error, { name, email }: AcceptEmailInviteFormValues) => {

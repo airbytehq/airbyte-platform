@@ -126,6 +126,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     } catch (final IOException e) {
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
+    } finally {
+      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, null);
     }
   }
 

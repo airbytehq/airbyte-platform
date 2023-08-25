@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.jooq.Result;
@@ -25,13 +26,16 @@ import org.jooq.Result;
  * Handle persisting Permission to the Config Database and perform all SQL queries.
  *
  */
+@Slf4j
 public class OrganizationPersistence {
 
   private final ExceptionWrappingDatabase database;
 
-  public static final String PRIMARY_KEY = "id";
-  public static final String USER_KEY = "user_id";
-  public static final String WORKSPACE_KEY = "workspace_id";
+  /**
+   * Each installation of Airbyte comes with a default organization. The ID of this organization is
+   * hardcoded to the 0 UUID so that it can be consistently retrieved.
+   */
+  public static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   public OrganizationPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
@@ -95,6 +99,13 @@ public class OrganizationPersistence {
     return organization;
   }
 
+  /**
+   * Get the default organization if it exists by looking up the hardcoded default organization id.
+   */
+  public Optional<Organization> getDefaultOrganization() throws IOException {
+    return getOrganization(DEFAULT_ORGANIZATION_ID);
+  }
+
   private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
@@ -124,6 +135,7 @@ public class OrganizationPersistence {
     }
     ctx.insertInto(ORGANIZATION)
         .set(ORGANIZATION.ID, organization.getOrganizationId())
+        .set(ORGANIZATION.USER_ID, organization.getUserId())
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
         .set(ORGANIZATION.CREATED_AT, timestamp)

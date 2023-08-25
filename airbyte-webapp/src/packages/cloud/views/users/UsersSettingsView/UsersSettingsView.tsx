@@ -11,10 +11,10 @@ import { Table } from "components/ui/Table";
 import { useListUsers, useUserHook } from "core/api/cloud";
 import { WorkspaceUserRead } from "core/api/types/CloudApi";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import styles from "./UsersSettingsView.module.scss";
 import { InviteUsersModal } from "../InviteUsersModal";

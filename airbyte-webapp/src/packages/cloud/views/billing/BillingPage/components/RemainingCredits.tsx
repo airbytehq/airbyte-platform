@@ -18,9 +18,9 @@ import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/clou
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";
@@ -38,6 +38,7 @@ function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspaceRead): boolean {
 }
 
 export const RemainingCredits: React.FC = () => {
+  const { sendEmailVerification } = useAuthService();
   const retryIntervalId = useRef<number>();
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
@@ -145,7 +146,9 @@ export const RemainingCredits: React.FC = () => {
           </FlexContainer>
         </FlexContainer>
         <FlexContainer direction="column">
-          {!emailVerified && <EmailVerificationHint variant={bannerVariant} />}
+          {!emailVerified && sendEmailVerification && (
+            <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
+          )}
           <LowCreditBalanceHint variant={bannerVariant} />
         </FlexContainer>
       </Box>

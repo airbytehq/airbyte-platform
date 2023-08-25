@@ -27,6 +27,19 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void createOrganization() throws Exception {
+    Organization organization = new Organization()
+        .withOrganizationId(UUID.randomUUID())
+        .withUserId(UUID.randomUUID())
+        .withEmail("octavia@airbyte.io")
+        .withName("new org");
+    organizationPersistence.createOrganization(organization);
+    Optional<Organization> result = organizationPersistence.getOrganization(organization.getOrganizationId());
+    assertTrue(result.isPresent());
+    assertEquals(organization, result.get());
+  }
+
+  @Test
   void getOrganization() throws Exception {
     Optional<Organization> result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1);
     assertTrue(result.isPresent());

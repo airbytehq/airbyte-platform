@@ -36,11 +36,13 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
@@ -70,6 +72,7 @@ public class SourceDefinitionsHandler {
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final SourceHandler sourceHandler;
+  private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
 
   @Inject
@@ -78,12 +81,14 @@ public class SourceDefinitionsHandler {
                                   final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
+                                  final SupportStateUpdater supportStateUpdater,
                                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.sourceHandler = sourceHandler;
+    this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -283,6 +288,10 @@ public class SourceDefinitionsHandler {
 
     if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
       configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    }
+    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
+      final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
+      supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
     }
     return buildSourceDefinitionRead(newSource, newVersion);
   }

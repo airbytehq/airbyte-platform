@@ -13,11 +13,11 @@ import { Heading } from "components/ui/Heading";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { AuthConfirmPasswordReset } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 import { useQuery } from "hooks/useQuery";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { ResetPasswordConfirmErrorCodes } from "packages/cloud/services/auth/types";
 
 interface ResetPasswordConfirmFormValues {
@@ -38,9 +38,12 @@ const ResetPasswordButton: React.FC = () => {
   );
 };
 
-export const ResetPasswordConfirmPage: React.FC = () => {
+interface ResetPasswordConfirmPageProps {
+  confirmPasswordReset: AuthConfirmPasswordReset;
+}
+
+export const ResetPasswordConfirmPage: React.FC<ResetPasswordConfirmPageProps> = ({ confirmPasswordReset }) => {
   const { formatMessage } = useIntl();
-  const { confirmPasswordReset } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const navigate = useNavigate();

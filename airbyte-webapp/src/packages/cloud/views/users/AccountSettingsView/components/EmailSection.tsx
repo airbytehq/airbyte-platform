@@ -5,7 +5,7 @@ import * as yup from "yup";
 import { Form, FormControl } from "components/forms";
 import { Card } from "components/ui/Card";
 
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { useCurrentUser } from "core/services/auth";
 
 const emailFormSchema = yup.object({
   email: yup.string().required("form.empty.error"),

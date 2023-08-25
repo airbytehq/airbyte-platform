@@ -183,17 +183,25 @@ public class LogClientSingleton {
    *
    * @param workerEnvironment environment of worker.
    * @param logConfigs configuration for logs
-   * @param path log path
+   * @param path log path, if path is null, it will clear the JobMdc instead
    */
   public void setJobMdc(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path path) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker job mdc");
-      final String resolvedPath = path.resolve(LogClientSingleton.LOG_FILENAME).toString();
-      MDC.put(LogClientSingleton.JOB_LOG_PATH_MDC_KEY, resolvedPath);
+      if (path != null) {
+        final String resolvedPath = path.resolve(LogClientSingleton.LOG_FILENAME).toString();
+        MDC.put(LogClientSingleton.JOB_LOG_PATH_MDC_KEY, resolvedPath);
+      } else {
+        MDC.remove(LogClientSingleton.JOB_LOG_PATH_MDC_KEY);
+      }
     } else {
       LOGGER.debug("Setting kube job mdc");
       createCloudClientIfNull(logConfigs);
-      MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, path.resolve(LogClientSingleton.LOG_FILENAME).toString());
+      if (path != null) {
+        MDC.put(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY, path.resolve(LogClientSingleton.LOG_FILENAME).toString());
+      } else {
+        MDC.remove(LogClientSingleton.CLOUD_JOB_LOG_PATH_MDC_KEY);
+      }
     }
   }
 

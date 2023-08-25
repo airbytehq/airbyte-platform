@@ -12,13 +12,14 @@ import { ThemeToggle } from "components/ui/ThemeToggle";
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceAsync } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
+import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { RoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
@@ -47,14 +48,14 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   // exp-speedy-connection
   const { isExperimentVariant } = useExperimentSpeedyConnection();
 
-  const { hasCorporateEmail } = useAuthService();
+  const { user } = useAuthService();
 
   const isTrial = isNewTrialPolicy
     ? cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
       cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
     : Boolean(cloudWorkspace?.trialExpiryTimestamp);
 
-  const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
+  const showExperimentBanner = isExperimentVariant && isTrial && user && isCorporateEmail(user.email);
 
   return (
     <div className={classNames(styles.mainContainer)}>

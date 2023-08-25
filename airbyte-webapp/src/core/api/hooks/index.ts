@@ -12,4 +12,5 @@ export * from "./instanceConfiguration";
 export * from "./streams";
 export * from "./workspaces";
 export * from "./organizations";
+export * from "./users";
 export * from "./upgradeConnectorVersion";

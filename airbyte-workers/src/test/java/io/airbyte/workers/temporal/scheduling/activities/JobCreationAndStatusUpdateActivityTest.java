@@ -64,12 +64,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -89,8 +89,7 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private Path mPath;
 
-  @Mock
-  private WorkerEnvironment mWorkerEnvironment;
+  private final WorkerEnvironment mWorkerEnvironment = WorkerEnvironment.DOCKER;
 
   @Mock
   private LogConfigs mLogConfigs;
@@ -110,7 +109,6 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private JobsApi jobsApi;
 
-  @InjectMocks
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -134,6 +132,12 @@ class JobCreationAndStatusUpdateActivityTest {
       .withFailures(Collections.singletonList(
           new FailureReason()
               .withFailureOrigin(FailureOrigin.SOURCE)));
+
+  @BeforeEach
+  void beforeEach() {
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
+        mJobPersistence, mPath, mWorkerEnvironment, mLogConfigs, mJobNotifier, mJobtracker, mConfigRepository, mJobErrorReporter, jobsApi);
+  }
 
   @Nested
   class Creation {
