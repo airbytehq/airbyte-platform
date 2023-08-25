@@ -28,6 +28,7 @@ import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
+import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
@@ -728,7 +729,19 @@ public class ConnectionsHandler {
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
     final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
+    final StandardDestinationDefinition destination = configRepository.getDestinationDefinitionFromConnection(connectionId);
+    // Note: we're using the workspace from the source to save an extra db request.
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destination, sourceConnection.getWorkspaceId());
+    final List<DestinationSyncMode> supportedDestinationSyncModes =
+        Enums.convertListTo(destinationVersion.getSpec().getSupportedDestinationSyncModes(), DestinationSyncMode.class);
+    final var convertedCatalog = Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
+    if (convertedCatalog.isPresent()) {
+      convertedCatalog.get().getStreams().forEach((streamAndConfiguration) -> {
+        CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfiguration, supportedDestinationSyncModes);
+      });
+    }
+    return convertedCatalog;
   }
 
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)

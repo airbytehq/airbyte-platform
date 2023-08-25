@@ -57,28 +57,27 @@ const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
 };
 
 const saveConnectionAndAssertStreams = (
-  ...expectedSyncModes: Array<{ namespace: string; name: string; config: Partial<AirbyteStreamConfiguration> }>
+  expectedSyncMode: { namespace: string; name: string; config: Partial<AirbyteStreamConfiguration> },
+  { expectModal = true }: { expectModal?: boolean } | undefined = {}
 ) => {
   replicationPage
-    .saveChangesAndHandleResetModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler })
+    .saveChangesAndHandleResetModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler, expectModal })
     .then((connection) => {
-      expectedSyncModes.forEach((expected) => {
-        const stream = connection.syncCatalog.streams.find(
-          ({ stream }) => stream?.namespace === expected.namespace && stream.name === expected.name
-        );
+      const stream = connection.syncCatalog.streams.find(
+        ({ stream }) => stream?.namespace === expectedSyncMode.namespace && stream.name === expectedSyncMode.name
+      );
 
-        expect(stream).to.exist;
-        expect(stream?.config).to.contain({
-          syncMode: expected.config.syncMode,
-          destinationSyncMode: expected.config.destinationSyncMode,
-        });
-        if (expected.config.cursorField) {
-          expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
-        }
-        if (expected.config.primaryKey) {
-          expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
-        }
+      expect(stream).to.exist;
+      expect(stream?.config).to.contain({
+        syncMode: expectedSyncMode.config.syncMode,
+        destinationSyncMode: expectedSyncMode.config.destinationSyncMode,
       });
+      if (expectedSyncMode.config.cursorField) {
+        expect(stream?.config?.cursorField).to.eql(expectedSyncMode.config.cursorField);
+      }
+      if (expectedSyncMode.config.primaryKey) {
+        expect(stream?.config?.cursorField).to.eql(expectedSyncMode.config.cursorField);
+      }
     });
 };
 
@@ -155,14 +154,17 @@ describe("Connection - sync modes", () => {
       streamDetails.close();
 
       // Save
-      saveConnectionAndAssertStreams({
-        namespace: "public",
-        name: "users",
-        config: {
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.overwrite,
+      saveConnectionAndAssertStreams(
+        {
+          namespace: "public",
+          name: "users",
+          config: {
+            syncMode: SyncMode.full_refresh,
+            destinationSyncMode: DestinationSyncMode.overwrite,
+          },
         },
-      });
+        { expectModal: false }
+      );
 
       // Confirm after save
       usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);

@@ -20,6 +20,7 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.config.DataType;
 import io.airbyte.config.FieldSelectionData;
+import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -125,6 +126,50 @@ class CatalogConverterTest {
     final var catalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     catalog.getStreams().get(0).getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(new SelectedFieldInfo().addFieldPathItem(FIELD_NAME));
     assertEquals(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(), CatalogConverter.toConfiguredProtocol(catalog));
+  }
+
+  @Test
+  void testDiscoveredToApiDefaultSyncModesNoSourceCursor() throws JsonValidationException {
+    final AirbyteCatalog persistedCatalog = CatalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
+    final var actualStreamConfig = CatalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
+    final var actualSyncMode = actualStreamConfig.getSyncMode();
+    final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();
+    assertEquals(SyncMode.FULL_REFRESH, actualSyncMode);
+    assertEquals(DestinationSyncMode.OVERWRITE, actualDestinationSyncMode);
+  }
+
+  @Test
+  void testDiscoveredToApiDefaultSyncModesSourceCursorAndPrimaryKey() throws JsonValidationException {
+    final AirbyteCatalog persistedCatalog = CatalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
+    persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true).withSourceDefinedPrimaryKey(List.of(List.of("unused")));
+    final var actualStreamConfig = CatalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
+    final var actualSyncMode = actualStreamConfig.getSyncMode();
+    final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();
+    assertEquals(SyncMode.INCREMENTAL, actualSyncMode);
+    assertEquals(DestinationSyncMode.APPEND_DEDUP, actualDestinationSyncMode);
+  }
+
+  @Test
+  void testDiscoveredToApiDefaultSyncModesSourceCursorNoPrimaryKey() throws JsonValidationException {
+    final AirbyteCatalog persistedCatalog = CatalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
+    persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true);
+    final var actualStreamConfig = CatalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
+    final var actualSyncMode = actualStreamConfig.getSyncMode();
+    final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();
+    assertEquals(SyncMode.FULL_REFRESH, actualSyncMode);
+    assertEquals(DestinationSyncMode.OVERWRITE, actualDestinationSyncMode);
+  }
+
+  @Test
+  void testDiscoveredToApiDefaultSyncModesSourceCursorNoFullRefresh() throws JsonValidationException {
+    final AirbyteCatalog persistedCatalog = CatalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
+    persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true)
+        .withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.INCREMENTAL));
+    final var actualStreamConfig = CatalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
+    final var actualSyncMode = actualStreamConfig.getSyncMode();
+    final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();
+    assertEquals(SyncMode.INCREMENTAL, actualSyncMode);
+    assertEquals(DestinationSyncMode.APPEND, actualDestinationSyncMode);
   }
 
 }
