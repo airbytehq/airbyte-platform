@@ -137,37 +137,37 @@ class SupportStateUpdaterTest {
         .withDefaultVersionId(SRC_V1_0_0.getVersionId());
 
     final UUID destinationDefinitionId = UUID.randomUUID();
-    final ActorDefinitionVersion DEST_V1_1_0 = createActorDefinitionVersion(V1_1_0)
+    final ActorDefinitionVersion DEST_V0_1_0 = createActorDefinitionVersion(V0_1_0)
         .withActorDefinitionId(destinationDefinitionId);
-    final ActorDefinitionVersion DEST_V2_0_0 = createActorDefinitionVersion(V2_0_0)
+    final ActorDefinitionVersion DEST_V1_0_0 = createActorDefinitionVersion(V1_0_0)
         .withActorDefinitionId(destinationDefinitionId);
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName("destination")
         .withDestinationDefinitionId(destinationDefinitionId)
-        .withDefaultVersionId(DEST_V2_0_0.getVersionId());
+        .withDefaultVersionId(DEST_V1_0_0.getVersionId());
 
     final ActorDefinitionBreakingChange SRC_BC_1_0_0 = createBreakingChange(V1_0_0, "2020-01-01");
-    final ActorDefinitionBreakingChange DEST_BC_2_0_0 = createBreakingChange(V2_0_0, "2020-02-01")
+    final ActorDefinitionBreakingChange DEST_BC_1_0_0 = createBreakingChange(V1_0_0, "2020-02-01")
         .withActorDefinitionId(destinationDefinitionId);
 
     when(mConfigRepository.listPublicSourceDefinitions(false)).thenReturn(List.of(sourceDefinition));
     when(mConfigRepository.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
-    when(mConfigRepository.listBreakingChanges()).thenReturn(List.of(SRC_BC_1_0_0, DEST_BC_2_0_0));
+    when(mConfigRepository.listBreakingChanges()).thenReturn(List.of(SRC_BC_1_0_0, DEST_BC_1_0_0));
     when(mConfigRepository.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID))
         .thenReturn(List.of(SRC_V0_1_0, SRC_V1_0_0));
     when(mConfigRepository.listActorDefinitionVersionsForDefinition(destinationDefinitionId))
-        .thenReturn(List.of(DEST_V1_1_0, DEST_V2_0_0));
+        .thenReturn(List.of(DEST_V0_1_0, DEST_V1_0_0));
 
-    supportStateUpdater.updateSupportStates();
+    supportStateUpdater.updateSupportStates(LocalDate.parse("2020-01-15"));
 
     verify(mConfigRepository).listPublicSourceDefinitions(false);
     verify(mConfigRepository).listPublicDestinationDefinitions(false);
     verify(mConfigRepository).listBreakingChanges();
     verify(mConfigRepository).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
     verify(mConfigRepository).listActorDefinitionVersionsForDefinition(destinationDefinitionId);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId(), DEST_V1_1_0.getVersionId()),
-        SupportState.UNSUPPORTED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V2_0_0.getVersionId()),
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId()), SupportState.UNSUPPORTED);
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(DEST_V0_1_0.getVersionId()), SupportState.DEPRECATED);
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V1_0_0.getVersionId()),
         SupportState.SUPPORTED);
     verifyNoMoreInteractions(mConfigRepository);
   }
