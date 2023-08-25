@@ -239,9 +239,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CloudWorkspaceReadList"
-  /v1/cloud_workspaces/list_workspaces_by_most_recently_running_jobs:
+  /v1/cloud_workspaces/list_active_workspaces_by_most_recently_running_jobs:
     post:
-      operationId: listWorkspacesByMostRecentlyRunningJobs
+      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
       requestBody:
         content:
           application/json:
