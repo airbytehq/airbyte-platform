@@ -4,8 +4,8 @@ import { LoadingPage } from "components";
 
 import { MissingConfigError, useConfig } from "config";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
+import { RequestAuthMiddleware } from "core/services/auth";
 import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
-import { RequestAuthMiddleware } from "packages/cloud/lib/auth/RequestAuthMiddleware";
 import { useAuth } from "packages/firebaseReact";
 
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";

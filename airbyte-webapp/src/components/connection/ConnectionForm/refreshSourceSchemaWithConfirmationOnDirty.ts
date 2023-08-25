@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { useUnmount } from "react-use";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -9,10 +8,6 @@ export const useRefreshSourceSchemaWithConfirmationOnDirty = (dirty: boolean) =>
   const { clearFormChange } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { formId, refreshSchema } = useConnectionFormService();
-
-  useUnmount(() => {
-    closeConfirmationModal();
-  });
 
   return useCallback(() => {
     if (dirty) {

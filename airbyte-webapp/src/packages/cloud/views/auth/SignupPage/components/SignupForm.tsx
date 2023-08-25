@@ -10,11 +10,11 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
+import { AuthSignUp } from "core/services/auth";
 import { isGdprCountry } from "core/utils/dataPrivacy";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { SignUpFormErrorCodes } from "packages/cloud/services/auth/types";
 
 import { PasswordFormControl } from "../../components/PasswordFormControl";
@@ -53,9 +53,12 @@ const composeSignUpSchema = (showName: boolean, showCompanyName: boolean): Schem
     ...(showCompanyName && { companyName: yup.string().required("form.empty.error") }),
   });
 
-export const SignupForm: React.FC = () => {
+interface SignupFormProps {
+  signUp: AuthSignUp;
+}
+
+export const SignupForm: React.FC<SignupFormProps> = ({ signUp }) => {
   const { formatMessage } = useIntl();
-  const { signUp } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
 

@@ -1006,6 +1006,8 @@ components:
       enum:
         # - auth0
         - google_identity_platform
+        - airbyte
+        - keycloak
     # WORKSPACE
     WorkspaceUserRead:
       type: object

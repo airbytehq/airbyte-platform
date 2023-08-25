@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.license.condition;
 
+import io.airbyte.config.Configs.AirbyteEdition;
 import io.micronaut.context.condition.Condition;
 import io.micronaut.context.condition.ConditionContext;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +19,8 @@ public class AirbyteProEnabledCondition implements Condition {
 
   @Override
   public boolean matches(ConditionContext context) {
-    log.warn("inside the pro enabled condition!");
-    final var edition = context.getProperty("airbyte.edition", String.class).orElse("community");
-    log.warn("got edition: " + edition);
-    return "pro".equals(edition);
+    final AirbyteEdition edition = context.getBean(AirbyteEdition.class);
+    return edition.equals(AirbyteEdition.PRO);
   }
 
 }

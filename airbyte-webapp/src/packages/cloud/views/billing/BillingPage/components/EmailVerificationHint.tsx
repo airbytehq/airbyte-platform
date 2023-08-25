@@ -2,14 +2,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Message } from "components/ui/Message";
 
+import { AuthSendEmailVerification } from "core/services/auth";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 interface EmailVerificationHintProps {
   variant: "info" | "warning" | "error";
+  sendEmailVerification: AuthSendEmailVerification;
 }
-export const EmailVerificationHint: React.FC<EmailVerificationHintProps> = ({ variant }) => {
-  const { sendEmailVerification } = useAuthService();
+export const EmailVerificationHint: React.FC<EmailVerificationHintProps> = ({ sendEmailVerification, variant }) => {
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 

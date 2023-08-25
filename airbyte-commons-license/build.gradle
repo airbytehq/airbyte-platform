@@ -14,6 +14,8 @@ dependencies {
     annotationProcessor libs.lombok
 
     implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-micronaut')
+    implementation project(':airbyte-config:config-models')
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor

@@ -35,12 +35,14 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -70,6 +72,7 @@ public class DestinationDefinitionsHandler {
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final DestinationHandler destinationHandler;
+  private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
 
   @VisibleForTesting
@@ -78,12 +81,14 @@ public class DestinationDefinitionsHandler {
                                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                        final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                        final DestinationHandler destinationHandler,
+                                       final SupportStateUpdater supportStateUpdater,
                                        final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.destinationHandler = destinationHandler;
+    this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -283,6 +288,11 @@ public class DestinationDefinitionsHandler {
 
     if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
       configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    }
+    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
+      final StandardDestinationDefinition updatedDestinationDefinition = configRepository
+          .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+      supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition);
     }
     return buildDestinationDefinitionRead(newDestination, newVersion);
   }

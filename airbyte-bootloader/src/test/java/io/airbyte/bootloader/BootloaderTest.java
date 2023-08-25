@@ -20,6 +20,7 @@ import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.db.factory.DSLContextFactory;
@@ -75,7 +76,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.20.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.21.001";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -132,7 +133,9 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient);
+    val supportStateUpdater = new SupportStateUpdater(configRepository);
+    val applyDefinitionsHelper =
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -185,8 +188,10 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val supportStateUpdater = new SupportStateUpdater(configRepository);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient);
+    val applyDefinitionsHelper =
+        new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);

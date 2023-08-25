@@ -812,4 +812,14 @@ public interface Configs {
     AWS_SECRET_MANAGER
   }
 
+  /**
+   * The configured Airbyte edition for the instance. By default, an Airbyte instance is configured as
+   * Community edition. If configured as Pro edition, the instance will perform a license check and
+   * activate additional features if valid.
+   */
+  enum AirbyteEdition {
+    COMMUNITY,
+    PRO
+  }
+
 }

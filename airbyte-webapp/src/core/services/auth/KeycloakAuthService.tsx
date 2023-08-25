@@ -5,40 +5,34 @@ import { AuthProvider, useAuth } from "react-oidc-context";
 import LoadingPage from "components/LoadingPage";
 
 import { useGetInstanceConfiguration } from "core/api";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useGetService, useInjectServices } from "core/servicesProvider";
-import { RequestAuthMiddleware } from "packages/cloud/lib/auth/RequestAuthMiddleware";
+
+import { RequestAuthMiddleware } from "./RequestAuthMiddleware";
 
 // This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
 export const KeycloakAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const { auth, webappUrl } = useGetInstanceConfiguration();
 
-  const isKeycloakAuthenticationEnabled = useFeature(FeatureItem.KeycloakAuthentication);
-
-  if (isKeycloakAuthenticationEnabled) {
-    if (!auth) {
-      throw new Error("Authentication is enabled, but the server returned an invalid auth configuration: ", auth);
-    }
-
-    const oidcConfig = {
-      authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
-      client_id: auth.clientId,
-      redirect_uri: `${window.location.origin}/${window.location.pathname}`,
-      onSigninCallback: () => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      },
-    };
-
-    return (
-      <AuthProvider {...oidcConfig}>
-        <LoginRedirectCheck>
-          <KeycloakAuthMiddleware>{children}</KeycloakAuthMiddleware>
-        </LoginRedirectCheck>
-      </AuthProvider>
-    );
+  if (!auth) {
+    throw new Error("Authentication is enabled, but the server returned an invalid auth configuration: ", auth);
   }
 
-  return <>{children}</>;
+  const oidcConfig = {
+    authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
+    client_id: auth.clientId,
+    redirect_uri: `${window.location.origin}/${window.location.pathname}`,
+    onSigninCallback: () => {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    },
+  };
+
+  return (
+    <AuthProvider {...oidcConfig}>
+      <LoginRedirectCheck>
+        <KeycloakAuthMiddleware>{children}</KeycloakAuthMiddleware>
+      </LoginRedirectCheck>
+    </AuthProvider>
+  );
 };
 
 // While auth status is loading we want to suspend rendering of the app

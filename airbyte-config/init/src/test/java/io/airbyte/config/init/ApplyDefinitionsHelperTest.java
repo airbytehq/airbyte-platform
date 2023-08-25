@@ -24,9 +24,11 @@ import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.IngestBreakingChanges;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
@@ -54,6 +56,7 @@ class ApplyDefinitionsHelperTest {
   private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
+  private SupportStateUpdater supportStateUpdater;
   private FeatureFlagClient featureFlagClient;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
 
@@ -101,11 +104,14 @@ class ApplyDefinitionsHelperTest {
     configRepository = mock(ConfigRepository.class);
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
+    supportStateUpdater = mock(SupportStateUpdater.class);
     featureFlagClient = mock(TestClient.class);
 
-    applyDefinitionsHelper = new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient);
+    applyDefinitionsHelper =
+        new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, supportStateUpdater);
 
     when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
+    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
 
     // Default calls to empty.
     when(definitionsProvider.getDestinationDefinitions()).thenReturn(Collections.emptyList());
@@ -143,8 +149,9 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
     verify(configRepository).writeActorDefinitionBreakingChanges(List.of());
+    verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 
   @ParameterizedTest
@@ -170,8 +177,9 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
+    verify(supportStateUpdater).updateSupportStates();
 
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 
   @ParameterizedTest
@@ -202,7 +210,9 @@ class ApplyDefinitionsHelperTest {
       verify(configRepository).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
       verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     }
-    verifyNoMoreInteractions(configRepository);
+    verify(supportStateUpdater).updateSupportStates();
+
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 
   @ParameterizedTest
@@ -240,7 +250,33 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
-    verifyNoMoreInteractions(configRepository);
+    verify(supportStateUpdater).updateSupportStates();
+
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
+  }
+
+  @Test
+  void testTurnOffRunSupportStateUpdaterFeatureFlag() throws JsonValidationException, ConfigNotFoundException, IOException {
+    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
+
+    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
+    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
+
+    applyDefinitionsHelper.apply(true);
+    verifyConfigRepositoryGetInteractions();
+
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
+        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
+    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
+
+    verify(supportStateUpdater, never()).updateSupportStates();
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 
   @Test
@@ -263,7 +299,9 @@ class ApplyDefinitionsHelperTest {
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
     verify(configRepository, never()).writeActorDefinitionBreakingChanges(any());
 
-    verifyNoMoreInteractions(configRepository);
+    verify(supportStateUpdater).updateSupportStates();
+
+    verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 
   private static List<ActorDefinitionBreakingChange> getExpectedBreakingChanges() {

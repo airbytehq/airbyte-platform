@@ -168,9 +168,9 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(JobListRequestBody.OrderByFieldEnum.fromValue(orderByField.name))
+      .orderByField(JobListRequestBody.OrderByFieldEnum.valueOf(orderByField.name))
       .orderByMethod(
-        JobListRequestBody.OrderByMethodEnum.fromValue(orderByMethod.name),
+        JobListRequestBody.OrderByMethodEnum.valueOf(orderByMethod.name),
       )
 
     val response = try {
@@ -215,8 +215,8 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(OrderByFieldEnum.fromValue(orderByField.name))
-      .orderByMethod(OrderByMethodEnum.fromValue(orderByMethod.name))
+      .orderByField(OrderByFieldEnum.valueOf(orderByField.name))
+      .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
 
     val response = try {
       configApiClient.getJobListForWorkspaces(requestBody, userInfo)

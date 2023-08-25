@@ -28,7 +28,7 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
-  edition: ${AIRBYTE_EDITION:community}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   shutdown:
     delay_ms: 20000
   cloud:

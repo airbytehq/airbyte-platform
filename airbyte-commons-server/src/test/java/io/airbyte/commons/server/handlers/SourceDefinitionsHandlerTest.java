@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -53,11 +54,13 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
@@ -92,6 +95,7 @@ class SourceDefinitionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private SourceHandler sourceHandler;
+  private SupportStateUpdater supportStateUpdater;
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
@@ -104,6 +108,7 @@ class SourceDefinitionsHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     sourceHandler = mock(SourceHandler.class);
+    supportStateUpdater = mock(SupportStateUpdater.class);
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     sourceDefinition = generateSourceDefinition();
@@ -111,7 +116,9 @@ class SourceDefinitionsHandlerTest {
     featureFlagClient = mock(TestClient.class);
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            featureFlagClient);
+            supportStateUpdater, featureFlagClient);
+
+    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -649,24 +656,26 @@ class SourceDefinitionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean ingestBreakingChangesFF) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(ingestBreakingChangesFF);
+  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
 
-    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
-        .thenReturn(sourceDefinitionVersion);
-    final SourceDefinitionRead currentSource = sourceDefinitionsHandler
-        .getSourceDefinition(
-            new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinition.getSourceDefinitionId()));
-    final String currentTag = currentSource.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttag";
-    assertNotEquals(newDockerImageTag, currentTag);
-
     final StandardSourceDefinition updatedSource =
         Jsons.clone(sourceDefinition).withDefaultVersionId(null);
     final ActorDefinitionVersion updatedSourceDefVersion =
         generateVersionFromSourceDefinition(updatedSource)
-            .withDockerImageTag(newDockerImageTag);
+            .withDockerImageTag(newDockerImageTag)
+            .withVersionId(UUID.randomUUID());
+
+    final StandardSourceDefinition persistedUpdatedSource =
+        Jsons.clone(updatedSource).withDefaultVersionId(updatedSourceDefVersion.getVersionId());
+
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
+        .thenReturn(sourceDefinition) // Call at the beginning of the method
+        .thenReturn(persistedUpdatedSource); // Call after we've persisted
+
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(sourceDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom())).thenReturn(updatedSourceDefVersion);
@@ -684,11 +693,13 @@ class SourceDefinitionsHandlerTest {
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
     verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion, breakingChanges);
-    if (ingestBreakingChangesFF) {
-      verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    if (runSupportStateUpdaterFlagValue) {
+      verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
+    } else {
+      verifyNoInteractions(supportStateUpdater);
     }
-
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 
   @Test

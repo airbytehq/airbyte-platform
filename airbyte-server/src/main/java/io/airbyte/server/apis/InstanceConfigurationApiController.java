@@ -6,7 +6,8 @@ package io.airbyte.server.apis;
 
 import io.airbyte.api.generated.InstanceConfigurationApi;
 import io.airbyte.api.model.generated.InstanceConfigurationResponse;
-import io.airbyte.commons.server.handlers.instance_configuration.InstanceConfigurationHandler;
+import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody;
+import io.airbyte.commons.server.handlers.InstanceConfigurationHandler;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.security.annotation.Secured;
@@ -26,7 +27,12 @@ public class InstanceConfigurationApiController implements InstanceConfiguration
   @Override
   @Get
   public InstanceConfigurationResponse getInstanceConfiguration() {
-    return instanceConfigurationHandler.getInstanceConfiguration();
+    return ApiHelper.execute(instanceConfigurationHandler::getInstanceConfiguration);
+  }
+
+  @Override
+  public InstanceConfigurationResponse setupInstanceConfiguration(InstanceConfigurationSetupRequestBody instanceConfigurationSetupRequestBody) {
+    return ApiHelper.execute(() -> instanceConfigurationHandler.setupInstanceConfiguration(instanceConfigurationSetupRequestBody));
   }
 
 }

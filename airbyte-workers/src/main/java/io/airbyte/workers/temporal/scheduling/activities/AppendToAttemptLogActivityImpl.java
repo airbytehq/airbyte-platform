@@ -47,15 +47,19 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
 
     setMdc(input);
 
-    final var msg = input.getMessage();
+    try {
+      final var msg = input.getMessage();
 
-    switch (input.getLevel()) {
-      case ERROR -> logger.error(msg);
-      case WARN -> logger.warn(msg);
-      default -> logger.info(msg);
+      switch (input.getLevel()) {
+        case ERROR -> logger.error(msg);
+        case WARN -> logger.warn(msg);
+        default -> logger.info(msg);
+      }
+
+      return new LogOutput(true);
+    } finally {
+      unsetMdc();
     }
-
-    return new LogOutput(true);
   }
 
   private void setMdc(final LogInput input) {
@@ -65,6 +69,10 @@ public class AppendToAttemptLogActivityImpl implements AppendToAttemptLogActivit
         input.getAttemptNumber());
 
     logClientSingleton.setJobMdc(workerEnvironment, logConfigs, jobRoot);
+  }
+
+  private void unsetMdc() {
+    logClientSingleton.setJobMdc(workerEnvironment, logConfigs, null);
   }
 
 }

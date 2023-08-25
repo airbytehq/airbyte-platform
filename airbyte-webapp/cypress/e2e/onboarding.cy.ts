@@ -1,10 +1,15 @@
-import { submitButtonClick, fillEmail } from "commands/common";
+import { submitButtonClick } from "commands/common";
 
 const OSS_SECURITY_CHECK_URL = "https://oss.airbyte.com/security-check";
 
+export const fillSetupForm = () => {
+  cy.get("input[name=email]").type("test-email-onboarding@test-onboarding-domain.com");
+  cy.get("input[name=organizationName]").type("ACME Corp");
+};
+
 describe("Setup actions", () => {
   beforeEach(() => {
-    cy.intercept("POST", "/api/v1/workspaces/get", (req) => {
+    cy.intercept("GET", "/api/v1/instance_configuration", (req) => {
       req.continue((res) => {
         res.body.initialSetupComplete = false;
         res.send(res.body);
@@ -21,7 +26,7 @@ describe("Setup actions", () => {
     cy.visit("/setup");
     cy.url().should("include", `/setup`);
 
-    fillEmail("test-email-onboarding@test-onboarding-domain.com");
+    fillSetupForm();
 
     cy.get("[data-testid=securityCheckRunning]").should("be.visible");
     cy.get("button[type=submit]").should("be.disabled");
@@ -35,7 +40,7 @@ describe("Setup actions", () => {
     cy.visit("/setup");
     cy.url().should("include", `/setup`);
 
-    fillEmail("test-email-onboarding@test-onboarding-domain.com");
+    fillSetupForm();
 
     cy.get("button[type=submit]").should("be.enabled");
   });
@@ -50,7 +55,7 @@ describe("Setup actions", () => {
     cy.visit("/setup");
     cy.url().should("include", `/setup`);
 
-    fillEmail("test-email-onboarding@test-onboarding-domain.com");
+    fillSetupForm();
 
     cy.get("button[type=submit]").should("be.disabled");
     cy.get("[data-testid=advancedOptions]").click();
@@ -69,7 +74,7 @@ describe("Setup actions", () => {
     cy.visit("/setup");
     cy.url().should("include", `/setup`);
 
-    fillEmail("test-email-onboarding@test-onboarding-domain.com");
+    fillSetupForm();
 
     submitButtonClick();
 

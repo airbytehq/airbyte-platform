@@ -14,10 +14,13 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Persistence Interface for Workspace table.
  */
+@Slf4j
 public class WorkspacePersistence {
 
   private final ExceptionWrappingDatabase database;
@@ -43,6 +46,29 @@ public class WorkspacePersistence {
         .stream()
         .map(DbConverter::buildStandardWorkspace)
         .toList();
+  }
+
+  public void setOrganizationIdIfNull(final UUID workspaceId, final UUID organizationId) throws IOException {
+    // find the workspace with the given ID and check if its organization ID is null. If so, update it.
+    // otherwise, log a warning and do nothing.
+    database.transaction(ctx -> {
+      final boolean isExistingWorkspace = ctx.fetchExists(ctx.selectFrom(WORKSPACE).where(WORKSPACE.ID.eq(workspaceId)));
+      if (isExistingWorkspace) {
+        final boolean isNullOrganizationId =
+            ctx.fetchExists(ctx.selectFrom(WORKSPACE).where(WORKSPACE.ID.eq(workspaceId)).and(WORKSPACE.ORGANIZATION_ID.isNull()));
+        if (isNullOrganizationId) {
+          ctx.update(WORKSPACE)
+              .set(WORKSPACE.ORGANIZATION_ID, organizationId)
+              .where(WORKSPACE.ID.eq(workspaceId))
+              .execute();
+        } else {
+          log.warn("Workspace with ID {} already has an organization ID set. Skipping update.", workspaceId);
+        }
+      } else {
+        log.warn("Workspace with ID {} does not exist. Skipping update.", workspaceId);
+      }
+      return null;
+    });
   }
 
 }
