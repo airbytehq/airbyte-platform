@@ -43,7 +43,6 @@ module.exports = [
   "src/hooks/services/Modal/types.ts",
   "src/hooks/services/Modal/ModalService.test.tsx",
   "src/hooks/services/Modal/index.ts",
-  "src/hooks/services/useConnectionHook.tsx",
   "src/hooks/services/useRequestErrorHandler.tsx",
   "src/hooks/services/ConnectionForm/ConnectionFormService.test.tsx",
   "src/hooks/services/ConnectionForm/ConnectionFormService.tsx",

@@ -4,8 +4,8 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Switch } from "components/ui/Switch";
 
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
-import { useEnableConnection, useSyncConnection } from "hooks/services/useConnectionHook";
+import { useEnableConnection, useSyncConnection } from "core/api";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 
 import styles from "./StatusCellControl.module.scss";
 

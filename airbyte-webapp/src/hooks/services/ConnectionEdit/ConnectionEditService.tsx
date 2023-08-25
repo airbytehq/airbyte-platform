@@ -3,16 +3,16 @@ import { useContext, useState, createContext, useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
+import { useGetConnection, useGetConnectionQuery, useUpdateConnection } from "core/api";
 import {
   AirbyteCatalog,
   ConnectionStatus,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification/NotificationService";
-import { useGetConnection, useUpdateConnection, useWebConnectionService } from "../useConnectionHook";
 import { SchemaError } from "../useSourceHook";
 
 interface ConnectionEditProps {
@@ -42,7 +42,7 @@ const getConnectionCatalog = (connection: WebBackendConnectionRead): ConnectionC
 const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEditHook => {
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const connectionService = useWebConnectionService();
+  const getConnectionQuery = useGetConnectionQuery();
   const [connection, setConnection] = useState(useGetConnection(connectionId));
   const [catalog, setCatalog] = useState<ConnectionCatalog>(() => getConnectionCatalog(connection));
   const [schemaHasBeenRefreshed, setSchemaHasBeenRefreshed] = useState(false);
@@ -50,7 +50,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
     unregisterNotificationById("connection.noDiff");
 
-    const refreshedConnection = await connectionService.getConnection(connectionId, true);
+    const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
     if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
       setConnection(refreshedConnection);
       setSchemaHasBeenRefreshed(true);

@@ -8,13 +8,12 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
-import { useUpgradeConnectorVersion } from "core/api";
+import { useConnectionList, useUpgradeConnectorVersion } from "core/api";
+import { ActorDefinitionVersionRead } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline } from "core/domain/connector";
-import { ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 import { SourcePaths } from "pages/routePaths";
 
 import styles from "./BreakingChangeBanner.module.scss";

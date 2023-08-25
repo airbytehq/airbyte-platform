@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
 
-import { useCancelJob, useListJobsForConnectionStatus, useSetConnectionJobsData } from "core/api";
+import {
+  useResetConnection,
+  useResetConnectionStream,
+  useSyncConnection,
+  useCancelJob,
+  useListJobsForConnectionStatus,
+  useSetConnectionJobsData,
+} from "core/api";
 import {
   ConnectionStatus,
   ConnectionStream,
@@ -9,10 +16,9 @@ import {
   JobStatus,
   JobInfoRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
-import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;

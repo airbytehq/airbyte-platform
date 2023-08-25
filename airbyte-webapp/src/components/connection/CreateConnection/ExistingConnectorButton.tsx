@@ -4,9 +4,9 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useConnectionList } from "core/api";
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { isSource } from "core/domain/connector/source";
-import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import styles from "./ExistingConnectorButton.module.scss";
 

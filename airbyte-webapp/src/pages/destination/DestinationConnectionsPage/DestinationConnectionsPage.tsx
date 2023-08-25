@@ -8,9 +8,8 @@ import { DestinationConnectionTable } from "components/destination/DestinationCo
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useConnectionList } from "core/api";
 import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
