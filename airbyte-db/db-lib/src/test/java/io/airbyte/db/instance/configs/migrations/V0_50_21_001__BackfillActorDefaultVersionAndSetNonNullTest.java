@@ -69,6 +69,7 @@ class V0_50_21_001__BackfillActorDefaultVersionAndSetNonNullTest extends Abstrac
     return actor.get(DEFAULT_VERSION_ID_COL);
   }
 
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   static void insertDependencies(final DSLContext ctx) {
     ctx.insertInto(WORKSPACE)
         .columns(

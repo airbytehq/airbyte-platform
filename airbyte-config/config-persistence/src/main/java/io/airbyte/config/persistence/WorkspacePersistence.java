@@ -48,9 +48,11 @@ public class WorkspacePersistence {
         .toList();
   }
 
+  /**
+   * Find the workspace with the given ID and check if its organization ID is null. If so, update it.
+   * Otherwise, log a warning and do nothing.
+   */
   public void setOrganizationIdIfNull(final UUID workspaceId, final UUID organizationId) throws IOException {
-    // find the workspace with the given ID and check if its organization ID is null. If so, update it.
-    // otherwise, log a warning and do nothing.
     database.transaction(ctx -> {
       final boolean isExistingWorkspace = ctx.fetchExists(ctx.selectFrom(WORKSPACE).where(WORKSPACE.ID.eq(workspaceId)));
       if (isExistingWorkspace) {
