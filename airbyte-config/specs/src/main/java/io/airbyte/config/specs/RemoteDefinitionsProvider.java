@@ -52,7 +52,6 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   private URI parsedRemoteRegistryBaseUrlOrDefault(final String remoteRegistryBaseUrl) {
     try {
       if (remoteRegistryBaseUrl == null || remoteRegistryBaseUrl.isEmpty()) {
-        LOGGER.error("Remote connector registry base URL cannot be null or empty. Falling back to default");
         return new URI(AirbyteCatalogConstants.REMOTE_REGISTRY_BASE_URL);
       } else {
         return new URI(remoteRegistryBaseUrl);
