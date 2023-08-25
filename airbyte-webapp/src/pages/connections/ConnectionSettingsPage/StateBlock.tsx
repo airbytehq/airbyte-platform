@@ -146,7 +146,13 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
               {errorMessage ? (
                 <Message type="error" text={errorMessage} />
               ) : (
-                <Message type="warning" text={<FormattedMessage id="connection.state.warning" />} />
+                <Message
+                  type="warning"
+                  text={<FormattedMessage id="connection.state.warning" />}
+                  secondaryText={
+                    <FormattedMessage id="connection.state.warning.secondary" values={{ br: () => <br /> }} />
+                  }
+                />
               )}
               <FlexContainer alignItems="center" justifyContent="flex-end">
                 <Button
