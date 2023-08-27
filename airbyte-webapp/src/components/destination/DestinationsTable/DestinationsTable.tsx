@@ -5,8 +5,8 @@ import { ImplementationTable } from "components/EntityTable";
 import { EntityTableDataItem } from "components/EntityTable/types";
 import { getEntityTableData } from "components/EntityTable/utils";
 
-import { DestinationRead } from "core/request/AirbyteClient";
-import { useConnectionList } from "hooks/services/useConnectionHook";
+import { useConnectionList } from "core/api";
+import { DestinationRead } from "core/api/types/AirbyteClient";
 
 interface DestinationsTableProps {
   destinations: DestinationRead[];

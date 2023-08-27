@@ -41,6 +41,7 @@ jest.mock("area/workspace/utils", () => ({
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
   useInvalidateWorkspaceStateQuery: () => () => null,
+  useCreateConnection: () => async () => null,
 }));
 
 jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({

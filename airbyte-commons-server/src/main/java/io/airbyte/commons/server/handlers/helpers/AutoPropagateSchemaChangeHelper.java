@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -51,6 +50,7 @@ public class AutoPropagateSchemaChangeHelper {
                                                 final AirbyteCatalog newCatalog,
                                                 final List<StreamTransform> transformations,
                                                 final NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                final List<DestinationSyncMode> supportedDestinationSyncModes,
                                                 final FeatureFlagClient featureFlagClient,
                                                 final UUID workspaceId) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
@@ -74,7 +74,9 @@ public class AutoPropagateSchemaChangeHelper {
               // the catalog.
               streamAndConfigurationToAdd.getConfig()
                   .selected(true);
-              configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd);
+              CatalogConverter.configureDefaultSyncModesForNewStream(streamAndConfigurationToAdd.getStream(),
+                  streamAndConfigurationToAdd.getConfig());
+              CatalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes);
             }
             // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
             // supported sync modes.
@@ -91,36 +93,6 @@ public class AutoPropagateSchemaChangeHelper {
     });
 
     return new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values()));
-  }
-
-  private static void configureDefaultSyncModesForNewStream(final AirbyteStreamAndConfiguration streamToAdd) {
-    // TODO(mfsiega-airbyte): unite this with the default config generation in the CatalogConverter.
-    final var stream = streamToAdd.getStream();
-    final var config = streamToAdd.getConfig();
-    final boolean hasSourceDefinedCursor = stream.getSourceDefinedCursor() != null && stream.getSourceDefinedCursor();
-    final boolean hasSourceDefinedPrimaryKey = stream.getSourceDefinedPrimaryKey() != null && !stream.getSourceDefinedPrimaryKey().isEmpty();
-    final boolean supportsFullRefresh = stream.getSupportedSyncModes().contains(SyncMode.FULL_REFRESH);
-    if (hasSourceDefinedCursor && hasSourceDefinedPrimaryKey) { // Source-defined cursor and primary key
-      config
-          .syncMode(SyncMode.INCREMENTAL)
-          .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-          .primaryKey(stream.getSourceDefinedPrimaryKey());
-    } else if (hasSourceDefinedCursor && supportsFullRefresh) { // Source-defined cursor but no primary key.
-      // NOTE: we prefer Full Refresh | Overwrite to avoid the risk of an Incremental | Append sync
-      // blowing up their destination.
-      config
-          .syncMode(SyncMode.FULL_REFRESH)
-          .destinationSyncMode(DestinationSyncMode.OVERWRITE);
-    } else if (hasSourceDefinedCursor) { // Source-defined cursor but no primary key *and* no full-refresh supported.
-      // If *only* incremental is supported, we go with it.
-      config
-          .syncMode(SyncMode.INCREMENTAL)
-          .destinationSyncMode(DestinationSyncMode.APPEND);
-    } else { // No source-defined cursor at all.
-      config
-          .syncMode(SyncMode.FULL_REFRESH)
-          .destinationSyncMode(DestinationSyncMode.OVERWRITE);
-    }
   }
 
   @VisibleForTesting

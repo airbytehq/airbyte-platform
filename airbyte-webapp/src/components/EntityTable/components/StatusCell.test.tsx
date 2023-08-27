@@ -4,7 +4,7 @@ import { TestWrapper, TestSuspenseBoundary, mockConnection } from "test-utils";
 
 import { StatusCell } from "./StatusCell";
 
-jest.mock("hooks/services/useConnectionHook", () => ({
+jest.mock("core/api", () => ({
   useConnectionList: jest.fn(() => ({
     connections: [],
   })),
@@ -18,7 +18,7 @@ jest.mock("hooks/services/useConnectionHook", () => ({
 
 const mockId = "mock-id";
 
-jest.doMock("hooks/services/useConnectionHook", () => ({
+jest.doMock("core/api", () => ({
   useEnableConnection: () => ({
     mutateAsync: jest.fn(),
     isLoading: false,

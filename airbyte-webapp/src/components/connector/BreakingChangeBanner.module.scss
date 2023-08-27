@@ -17,3 +17,19 @@
   width: fit-content;
   margin-left: variables.$spacing-sm;
 }
+
+.breakingChangeMessage {
+  line-height: 1.2;
+  font-size: variables.$font-size-md;
+
+  & * {
+    margin: 0;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  // needed to override the Markdown component style
+  & a {
+    line-height: inherit;
+  }
+}

@@ -10,10 +10,10 @@ import { Heading } from "components/ui/Heading";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
 import { AirbyteCatalog, ConnectionState, StreamState } from "core/request/AirbyteClient";
 import { haveSameShape } from "core/utils/objects";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useCreateOrUpdateState, useGetConnectionState } from "hooks/services/useConnectionHook";
 
 import styles from "./StateBlock.module.scss";
 
@@ -146,7 +146,13 @@ export const StateBlock: React.FC<StateBlockProps> = ({ connectionId, syncCatalo
               {errorMessage ? (
                 <Message type="error" text={errorMessage} />
               ) : (
-                <Message type="warning" text={<FormattedMessage id="connection.state.warning" />} />
+                <Message
+                  type="warning"
+                  text={<FormattedMessage id="connection.state.warning" />}
+                  secondaryText={
+                    <FormattedMessage id="connection.state.warning.secondary" values={{ br: () => <br /> }} />
+                  }
+                />
               )}
               <FlexContainer alignItems="center" justifyContent="flex-end">
                 <Button

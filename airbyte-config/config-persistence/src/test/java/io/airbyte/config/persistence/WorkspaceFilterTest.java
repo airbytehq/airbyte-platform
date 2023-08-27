@@ -64,12 +64,13 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .execute());
 
     // create workspace
-    database.transaction(ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE)
-        .values(WORKSPACE_ID_0, "ws-0", "ws-0", true)
-        .values(WORKSPACE_ID_1, "ws-1", "ws-1", true)
-        .values(WORKSPACE_ID_2, "ws-2", "ws-2", true)
-        .values(WORKSPACE_ID_3, "ws-3", "ws-3", true)
-        .execute());
+    database.transaction(
+        ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false)
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true) // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true) // note that workspace 3 is tombstoned!
+            .execute());
     // create actors
     database.transaction(
         ctx -> ctx
@@ -112,8 +113,8 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  @DisplayName("Should return a list of workspace IDs with most recently running jobs")
-  void testListWorkspacesByMostRecentlyRunningJobs() throws IOException {
+  @DisplayName("Should return a list of active workspace IDs with most recently running jobs")
+  void testListActiveWorkspacesByMostRecentlyRunningJobs() throws IOException {
     final int timeWindowInHours = 48;
     /*
      * Following function is to filter workspace (IDs) with most recently running jobs within a given
@@ -121,17 +122,16 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
      * time window. Step 2: Trace back via CONNECTION table and ACTOR table. Step 3: Return workspace
      * IDs from ACTOR table.
      */
-    final List<UUID> actualResult = configRepository.listWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
+    final List<UUID> actualResult = configRepository.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
     /*
      * With the test data provided above, expected outputs for each step: Step 1: `jobs` (IDs) OL, 1L,
      * 2L, 3L, 4L, 5L and 6L. Step 2: `connections` (IDs) CONN_ID_0, CONN_ID_1, CONN_ID_2, CONN_ID_3,
      * and CONN_ID_4 `actors` (IDs) ACTOR_ID_0, ACTOR_ID_1, and ACTOR_ID_2. Step 3: `workspaces` (IDs)
-     * WORKSPACE_ID_0, WORKSPACE_ID_1 and WORKSPACE_ID_2.
+     * WORKSPACE_ID_0, WORKSPACE_ID_1. Note that WORKSPACE_ID_2 is excluded because it is tombstoned.
      */
     final List<UUID> expectedResult = new ArrayList<>();
     expectedResult.add(WORKSPACE_ID_0);
     expectedResult.add(WORKSPACE_ID_1);
-    expectedResult.add(WORKSPACE_ID_2);
     assertTrue(expectedResult.size() == actualResult.size() && expectedResult.containsAll(actualResult) && actualResult.containsAll(expectedResult));
   }
 

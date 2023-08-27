@@ -48,7 +48,6 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
                 .with_env_variable("VERSION", "dev")
                 .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
                 .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache", "--no-daemon"])
-                .with_exec(["./gradlew", "spotlessCheck"])
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command)
                 .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"]) #TODO: Move this to a context manager
         )
@@ -176,7 +175,7 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
         .with_exec(["./run.sh"])
     )
     
-    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test", "-x", "buildDockerImage", "--build-cache", "--no-daemon"]
+    gradle_command = ["./gradlew", "checK", "test", "-x", ":airbyte-webapp:test", "-x", "buildDockerImage", "--build-cache", "--no-daemon"]
 
     result = (
                 with_gradle(client, ctx, settings, directory=base_dir)

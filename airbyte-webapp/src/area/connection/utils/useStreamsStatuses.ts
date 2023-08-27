@@ -8,11 +8,10 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useListStreamsStatuses } from "core/api";
-import { StreamStatusRead } from "core/request/AirbyteClient";
+import { useListStreamsStatuses, useGetConnection } from "core/api";
+import { StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
-import { useGetConnection } from "hooks/services/useConnectionHook";
 
 import {
   AirbyteStreamAndConfigurationWithEnforcedStream,

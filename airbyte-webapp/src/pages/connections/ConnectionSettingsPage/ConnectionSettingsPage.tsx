@@ -16,6 +16,7 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
+import { useDeleteConnection } from "core/api";
 import { Geography, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -24,7 +25,6 @@ import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useDeleteConnection } from "hooks/services/useConnectionHook";
 
 import styles from "./ConnectionSettingsPage.module.scss";
 import { SchemaUpdateNotifications } from "./SchemaUpdateNotifications";

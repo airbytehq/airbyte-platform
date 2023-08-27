@@ -5,7 +5,7 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { useListJobsForConnectionStatus } from "core/api";
+import { useListJobsForConnectionStatus, useGetConnection } from "core/api";
 import {
   ConnectionScheduleType,
   ConnectionStatus,
@@ -14,10 +14,9 @@ import {
   JobStatus,
   JobWithAttemptsRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useGetConnection } from "hooks/services/useConnectionHook";
 
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 import { jobStatusesIndicatingFinishedExecution } from "../ConnectionSync/ConnectionSyncContext";

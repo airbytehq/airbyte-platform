@@ -448,6 +448,11 @@ public class SchedulerHandler {
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
+      final UUID destinationDefinitionId =
+          configRepository.getDestinationDefinitionFromConnection(connectionRead.getConnectionId()).getDestinationDefinitionId();
+      final var supportedDestinationSyncModes =
+          getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
+              .workspaceId(sourceAutoPropagateChange.getWorkspaceId())).getSupportedDestinationSyncModes();
 
       if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
         applySchemaChange(updateObject.getConnectionId(),
@@ -457,7 +462,7 @@ public class SchedulerHandler {
             sourceAutoPropagateChange.getCatalog(),
             diff.getTransforms(),
             sourceAutoPropagateChange.getCatalogId(),
-            connectionRead.getNonBreakingChangesPreference());
+            connectionRead.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
         connectionsHandler.updateConnection(updateObject);
         LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
@@ -737,7 +742,8 @@ public class SchedulerHandler {
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
                                  final UUID sourceCatalogId,
-                                 final NonBreakingChangesPreference nonBreakingChangesPreference) {
+                                 final NonBreakingChangesPreference nonBreakingChangesPreference,
+                                 final List<DestinationSyncMode> supportedDestinationSyncModes) {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     final io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
@@ -745,6 +751,7 @@ public class SchedulerHandler {
         newCatalog,
         transformations,
         nonBreakingChangesPreference,
+        supportedDestinationSyncModes,
         featureFlagClient, workspaceId);
     updateObject.setSyncCatalog(catalog);
     updateObject.setSourceCatalogId(sourceCatalogId);
