@@ -10,6 +10,7 @@ import {
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
 
+import { ConnectionValues } from "core/api";
 import {
   ConnectionScheduleType,
   DestinationDefinitionRead,
@@ -18,7 +19,7 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
@@ -26,7 +27,6 @@ import { useSourceDefinition } from "services/connector/SourceDefinitionService"
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
 import { useUniqueFormId } from "../FormChangeTracker";
-import { ValuesProps } from "../useConnectionHook";
 import { SchemaError } from "../useSourceHook";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
@@ -47,7 +47,7 @@ export const tidyConnectionFormValues = (
   workspaceId: string,
   validationSchema: ConnectionValidationSchema,
   operations?: OperationRead[]
-): ValuesProps => {
+): ConnectionValues => {
   // TODO (https://github.com/airbytehq/airbyte/issues/17279): We should try to fix the types so we don't need the casting.
   const formValues: ConnectionFormValues = validationSchema.cast(values, {
     context: { isRequest: true },

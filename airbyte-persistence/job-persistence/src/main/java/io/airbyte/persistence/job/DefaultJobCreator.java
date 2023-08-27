@@ -30,6 +30,7 @@ import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.DestResourceOverrides;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
@@ -174,7 +175,8 @@ public class DefaultJobCreator implements JobCreator {
                                                                final StandardSourceDefinition sourceDefinition,
                                                                final StandardDestinationDefinition destinationDefinition,
                                                                final boolean isReset) {
-    final String variant = getResourceRequirementsVariant(workspaceId, standardSync, sourceDefinition, destinationDefinition);
+    final var ffContext = buildFeatureFlagContext(workspaceId, standardSync, sourceDefinition, destinationDefinition);
+    final String variant = featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, ffContext);
 
     // Note on use of sourceType, throughput is driven by the source, if the source is slow, the rest is
     // going to be slow. With this in mind, we align the resources given to the orchestrator and the
@@ -182,7 +184,8 @@ public class DefaultJobCreator implements JobCreator {
     // is slow.
     final Optional<String> sourceType = getSourceType(sourceDefinition);
     final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
-    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant);
+    final ResourceRequirements mergedDstResourceReq =
+        getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant, ffContext);
 
     final var syncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(variant).withSubType(sourceType.orElse(null)))
@@ -204,10 +207,10 @@ public class DefaultJobCreator implements JobCreator {
     return syncResourceRequirements;
   }
 
-  private String getResourceRequirementsVariant(final UUID workspaceId,
-                                                final StandardSync standardSync,
-                                                final StandardSourceDefinition sourceDefinition,
-                                                final StandardDestinationDefinition destinationDefinition) {
+  private Context buildFeatureFlagContext(final UUID workspaceId,
+                                          final StandardSync standardSync,
+                                          final StandardSourceDefinition sourceDefinition,
+                                          final StandardDestinationDefinition destinationDefinition) {
     final List<Context> contextList = new ArrayList<>();
     addIfNotNull(contextList, workspaceId, Workspace::new);
     addIfNotNull(contextList, standardSync.getConnectionId(), Connection::new);
@@ -216,7 +219,7 @@ public class DefaultJobCreator implements JobCreator {
     addIfNotNull(contextList, sourceDefinition != null ? sourceDefinition.getSourceDefinitionId() : null, SourceDefinition::new);
     addIfNotNull(contextList, standardSync.getDestinationId(), Destination::new);
     addIfNotNull(contextList, destinationDefinition.getDestinationDefinitionId(), DestinationDefinition::new);
-    return featureFlagClient.stringVariation(UseResourceRequirementsVariant.INSTANCE, new Multi(contextList));
+    return new Multi(contextList);
   }
 
   private static void addIfNotNull(final List<Context> contextList, final UUID uuid, final Function<UUID, Context> supplier) {
@@ -247,17 +250,34 @@ public class DefaultJobCreator implements JobCreator {
         JobType.SYNC);
   }
 
+  private ResourceRequirements getDestinationResourceOverrides(final Context ffCtx) {
+    final String destOverrides = featureFlagClient.stringVariation(DestResourceOverrides.INSTANCE, ffCtx);
+    try {
+      return ResourceRequirementsUtils.parse(destOverrides);
+    } catch (final Exception e) {
+      log.warn("Could not parse DESTINATION resource overrides from feature flag string: '{}'", destOverrides);
+      log.warn("Error parsing DESTINATION resource overrides: {}", e.getMessage());
+      return null;
+    }
+  }
+
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
                                                                   final StandardDestinationDefinition destinationDefinition,
                                                                   final Optional<String> sourceType,
-                                                                  final String variant) {
+                                                                  final String variant,
+                                                                  final Context ffContext) {
     final ResourceRequirements defaultDstRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, sourceType, variant);
-    return ResourceRequirementsUtils.getResourceRequirements(
+
+    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         destinationDefinition.getResourceRequirements(),
         defaultDstRssReqs,
         JobType.SYNC);
+
+    final var overrides = getDestinationResourceOverrides(ffContext);
+
+    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
   }
 
   private Optional<String> getSourceType(final StandardSourceDefinition sourceDefinition) {

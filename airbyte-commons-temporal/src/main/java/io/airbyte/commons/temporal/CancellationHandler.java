@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.temporal;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.TEMPORAL_ACTIVITY_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.TEMPORAL_WORKFLOW_ID_KEY;
 
@@ -67,10 +68,12 @@ public interface CancellationHandler {
         activityContext.heartbeat(null);
       } catch (final ActivityCanceledException e) {
         ApmTraceUtils.addExceptionToTrace(e);
+        ApmTraceUtils.addTagsToTrace(Map.of(FAILURE_TYPES_KEY, e.getClass().getName()));
         onCancellationCallback.run();
         LOGGER.warn("Job was cancelled.", e);
       } catch (final ActivityCompletionException e) {
         ApmTraceUtils.addExceptionToTrace(e);
+        ApmTraceUtils.addTagsToTrace(Map.of(FAILURE_TYPES_KEY, e.getClass().getName()));
         // TODO: This is a hack to avoid having to manually destroy pod, it should be revisited
         if (!e.getWorkflowId().orElse("").toLowerCase().startsWith("sync")) {
           LOGGER.warn("The job timeout and was not a sync, we will destroy the pods related to it", e);

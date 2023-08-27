@@ -4,17 +4,16 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Markdown } from "components/ui/Markdown";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
-import { TextWithHTML } from "components/ui/TextWithHTML";
 
-import { useUpgradeConnectorVersion } from "core/api";
+import { useConnectionList, useUpgradeConnectorVersion } from "core/api";
+import { ActorDefinitionVersionRead } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline } from "core/domain/connector";
-import { ActorDefinitionVersionRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 import { SourcePaths } from "pages/routePaths";
 
 import styles from "./BreakingChangeBanner.module.scss";
@@ -160,9 +159,7 @@ export const BreakingChangeBanner = ({
               <Text bold>
                 <FormattedMessage id="connector.breakingChange.version" values={{ version: breakingChange.version }} />
               </Text>
-              <Text>
-                <TextWithHTML text={breakingChange.message} />
-              </Text>
+              <Markdown className={styles.breakingChangeMessage} content={breakingChange.message} />
             </FlexContainer>
           ))}
           <Text>

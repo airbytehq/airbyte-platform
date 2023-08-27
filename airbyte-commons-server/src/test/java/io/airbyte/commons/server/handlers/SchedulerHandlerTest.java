@@ -120,6 +120,7 @@ import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -214,6 +215,12 @@ class SchedulerHandlerTest {
   public static final String A_DIFFERENT_STREAM = "aDifferentStream";
 
   private static final ResourceRequirements RESOURCE_REQUIREMENT = new ResourceRequirements().withCpuLimit("1.0").withCpuRequest("0.5");
+  private static final StandardDestinationDefinition SOME_DESTINATION_DEFINITION = new StandardDestinationDefinition()
+      .withDestinationDefinitionId(UUID.randomUUID());
+  private static final ActorDefinitionVersion SOME_ACTOR_DEFINITION = new ActorDefinitionVersion().withSpec(
+      new ConnectorSpecification()
+          .withSupportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP))
+          .withDocumentationUrl(URI.create("unused")));
 
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
@@ -257,6 +264,8 @@ class SchedulerHandlerTest {
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
     when(configRepository.getStandardSync(any())).thenReturn(new StandardSync().withStatus(StandardSync.Status.ACTIVE));
+    when(configRepository.getStandardDestinationDefinition(any())).thenReturn(SOME_DESTINATION_DEFINITION);
+    when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(SOME_DESTINATION_DEFINITION);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     jobPersistence = mock(JobPersistence.class);
     eventRunner = mock(EventRunner.class);
@@ -264,6 +273,7 @@ class SchedulerHandlerTest {
     envVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     webUrlHelper = mock(WebUrlHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any())).thenReturn(SOME_ACTOR_DEFINITION);
     streamResetPersistence = mock(StreamResetPersistence.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     jobCreator = mock(JobCreator.class);

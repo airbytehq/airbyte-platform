@@ -1563,20 +1563,23 @@ public class ConfigRepository {
   }
 
   /**
-   * List workspace IDs with most recently running jobs within a given time window (in hours).
+   * List active workspace IDs with most recently running jobs within a given time window (in hours).
    *
    * @param timeWindowInHours - integer, e.g. 24, 48, etc
    * @return list of workspace IDs
    * @throws IOException - failed to query data
    */
-  public List<UUID> listWorkspacesByMostRecentlyRunningJobs(final int timeWindowInHours) throws IOException {
+  public List<UUID> listActiveWorkspacesByMostRecentlyRunningJobs(final int timeWindowInHours) throws IOException {
     final Result<Record1<UUID>> records = database.query(ctx -> ctx.selectDistinct(ACTOR.WORKSPACE_ID)
         .from(ACTOR)
+        .join(WORKSPACE)
+        .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
         .join(CONNECTION)
         .on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
         .join(JOBS)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
         .where(JOBS.UPDATED_AT.greaterOrEqual(OffsetDateTime.now().minusHours(timeWindowInHours)))
+        .and(WORKSPACE.TOMBSTONE.isFalse())
         .fetch());
     return records.stream().map(record -> record.get(ACTOR.WORKSPACE_ID)).collect(Collectors.toList());
   }

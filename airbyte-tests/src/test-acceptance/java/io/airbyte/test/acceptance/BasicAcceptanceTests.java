@@ -387,7 +387,7 @@ class BasicAcceptanceTests {
     final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration()
         .syncMode(SyncMode.FULL_REFRESH)
         .cursorField(Collections.emptyList())
-        .destinationSyncMode(DestinationSyncMode.APPEND)
+        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
         .primaryKey(Collections.emptyList())
         .aliasName(STREAM_NAME.replace(".", "_"))
         .selected(true)

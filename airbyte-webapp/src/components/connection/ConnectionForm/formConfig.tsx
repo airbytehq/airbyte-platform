@@ -5,15 +5,7 @@ import * as yup from "yup";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
-import { useCurrentWorkspace } from "core/api";
-import { SyncSchema } from "core/domain/catalog";
-import {
-  isDbtTransformation,
-  isNormalizationTransformation,
-  isWebhookTransformation,
-  NormalizationType,
-} from "core/domain/connection/operation";
-import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
+import { ConnectionValues, useCurrentWorkspace } from "core/api";
 import {
   ConnectionScheduleData,
   ConnectionScheduleType,
@@ -29,11 +21,18 @@ import {
   SchemaChange,
   SyncMode,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
+import { SyncSchema } from "core/domain/catalog";
+import {
+  isDbtTransformation,
+  isNormalizationTransformation,
+  isWebhookTransformation,
+  NormalizationType,
+} from "core/domain/connection/operation";
+import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
-import { ValuesProps } from "hooks/services/useConnectionHook";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
 import { frequencyConfig } from "./frequencyConfig";
@@ -53,7 +52,7 @@ export interface FormikConnectionFormValues {
   geography: Geography;
 }
 
-export type ConnectionFormValues = ValuesProps;
+export type ConnectionFormValues = ConnectionValues;
 
 export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
   [SyncMode.incremental, DestinationSyncMode.append_dedup],

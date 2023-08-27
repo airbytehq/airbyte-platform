@@ -5,7 +5,7 @@ import { mockConnection } from "test-utils";
 import { mockAttempt } from "test-utils/mock-data/mockAttempt";
 import { mockJob } from "test-utils/mock-data/mockJob";
 
-import { useListJobsForConnectionStatus } from "core/api";
+import { useListJobsForConnectionStatus, useGetConnection } from "core/api";
 import {
   ConnectionScheduleDataBasicSchedule,
   ConnectionScheduleDataCron,
@@ -17,9 +17,8 @@ import {
   JobWithAttemptsRead,
   SchemaChange,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useGetConnection } from "hooks/services/useConnectionHook";
 
 import { isConnectionLate, isHandleableScheduledConnection, useConnectionStatus } from "./useConnectionStatus";
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
@@ -39,7 +38,7 @@ jest.mock("components/connection/StreamStatus/streamStatusUtils", () => ({
   },
 }));
 
-jest.mock("hooks/services/useConnectionHook");
+jest.mock("core/api");
 const mockUseGetConnection = useGetConnection as unknown as jest.Mock<WebBackendConnectionRead>;
 
 jest.mock("core/api");

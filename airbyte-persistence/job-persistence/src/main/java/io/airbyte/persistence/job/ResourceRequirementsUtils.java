@@ -5,6 +5,7 @@
 package io.airbyte.persistence.job;
 
 import com.google.common.base.Preconditions;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
@@ -135,6 +136,21 @@ public class ResourceRequirementsUtils {
     return jobTypeResourceRequirement.isEmpty()
         ? Optional.empty()
         : Optional.of(jobTypeResourceRequirement.get(0));
+  }
+
+  /**
+   * Utility for deserializing from a raw json string.
+   *
+   * @param rawOverrides A json string to be parsed.
+   * @return ResourceRequirements parsed from the string.
+   */
+  public static ResourceRequirements parse(final String rawOverrides) {
+    if (rawOverrides.isEmpty()) {
+      return null;
+    }
+
+    final var json = Jsons.deserialize(rawOverrides);
+    return Jsons.object(json, ResourceRequirements.class);
   }
 
 }

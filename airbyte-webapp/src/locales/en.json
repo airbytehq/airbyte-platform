@@ -596,7 +596,8 @@
 
   "connection.state.title": "Connection state",
   "connection.state.noIncremental": "This connection contains no incremental streams, so it cannot have state.",
-  "connection.state.warning": "Updates to connection state should be handled with extreme care. Make changes only as directed by the Airbyte team.",
+  "connection.state.warning": "Updates to connection state should be handled with extreme care.",
+  "connection.state.warning.secondary": "Updates may break your syncs, requiring a reset to fix.<br></br>Make changes only as directed by the Airbyte team.",
   "connection.state.update": "Update state",
   "connection.state.confirm.title": "Confirm connection state update",
   "connection.state.confirm.message": "Are you sure you want to modify the state of this connection?",

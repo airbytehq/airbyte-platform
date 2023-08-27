@@ -41,6 +41,7 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.DestResourceOverrides;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -51,12 +52,21 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.platform.commons.util.StringUtils;
+import org.mockito.ArgumentCaptor;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class DefaultJobCreatorTest {
 
   private static final String DEFAULT_VARIANT = "default";
@@ -505,6 +515,131 @@ class DefaultJobCreatorTest {
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
 
     verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig);
+  }
+
+  @ParameterizedTest
+  @MethodSource("resourceOverrideMatrix")
+  void testDestinationResourceReqsOverrides(final String cpuReqOverride,
+                                            final String cpuLimitOverride,
+                                            final String memReqOverride,
+                                            final String memLimitOverride)
+      throws IOException {
+    final var overrides = new HashMap<>();
+    if (cpuReqOverride != null) {
+      overrides.put("cpu_request", cpuReqOverride);
+    }
+    if (cpuLimitOverride != null) {
+      overrides.put("cpu_limit", cpuLimitOverride);
+    }
+    if (memReqOverride != null) {
+      overrides.put("memory_request", memReqOverride);
+    }
+    if (memLimitOverride != null) {
+      overrides.put("memory_limit", memLimitOverride);
+    }
+
+    final ResourceRequirements originalReqs = new ResourceRequirements()
+        .withCpuLimit("0.8")
+        .withCpuRequest("0.8")
+        .withMemoryLimit("800Mi")
+        .withMemoryRequest("800Mi");
+
+    final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+
+    jobCreator.createSyncJob(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        null,
+        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID);
+
+    final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    final var destConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getDestination();
+
+    final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
+    assertEquals(expectedCpuReq, destConfigValues.getCpuRequest());
+
+    final var expectedCpuLimit = StringUtils.isNotBlank(cpuLimitOverride) ? cpuLimitOverride : originalReqs.getCpuLimit();
+    assertEquals(expectedCpuLimit, destConfigValues.getCpuLimit());
+
+    final var expectedMemReq = StringUtils.isNotBlank(memReqOverride) ? memReqOverride : originalReqs.getMemoryRequest();
+    assertEquals(expectedMemReq, destConfigValues.getMemoryRequest());
+
+    final var expectedMemLimit = StringUtils.isNotBlank(memLimitOverride) ? memLimitOverride : originalReqs.getMemoryLimit();
+    assertEquals(expectedMemLimit, destConfigValues.getMemoryLimit());
+  }
+
+  private static Stream<Arguments> resourceOverrideMatrix() {
+    return Stream.of(
+        Arguments.of("0.7", "0.4", "1000Mi", "2000Mi"),
+        Arguments.of("0.3", null, "1000Mi", null),
+        Arguments.of(null, null, null, null),
+        Arguments.of(null, "0.4", null, null),
+        Arguments.of("3", "3", "3000Mi", "3000Mi"),
+        Arguments.of("4", "5", "6000Mi", "7000Mi"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("weirdnessOverrideMatrix")
+  void ignoresOverridesIfJsonStringWeird(final String weirdness) throws IOException {
+    final ResourceRequirements originalReqs = new ResourceRequirements()
+        .withCpuLimit("0.8")
+        .withCpuRequest("0.8")
+        .withMemoryLimit("800Mi")
+        .withMemoryRequest("800Mi");
+
+    final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
+        new TestClient(Map.of(DestResourceOverrides.INSTANCE.getKey(), Jsons.serialize(weirdness))));
+
+    jobCreator.createSyncJob(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        null,
+        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID);
+
+    final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    final var destConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getDestination();
+
+    assertEquals(originalReqs.getCpuRequest(), destConfigValues.getCpuRequest());
+    assertEquals(originalReqs.getCpuLimit(), destConfigValues.getCpuLimit());
+    assertEquals(originalReqs.getMemoryRequest(), destConfigValues.getMemoryRequest());
+    assertEquals(originalReqs.getMemoryLimit(), destConfigValues.getMemoryLimit());
+  }
+
+  private static Stream<Arguments> weirdnessOverrideMatrix() {
+    return Stream.of(
+        Arguments.of("0.7"),
+        Arguments.of("0.5, 1, 1000Mi, 2000Mi"),
+        Arguments.of("cat burglar"),
+        Arguments.of("{ \"cpu_limit\": \"2\", \"cpu_request\": \"1\"  "),
+        Arguments.of("null"),
+        Arguments.of("undefined"),
+        Arguments.of(""),
+        Arguments.of("{}"));
   }
 
   @Test
