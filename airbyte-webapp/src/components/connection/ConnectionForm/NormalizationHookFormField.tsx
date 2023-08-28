@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Box } from "components/ui/Box";
 import { ExternalLink } from "components/ui/Link";
 
-import { NormalizationType } from "core/domain/connection";
+import { NormalizationType } from "area/connection/types";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 

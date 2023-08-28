@@ -52,12 +52,15 @@ src/
 ├ area/ # Code for a specific domain of the webapp
 │ ├ connection/
 │ │ ├ services/ # Services for this area
+│ │ ├ types/ # Types and enums that must be available widely and are not explicitly
+│ │ │        # belonging to a component or util (e.g. prop types) in which case they should
+│ │ │        # be living within that component/util file.
 │ │ ├ utils/ # Utils for this area
 │ │ └ components/ # Components related to this area or for pages specific to this area
 │ ├ connector/ # Has the same services/, utils/, components/ structure
 │ ├ connectorBuilder/
 │ ├ settings/
-│ └ workspaces/
+│ └ workspace/
 └ cloud/ # Cloud specific code (following a similar structure as above)
 ```
 

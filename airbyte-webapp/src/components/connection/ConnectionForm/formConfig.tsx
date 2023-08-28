@@ -4,7 +4,9 @@ import * as yup from "yup";
 
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
+import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
+import { isDbtTransformation, isNormalizationTransformation, isWebhookTransformation } from "area/connection/utils";
 import { ConnectionValues, useCurrentWorkspace } from "core/api";
 import {
   ConnectionScheduleData,
@@ -23,12 +25,6 @@ import {
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
 import { SyncSchema } from "core/domain/catalog";
-import {
-  isDbtTransformation,
-  isNormalizationTransformation,
-  isWebhookTransformation,
-  NormalizationType,
-} from "core/domain/connection/operation";
 import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";

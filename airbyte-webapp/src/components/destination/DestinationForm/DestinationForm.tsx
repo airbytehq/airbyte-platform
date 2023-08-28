@@ -6,8 +6,8 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { ConnectionConfiguration } from "core/domain/connection";
-import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { ConnectionConfiguration } from "area/connector/types";
+import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { FormError } from "core/utils/errorStatusMessage";
 import { useGetDestinationDefinitionSpecificationAsync } from "services/connector/DestinationDefinitionSpecificationService";

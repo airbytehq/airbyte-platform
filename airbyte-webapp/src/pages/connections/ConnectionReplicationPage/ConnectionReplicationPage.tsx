@@ -19,8 +19,7 @@ import { Message } from "components/ui/Message/Message";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionValues, useGetStateTypeQuery } from "core/api";
-import { toWebBackendConnectionUpdate } from "core/domain/connection";
-import { SchemaChange } from "core/request/AirbyteClient";
+import { SchemaChange, WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
@@ -36,6 +35,21 @@ import { useModalService } from "hooks/services/Modal";
 
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";
+
+const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
+  name: connection.name,
+  connectionId: connection.connectionId,
+  namespaceDefinition: connection.namespaceDefinition,
+  namespaceFormat: connection.namespaceFormat,
+  prefix: connection.prefix,
+  syncCatalog: connection.syncCatalog,
+  scheduleData: connection.scheduleData,
+  scheduleType: connection.scheduleType,
+  status: connection.status,
+  resourceRequirements: connection.resourceRequirements,
+  operations: connection.operations,
+  sourceCatalogId: connection.catalogId,
+});
 
 const ValidateFormOnSchemaRefresh: React.FC = () => {
   const { schemaHasBeenRefreshed } = useConnectionEditService();

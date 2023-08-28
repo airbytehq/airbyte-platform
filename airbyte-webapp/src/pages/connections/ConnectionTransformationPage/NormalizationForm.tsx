@@ -9,8 +9,9 @@ import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
 
+import { NormalizationType } from "area/connection/types";
+import { isNormalizationTransformation } from "area/connection/utils";
 import { useCurrentWorkspace } from "core/api";
-import { isNormalizationTransformation, NormalizationType } from "core/domain/connection";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

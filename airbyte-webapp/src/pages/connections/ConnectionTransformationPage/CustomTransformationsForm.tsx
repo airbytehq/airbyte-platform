@@ -10,7 +10,7 @@ import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
 
-import { isDbtTransformation } from "core/domain/connection";
+import { isDbtTransformation } from "area/connection/utils";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

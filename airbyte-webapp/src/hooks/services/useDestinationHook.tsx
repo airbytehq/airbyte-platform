@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { ConnectionConfiguration } from "area/connector/types";
 import { useRemoveConnectionsFromList, useSuspenseQuery } from "core/api";
-import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";

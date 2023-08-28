@@ -8,7 +8,7 @@ import {
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper as wrapper } from "test-utils/testutils";
 
-import { NormalizationType } from "core/domain/connection";
+import { NormalizationType } from "area/connection/types";
 import { ConnectionScheduleTimeUnit, OperationRead } from "core/request/AirbyteClient";
 
 import { mapFormPropsToOperation, useFrequencyDropdownData, useInitialValues } from "./formConfig";

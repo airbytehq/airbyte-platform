@@ -1,11 +1,6 @@
 import { DbtOperationRead } from "components/connection/TransformationHookForm";
 
-import { OperationCreate, OperationRead, OperatorType } from "core/request/AirbyteClient";
-
-export enum NormalizationType {
-  basic = "basic",
-  raw = "raw",
-}
+import { OperationCreate, OperationRead, OperatorType } from "core/api/types/AirbyteClient";
 
 export const isDbtTransformation = (op: OperationRead): op is DbtOperationRead => {
   return op.operatorConfiguration.operatorType === OperatorType.dbt;
