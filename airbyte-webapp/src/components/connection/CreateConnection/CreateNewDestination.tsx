@@ -9,6 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 
+import { useSuggestedDestinations } from "area/connector/utils";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -21,6 +22,8 @@ export const DESTINATION_DEFINITION_PARAM = "destinationDefinitionId";
 export const CreateNewDestination: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedDestinationDefinitionId = searchParams.get(DESTINATION_DEFINITION_PARAM);
+
+  const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   const destinationDefinitions = useAvailableDestinationDefinitions();
   const { trackAction } = useAppMonitoringService();
@@ -84,6 +87,7 @@ export const CreateNewDestination: React.FC = () => {
       onSelectConnectorDefinition={(destinationDefinitionId) =>
         onSelectDestinationDefinitionId(destinationDefinitionId)
       }
+      suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
     />
   );
 };

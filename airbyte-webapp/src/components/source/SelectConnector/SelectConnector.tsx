@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { SuggestedConnectors } from "area/connector/components";
 import { useCurrentWorkspace } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
@@ -26,6 +27,7 @@ interface SelectConnectorProps {
   connectorType: "source" | "destination";
   connectorDefinitions: ConnectorDefinition[];
   onSelectConnectorDefinition: (id: string) => void;
+  suggestedConnectorDefinitionIds: string[];
 }
 
 const RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "alpha", "custom"];
@@ -35,6 +37,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   connectorType,
   connectorDefinitions,
   onSelectConnectorDefinition,
+  suggestedConnectorDefinitionIds,
 }) => {
   const { formatMessage } = useIntl();
   const { email } = useCurrentWorkspace();
@@ -142,7 +145,17 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           </FlexContainer>
         </Box>
       </div>
+
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
+
+      {suggestedConnectorDefinitionIds.length > 0 && (
+        <div className={styles.selectConnector__suggestedConnectors}>
+          <SuggestedConnectors
+            definitionIds={suggestedConnectorDefinitionIds}
+            onConnectorButtonClick={handleConnectorButtonClick}
+          />
+        </div>
+      )}
 
       <div className={styles.selectConnector__grid}>
         <ConnectorGrid

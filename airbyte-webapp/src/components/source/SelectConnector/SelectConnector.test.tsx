@@ -28,6 +28,7 @@ describe(`${SelectConnector.name}`, () => {
         connectorType="source"
         connectorDefinitions={[mockSourceDefinition]}
         onSelectConnectorDefinition={jest.fn()}
+        suggestedConnectorDefinitionIds={[]}
       />
     );
 

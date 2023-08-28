@@ -1,0 +1,21 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.suggestedConnectors {
+  position: relative;
+  background: colors.$blue-50;
+  padding: variables.$spacing-xl;
+  border-radius: variables.$border-radius-md;
+
+  &__dismiss {
+    position: absolute;
+    top: variables.$spacing-md;
+    right: variables.$spacing-md;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: variables.$spacing-xl;
+  }
+}

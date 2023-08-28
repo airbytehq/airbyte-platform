@@ -4,17 +4,16 @@
 @use "scss/z-indices";
 
 .selectConnector {
-  container-type: inline-size;
   position: relative;
   z-index: z-indices.$base;
   display: grid;
 
   // The width of the center column includes horizontal page padding on both sides.
-  grid-template-columns: 1fr min(100%, calc(variables.$page-width + 2 * variables.$spacing-md)) 1fr;
+  grid-template-columns: 1fr min(100%, calc(variables.$page-width + 2 * variables.$spacing-xl)) 1fr;
 
   &__header {
     grid-column: 2 / 3;
-    padding: variables.$spacing-md variables.$spacing-md variables.$spacing-md;
+    padding: variables.$spacing-md variables.$spacing-xl variables.$spacing-md;
     position: sticky;
     top: 0;
     background-color: colors.$backdrop;
@@ -35,9 +34,17 @@
     grid-column: 3 / 4;
   }
 
+  &__suggestedConnectors {
+    grid-column: 2 / 3;
+
+    &:not(:empty) {
+      margin: variables.$spacing-sm 0 variables.$spacing-md;
+    }
+  }
+
   &__grid {
     grid-column: 2 / 3;
-    padding-inline: variables.$spacing-md;
+    padding-inline: variables.$spacing-xl;
     margin-top: calc(
       variables.$spacing-xl - variables.$spacing-md
     ); // When not scrolled, we want xl space between the sticky header and the grid

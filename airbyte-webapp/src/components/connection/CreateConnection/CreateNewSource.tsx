@@ -7,6 +7,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 
+import { useSuggestedSources } from "area/connector/utils";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -20,7 +21,7 @@ export const SOURCE_DEFINITION_PARAM = "sourceDefinitionId";
 export const CreateNewSource: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSourceDefinitionId = searchParams.get(SOURCE_DEFINITION_PARAM);
-
+  const suggestedSourceDefinitionIds = useSuggestedSources();
   const sourceDefinitions = useAvailableSourceDefinitions();
   const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createSource } = useCreateSource();
@@ -79,6 +80,7 @@ export const CreateNewSource: React.FC = () => {
       connectorDefinitions={sourceDefinitions}
       connectorType="source"
       onSelectConnectorDefinition={(sourceDefinitionId) => onSelectSourceDefinitionId(sourceDefinitionId)}
+      suggestedConnectorDefinitionIds={suggestedSourceDefinitionIds}
     />
   );
 };

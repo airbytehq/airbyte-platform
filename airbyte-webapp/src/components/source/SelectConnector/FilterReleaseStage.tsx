@@ -37,6 +37,9 @@ export const FilterReleaseStage: React.FC<FilterReleaseStageProps> = ({
 
   return (
     <FlexContainer gap="xl">
+      <Text>
+        <FormattedMessage id="connector.filterBy" />
+      </Text>
       {availableReleaseStages.map((stage) => {
         const id = `filter-release-stage-${stage}`;
         const isChecked = selectedReleaseStages.includes(stage);
