@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { useLocalStorageFixed } from "core/utils/useLocalStorageFixed";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
@@ -29,7 +29,7 @@ export const SuggestedConnectorsUnmemoized: React.FC<SuggestedConnectorsProps> =
   const { formatMessage } = useIntl();
   const { sourceDefinitionMap } = useSourceDefinitionList();
   const { destinationDefinitionMap } = useDestinationDefinitionList();
-  const [showSuggestedConnectors, setShowSuggestedConnectors] = useLocalStorageFixed(
+  const [showSuggestedConnectors, setShowSuggestedConnectors] = useLocalStorage(
     "airbyte_connector-grid-show-suggested-connectors",
     true
   );

@@ -17,6 +17,7 @@ interface AirbyteLocalStorage {
   allowlistIpsOpen: boolean;
   airbyteTheme: Theme;
   "airbyte_connector-grid-release-stage-filter": ReleaseStage[];
+  "airbyte_connector-grid-show-suggested-connectors": boolean;
 }
 
 /*
