@@ -2,7 +2,6 @@ import partition from "lodash/partition";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useLocalStorage } from "react-use";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
@@ -14,6 +13,7 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
@@ -46,7 +46,7 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
   } = useConnectorBuilderTestRead();
-  const [showLimitWarning, setShowLimitWarning] = useLocalStorage<boolean>("connectorBuilderLimitWarning", true);
+  const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const mode = useBuilderWatch("mode");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
   const { setValue } = useFormContext();

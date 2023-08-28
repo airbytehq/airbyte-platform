@@ -13,6 +13,7 @@ import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { ReleaseStage } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useModalService } from "hooks/services/Modal";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
@@ -28,7 +29,7 @@ interface SelectConnectorProps {
 }
 
 const RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "alpha", "custom"];
-const DEFAULT_SELECTED_RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "custom"];
+export const DEFAULT_SELECTED_RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "custom"];
 
 export const SelectConnector: React.FC<SelectConnectorProps> = ({
   connectorType,
@@ -40,11 +41,29 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal, closeModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedReleaseStages, setSelectedReleaseStages] = useState<ReleaseStage[]>(
-    DEFAULT_SELECTED_RELEASE_STAGES.filter((stage) =>
-      connectorDefinitions.some((definition) => definition.releaseStage === stage)
-    )
+  const defaultReleaseStages = DEFAULT_SELECTED_RELEASE_STAGES.filter((stage) =>
+    connectorDefinitions.some((definition) => definition.releaseStage === stage)
   );
+  const [releaseStagesInLocalStorage, setSelectedReleaseStages] = useLocalStorage(
+    "airbyte_connector-grid-release-stage-filter",
+    defaultReleaseStages
+  );
+  const availableReleaseStages = RELEASE_STAGES.filter((stage) =>
+    connectorDefinitions.some((d) => d.releaseStage === stage)
+  );
+  const selectedReleaseStages = releaseStagesInLocalStorage.filter((releaseStage) =>
+    availableReleaseStages.includes(releaseStage)
+  );
+  if (selectedReleaseStages.length === 0) {
+    selectedReleaseStages.push(...defaultReleaseStages);
+  }
+
+  const updateSelectedReleaseStages = (updatedSelectedReleaseStages: ReleaseStage[]) => {
+    // It's possible there was a release stage selected that is currently not being displayed.
+    // We should add that back in before we persist to local storage.
+    const hiddenReleaseStages = releaseStagesInLocalStorage.filter((stage) => !selectedReleaseStages.includes(stage));
+    setSelectedReleaseStages([...updatedSelectedReleaseStages, ...hiddenReleaseStages]);
+  };
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
@@ -113,11 +132,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         <Box mt="lg">
           <FlexContainer justifyContent="space-between">
             <FilterReleaseStage
-              availableReleaseStages={RELEASE_STAGES.filter((stage) =>
-                connectorDefinitions.some((d) => d.releaseStage === stage)
-              )}
+              availableReleaseStages={availableReleaseStages}
               selectedReleaseStages={selectedReleaseStages}
-              onUpdateSelectedReleaseStages={setSelectedReleaseStages}
+              onUpdateSelectedReleaseStages={(releaseStages) => updateSelectedReleaseStages(releaseStages)}
             />
             <Text color="grey">
               <FormattedMessage id="connector.connectorCount" values={{ count: filteredSearchResults.length }} />
@@ -133,7 +150,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
             searchTerm.length > 0 ? allSearchResults.length - filteredSearchResults.length : 0
           }
           onShowAllResultsClick={() => {
-            setSelectedReleaseStages(RELEASE_STAGES);
+            updateSelectedReleaseStages(RELEASE_STAGES);
           }}
           connectorDefinitions={filteredSearchResults}
           onConnectorButtonClick={handleConnectorButtonClick}

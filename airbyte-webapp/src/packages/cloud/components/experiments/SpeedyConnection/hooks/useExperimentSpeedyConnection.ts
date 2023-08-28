@@ -1,12 +1,11 @@
 import { useCurrentWorkspaceState } from "core/api";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useExperiment } from "hooks/services/Experiment";
 
 export const useExperimentSpeedyConnection = () => {
   const { hasConnections } = useCurrentWorkspaceState();
   const isVariantEnabled = useExperiment("onboarding.speedyConnection", false);
-
-  const timestamp = localStorage.getItem("exp-speedy-connection-timestamp");
-  const expiredOfferDate = timestamp ? String(timestamp) : String(0);
+  const [expiredOfferDate] = useLocalStorage("exp-speedy-connection-timestamp", "");
 
   const now = new Date();
   const isExperimentVariant =

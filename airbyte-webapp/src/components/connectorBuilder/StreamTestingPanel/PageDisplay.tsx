@@ -2,7 +2,6 @@ import { faTable } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useLocalStorage } from "react-use";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -15,6 +14,7 @@ import {
   StreamReadSlicesItemPagesItem,
   StreamReadSlicesItemPagesItemRecordsItem,
 } from "core/api/types/ConnectorBuilderClient";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
@@ -112,7 +112,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
 };
 
 const RecordDisplay = ({ records }: { records: StreamReadSlicesItemPagesItemRecordsItem[] }) => {
-  const [recordViewMode, setRecordViewMode] = useLocalStorage<"json" | "table">("connectorBuilderRecordView", "json");
+  const [recordViewMode, setRecordViewMode] = useLocalStorage("connectorBuilderRecordView", "json");
   const formattedRecords = useMemo(() => formatJson(records), [records]);
 
   return (

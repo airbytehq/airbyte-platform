@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { useLocalStorage } from "react-use";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -14,6 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectorConfig } from "core/api/types/ConnectorBuilderClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
@@ -45,7 +45,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
   const { trackError } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
-  const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
+  const [showInputsWarning, setShowInputsWarning] = useLocalStorage("connectorBuilderInputsWarning", true);
 
   const closeAndSwitchToYaml = () => {
     setValue("mode", "yaml");

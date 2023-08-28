@@ -12,7 +12,7 @@ const optionalFieldsButton = "button[data-testid='optional-fields']";
 
 export const selectServiceType = (type: string) => {
   // Make sure alpha connectors are visible in the grid, since they are hidden by default
-  cy.contains("label", "Alpha").click();
+  cy.get("#filter-release-stage-alpha").check({ force: true });
   cy.contains("button", type).click();
 };
 

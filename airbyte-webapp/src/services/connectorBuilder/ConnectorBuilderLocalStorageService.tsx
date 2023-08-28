@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 
 import { BuilderState } from "components/connectorBuilder/types";
 
-import { useLocalStorageFixed } from "core/utils/useLocalStorageFixed";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 
 interface LocalStorageContext {
   storedMode: BuilderState["mode"];
@@ -12,7 +12,7 @@ interface LocalStorageContext {
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const ConnectorBuilderLocalStorageProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const [storedMode, setStoredMode] = useLocalStorageFixed<BuilderState["mode"]>("connectorBuilderEditorView", "ui");
+  const [storedMode, setStoredMode] = useLocalStorage("connectorBuilderEditorView", "ui");
 
   const ctx = {
     storedMode,

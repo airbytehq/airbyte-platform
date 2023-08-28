@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+// This import should be refactored to use our custom useLocalStorage hook, but requires a larger refactor
+// eslint-disable-next-line no-restricted-imports
 import { useLocalStorage } from "react-use";
 
 import { Box } from "components/ui/Box";

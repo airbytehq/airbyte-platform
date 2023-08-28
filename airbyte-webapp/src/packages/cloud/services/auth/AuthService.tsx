@@ -13,6 +13,7 @@ import { useAnalyticsService } from "core/services/analytics";
 import { AuthProviders, AuthContextApi, OAuthLoginState, AuthContext, useAuthService } from "core/services/auth";
 import { trackSignup } from "core/utils/fathom";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
@@ -35,6 +36,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
     AuthServiceState,
     typeof actions
   >(authStateReducer, initialState, actions);
+  const [, setSpeedyConnectionTimestamp] = useLocalStorage("exp-speedy-connection-timestamp", "");
   const auth = useAuth();
   const userService = useGetUserService();
   const analytics = useAnalyticsService();
@@ -96,10 +98,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
           // errors in between creating the firebase user and the database user originally.
           const user = await createAirbyteUser(currentUser);
           // exp-speedy-connection
-          localStorage.setItem(
-            "exp-speedy-connection-timestamp",
-            String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000))
-          );
+          setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
           await onAfterAuth(currentUser, user);
         } else {
           throw e;
@@ -262,10 +261,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
 
         if (auth.currentUser) {
           // exp-speedy-connection
-          localStorage.setItem(
-            "exp-speedy-connection-timestamp",
-            String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000))
-          );
+          setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
           await onAfterAuth(auth.currentUser);
         }
       },
