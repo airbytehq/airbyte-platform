@@ -13,7 +13,6 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -48,6 +47,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -110,7 +110,9 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
     return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
         () -> {
           final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
           final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
@@ -130,14 +132,15 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           } else {
             workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig, resourceRequirements);
           }
+          final var worker = workerFactory.get();
+          cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution<OperatorDbtInput, Void> temporalAttemptExecution =
               new TemporalAttemptExecution<>(
                   workspaceRoot, workerEnvironment, logConfigs,
                   jobRunConfig,
-                  workerFactory,
-                  inputSupplier,
-                  new CancellationHandler.TemporalCancellationHandler(context),
+                  worker,
+                  inputSupplier.get(),
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context);

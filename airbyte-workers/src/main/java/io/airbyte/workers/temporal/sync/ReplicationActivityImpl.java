@@ -19,7 +19,6 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
@@ -49,7 +48,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,23 +120,17 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
     }
     final ActivityExecutionContext context = Activity.getExecutionContext();
+
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
+
     return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
         () -> {
-
-          final var fullSourceConfig = secretsHydrator.hydrate(syncInput.getSourceConfiguration());
-          final var fullDestinationConfig = secretsHydrator.hydrate(syncInput.getDestinationConfiguration());
-
-          final var fullSyncInput = Jsons.clone(syncInput)
-              .withSourceConfiguration(fullSourceConfig)
-              .withDestinationConfiguration(fullDestinationConfig);
-
-          final Supplier<StandardSyncInput> inputSupplier = () -> {
-            airbyteConfigValidator.ensureAsRuntime(ConfigSchema.STANDARD_SYNC_INPUT, Jsons.jsonNode(fullSyncInput));
-            return fullSyncInput;
-          };
-
+          final var hydratedSyncInput = getHydratedSyncInput(syncInput);
           final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory =
               orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, () -> context);
+          final var worker = workerFactory.get();
+          cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
               new TemporalAttemptExecution<>(
@@ -145,9 +138,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   workerEnvironment,
                   logConfigs,
                   jobRunConfig,
-                  workerFactory,
-                  inputSupplier,
-                  new CancellationHandler.TemporalCancellationHandler(context),
+                  worker,
+                  hydratedSyncInput,
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context,
@@ -168,6 +160,18 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           return standardSyncOutput;
         },
         () -> context);
+  }
+
+  private StandardSyncInput getHydratedSyncInput(final StandardSyncInput syncInput) {
+    final var fullSourceConfig = secretsHydrator.hydrate(syncInput.getSourceConfiguration());
+    final var fullDestinationConfig = secretsHydrator.hydrate(syncInput.getDestinationConfiguration());
+
+    final var fullSyncInput = Jsons.clone(syncInput)
+        .withSourceConfiguration(fullSourceConfig)
+        .withDestinationConfiguration(fullDestinationConfig);
+
+    airbyteConfigValidator.ensureAsRuntime(ConfigSchema.STANDARD_SYNC_INPUT, Jsons.jsonNode(fullSyncInput));
+    return fullSyncInput;
   }
 
   private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {

@@ -7,6 +7,7 @@ package io.airbyte.workers.temporal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -16,13 +17,10 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
-import io.airbyte.commons.functional.CheckedSupplier;
-import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.config.Configs;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
-import io.temporal.serviceclient.CheckedExceptionWrapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +50,7 @@ class TemporalAttemptExecutionTest {
 
   private Path jobRoot;
 
-  private CheckedSupplier<Worker<String, String>, Exception> execution;
+  private Worker<String, String> worker;
   private Consumer<Path> mdcSetter;
 
   private TemporalAttemptExecution<String, String> attemptExecution;
@@ -79,16 +76,15 @@ class TemporalAttemptExecutionTest {
     final Path workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_attempt_execution_test");
     jobRoot = workspaceRoot.resolve(JOB_ID).resolve(String.valueOf(ATTEMPT_NUMBER));
 
-    execution = mock(CheckedSupplier.class);
+    worker = mock(Worker.class);
     mdcSetter = mock(Consumer.class);
 
     attemptExecution = new TemporalAttemptExecution<>(
         workspaceRoot,
-        configs.getWorkerEnvironment(), configs.getLogConfigs(),
-        JOB_RUN_CONFIG, execution,
-        () -> "",
+        JOB_RUN_CONFIG,
+        worker,
+        "",
         mdcSetter,
-        mock(CancellationHandler.class),
         airbyteApiClient,
         () -> "workflow_id", configs.getAirbyteVersionOrWarning(),
         Optional.of("SYNC"));
@@ -103,41 +99,25 @@ class TemporalAttemptExecutionTest {
   @Test
   void testSuccessfulSupplierRun() throws Exception {
     final String expected = "louis XVI";
-    final Worker<String, String> worker = mock(Worker.class);
-    when(worker.run(any(), any())).thenReturn(expected);
-
-    when(execution.get()).thenAnswer((Answer<Worker<String, String>>) invocation -> worker);
+    when(worker.run(anyString(), any())).thenReturn(expected);
 
     final String actual = attemptExecution.get();
 
     assertEquals(expected, actual);
 
-    verify(execution).get();
-    verify(mdcSetter, atLeast(2)).accept(jobRoot);
-    verify(attemptApi, times(1)).setWorkflowInAttempt(
-        argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
-  }
-
-  @Test
-  void testThrowsCheckedException() throws Exception {
-    when(execution.get()).thenThrow(new IOException());
-
-    final CheckedExceptionWrapper actualException = assertThrows(CheckedExceptionWrapper.class, () -> attemptExecution.get());
-    assertEquals(IOException.class, CheckedExceptionWrapper.unwrap(actualException).getClass());
-
-    verify(execution).get();
-    verify(mdcSetter).accept(jobRoot);
+    verify(worker).run(anyString(), any());
+    verify(mdcSetter, atLeast(1)).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
         argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
   }
 
   @Test
   void testThrowsUnCheckedException() throws Exception {
-    when(execution.get()).thenThrow(new IllegalArgumentException());
+    when(worker.run(anyString(), any())).thenThrow(new IllegalArgumentException());
 
     assertThrows(IllegalArgumentException.class, () -> attemptExecution.get());
 
-    verify(execution).get();
+    verify(worker).run(anyString(), any());
     verify(mdcSetter).accept(jobRoot);
     verify(attemptApi, times(1)).setWorkflowInAttempt(
         argThat(request -> request.getAttemptNumber().equals(ATTEMPT_NUMBER) && request.getJobId().equals(Long.valueOf(JOB_ID))));
