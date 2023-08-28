@@ -785,14 +785,16 @@ public class AcceptanceTestHarness {
     return sourceDefinitionRead;
   }
 
-  public DestinationDefinitionRead createE2eDestinationDefinition(final UUID workspaceId) throws ApiException {
-    return apiClient.getDestinationDefinitionApi().createCustomDestinationDefinition(new CustomDestinationDefinitionCreate()
-        .workspaceId(workspaceId)
-        .destinationDefinition(new DestinationDefinitionCreate()
-            .name("E2E Test Destination")
-            .dockerRepository("airbyte/destination-e2e-test")
-            .dockerImageTag(DESTINATION_E2E_TEST_CONNECTOR_VERSION)
-            .documentationUrl(URI.create("https://example.com"))));
+  public DestinationDefinitionRead createE2eDestinationDefinition(final UUID workspaceId) throws Exception {
+    return AirbyteApiClient.retryWithJitterThrows(() -> apiClient.getDestinationDefinitionApi()
+        .createCustomDestinationDefinition(new CustomDestinationDefinitionCreate()
+            .workspaceId(workspaceId)
+            .destinationDefinition(new DestinationDefinitionCreate()
+                .name("E2E Test Destination")
+                .dockerRepository("airbyte/destination-e2e-test")
+                .dockerImageTag(DESTINATION_E2E_TEST_CONNECTOR_VERSION)
+                .documentationUrl(URI.create("https://example.com")))),
+        "create destination definition", 10, 60, 3);
   }
 
   public SourceRead createPostgresSource() {
