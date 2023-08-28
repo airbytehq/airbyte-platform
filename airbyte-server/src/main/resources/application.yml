@@ -23,6 +23,8 @@ micronaut:
           allowed-origins-regex:
             - ^.*$
     netty:
+      aggregator:
+        max-content-length: 1048576
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}

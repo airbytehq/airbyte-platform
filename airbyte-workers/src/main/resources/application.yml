@@ -2,6 +2,9 @@ micronaut:
   application:
     name: airbyte-workers
   server:
+    netty:
+      aggregator:
+        max-content-length: 1048576
     port: 9000
   caches:
     # used by RecordMetricActivity to cache repeated calls to workspaceApi.getWorkspaceByConnectionId.
