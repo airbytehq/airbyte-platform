@@ -13,8 +13,10 @@ import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
@@ -89,6 +91,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private static final int sourceMaxBufferSize = 1000;
   private static final int destinationMaxBufferSize = 1000;
   private static final int observabilityMetricsPeriodInSeconds = 1;
+  private static final int executorShutdownGracePeriodInSeconds = 10;
 
   public BufferedReplicationWorker(final String jobId,
                                    final int attempt,
@@ -174,6 +177,20 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       } finally {
         executors.shutdownNow();
         scheduledExecutors.shutdownNow();
+
+        try {
+          // Best effort to mark as complete when the Worker is actually done.
+          executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
+          scheduledExecutors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
+          if (!executors.isTerminated() || !scheduledExecutors.isTerminated()) {
+            final MetricClient metricClient = MetricClientFactory.getMetricClient();
+            metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR, 1,
+                new MetricAttribute(MetricTags.IMPLEMENTATION, "buffered"));
+          }
+        } catch (final InterruptedException e) {
+          // Preserve the interrupt status
+          Thread.currentThread().interrupt();
+        }
       }
 
       if (!cancelled) {
@@ -248,13 +265,19 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   @Override
   public void cancel() {
+    boolean wasInterrupted = false;
+
     cancelled = true;
     replicationWorkerHelper.markCancelled();
 
     LOGGER.info("Cancelling replication worker...");
+    executors.shutdownNow();
+    scheduledExecutors.shutdownNow();
     try {
-      executors.awaitTermination(10, TimeUnit.SECONDS);
+      executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
+      scheduledExecutors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
     } catch (final InterruptedException e) {
+      wasInterrupted = true;
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Unable to cancel due to interruption.", e);
     }
@@ -276,6 +299,11 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     }
 
     replicationWorkerHelper.endOfReplication();
+
+    if (wasInterrupted) {
+      // Preserve the interrupt flag if we were interrupted
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**

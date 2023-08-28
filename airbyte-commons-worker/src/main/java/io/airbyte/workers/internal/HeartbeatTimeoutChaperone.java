@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +155,13 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
   @Override
   public void close() throws Exception {
     if (lazyExecutorService != null) {
-      lazyExecutorService.shutdown();
+      lazyExecutorService.shutdownNow();
+      try {
+        lazyExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (final InterruptedException e) {
+        // Propagate the status if we were interrupted
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
