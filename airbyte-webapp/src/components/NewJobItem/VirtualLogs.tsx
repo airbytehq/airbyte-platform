@@ -62,7 +62,7 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({ logLines, searchTer
     if (listRef.current === null || !logLines.length) {
       return;
     }
-    listRef?.current.scrollToItem(logLines.length);
+    listRef?.current.scrollToItem(logLines.length, "end");
   }, [logLines.length]);
 
   useEffect(() => {
