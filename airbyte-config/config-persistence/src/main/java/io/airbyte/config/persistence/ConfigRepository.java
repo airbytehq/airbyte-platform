@@ -2413,38 +2413,63 @@ public class ConfigRepository {
    * @param airbyteCatalog the catalog to be cached
    * @param context - db context
    * @param timestamp - timestamp
+   * @param writeCatalogInCanonicalJson - should we write the catalog in canonical json
    * @return the db identifier for the cached catalog.
    */
   private UUID getOrInsertCanonicalActorCatalog(final AirbyteCatalog airbyteCatalog,
                                                 final DSLContext context,
-                                                final OffsetDateTime timestamp) {
+                                                final OffsetDateTime timestamp,
+                                                final boolean writeCatalogInCanonicalJson) {
+
+    final String canonicalCatalogHash = generateCanonicalHash(airbyteCatalog);
+    UUID catalogId = lookupCatalogId(canonicalCatalogHash, airbyteCatalog, context);
+    if (catalogId != null) {
+      return catalogId;
+    }
+
+    final String oldCatalogHash = generateOldHash(airbyteCatalog);
+    catalogId = lookupCatalogId(oldCatalogHash, airbyteCatalog, context);
+    if (catalogId != null) {
+      return catalogId;
+    }
+
+    final String catalogHash = writeCatalogInCanonicalJson ? canonicalCatalogHash : oldCatalogHash;
+
+    return insertCatalog(airbyteCatalog, catalogHash, context, timestamp);
+  }
+
+  private String generateCanonicalHash(AirbyteCatalog airbyteCatalog) {
     final HashFunction hashFunction = Hashing.murmur3_32_fixed();
-
     try {
-      final String catalogHash = hashFunction.hashBytes(Jsons.canonicalJsonSerialize(airbyteCatalog)
+      return hashFunction.hashBytes(Jsons.canonicalJsonSerialize(airbyteCatalog)
           .getBytes(Charsets.UTF_8)).toString();
-
-      final UUID catalogId = findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
-      if (catalogId != null) {
-        return catalogId;
-      }
-    } catch (final IOException e) {
+    } catch (IOException e) {
       LOGGER.error("Failed to serialize AirbyteCatalog to canonical JSON", e);
+      return null;
     }
+  }
 
-    // Fallback to the old json when canonical json serialization failed
-    final String oldCatalogHash = hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
+  private String generateOldHash(AirbyteCatalog airbyteCatalog) {
+    final HashFunction hashFunction = Hashing.murmur3_32_fixed();
+    return hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
+  }
 
-    final UUID oldCatalogId = findAndReturnCatalogId(oldCatalogHash, airbyteCatalog, context);
-    if (oldCatalogId != null) {
-      return oldCatalogId;
+  private UUID lookupCatalogId(String catalogHash, AirbyteCatalog airbyteCatalog, DSLContext context) {
+    if (catalogHash == null) {
+      return null;
     }
+    return findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
+  }
 
+  private UUID insertCatalog(AirbyteCatalog airbyteCatalog,
+                             String catalogHash,
+                             DSLContext context,
+                             OffsetDateTime timestamp) {
     final UUID catalogId = UUID.randomUUID();
     context.insertInto(ACTOR_CATALOG)
         .set(ACTOR_CATALOG.ID, catalogId)
         .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(airbyteCatalog)))
-        .set(ACTOR_CATALOG.CATALOG_HASH, oldCatalogHash)
+        .set(ACTOR_CATALOG.CATALOG_HASH, catalogHash)
         .set(ACTOR_CATALOG.CREATED_AT, timestamp)
         .set(ACTOR_CATALOG.MODIFIED_AT, timestamp).execute();
     return catalogId;
@@ -2611,6 +2636,7 @@ public class ConfigRepository {
    * @param catalog - catalog that was fetched.
    * @param actorId - actor the catalog was fetched by
    * @param connectorVersion - version of the connector when catalog was fetched
+   * @param writeCatalogInCanonicalJson - should we write the catalog in canonical json
    * @param configurationHash - hash of the config of the connector when catalog was fetched
    * @return The identifier (UUID) of the fetch event inserted in the database
    * @throws IOException - error while interacting with db
@@ -2618,12 +2644,13 @@ public class ConfigRepository {
   public UUID writeCanonicalActorCatalogFetchEvent(final AirbyteCatalog catalog,
                                                    final UUID actorId,
                                                    final String connectorVersion,
-                                                   final String configurationHash)
+                                                   final String configurationHash,
+                                                   final boolean writeCatalogInCanonicalJson)
       throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final UUID fetchEventID = UUID.randomUUID();
     return database.transaction(ctx -> {
-      final UUID catalogId = getOrInsertCanonicalActorCatalog(catalog, ctx, timestamp);
+      final UUID catalogId = getOrInsertCanonicalActorCatalog(catalog, ctx, timestamp, writeCatalogInCanonicalJson);
       ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
           .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
           .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)

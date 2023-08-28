@@ -169,12 +169,12 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH, false);
 
     final AirbyteCatalog secondCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("size", JsonSchemaType.NUMBER), Field.of("label", JsonSchemaType.STRING),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
+    configRepository.writeCanonicalActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash, false);
 
     final String expectedCatalog =
         "{"
@@ -200,6 +200,60 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final Optional<ActorCatalog> catalogResult = configRepository.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
     assertTrue(catalogResult.isPresent());
     assertEquals(expectedCatalog, Jsons.serialize(catalogResult.get().getCatalog()));
+  }
+
+  @Test
+  void testWriteCanonicalActorCatalog() throws IOException, JsonValidationException, SQLException {
+    final String canonicalConfigHash = "8ad32981";
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withSourceType(SourceType.DATABASE)
+        .withName("sourceDefinition");
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersionId(sourceDefinition.getDefaultVersionId());
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+
+    final SourceConnection source = new SourceConnection()
+        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceId(UUID.randomUUID())
+        .withName("SomeConnector")
+        .withWorkspaceId(workspace.getWorkspaceId())
+        .withConfiguration(Jsons.deserialize("{}"));
+    configRepository.writeSourceConnectionNoSecrets(source);
+
+    final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
+        Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
+        Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
+    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH, true);
+
+    String expectedCatalog =
+        "{"
+            + "\"streams\":["
+            + "{"
+            + "\"default_cursor_field\":[],"
+            + "\"json_schema\":{"
+            + "\"properties\":{"
+            + "\"color\":{\"type\":\"string\"},"
+            + "\"label\":{\"type\":\"string\"},"
+            + "\"price\":{\"type\":\"number\"},"
+            + "\"size\":{\"type\":\"number\"}"
+            + "},"
+            + "\"type\":\"object\""
+            + "},"
+            + "\"name\":\"product\","
+            + "\"source_defined_primary_key\":[],"
+            + "\"supported_sync_modes\":[\"full_refresh\"]"
+            + "}"
+            + "]"
+            + "}";
+
+    final Optional<ActorCatalog> catalogResult = configRepository.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    assertTrue(catalogResult.isPresent());
+    assertEquals(catalogResult.get().getCatalogHash(), canonicalConfigHash);
+    assertEquals(expectedCatalog, Jsons.canonicalJsonSerialize(catalogResult.get().getCatalog()));
   }
 
   @Test
