@@ -7,7 +7,6 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { useOperationsCheck } from "core/api";
-import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
 import { dbtOperationReadOrCreateSchema } from "./schema";
 import { DbtOperationReadOrCreate } from "./types";
@@ -30,18 +29,10 @@ interface TransformationHookFormProps {
 export const TransformationHookForm: React.FC<TransformationHookFormProps> = ({ transformation, onDone, onCancel }) => {
   const { formatMessage } = useIntl();
   const operationCheck = useOperationsCheck();
-  const { clearFormChange } = useFormChangeTrackerService();
-  const formId = useUniqueFormId();
 
   const onSubmit = async (values: DbtOperationReadOrCreate) => {
     await operationCheck(values);
-    clearFormChange(formId);
     onDone(values);
-  };
-
-  const onFormCancel = () => {
-    clearFormChange(formId);
-    onCancel();
   };
 
   return (
@@ -49,7 +40,6 @@ export const TransformationHookForm: React.FC<TransformationHookFormProps> = ({ 
       onSubmit={onSubmit}
       schema={dbtOperationReadOrCreateSchema}
       defaultValues={transformation}
-      trackDirtyChanges
     >
       <ModalBody maxHeight={400}>
         <FlexContainer gap="lg">
@@ -96,7 +86,7 @@ export const TransformationHookForm: React.FC<TransformationHookFormProps> = ({ 
         </FlexContainer>
       </ModalBody>
       <ModalFooter>
-        <ModalFormSubmissionButtons submitKey="form.saveTransformation" onCancelClickCallback={onFormCancel} />
+        <ModalFormSubmissionButtons submitKey="form.saveTransformation" onCancelClickCallback={onCancel} />
       </ModalFooter>
     </Form>
   );
