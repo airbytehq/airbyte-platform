@@ -14,15 +14,17 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import java.time.Duration;
 
-// todo (cgardens) - don't know what this is meant to do. needs javadocs.
+/**
+ * Workflow used for testing cancellations and heartbeats.
+ */
 @SuppressWarnings("MissingJavadocType")
 @WorkflowInterface
-public interface HeartbeatWorkflow {
+public interface TestWorkflow {
 
   @WorkflowMethod
   void execute();
 
-  class HeartbeatWorkflowImpl implements HeartbeatWorkflow {
+  class TestWorkflowImpl implements TestWorkflow {
 
     private final ActivityOptions options = ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofDays(1))
@@ -30,28 +32,28 @@ public interface HeartbeatWorkflow {
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
 
-    private final HeartbeatActivity heartbeatActivity = Workflow.newActivityStub(HeartbeatActivity.class, options);
+    private final TestHeartbeatActivity testHeartbeatActivity = Workflow.newActivityStub(TestHeartbeatActivity.class, options);
 
     @Override
     public void execute() {
-      heartbeatActivity.heartbeat();
+      testHeartbeatActivity.heartbeat();
     }
 
   }
 
   @ActivityInterface
-  interface HeartbeatActivity {
+  interface TestHeartbeatActivity {
 
     @ActivityMethod
     void heartbeat();
 
   }
 
-  class HeartbeatActivityImpl implements HeartbeatActivity {
+  class TestActivityImplTest implements TestHeartbeatActivity {
 
     private final Runnable runnable;
 
-    public HeartbeatActivityImpl(final Runnable runnable) {
+    public TestActivityImplTest(final Runnable runnable) {
       this.runnable = runnable;
     }
 

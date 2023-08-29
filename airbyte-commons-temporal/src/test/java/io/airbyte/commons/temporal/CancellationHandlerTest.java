@@ -4,7 +4,9 @@
 
 package io.airbyte.commons.temporal;
 
-import io.airbyte.commons.temporal.stubs.HeartbeatWorkflow;
+import io.airbyte.commons.temporal.stubs.TestWorkflow;
+import io.airbyte.commons.temporal.stubs.TestWorkflow.TestActivityImplTest;
+import io.airbyte.commons.temporal.stubs.TestWorkflow.TestWorkflowImpl;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.client.WorkflowClient;
@@ -23,23 +25,23 @@ class CancellationHandlerTest {
 
     final Worker worker = testEnv.newWorker("task-queue");
 
-    worker.registerWorkflowImplementationTypes(HeartbeatWorkflow.HeartbeatWorkflowImpl.class);
+    worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
     final WorkflowClient client = testEnv.getWorkflowClient();
 
-    worker.registerActivitiesImplementations(new HeartbeatWorkflow.HeartbeatActivityImpl(() -> {
+    worker.registerActivitiesImplementations(new TestActivityImplTest(() -> {
       final ActivityExecutionContext context = Activity.getExecutionContext();
       new CancellationHandler.TemporalCancellationHandler(context).checkAndHandleCancellation(() -> {});
     }));
 
     testEnv.start();
 
-    final HeartbeatWorkflow heartbeatWorkflow = client.newWorkflowStub(
-        HeartbeatWorkflow.class,
+    final TestWorkflow testWorkflow = client.newWorkflowStub(
+        TestWorkflow.class,
         WorkflowOptions.newBuilder()
             .setTaskQueue("task-queue")
             .build());
 
-    Assertions.assertDoesNotThrow(heartbeatWorkflow::execute);
+    Assertions.assertDoesNotThrow(testWorkflow::execute);
 
   }
 

@@ -282,24 +282,6 @@ public class TemporalUtils {
    * It manages this by regularly calling back to temporal in order to check whether the activity has
    * been cancelled. If it is cancelled it calls the callback.
    *
-   * @param callable callable to run with cancellation
-   * @param activityContext context used to check whether the activity has been cancelled
-   * @param <T> type of variable returned by the callable
-   * @return if the callable succeeds without being cancelled, returns the value returned by the
-   *         callable
-   */
-  public <T> T withBackgroundHeartbeat(final Callable<T> callable,
-                                       final Supplier<ActivityExecutionContext> activityContext) {
-    return withBackgroundHeartbeat(null, callable, activityContext);
-  }
-
-  /**
-   * Run a callable. If while it is running the temporal activity is cancelled, the provided callback
-   * is triggered.
-   *
-   * It manages this by regularly calling back to temporal in order to check whether the activity has
-   * been cancelled. If it is cancelled it calls the callback.
-   *
    * @param afterCancellationCallbackRef callback to be triggered if the temporal activity is
    *        cancelled before the callable completes
    * @param callable callable to run with cancellation
