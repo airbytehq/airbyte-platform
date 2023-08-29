@@ -16,6 +16,8 @@ import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
 import { GeneralOrganizationSettingsPage } from "./GeneralOrganizationSettingsPage";
 import { GeneralWorkspaceSettingsPage } from "./GeneralWorkspaceSettingsPage";
+import { OrganizationAccessManagementPage } from "./pages/AccessManagementPage/OrganizationAccessManagementPage";
+import { WorkspaceAccessManagementPage } from "./pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ConfigurationsPage } from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
@@ -40,6 +42,7 @@ export const SettingsRoute = {
   DataResidency: "data-residency",
   Workspace: "workspace",
   Organization: "organization",
+  AccessManagement: "access-management",
 } as const;
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
@@ -48,6 +51,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
   const { pathname } = useLocation();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
+  const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
 
   const menuItems: CategoryItem[] = pageConfig?.menuConfig || [
     {
@@ -99,6 +103,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
           name: <FormattedMessage id="settings.metrics" />,
           component: MetricsPage,
         },
+        ...(isAccessManagementEnabled && !pageConfig
+          ? [
+              {
+                path: `${SettingsRoute.Workspace}/${SettingsRoute.AccessManagement}`,
+                name: <FormattedMessage id="settings.accessManagement" />,
+                component: WorkspaceAccessManagementPage,
+              },
+            ]
+          : []),
       ],
     },
     ...(newWorkspacesUI && organizationId
@@ -111,6 +124,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
                 name: <FormattedMessage id="settings.generalSettings" />,
                 component: GeneralOrganizationSettingsPage,
               },
+              ...(isAccessManagementEnabled && !pageConfig
+                ? [
+                    {
+                      path: `${SettingsRoute.Organization}/${SettingsRoute.AccessManagement}`,
+                      name: <FormattedMessage id="settings.accessManagement" />,
+                      component: OrganizationAccessManagementPage,
+                    },
+                  ]
+                : []),
             ],
           },
         ]

@@ -8,6 +8,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   getWorkspace,
+  listUsersInWorkspace,
   listWorkspaces,
   updateWorkspace,
   updateWorkspaceName,
@@ -21,6 +22,7 @@ export const workspaceKeys = {
   all: [SCOPE_USER, "workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
+  listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
 };
@@ -131,6 +133,13 @@ export const useGetWorkspace = (
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
   return useSuspenseQuery(queryKey, queryFn, options);
+};
+
+export const useListUsersInWorkspace = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = workspaceKeys.listUsers(workspaceId);
+
+  return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
 export const useUpdateWorkspace = () => {

@@ -34,4 +34,5 @@ export interface Experiments {
   "settings.emailNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "workspaces.newWorkspacesUI": boolean;
+  "settings.accessManagement": boolean;
 }
