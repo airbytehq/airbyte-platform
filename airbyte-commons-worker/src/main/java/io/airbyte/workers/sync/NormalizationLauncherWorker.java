@@ -8,7 +8,6 @@ import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_NORMALIZATION_STE
 import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -16,10 +15,8 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.temporal.activity.ActivityExecutionContext;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * Normalization Launcher Worker.
@@ -36,9 +33,7 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
                                      final JobRunConfig jobRunConfig,
                                      final WorkerConfigs workerConfigs,
                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                     final Supplier<ActivityExecutionContext> activityContext,
                                      final Integer serverPort,
-                                     final TemporalUtils temporalUtils,
                                      final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
@@ -51,9 +46,7 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
         containerOrchestratorConfig,
         workerConfigs.getResourceRequirements(),
         NormalizationSummary.class,
-        activityContext,
         serverPort,
-        temporalUtils,
         workerConfigs,
         featureFlagClient,
         // Normalization process will happen only on a fixed set of connectors,

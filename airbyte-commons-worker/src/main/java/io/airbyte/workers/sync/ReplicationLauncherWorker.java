@@ -8,7 +8,6 @@ import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP;
 import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
@@ -17,10 +16,8 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.temporal.activity.ActivityExecutionContext;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * Launches a container-orchestrator container/pod to manage the message passing for the replication
@@ -41,9 +38,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
                                    final IntegrationLauncherConfig destinationLauncherConfig,
                                    final JobRunConfig jobRunConfig,
                                    final ResourceRequirements resourceRequirements,
-                                   final Supplier<ActivityExecutionContext> activityContext,
                                    final Integer serverPort,
-                                   final TemporalUtils temporalUtils,
                                    final WorkerConfigs workerConfigs,
                                    final FeatureFlagClient featureFlagClient) {
     super(
@@ -58,9 +53,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
         containerOrchestratorConfig,
         resourceRequirements,
         ReplicationOutput.class,
-        activityContext,
         serverPort,
-        temporalUtils,
         workerConfigs,
         featureFlagClient,
         sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());

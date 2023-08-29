@@ -128,7 +128,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
             final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
             workerFactory =
                 getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-                    () -> context, input.getConnectionId(), input.getWorkspaceId());
+                    input.getConnectionId(), input.getWorkspaceId());
           } else {
             workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig, resourceRequirements);
           }
@@ -170,7 +170,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                                                                                        final WorkerConfigs workerConfigs,
                                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                        final JobRunConfig jobRunConfig,
-                                                                                                       final Supplier<ActivityExecutionContext> activityContext,
                                                                                                        final UUID connectionId,
                                                                                                        final UUID workspaceId) {
 
@@ -181,9 +180,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         jobRunConfig,
         workerConfigs,
         containerOrchestratorConfig.get(),
-        activityContext,
         serverPort,
-        temporalUtils,
         featureFlagClient);
   }
 
