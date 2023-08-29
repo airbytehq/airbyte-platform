@@ -441,7 +441,7 @@ export function useInitializedBuilderProject() {
       // could not resolve manifest, use default form values
       return [
         DEFAULT_BUILDER_FORM_VALUES,
-        false,
+        true,
         convertJsonToYaml(builderProject.declarativeManifest?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES),
       ];
     }
