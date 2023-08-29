@@ -20,7 +20,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
@@ -105,9 +104,7 @@ public class ApplyDefinitionsHelper {
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
     }
-    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(allBreakingChanges);
-    }
+    configRepository.writeActorDefinitionBreakingChanges(allBreakingChanges);
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       supportStateUpdater.updateSupportStates();
     }

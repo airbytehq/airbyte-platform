@@ -5,7 +5,6 @@
 package io.airbyte.config.init;
 
 import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,7 +26,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
@@ -110,7 +108,6 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobPersistence, configRepository, featureFlagClient, supportStateUpdater);
 
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
     when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
 
     // Default calls to empty.
@@ -276,31 +273,6 @@ class ApplyDefinitionsHelperTest {
     verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
 
     verify(supportStateUpdater, never()).updateSupportStates();
-    verifyNoMoreInteractions(configRepository, supportStateUpdater);
-  }
-
-  @Test
-  void testTurnOffIngestBreakingChangesFeatureFlag() throws JsonValidationException, IOException, ConfigNotFoundException {
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(false);
-
-    when(definitionsProvider.getSourceDefinitions()).thenReturn(List.of(SOURCE_POSTGRES_2));
-    when(definitionsProvider.getDestinationDefinitions()).thenReturn(List.of(DESTINATION_S3_2));
-
-    applyDefinitionsHelper.apply(true);
-    verifyConfigRepositoryGetInteractions();
-
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
-        ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
-        ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
-        ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(configRepository, never()).writeActorDefinitionBreakingChanges(any());
-
-    verify(supportStateUpdater).updateSupportStates();
-
     verifyNoMoreInteractions(configRepository, supportStateUpdater);
   }
 

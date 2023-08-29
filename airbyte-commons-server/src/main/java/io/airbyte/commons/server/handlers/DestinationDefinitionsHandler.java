@@ -40,7 +40,6 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
@@ -286,9 +285,7 @@ public class DestinationDefinitionsHandler {
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
     configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion, breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
-    }
+    configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       final StandardDestinationDefinition updatedDestinationDefinition = configRepository
           .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());

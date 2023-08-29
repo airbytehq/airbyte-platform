@@ -40,7 +40,6 @@ import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
@@ -285,10 +284,8 @@ public class SourceDefinitionsHandler {
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
     configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion, breakingChangesForDef);
+    configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
-    }
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
       supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);

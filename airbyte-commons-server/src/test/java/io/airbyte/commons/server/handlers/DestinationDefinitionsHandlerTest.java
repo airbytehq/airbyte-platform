@@ -58,7 +58,6 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
@@ -126,8 +125,6 @@ class DestinationDefinitionsHandlerTest {
         destinationHandler,
         supportStateUpdater,
         featureFlagClient);
-
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
