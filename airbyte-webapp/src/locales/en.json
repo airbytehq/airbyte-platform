@@ -221,7 +221,7 @@
   "connectionForm.update.success": "Connection update succeeded",
   "connectionForm.update.failed": "Connection update failed",
 
-  "connectionForm.breakingChange.deprecatedNoDeadline.message": "A pending upgrade to <b>{actor_name}</b> requires your attention",
+  "connectionForm.breakingChange.deprecatedNoDeadline.message": "A pending upgrade to <b>{actor_name}</b> requires your attention.",
   "connectionForm.breakingChange.deprecated.message": "There is a new version available for the <b>{actor_definition_name}</b> {actor_type} connector which contains breaking changes. To ensure continuous syncing, please upgrade the <b>{actor_name}</b> {actor_type} by <b>{upgrade_deadline}</b>, otherwise the <b>{connection_name}</b> connection will automatically be paused on that date to prevent failure or unexpected behavior.",
   "connectionForm.breakingChange.unsupported.message": "There is a new version available for the <b>{actor_definition_name}</b> {actor_type} connector which contains breaking changes. To prevent failure or unexpected behavior, the <b>{connection_name}</b> connection was automatically paused. Upgrade the <b>{actor_name}</b> {actor_type} to resume syncing.",
   "connectionForm.breakingChange.source.buttonLabel": "Go to Source",
