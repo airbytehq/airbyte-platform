@@ -34,8 +34,7 @@ class ReplicationWorkerHelperTest {
         null,
         null,
         null,
-        null,
-        true));
+        null));
   }
 
   @Test
@@ -46,7 +45,7 @@ class ReplicationWorkerHelperTest {
     doReturn(sourceRawMessage).when(replicationWorkerHelper).internalProcessMessageFromSource(sourceRawMessage);
     when(mapper.mapMessage(sourceRawMessage)).thenReturn(mappedSourceMessage);
 
-    final Optional<AirbyteMessage> processedMessageFromSource = replicationWorkerHelper.processMessageFromSourceNew(sourceRawMessage);
+    final Optional<AirbyteMessage> processedMessageFromSource = replicationWorkerHelper.processMessageFromSource(sourceRawMessage);
 
     assertEquals(Optional.of(mappedSourceMessage), processedMessageFromSource);
   }

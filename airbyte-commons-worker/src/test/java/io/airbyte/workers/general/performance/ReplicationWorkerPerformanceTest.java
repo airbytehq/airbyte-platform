@@ -81,8 +81,7 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                          final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                          final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                         final FeatureFlagClient featureFlagClient);
+                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -117,7 +116,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final var syncPersistence = mock(SyncPersistence.class);
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
-    final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "", false);
+    final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
     final var validator = new RecordSchemaValidator(Map.of(
         new AirbyteStreamNameNamespacePair("s1", null),
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
@@ -172,8 +171,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper,
-        featureFlagClient);
+        replicationAirbyteMessageEventPublishingHelper);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {

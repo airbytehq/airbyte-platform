@@ -7,7 +7,6 @@ package io.airbyte.workers.internal;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
-import io.airbyte.featureflag.UseNewStateMessageProcessing;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -36,7 +35,6 @@ public class NamespacingMapper implements AirbyteMapper {
   private final String namespaceFormat;
   private final String streamPrefix;
   private final Map<NamespaceAndStreamName, NamespaceAndStreamName> destinationToSourceNamespaceAndStreamName;
-  private final boolean useNewNamespaceMapping;
 
   @VisibleForTesting
   record NamespaceAndStreamName(String namespace, String streamName) {}
@@ -44,9 +42,8 @@ public class NamespacingMapper implements AirbyteMapper {
   public NamespacingMapper(
                            final NamespaceDefinitionType namespaceDefinition,
                            final String namespaceFormat,
-                           final String streamPrefix,
-                           final boolean useNewNamespaceMapping) {
-    this(namespaceDefinition, namespaceFormat, streamPrefix, new HashMap<>(), useNewNamespaceMapping);
+                           final String streamPrefix) {
+    this(namespaceDefinition, namespaceFormat, streamPrefix, new HashMap<>());
   }
 
   @VisibleForTesting
@@ -54,13 +51,11 @@ public class NamespacingMapper implements AirbyteMapper {
                     final NamespaceDefinitionType namespaceDefinition,
                     final String namespaceFormat,
                     final String streamPrefix,
-                    final Map<NamespaceAndStreamName, NamespaceAndStreamName> destinationToSourceNamespaceAndStreamName,
-                    final boolean useNewNamespaceMapping) {
+                    final Map<NamespaceAndStreamName, NamespaceAndStreamName> destinationToSourceNamespaceAndStreamName) {
     this.namespaceDefinition = namespaceDefinition;
     this.namespaceFormat = namespaceFormat;
     this.streamPrefix = streamPrefix;
     this.destinationToSourceNamespaceAndStreamName = destinationToSourceNamespaceAndStreamName;
-    this.useNewNamespaceMapping = useNewNamespaceMapping;
   }
 
   @Override
@@ -85,48 +80,8 @@ public class NamespacingMapper implements AirbyteMapper {
     return catalog;
   }
 
-  /**
-   * The behavior of this method depends on the value of {@link #useNewNamespaceMapping}, which is
-   * decided by the {@link UseNewStateMessageProcessing} feature flag. The feature flag is being used
-   * to test a new version of this method which is meant to fix the issue described here
-   * https://github.com/airbytehq/airbyte/issues/29478. {@link #mapMessageNew} is the new version of
-   * the method that is meant to fix the issue. {@link #mapMessageOld} is the original version of the
-   * method where the issue is present.
-   */
   @Override
   public AirbyteMessage mapMessage(final AirbyteMessage message) {
-    if (useNewNamespaceMapping) {
-      return mapMessageNew(message);
-    } else {
-      return mapMessageOld(message);
-    }
-  }
-
-  /**
-   * If you are making changes in this method please read the documentation in {@link #mapMessage}
-   * first.
-   */
-  AirbyteMessage mapMessageOld(final AirbyteMessage message) {
-    if (message.getType() == Type.RECORD) {
-      // Default behavior if namespaceDefinition is not set is to follow SOURCE
-      if (namespaceDefinition != null) {
-        if (namespaceDefinition.equals(NamespaceDefinitionType.DESTINATION)) {
-          message.getRecord().withNamespace(null);
-        } else if (namespaceDefinition.equals(NamespaceDefinitionType.CUSTOMFORMAT)) {
-          message.getRecord().withNamespace(formatNamespace(message.getRecord().getNamespace(), namespaceFormat));
-        }
-      }
-      message.getRecord().setStream(transformStreamName(message.getRecord().getStream(), streamPrefix));
-      return message;
-    }
-    return message;
-  }
-
-  /**
-   * If you are making changes in this method please read the documentation in {@link #mapMessage}
-   * first.
-   */
-  AirbyteMessage mapMessageNew(final AirbyteMessage message) {
     if (message.getType() == Type.RECORD) {
       final AirbyteRecordMessage recordMessage = message.getRecord();
 

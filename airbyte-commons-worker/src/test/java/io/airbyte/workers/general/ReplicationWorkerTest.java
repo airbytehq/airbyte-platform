@@ -208,6 +208,8 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(RECORD_MESSAGE2)).thenReturn(RECORD_MESSAGE2);
     when(mapper.mapMessage(RECORD_MESSAGE3)).thenReturn(RECORD_MESSAGE3);
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
+    when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
+    when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 

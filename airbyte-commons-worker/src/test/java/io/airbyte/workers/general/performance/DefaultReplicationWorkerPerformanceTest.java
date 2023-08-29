@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.general.performance;
 
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.general.DefaultReplicationWorker;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
@@ -38,11 +37,10 @@ class DefaultReplicationWorkerPerformanceTest extends ReplicationWorkerPerforman
                                                 final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                 final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                final FeatureFlagClient featureFlagClient) {
+                                                final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
     return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
         fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-        messageEventPublishingHelper, /* we don't care about the onReplicationRunning callback here */ () -> {}, false);
+        messageEventPublishingHelper, /* we don't care about the onReplicationRunning callback here */ () -> {});
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {

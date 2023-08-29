@@ -26,7 +26,6 @@ import io.airbyte.featureflag.ReplicationWorkerImpl;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceType;
-import io.airbyte.featureflag.UseNewStateMessageProcessing;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -267,7 +266,6 @@ public class ReplicationWorkerFactory {
                                                            final VoidCallable onReplicationRunning) {
     final Context flagContext = getFeatureFlagContext(syncInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
-    final boolean useNewStateMessageProcessing = featureFlagClient.boolVariation(UseNewStateMessageProcessing.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
         workerImpl,
         jobRunConfig.getJobId(),
@@ -276,8 +274,7 @@ public class ReplicationWorkerFactory {
         new NamespacingMapper(
             syncInput.getNamespaceDefinition(),
             syncInput.getNamespaceFormat(),
-            syncInput.getPrefix(),
-            useNewStateMessageProcessing),
+            syncInput.getPrefix()),
         destination,
         messageTracker,
         syncPersistence,
@@ -287,8 +284,7 @@ public class ReplicationWorkerFactory {
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationEventPublishingHelper,
-        onReplicationRunning,
-        useNewStateMessageProcessing);
+        onReplicationRunning);
   }
 
   private static Context getFeatureFlagContext(final StandardSyncInput syncInput) {
@@ -327,20 +323,19 @@ public class ReplicationWorkerFactory {
                                                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                                   final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                                  final VoidCallable onReplicationRunning,
-                                                                  final boolean useNewStateMessageProcessing) {
+                                                                  final VoidCallable onReplicationRunning) {
     if ("buffered".equals(workerImpl)) {
       MetricClientFactory.getMetricClient()
           .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning, useNewStateMessageProcessing);
+          messageEventPublishingHelper, onReplicationRunning);
     } else {
       MetricClientFactory.getMetricClient()
           .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning, useNewStateMessageProcessing);
+          messageEventPublishingHelper, onReplicationRunning);
     }
   }
 

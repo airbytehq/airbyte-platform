@@ -21,7 +21,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.featureflag.UseNewStateMessageProcessing;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -75,7 +74,6 @@ class ReplicationWorkerHelper {
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
   private final VoidCallable onReplicationRunning;
-  private final boolean useNewStateMessageProcessing;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
@@ -96,8 +94,7 @@ class ReplicationWorkerHelper {
                                  final SyncPersistence syncPersistence,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                  final ThreadedTimeTracker timeTracker,
-                                 final VoidCallable onReplicationRunning,
-                                 final boolean useNewStateMessageProcessing) {
+                                 final VoidCallable onReplicationRunning) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.fieldSelector = fieldSelector;
     this.mapper = mapper;
@@ -106,7 +103,6 @@ class ReplicationWorkerHelper {
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
     this.timeTracker = timeTracker;
     this.onReplicationRunning = onReplicationRunning;
-    this.useNewStateMessageProcessing = useNewStateMessageProcessing;
     this.recordsRead = 0L;
   }
 
@@ -226,60 +222,13 @@ class ReplicationWorkerHelper {
     return sourceRawMessage;
   }
 
-  /**
-   * If you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first.
-   */
-  Optional<AirbyteMessage> processMessageFromSourceNew(final AirbyteMessage sourceRawMessage) {
+  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage sourceRawMessage) {
     final AirbyteMessage processedMessage = internalProcessMessageFromSource(sourceRawMessage);
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
     // destination
     return Optional.of(mapper.mapMessage(processedMessage));
 
-  }
-
-  /**
-   * If you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first.
-   */
-  private Optional<AirbyteMessage> processMessageFromSourceOld(final AirbyteMessage airbyteMessage) {
-    fieldSelector.filterSelectedFields(airbyteMessage);
-    fieldSelector.validateSchema(airbyteMessage);
-
-    final AirbyteMessage message = mapper.mapMessage(airbyteMessage);
-
-    messageTracker.acceptFromSource(message);
-
-    if (shouldPublishMessage(airbyteMessage)) {
-      replicationAirbyteMessageEventPublishingHelper
-          .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
-    }
-
-    recordsRead += 1;
-
-    if (recordsRead % 5000 == 0) {
-      LOGGER.info("Records read: {} ({})", recordsRead,
-          FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
-    }
-
-    return Optional.of(message);
-  }
-
-  /**
-   * The behavior of this method depends on the value of {@link #useNewStateMessageProcessing}, which
-   * is decided by the {@link UseNewStateMessageProcessing} feature flag. The feature flag is being
-   * used to test a new version of this method which is meant to fix the issue described here
-   * https://github.com/airbytehq/airbyte/issues/29478. {@link #processMessageFromSourceNew} is the
-   * new version of the method that is meant to fix the issue. {@link #processMessageFromSourceOld} is
-   * the original version of the method where the issue is present.
-   */
-  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {
-    if (useNewStateMessageProcessing) {
-      return processMessageFromSourceNew(airbyteMessage);
-    } else {
-      return processMessageFromSourceOld(airbyteMessage);
-    }
   }
 
   @VisibleForTesting
@@ -310,13 +259,8 @@ class ReplicationWorkerHelper {
     }
   }
 
-  /**
-   * The value of {@link #useNewStateMessageProcessing} is decided by the
-   * {@link UseNewStateMessageProcessing} feature flag. The feature flag is being used to test a fix
-   * the issue described here https://github.com/airbytehq/airbyte/issues/29478.
-   */
   public void processMessageFromDestination(final AirbyteMessage destinationRawMessage) {
-    final AirbyteMessage message = useNewStateMessageProcessing ? mapper.revertMap(destinationRawMessage) : destinationRawMessage;
+    final AirbyteMessage message = mapper.revertMap(destinationRawMessage);
     internalProcessMessageFromDestination(message);
   }
 
