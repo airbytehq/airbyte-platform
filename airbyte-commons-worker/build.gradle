@@ -74,7 +74,7 @@ dependencies {
 }
 
 test {
-    maxHeapSize = '2g'
+    maxHeapSize = '4g'
 
     useJUnitPlatform {
         excludeTags("cloud-storage")

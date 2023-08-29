@@ -43,10 +43,6 @@ object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-sche
 
 object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)
 
-object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
-
-object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)
-
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
 
 object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on-expanded-gke-dataplane", default = false)
