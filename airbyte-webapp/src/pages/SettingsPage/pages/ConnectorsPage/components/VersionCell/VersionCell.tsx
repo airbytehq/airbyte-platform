@@ -1,4 +1,6 @@
+import classNames from "classnames";
 import React from "react";
+import { useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 
@@ -37,16 +39,8 @@ export const VersionCell: React.FC<VersionCellProps> = ({
   latestVersion,
   releaseStage,
 }) => {
-  const { formatMessage } = useIntl();
   const { feedbackList } = useUpdatingState();
   const feedback = feedbackList[connectorDefinitionId];
-
-  const inputLatestNote =
-    feedback !== "success" && releaseStage !== ReleaseStage.custom
-      ? formatMessage({
-          id: "admin.latestNote",
-        })
-      : undefined;
 
   return (
     <Form<ConnectorVersionFormValues>
@@ -57,26 +51,60 @@ export const VersionCell: React.FC<VersionCellProps> = ({
       schema={versionCellFormSchema}
       onSubmit={onChange}
     >
-      <FlexContainer justifyContent="flex-end" alignItems="center" className={styles.versionCell}>
-        <FlexItem>
-          <VersionChangeResult feedback={feedback} />
-        </FlexItem>
-        <div className={styles.inputField} data-before={inputLatestNote}>
-          <FormControl
-            name="version"
-            fieldType="input"
-            className={styles.versionInput}
-            containerControlClassName={styles.inputContainer}
-            type="text"
-            autoComplete="off"
-          />
-        </div>
-        <SubmissionButton
-          connectorDefinitionId={connectorDefinitionId}
-          currentVersion={currentVersion}
-          latestVersion={latestVersion}
-        />
-      </FlexContainer>
+      <VersionFormContent
+        feedback={feedback}
+        releaseStage={releaseStage}
+        connectorDefinitionId={connectorDefinitionId}
+        currentVersion={currentVersion}
+        latestVersion={latestVersion}
+      />
     </Form>
+  );
+};
+
+const VersionFormContent = ({
+  feedback,
+  releaseStage,
+  connectorDefinitionId,
+  currentVersion,
+  latestVersion,
+}: {
+  feedback: string;
+  releaseStage?: ReleaseStage;
+  connectorDefinitionId: string;
+  currentVersion: string;
+  latestVersion?: string;
+}) => {
+  const { formatMessage } = useIntl();
+  const value = useWatch({ name: "version" });
+
+  const inputLatestNote =
+    value === latestVersion && releaseStage !== ReleaseStage.custom
+      ? formatMessage({
+          id: "admin.latestNote",
+        })
+      : undefined;
+
+  return (
+    <FlexContainer justifyContent="flex-end" alignItems="center" className={styles.versionCell}>
+      <FlexItem>
+        <VersionChangeResult feedback={feedback} />
+      </FlexItem>
+      <div className={styles.inputField} data-before={inputLatestNote}>
+        <FormControl
+          name="version"
+          fieldType="input"
+          className={classNames(styles.versionInput, { [styles.noLatest]: inputLatestNote === undefined })}
+          containerControlClassName={styles.inputContainer}
+          type="text"
+          autoComplete="off"
+        />
+      </div>
+      <SubmissionButton
+        connectorDefinitionId={connectorDefinitionId}
+        currentVersion={currentVersion}
+        latestVersion={latestVersion}
+      />
+    </FlexContainer>
   );
 };
