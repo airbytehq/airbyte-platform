@@ -21,6 +21,11 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -70,6 +75,7 @@ class ReplicationWorkerHelper {
   private final FieldSelector fieldSelector;
   private final AirbyteMapper mapper;
   private final MessageTracker messageTracker;
+  private final MetricClient metricClient;
   private final SyncPersistence syncPersistence;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
@@ -79,6 +85,7 @@ class ReplicationWorkerHelper {
   private ReplicationContext replicationContext = null;
   private ReplicationFeatureFlags replicationFeatureFlags = null; // NOPMD - keeping this as a placeholder
   private WorkerDestinationConfig destinationConfig = null;
+  private MetricAttribute[] metricAttrs = new MetricAttribute[0];
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
   // performant enough.
@@ -104,6 +111,7 @@ class ReplicationWorkerHelper {
     this.timeTracker = timeTracker;
     this.onReplicationRunning = onReplicationRunning;
     this.recordsRead = 0L;
+    this.metricClient = MetricClientFactory.getMetricClient();
   }
 
   public void markCancelled() {
@@ -118,6 +126,7 @@ class ReplicationWorkerHelper {
     this.replicationContext = replicationContext;
     this.replicationFeatureFlags = replicationFeatureFlags;
     this.timeTracker.trackReplicationStartTime();
+    this.metricAttrs = toConnectionAttrs(replicationContext);
   }
 
   public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {
@@ -219,6 +228,10 @@ class ReplicationWorkerHelper {
           FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
     }
 
+    if (sourceRawMessage.getType() == Type.STATE) {
+      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, metricAttrs);
+    }
+
     return sourceRawMessage;
   }
 
@@ -250,6 +263,8 @@ class ReplicationWorkerHelper {
     messageTracker.acceptFromDestination(destinationRawMessage);
     if (destinationRawMessage.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), destinationRawMessage.getState());
+
+      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, metricAttrs);
     }
 
     if (shouldPublishMessage(destinationRawMessage)) {
@@ -388,6 +403,25 @@ class ReplicationWorkerHelper {
     } else {
       return FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt);
     }
+  }
+
+  private MetricAttribute[] toConnectionAttrs(final ReplicationContext ctx) {
+    if (ctx == null) {
+      return new MetricAttribute[0];
+    }
+
+    final var attrs = new ArrayList<MetricAttribute>();
+    if (ctx.connectionId() != null) {
+      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId().toString()));
+    }
+    if (ctx.jobId() != null) {
+      attrs.add(new MetricAttribute(MetricTags.JOB_ID, ctx.jobId().toString()));
+    }
+    if (ctx.attempt() != null) {
+      attrs.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt().toString()));
+    }
+
+    return attrs.toArray(new MetricAttribute[0]);
   }
 
 }

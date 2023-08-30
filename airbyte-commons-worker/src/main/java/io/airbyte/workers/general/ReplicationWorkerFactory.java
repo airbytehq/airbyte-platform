@@ -138,7 +138,7 @@ public class ReplicationWorkerFactory {
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
         syncInput.getSyncResourceRequirements(), syncInput.getCatalog());
 
-    // TODO MetricClient should be injectable
+    // TODO MetricClient should be injectable (please)
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     final MetricClient metricClient = MetricClientFactory.getMetricClient();
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());

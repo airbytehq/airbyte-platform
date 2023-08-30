@@ -273,6 +273,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "
           + "was unable to match destination state message to source state message"),
+  STATE_PROCESSED_FROM_DESTINATION(MetricEmittingApps.WORKER,
+      "state_processed_from_destination",
+      "counter for number of state messages received from destination"),
+  STATE_PROCESSED_FROM_SOURCE(MetricEmittingApps.WORKER,
+      "state_processed_from_source",
+      "counter for number of state messages received from source"),
   // TEMPORARY, delete after the migration.
   STATS_TRACKER_IMPLEMENTATION(MetricEmittingApps.WORKER,
       "stats_tracker_implementation",
