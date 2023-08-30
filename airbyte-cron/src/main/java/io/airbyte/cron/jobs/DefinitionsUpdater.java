@@ -9,13 +9,16 @@ import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME
 import datadog.trace.api.Trace;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -47,23 +50,11 @@ public class DefinitionsUpdater {
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "30s",
              initialDelay = "1m")
-  void updateDefinitions() {
+  void updateDefinitions() throws JsonValidationException, ConfigNotFoundException, IOException {
     log.info("Updating definitions...");
     metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
-
-    try {
-      try {
-        applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);
-
-        log.info("Done applying remote connector definitions");
-      } catch (final Exception e) {
-        log.error("Error while applying remote definitions", e);
-      }
-
-    } catch (final Exception e) {
-      log.error("Error when retrieving remote definitions", e);
-    }
-
+    applyDefinitionsHelper.apply(deploymentMode == DeploymentMode.CLOUD);
+    log.info("Done applying remote connector definitions");
   }
 
 }
