@@ -694,7 +694,10 @@
   "admin.downloadServerLogs": "Download Server Logs",
   "admin.downloadSchedulerLogs": "Download Scheduler Logs",
   "admin.upgradeAll": "Upgrade all",
-  "admin.upgraded": "Upgraded!",
+  "admin.upgradeAll.success": "All {type} upgraded successfully",
+  "admin.upgradeAll.error": "Error upgrading all {type}",
+  "admin.upgradeConnector.success": "Successfully upgraded {name} to version {version}",
+  "admin.upgradeConnector.error": "Error upgrading {name} to version {version}",
 
   "settings.userSettings": "User settings",
   "settings.workspaceSettings": "Workspace settings",

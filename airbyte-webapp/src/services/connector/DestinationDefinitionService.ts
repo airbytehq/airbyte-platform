@@ -5,6 +5,7 @@ import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
 import { DestinationDefinitionService } from "core/domain/connector/DestinationDefinitionService";
 import { isDefined } from "core/utils/common";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
@@ -109,6 +110,7 @@ export const useCreateDestinationDefinition = () => {
 export const useUpdateDestinationDefinition = () => {
   const service = useGetDestinationDefinitionService();
   const queryClient = useQueryClient();
+  const { trackError } = useAppMonitoringService();
 
   return useMutation<
     DestinationDefinitionRead,
@@ -134,6 +136,9 @@ export const useUpdateDestinationDefinition = () => {
       });
 
       queryClient.invalidateQueries(connectorDefinitionKeys.count());
+    },
+    onError: (error: Error) => {
+      trackError(error);
     },
   });
 };

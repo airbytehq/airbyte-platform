@@ -24,6 +24,7 @@ export interface MessageProps {
   "data-testid"?: string;
   hideIcon?: boolean;
   iconOverride?: keyof typeof ICON_MAPPING;
+  textClassName?: string;
 }
 
 const ICON_MAPPING = {
@@ -65,6 +66,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   childrenClassName,
   children,
   iconOverride,
+  textClassName,
 }) => {
   const mainMessage = (
     <div
@@ -81,7 +83,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
           />
         </div>
       )}
-      <div className={styles.textContainer}>
+      <div className={classNames(styles.textContainer, textClassName)}>
         {text && <span className={styles.text}>{text}</span>}
         {secondaryText && (
           <Text size="md" className={styles.secondaryText}>

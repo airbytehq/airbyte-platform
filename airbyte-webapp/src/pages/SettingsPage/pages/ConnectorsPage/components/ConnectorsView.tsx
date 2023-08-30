@@ -30,7 +30,6 @@ export interface ConnectorsViewProps {
   connectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
   updatingDefinitionId?: string;
   onUpdateVersion: (values: ConnectorVersionFormValues) => Promise<void>;
-  feedbackList: Record<string, string>;
   connectorBuilderProjects?: BuilderProject[];
 }
 
@@ -57,7 +56,6 @@ const columnHelper = createColumnHelper<ConnectorDefinition>();
 const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   type,
   onUpdateVersion,
-  feedbackList,
   usedConnectorsDefinitions,
   updatingDefinitionId,
   connectorsDefinitions,
@@ -161,9 +159,8 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
       setUpdatingAll: setUpdatingAllConnectors,
       updatingAll: updatingAllConnectors,
       updatingDefinitionId,
-      feedbackList,
     }),
-    [feedbackList, updatingDefinitionId, updatingAllConnectors]
+    [updatingDefinitionId, updatingAllConnectors]
   );
 
   const usedDefinitionColumns = useMemo(

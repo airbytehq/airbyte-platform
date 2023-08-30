@@ -38,3 +38,8 @@
     width: 0;
   }
 }
+
+.toastText {
+  max-height: 150px;
+  overflow-y: auto;
+}
