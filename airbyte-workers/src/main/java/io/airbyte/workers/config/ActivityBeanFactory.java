@@ -137,7 +137,7 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("discoveryActivityOptions")
   public ActivityOptions discoveryActivityOptions(@Property(name = "airbyte.activity.discovery-timeout",
-                                                            defaultValue = "5") final Integer discoveryTimeoutMinutes) {
+                                                            defaultValue = "30") final Integer discoveryTimeoutMinutes) {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
         .setRetryOptions(TemporalUtils.NO_RETRY)
