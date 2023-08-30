@@ -36,7 +36,7 @@ export const shouldDisplayBreakingChangeBanner = (actorDefinitionVersion: ActorD
 
   // This is important as it catches the case where a user has been explicitly pinned to a previous version
   // e.g. Prereleases, PbA Users etc..
-  const actorNotOverriden = actorDefinitionVersion.isActorDefaultVersion;
+  const actorNotOverriden = !actorDefinitionVersion.isOverrideApplied;
 
   return hasUpcomingBreakingChanges && actorNotOverriden;
 };

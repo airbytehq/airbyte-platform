@@ -4924,13 +4924,13 @@ components:
         - dockerRepository
         - dockerImageTag
         - supportState
-        - isActorDefaultVersion
+        - isOverrideApplied
       properties:
         dockerRepository:
           type: string
         dockerImageTag:
           type: string
-        isActorDefaultVersion:
+        isOverrideApplied:
           type: boolean
         supportState:
           $ref: "#/components/schemas/SupportState"
