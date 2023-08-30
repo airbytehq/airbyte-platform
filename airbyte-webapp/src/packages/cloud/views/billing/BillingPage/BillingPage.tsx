@@ -12,9 +12,7 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
-import LargeEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 
 import styles from "./BillingPage.module.scss";
 import { CreditsUsage } from "./components/CreditsUsage";
@@ -44,7 +42,6 @@ const StripePortalLink: React.FC = () => {
 };
 export const BillingPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CREDITS);
-  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   return (
     <MainPageWithScroll
@@ -62,7 +59,6 @@ export const BillingPage: React.FC = () => {
     >
       <FlexContainer direction="column" className={styles.content}>
         <RemainingCredits />
-        {fcpEnabled && <LargeEnrollmentCallout />}
         <React.Suspense
           fallback={
             <div className={styles.creditUsageLoading}>
