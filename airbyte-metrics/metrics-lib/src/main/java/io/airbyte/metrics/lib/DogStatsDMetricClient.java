@@ -82,7 +82,7 @@ public class DogStatsDMetricClient implements MetricClient {
         return;
       }
 
-      log.info("publishing count, name: {}, value: {}, attributes: {}", metric, amt, attributes);
+      log.debug("publishing count, name: {}, value: {}, attributes: {}", metric, amt, attributes);
       statsDClient.count(metric.getMetricName(), amt, toTags(attributes));
     }
   }

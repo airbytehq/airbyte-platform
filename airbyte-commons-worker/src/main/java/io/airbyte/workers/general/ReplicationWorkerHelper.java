@@ -246,7 +246,7 @@ class ReplicationWorkerHelper {
 
   @VisibleForTesting
   void internalProcessMessageFromDestination(final AirbyteMessage destinationRawMessage) {
-    LOGGER.info("State in ReplicationWorkerHelper from destination: {}", destinationRawMessage);
+    LOGGER.debug("State in ReplicationWorkerHelper from destination: {}", destinationRawMessage);
     final StreamDescriptor previousStream = currentDestinationStream;
     currentDestinationStream = airbyteMessageDataExtractor.extractStreamDescriptor(destinationRawMessage, previousStream);
     if (currentDestinationStream != null) {
