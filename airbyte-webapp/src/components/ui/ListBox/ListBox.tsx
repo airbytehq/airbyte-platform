@@ -2,6 +2,7 @@ import { Placement } from "@floating-ui/react-dom";
 import { Listbox } from "@headlessui/react";
 import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
+import isEqual from "lodash/isEqual";
 import React from "react";
 import { useIntl } from "react-intl";
 
@@ -88,7 +89,7 @@ export const ListBox = <T,>({
   adaptiveWidth = true,
   footerOption,
 }: ListBoxProps<T>) => {
-  const selectedOption = options.find((option) => option.value === selectedValue);
+  const selectedOption = options.find((option) => isEqual(option.value, selectedValue));
 
   const onOnSelect = (value: T) => {
     onSelect(value);
@@ -96,7 +97,7 @@ export const ListBox = <T,>({
 
   return (
     <div className={className} data-testid={testId}>
-      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled}>
+      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
         <Float
           adaptiveWidth={adaptiveWidth}
           placement={placement}
