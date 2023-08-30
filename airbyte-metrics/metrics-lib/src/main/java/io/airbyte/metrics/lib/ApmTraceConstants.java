@@ -80,6 +80,11 @@ public final class ApmTraceConstants {
     public static final String DOCKER_IMAGE_KEY = "docker_image";
 
     /**
+     * Name of the APM trace tag that holds the actual type of the error.
+     */
+    public static final String ERROR_ACTUAL_TYPE_KEY = "error.actual_type";
+
+    /**
      * Name of the APM trace tag that holds the failure origin(s) associated with the trace.
      */
     public static final String FAILURE_ORIGINS_KEY = "failure_origins";

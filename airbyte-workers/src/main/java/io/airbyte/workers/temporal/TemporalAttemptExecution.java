@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.temporal;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -12,11 +14,13 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -131,10 +135,19 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
       return worker.run(input, jobRoot);
 
     } catch (final Exception e) {
+      addActualRootCauseToTrace(e);
       throw Activity.wrap(e);
     } finally {
       mdcSetter.accept(null);
     }
+  }
+
+  private void addActualRootCauseToTrace(final Exception e) {
+    Throwable inner = e;
+    while (inner.getCause() != null) {
+      inner = inner.getCause();
+    }
+    ApmTraceUtils.addTagsToTrace(Map.of(ERROR_ACTUAL_TYPE_KEY, e.getClass().getName()));
   }
 
   private void saveWorkflowIdForCancellation(final AirbyteApiClient airbyteApiClient) throws ApiException {
