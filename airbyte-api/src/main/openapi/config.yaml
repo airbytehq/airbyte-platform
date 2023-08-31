@@ -7553,15 +7553,11 @@ components:
     InstanceConfigurationSetupRequestBody:
       type: object
       required:
-        - workspaceId
         - email
         - anonymousDataCollection
         - initialSetupComplete
         - displaySetupWizard
       properties:
-        workspaceId:
-          type: string
-          format: uuid
         email:
           type: string
         anonymousDataCollection:

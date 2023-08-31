@@ -18,9 +18,9 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
@@ -42,7 +42,7 @@ public class InstanceConfigurationHandler {
   private final AirbyteEdition airbyteEdition;
   private final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration;
   private final Optional<ActiveAirbyteLicense> activeAirbyteLicense;
-  private final ConfigRepository configRepository;
+  private final WorkspacePersistence workspacePersistence;
   private final WorkspacesHandler workspacesHandler;
   private final UserPersistence userPersistence;
   private final OrganizationPersistence organizationPersistence;
@@ -54,7 +54,7 @@ public class InstanceConfigurationHandler {
                                       final AirbyteEdition airbyteEdition,
                                       final Optional<AirbyteKeycloakConfiguration> airbyteKeycloakConfiguration,
                                       final Optional<ActiveAirbyteLicense> activeAirbyteLicense,
-                                      final ConfigRepository configRepository,
+                                      final WorkspacePersistence workspacePersistence,
                                       final WorkspacesHandler workspacesHandler,
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence) {
@@ -62,14 +62,15 @@ public class InstanceConfigurationHandler {
     this.airbyteEdition = airbyteEdition;
     this.airbyteKeycloakConfiguration = airbyteKeycloakConfiguration;
     this.activeAirbyteLicense = activeAirbyteLicense;
-    this.configRepository = configRepository;
+    this.workspacePersistence = workspacePersistence;
     this.workspacesHandler = workspacesHandler;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
   }
 
-  public InstanceConfigurationResponse getInstanceConfiguration() throws IOException, ConfigNotFoundException {
-    final StandardWorkspace defaultWorkspace = getDefaultWorkspace();
+  public InstanceConfigurationResponse getInstanceConfiguration() throws IOException {
+    final UUID defaultOrganizationId = getDefaultOrganizationId();
+    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganizationId);
 
     return new InstanceConfigurationResponse()
         .webappUrl(webappUrl)
@@ -78,12 +79,15 @@ public class InstanceConfigurationHandler {
         .auth(getAuthConfiguration())
         .initialSetupComplete(defaultWorkspace.getInitialSetupComplete())
         .defaultUserId(getDefaultUserId())
-        .defaultOrganizationId(getDefaultOrganizationId())
+        .defaultOrganizationId(defaultOrganizationId)
         .defaultWorkspaceId(defaultWorkspace.getWorkspaceId());
   }
 
   public InstanceConfigurationResponse setupInstanceConfiguration(final InstanceConfigurationSetupRequestBody requestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
+
+    final UUID defaultOrganizationId = getDefaultOrganizationId();
+    final StandardWorkspace defaultWorkspace = getDefaultWorkspace(defaultOrganizationId);
 
     // Update the default organization and user with the provided information
     updateDefaultOrganization(requestBody);
@@ -91,7 +95,7 @@ public class InstanceConfigurationHandler {
 
     // Update the underlying workspace to mark the initial setup as complete
     workspacesHandler.updateWorkspace(new WorkspaceUpdate()
-        .workspaceId(requestBody.getWorkspaceId())
+        .workspaceId(defaultWorkspace.getWorkspaceId())
         .email(requestBody.getEmail())
         .displaySetupWizard(requestBody.getDisplaySetupWizard())
         .anonymousDataCollection(requestBody.getAnonymousDataCollection())
@@ -136,7 +140,7 @@ public class InstanceConfigurationHandler {
     userPersistence.writeUser(defaultUser);
   }
 
-  private UUID getDefaultOrganizationId() throws IOException, ConfigNotFoundException {
+  private UUID getDefaultOrganizationId() throws IOException {
     return organizationPersistence.getDefaultOrganization()
         .orElseThrow(() -> new IllegalStateException("Default organization does not exist."))
         .getOrganizationId();
@@ -157,14 +161,12 @@ public class InstanceConfigurationHandler {
     organizationPersistence.updateOrganization(defaultOrganization);
   }
 
-  // Currently, the default workspace is simply the first workspace created by the bootloader. This is
-  // hacky, but
-  // historically, the first workspace is used to store instance-level preferences.
-  // TODO introduce a proper means of persisting instance-level preferences instead of using the first
-  // workspace as a proxy.
-  private StandardWorkspace getDefaultWorkspace() throws IOException {
-    return configRepository.listStandardWorkspaces(true).stream().findFirst()
-        .orElseThrow(() -> new IllegalStateException("Default workspace does not exist."));
+  // Historically, instance setup for an OSS installation of Airbyte was stored on the one and only
+  // workspace that was created for the instance. Now that OSS supports multiple workspaces, we
+  // use the default Organization ID to select a workspace to use for instance setup. This is a hack.
+  // TODO persist instance configuration to a separate resource, rather than using a workspace.
+  private StandardWorkspace getDefaultWorkspace(final UUID organizationId) throws IOException {
+    return workspacePersistence.getDefaultWorkspaceForOrganization(organizationId);
   }
 
 }

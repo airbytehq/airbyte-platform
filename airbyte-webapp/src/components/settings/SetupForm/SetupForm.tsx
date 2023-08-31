@@ -9,7 +9,6 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useSetupInstanceConfiguration } from "core/api";
 
@@ -44,13 +43,12 @@ const setupFormValidationSchema = yup.object().shape({
 });
 
 export const SetupForm: React.FC = () => {
-  const workspaceId = useCurrentWorkspaceId();
   const { formatMessage } = useIntl();
   const { mutateAsync: setUpInstance } = useSetupInstanceConfiguration();
   const config = useConfig();
 
   const onSubmit = async (values: SetupFormValues) => {
-    await setUpInstance({ ...values, workspaceId, initialSetupComplete: true, displaySetupWizard: false });
+    await setUpInstance({ ...values, initialSetupComplete: true, displaySetupWizard: false });
   };
 
   return (

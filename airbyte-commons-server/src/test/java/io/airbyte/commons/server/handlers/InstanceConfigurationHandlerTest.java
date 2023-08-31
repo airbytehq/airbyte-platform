@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,15 +25,15 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -52,7 +53,7 @@ class InstanceConfigurationHandlerTest {
   private static final String DEFAULT_USER_NAME = "Default User Name";
 
   @Mock
-  private ConfigRepository mConfigRepository;
+  private WorkspacePersistence mWorkspacePersistence;
   @Mock
   private UserPersistence mUserPersistence;
   @Mock
@@ -72,17 +73,6 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense.setLicense(new AirbyteLicense(LicenseType.PRO));
-
-    when(mUserPersistence.getDefaultUser()).thenReturn(
-        Optional.of(new User()
-            .withUserId(USER_ID)
-            .withName(DEFAULT_USER_NAME)));
-
-    when(mOrganizationPersistence.getDefaultOrganization()).thenReturn(
-        Optional.of(new Organization()
-            .withOrganizationId(ORGANIZATION_ID)
-            .withName(DEFAULT_ORG_NAME)
-            .withUserId(USER_ID)));
   }
 
   @ParameterizedTest
@@ -92,22 +82,16 @@ class InstanceConfigurationHandlerTest {
     "false, true",
     "false, false"
   })
-  void testGetInstanceConfiguration(final boolean isPro, final boolean isInitialSetupComplete)
-      throws IOException, ConfigNotFoundException {
-    when(mConfigRepository.listStandardWorkspaces(true)).thenReturn(
-        List.of(new StandardWorkspace()
-            .withWorkspaceId(WORKSPACE_ID)
-            .withInitialSetupComplete(isInitialSetupComplete)));
+  void testGetInstanceConfiguration(final boolean isPro, final boolean isInitialSetupComplete) throws IOException {
+    stubGetDefaultUser();
+    stubGetDefaultOrganization();
 
-    instanceConfigurationHandler = new InstanceConfigurationHandler(
-        WEBAPP_URL,
-        isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
-        isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
-        isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),
-        mConfigRepository,
-        mWorkspacesHandler,
-        mUserPersistence,
-        mOrganizationPersistence);
+    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
+        new StandardWorkspace()
+            .withWorkspaceId(WORKSPACE_ID)
+            .withInitialSetupComplete(isInitialSetupComplete));
+
+    instanceConfigurationHandler = getInstanceConfigurationHandler(isPro);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
         .edition(isPro ? EditionEnum.PRO : EditionEnum.COMMUNITY)
@@ -126,6 +110,25 @@ class InstanceConfigurationHandlerTest {
     assertEquals(expected, actual);
   }
 
+  @Test
+  void testSetupInstanceConfigurationAlreadySetup() throws IOException {
+    stubGetDefaultOrganization();
+
+    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
+        new StandardWorkspace()
+            .withWorkspaceId(WORKSPACE_ID)
+            .withInitialSetupComplete(true)); // already setup, should trigger an error
+
+    instanceConfigurationHandler = getInstanceConfigurationHandler(true);
+
+    assertThrows(IllegalStateException.class, () -> instanceConfigurationHandler.setupInstanceConfiguration(
+        new InstanceConfigurationSetupRequestBody()
+            .email("test@mail.com")
+            .displaySetupWizard(false)
+            .initialSetupComplete(false)
+            .anonymousDataCollection(false)));
+  }
+
   @ParameterizedTest
   @CsvSource({
     "true, true",
@@ -135,23 +138,20 @@ class InstanceConfigurationHandlerTest {
   })
   void testSetupInstanceConfiguration(final boolean userNamePresent, final boolean orgNamePresent)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    when(mConfigRepository.listStandardWorkspaces(true))
-        .thenReturn(List.of(new StandardWorkspace()
-            .withWorkspaceId(WORKSPACE_ID)
-            .withInitialSetupComplete(true))); // after the handler's update, the workspace should have initialSetupComplete: true when retrieved
 
-    instanceConfigurationHandler = new InstanceConfigurationHandler(
-        WEBAPP_URL,
-        AirbyteEdition.PRO,
-        Optional.of(keycloakConfiguration),
-        Optional.of(activeAirbyteLicense),
-        mConfigRepository,
-        mWorkspacesHandler,
-        mUserPersistence,
-        mOrganizationPersistence);
+    stubGetDefaultOrganization();
+    stubGetDefaultUser();
 
-    final String userName = userNamePresent ? "test user" : DEFAULT_USER_NAME;
-    final String orgName = orgNamePresent ? "test org" : DEFAULT_ORG_NAME;
+    // first time default workspace is fetched, initial setup complete is false.
+    // second time is after the workspace is updated, so initial setup complete is true.
+    when(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID))
+        .thenReturn(
+            new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(false))
+        .thenReturn(
+            new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(true));
+
+    instanceConfigurationHandler = getInstanceConfigurationHandler(true);
+
     final String email = "test@airbyte.com";
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
@@ -166,15 +166,25 @@ class InstanceConfigurationHandlerTest {
         .defaultOrganizationId(ORGANIZATION_ID)
         .defaultWorkspaceId(WORKSPACE_ID);
 
-    final InstanceConfigurationResponse actual = instanceConfigurationHandler.setupInstanceConfiguration(
-        new InstanceConfigurationSetupRequestBody()
-            .workspaceId(WORKSPACE_ID)
-            .email(email)
-            .initialSetupComplete(true)
-            .anonymousDataCollection(true)
-            .displaySetupWizard(true)
-            .userName(userName)
-            .organizationName(orgName));
+    final InstanceConfigurationSetupRequestBody requestBody = new InstanceConfigurationSetupRequestBody()
+        .email(email)
+        .displaySetupWizard(true)
+        .anonymousDataCollection(true)
+        .initialSetupComplete(true);
+
+    String expectedUserName = DEFAULT_USER_NAME;
+    if (userNamePresent) {
+      expectedUserName = "test user";
+      requestBody.setUserName(expectedUserName);
+    }
+
+    String expectedOrgName = DEFAULT_ORG_NAME;
+    if (orgNamePresent) {
+      expectedOrgName = "test org";
+      requestBody.setOrganizationName(expectedOrgName);
+    }
+
+    final InstanceConfigurationResponse actual = instanceConfigurationHandler.setupInstanceConfiguration(requestBody);
 
     assertEquals(expected, actual);
 
@@ -182,12 +192,12 @@ class InstanceConfigurationHandlerTest {
     verify(mUserPersistence).writeUser(eq(new User()
         .withUserId(USER_ID)
         .withEmail(email)
-        .withName(userName)));
+        .withName(expectedUserName)));
 
     // verify the organization was updated with the name from the request
     verify(mOrganizationPersistence).updateOrganization(eq(new Organization()
         .withOrganizationId(ORGANIZATION_ID)
-        .withName(orgName)
+        .withName(expectedOrgName)
         .withEmail(email)
         .withUserId(USER_ID)));
 
@@ -197,6 +207,33 @@ class InstanceConfigurationHandlerTest {
         .displaySetupWizard(true)
         .anonymousDataCollection(true)
         .initialSetupComplete(true)));
+  }
+
+  private void stubGetDefaultUser() throws IOException {
+    when(mUserPersistence.getDefaultUser()).thenReturn(
+        Optional.of(new User()
+            .withUserId(USER_ID)
+            .withName(DEFAULT_USER_NAME)));
+  }
+
+  private void stubGetDefaultOrganization() throws IOException {
+    when(mOrganizationPersistence.getDefaultOrganization()).thenReturn(
+        Optional.of(new Organization()
+            .withOrganizationId(ORGANIZATION_ID)
+            .withName(DEFAULT_ORG_NAME)
+            .withUserId(USER_ID)));
+  }
+
+  private InstanceConfigurationHandler getInstanceConfigurationHandler(final boolean isPro) {
+    return new InstanceConfigurationHandler(
+        WEBAPP_URL,
+        isPro ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        isPro ? Optional.of(keycloakConfiguration) : Optional.empty(),
+        isPro ? Optional.of(activeAirbyteLicense) : Optional.empty(),
+        mWorkspacePersistence,
+        mWorkspacesHandler,
+        mUserPersistence,
+        mOrganizationPersistence);
   }
 
 }

@@ -273,4 +273,33 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(workspace, workspaces.get(0));
   }
 
+  @Test
+  void testGetDefaultWorkspaceForOrganization() throws JsonValidationException, IOException {
+    final StandardWorkspace expectedWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspaceInOrganization1");
+
+    configRepository.writeStandardWorkspaceNoSecrets(expectedWorkspace);
+
+    final StandardWorkspace tombstonedWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("tombstonedWorkspace")
+        .withTombstone(true);
+
+    configRepository.writeStandardWorkspaceNoSecrets(tombstonedWorkspace);
+
+    final StandardWorkspace laterWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("laterWorkspace");
+
+    configRepository.writeStandardWorkspaceNoSecrets(laterWorkspace);
+
+    final StandardWorkspace actualWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(MockData.ORGANIZATION_ID_1);
+
+    assertEquals(expectedWorkspace, actualWorkspace);
+  }
+
 }

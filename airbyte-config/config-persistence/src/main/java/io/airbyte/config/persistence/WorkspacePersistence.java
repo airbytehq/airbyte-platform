@@ -49,28 +49,20 @@ public class WorkspacePersistence {
   }
 
   /**
-   * Find the workspace with the given ID and check if its organization ID is null. If so, update it.
-   * Otherwise, log a warning and do nothing.
+   * Fetch the oldest, non-tombstoned Workspace that belongs to the given Organization.
    */
-  public void setOrganizationIdIfNull(final UUID workspaceId, final UUID organizationId) throws IOException {
-    database.transaction(ctx -> {
-      final boolean isExistingWorkspace = ctx.fetchExists(ctx.selectFrom(WORKSPACE).where(WORKSPACE.ID.eq(workspaceId)));
-      if (isExistingWorkspace) {
-        final boolean isNullOrganizationId =
-            ctx.fetchExists(ctx.selectFrom(WORKSPACE).where(WORKSPACE.ID.eq(workspaceId)).and(WORKSPACE.ORGANIZATION_ID.isNull()));
-        if (isNullOrganizationId) {
-          ctx.update(WORKSPACE)
-              .set(WORKSPACE.ORGANIZATION_ID, organizationId)
-              .where(WORKSPACE.ID.eq(workspaceId))
-              .execute();
-        } else {
-          log.warn("Workspace with ID {} already has an organization ID set. Skipping update.", workspaceId);
-        }
-      } else {
-        log.warn("Workspace with ID {} does not exist. Skipping update.", workspaceId);
-      }
-      return null;
-    });
+  public StandardWorkspace getDefaultWorkspaceForOrganization(final UUID organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+        .and(WORKSPACE.TOMBSTONE.notEqual(true))
+        .orderBy(WORKSPACE.CREATED_AT.asc())
+        .limit(1)
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .findFirst()
+        .orElseThrow(() -> new RuntimeException("No workspace found for organization: " + organizationId));
   }
 
 }
