@@ -99,6 +99,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
                   <label
                     htmlFor={option.label}
                     key={option.value}
+                    data-testid={`radio-option.${option.value}`}
                     className={classNames(styles.tile, {
                       [styles["tile--selected"]]: option.value === currentlySelectedCondition,
                       [styles["tile--disabled"]]: disabled || formField.readOnly,

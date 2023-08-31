@@ -9,6 +9,7 @@ const pokemonNameInput = "input[name='connectionConfiguration.pokemon_name']";
 const schemaInput = "[data-testid='tag-input'] input";
 const destinationPathInput = "input[name='connectionConfiguration.destination_path']";
 const optionalFieldsButton = "button[data-testid='optional-fields']";
+const xminOption = "label[data-testid='radio-option.1']";
 
 export const selectServiceType = (type: string) => {
   // Make sure alpha connectors are visible in the grid, since they are hidden by default
@@ -71,4 +72,8 @@ export const removeSchema = (value = "Remove public") => {
 
 export const openOptionalFields = () => {
   cy.get(optionalFieldsButton).click();
+};
+
+export const selectXmin = () => {
+  cy.get(xminOption).click();
 };
