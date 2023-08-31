@@ -34,3 +34,14 @@
     line-height: inherit;
   }
 }
+
+// Have to use !important here to override the Input component style,
+// since we don't have access to the same classes here like .focused
+// to make a more specific selector
+.upgradeInput {
+  border-color: colors.$yellow-300 !important;
+
+  &:hover {
+    border-color: colors.$yellow-500 !important;
+  }
+}
