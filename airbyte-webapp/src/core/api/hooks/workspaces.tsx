@@ -14,7 +14,7 @@ import {
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
-import { WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
+import { WorkspaceRead, WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -125,9 +125,7 @@ export const useGetWorkspaceQuery = (workspaceId: string) => {
 
 export const useGetWorkspace = (
   workspaceId: string,
-  options?: {
-    staleTime: number;
-  }
+  options?: Parameters<typeof useSuspenseQuery<WorkspaceRead>>[2]
 ) => {
   const queryKey = getWorkspaceQueryKey(workspaceId);
   const queryFn = useGetWorkspaceQuery(workspaceId);

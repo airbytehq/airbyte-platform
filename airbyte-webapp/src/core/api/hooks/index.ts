@@ -12,6 +12,7 @@ export * from "./organizations";
 export * from "./security";
 export * from "./instanceConfiguration";
 export * from "./streams";
+export * from "./permissions";
 export * from "./upgradeConnectorVersion";
 export * from "./users";
 export * from "./workspaces";

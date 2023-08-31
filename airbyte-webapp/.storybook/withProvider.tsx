@@ -1,4 +1,5 @@
 import React from "react";
+import { Decorator } from "@storybook/react";
 
 import { MemoryRouter } from "react-router-dom";
 import { IntlProvider } from "react-intl";
@@ -32,7 +33,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export const withProviders = (getStory) => (
+export const withProviders = (getStory: Parameters<Decorator>[0]) => (
   <React.Suspense fallback={null}>
     <AirbyteThemeProvider>
       <analyticsServiceContext.Provider value={analyticsContextMock}>
