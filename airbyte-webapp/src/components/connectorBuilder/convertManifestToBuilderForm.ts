@@ -45,6 +45,7 @@ import {
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   extractInterpolatedConfigKey,
+  getInferredAuthValue,
   hasIncrementalSyncUserInput,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   incrementalSyncInferredInputs,
@@ -691,7 +692,7 @@ function manifestAuthenticatorToBuilder(
   for (const userInputAuthKey of userInputAuthKeys) {
     if (
       !inferredInputs[userInputAuthKey].as_config_path &&
-      !isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))
+      !isInterpolatedConfigKey(getInferredAuthValue(builderAuthenticator, userInputAuthKey))
     ) {
       throw new ManifestCompatibilityError(
         undefined,

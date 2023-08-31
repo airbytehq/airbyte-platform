@@ -213,6 +213,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
           // set jsonManifest first so that a save isn't triggered
           setJsonManifest(convertedManifest);
+          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
           setValue("formValues", convertedFormValues, { shouldValidate: true });
           setValue("mode", "ui");
         } catch (e) {
@@ -240,6 +241,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       analyticsService,
       closeConfirmationModal,
       convertToBuilderFormValues,
+      currentProject.name,
       jsonManifest,
       openConfirmationModal,
       projectId,
@@ -449,7 +451,7 @@ export function useInitializedBuilderProject() {
       return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(resolvedManifest)];
     } catch (e) {
       // could not convert to form values, use default form values
-      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(DEFAULT_JSON_MANIFEST_VALUES)];
+      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(resolvedManifest)];
     }
   }, [builderProject.declarativeManifest?.manifest, resolvedManifest]);
 
