@@ -10,15 +10,12 @@ import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
-import { ConnectorIds } from "area/connector/utils";
 import { FormConditionItem } from "core/form/types";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConditionSection.module.scss";
 import { FormSection } from "./FormSection";
 import { GroupLabel } from "./GroupLabel";
 import { SectionContainer } from "./SectionContainer";
-import { useConnectorForm } from "../../connectorFormContext";
 import { setDefaultValues } from "../../useBuildForm";
 
 interface ConditionSectionProps {
@@ -33,15 +30,6 @@ interface ConditionSectionProps {
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
   const { setValue, clearErrors } = useFormContext();
   const value = useWatch({ name: path });
-
-  const { selectedConnectorDefinition } = useConnectorForm();
-
-  const showRadioButtonCards =
-    useExperiment("connector.updateMethodSelection", true) &&
-    selectedConnectorDefinition &&
-    "sourceDefinitionId" in selectedConnectorDefinition &&
-    selectedConnectorDefinition.sourceDefinitionId === ConnectorIds.Sources.MySql &&
-    path === "connectionConfiguration.replication_method";
 
   const { conditions, selectionConstValues } = formField;
   const currentSelectionValue = useWatch({ name: `${path}.${formField.selectionKey}` });
@@ -89,7 +77,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
         key={`form-field-group-${formField.fieldKey}`}
         label={<GroupLabel formField={formField} />}
         control={
-          showRadioButtonCards ? undefined : (
+          formField.display_type === "radio" ? undefined : (
             <DropDown
               options={options}
               onChange={onOptionChange}
@@ -105,7 +93,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
         {/* currentlySelectedCondition is only falsy if a malformed config is loaded which doesn't have a valid value for the const selection key. In this case, render the selection group as empty. */}
         {typeof currentlySelectedCondition !== "undefined" && (
           <>
-            {showRadioButtonCards && (
+            {formField.display_type === "radio" && (
               <FlexContainer direction="column">
                 {options.map((option) => (
                   <label

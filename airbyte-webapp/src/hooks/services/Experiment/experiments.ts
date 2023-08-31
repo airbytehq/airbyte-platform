@@ -29,7 +29,6 @@ export interface Experiments {
   "connector.showRequestSchemabutton": boolean;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
-  "connector.updateMethodSelection": boolean;
   "onboarding.speedyConnection": boolean;
   "settings.emailNotifications": boolean;
   "upcomingFeaturesPage.url": string;

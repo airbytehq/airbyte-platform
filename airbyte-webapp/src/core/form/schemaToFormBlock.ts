@@ -168,6 +168,7 @@ const defaultFields = [
   "always_show",
   "pattern_descriptor",
   "group",
+  "display_type",
 ] as const;
 
 const pickDefaultFields = (schema: AirbyteJSONSchema) => {
