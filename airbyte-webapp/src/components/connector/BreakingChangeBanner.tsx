@@ -43,6 +43,7 @@ export const BreakingChangeBanner = ({
   const { mutateAsync: upgradeVersion } = useUpgradeConnectorVersion(connectorType, connectorId, connectorDefinitionId);
   const { registerNotification } = useNotificationService();
   const connectorBreakingChangeDeadlines = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
+  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
 
   const supportState = actorDefinitionVersion.supportState;
 
@@ -95,15 +96,15 @@ export const BreakingChangeBanner = ({
         openConfirmationModal({
           title: `connector.breakingChange.upgradeModal.title.${connectorType}`,
           text:
-            connections.length === 0
-              ? "connector.breakingChange.upgradeModal.areYouSure"
-              : "connector.breakingChange.upgradeModal.text",
+            connections.length > 0
+              ? "connector.breakingChange.upgradeModal.text"
+              : "connector.breakingChange.upgradeModal.textNoConnections",
           textValues: { name: connectorName, count: connections.length, type: connectorType },
           submitButtonText: "connector.breakingChange.upgradeModal.confirm",
           submitButtonVariant: "primary",
-          additionalContent:
-            connections.length > 0 ? (
-              <FlexContainer direction="column" className={styles.additionalContent}>
+          additionalContent: (
+            <FlexContainer direction="column" className={styles.additionalContent}>
+              {connections.length > 0 && (
                 <FlexItem className={styles.connectionsContainer}>
                   <ul className={styles.connectionsList}>
                     {connections.slice(0, MAX_CONNECTION_NAMES).map((connection, idx) => (
@@ -133,12 +134,20 @@ export const BreakingChangeBanner = ({
                     </Button>
                   )}
                 </FlexItem>
+              )}
+              <span>
+                {!allowUpdateConnectors && (
+                  <>
+                    <FormattedMessage id="connector.breakingChange.upgradeModal.irreversible" />{" "}
+                  </>
+                )}
                 <FormattedMessage
                   id="connector.breakingChange.upgradeModal.areYouSure"
                   values={{ type: connectorType }}
                 />
-              </FlexContainer>
-            ) : undefined,
+              </span>
+            </FlexContainer>
+          ),
           onSubmit: handleSubmitUpgrade,
         });
       }}

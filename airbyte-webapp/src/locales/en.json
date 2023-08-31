@@ -828,6 +828,8 @@
   "connector.breakingChange.upgradeModal.title.destination": "Confirm destination upgrade",
   "connector.breakingChange.upgradeModal.confirm": "Confirm upgrade",
   "connector.breakingChange.upgradeModal.text": "<b>{name}</b> is used in {count, plural, one {# connection} other {# connections}}. Upgrading this {type} will affect all associated connections:",
+  "connector.breakingChange.upgradeModal.textNoConnections": "<b>{name}</b> is used in no connections.",
+  "connector.breakingChange.upgradeModal.irreversible": "<b>Upgrading is an irreversible action.</b>",
   "connector.breakingChange.upgradeModal.areYouSure": "Are you sure you want to upgrade this {type}?",
   "connector.breakingChange.upgradeModal.moreConnections": "+ {count} more connections",
   "connector.breakingChange.upgradeToast.success": "{type} upgraded successfully. See this <a>guide</a> for any remaining actions.",
