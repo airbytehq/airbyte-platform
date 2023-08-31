@@ -9,9 +9,9 @@ import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area
 import { isDbtTransformation, isNormalizationTransformation, isWebhookTransformation } from "area/connection/utils";
 import { ConnectionValues, useCurrentWorkspace } from "core/api";
 import {
+  ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
-  DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
   DestinationSyncMode,
   Geography,
@@ -315,7 +315,7 @@ export const getInitialNormalization = (
 
 export const useInitialValues = (
   connection: ConnectionOrPartialConnection,
-  destDefinition: DestinationDefinitionRead,
+  destDefinitionVersion: ActorDefinitionVersionRead,
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isNotCreateMode?: boolean
 ): FormikConnectionFormValues => {
@@ -382,11 +382,11 @@ export const useInitialValues = (
 
     const operations = connection.operations ?? [];
 
-    if (destDefinition.supportsDbt) {
+    if (destDefinitionVersion.supportsDbt) {
       initialValues.transformations = getInitialTransformations(operations);
     }
 
-    if (destDefinition.normalizationConfig?.supported) {
+    if (destDefinitionVersion.normalizationConfig?.supported) {
       initialValues.normalization = getInitialNormalization(operations, isNotCreateMode);
     }
 
@@ -405,8 +405,8 @@ export const useInitialValues = (
     connection.scheduleType,
     connection.source.name,
     defaultNonBreakingChangesPreference,
-    destDefinition.supportsDbt,
-    destDefinition.normalizationConfig,
+    destDefinitionVersion.supportsDbt,
+    destDefinitionVersion.normalizationConfig,
     initialSchema,
     isNotCreateMode,
     workspace,

@@ -5,6 +5,7 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
@@ -36,6 +37,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 describe("ConnectionFormService", () => {

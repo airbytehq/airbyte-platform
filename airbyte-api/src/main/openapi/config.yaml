@@ -4923,6 +4923,8 @@ components:
       required:
         - dockerRepository
         - dockerImageTag
+        - supportsDbt
+        - normalizationConfig
         - supportState
         - isOverrideApplied
       properties:
@@ -4930,6 +4932,10 @@ components:
           type: string
         dockerImageTag:
           type: string
+        supportsDbt:
+          type: boolean
+        normalizationConfig:
+          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         isOverrideApplied:
           type: boolean
         supportState:
@@ -6699,7 +6705,7 @@ components:
         actorType:
           $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
-      description: describes a normalization config for destination definition
+      description: describes a normalization config for destination definition version
       type: object
       required:
         - supported

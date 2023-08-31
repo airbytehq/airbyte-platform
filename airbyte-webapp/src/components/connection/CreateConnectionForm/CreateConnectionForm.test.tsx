@@ -8,6 +8,7 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
@@ -42,6 +43,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
   useInvalidateWorkspaceStateQuery: () => () => null,
   useCreateConnection: () => async () => null,
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({

@@ -15,11 +15,13 @@ import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
+import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -70,6 +72,15 @@ class ActorDefinitionVersionHandlerTest {
         .withDocumentationUrl("https://docs.airbyte.io");
   }
 
+  private ActorDefinitionVersion createActorDefinitionVersionWithNormalization() {
+    return createActorDefinitionVersion()
+        .withSupportsDbt(true)
+        .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
+            .withNormalizationRepository("repository")
+            .withNormalizationTag("dev")
+            .withNormalizationIntegrationType("integration-type"));
+  }
+
   @ParameterizedTest
   @CsvSource({"true", "false"})
   void testGetActorDefinitionVersionForSource(final boolean isOverrideApplied)
@@ -94,7 +105,9 @@ class ActorDefinitionVersionHandlerTest {
         .isOverrideApplied(isOverrideApplied)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(false)
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mConfigRepository).getSourceConnection(sourceId);
@@ -129,7 +142,46 @@ class ActorDefinitionVersionHandlerTest {
         .isOverrideApplied(isOverrideApplied)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag());
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(false)
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null));
+
+    assertEquals(expectedRead, actorDefinitionVersionRead);
+    verify(mConfigRepository).getDestinationConnection(destinationId);
+    verify(mConfigRepository).getDestinationDefinitionFromDestination(destinationId);
+    verify(mActorDefinitionVersionHelper).getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId);
+    verify(mConfigRepository).listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
+    verifyNoMoreInteractions(mConfigRepository);
+    verifyNoMoreInteractions(mActorDefinitionVersionHelper);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"true", "false"})
+  void testGetActorDefinitionVersionForDestinationWithNormalization(final boolean isOverrideApplied)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID destinationId = UUID.randomUUID();
+    final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionVersionWithNormalization();
+    final DestinationConnection destinationConnection = new DestinationConnection()
+        .withDestinationId(destinationId)
+        .withWorkspaceId(WORKSPACE_ID);
+
+    when(mConfigRepository.getDestinationConnection(destinationId))
+        .thenReturn(destinationConnection);
+    when(mConfigRepository.getDestinationDefinitionFromDestination(destinationId))
+        .thenReturn(DESTINATION_DEFINITION);
+    when(mActorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId))
+        .thenReturn(new ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isOverrideApplied));
+
+    final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(destinationId);
+    final ActorDefinitionVersionRead actorDefinitionVersionRead =
+        actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(destinationIdRequestBody);
+    final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
+        .isOverrideApplied(isOverrideApplied)
+        .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
+        .dockerRepository(actorDefinitionVersion.getDockerRepository())
+        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(actorDefinitionVersion.getSupportsDbt())
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()));
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mConfigRepository).getDestinationConnection(destinationId);
@@ -169,6 +221,8 @@ class ActorDefinitionVersionHandlerTest {
         .supportState(io.airbyte.api.model.generated.SupportState.DEPRECATED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(false)
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(null))
         .breakingChanges(new ActorDefinitionVersionBreakingChanges()
             .minUpgradeDeadline(LocalDate.parse("2023-01-01"))
             .upcomingBreakingChanges(List.of(

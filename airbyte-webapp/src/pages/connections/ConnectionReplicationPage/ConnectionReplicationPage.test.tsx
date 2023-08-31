@@ -10,6 +10,7 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
@@ -55,6 +56,7 @@ jest.mock("core/api", () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,
   }),
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({

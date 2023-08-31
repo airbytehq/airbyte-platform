@@ -16,12 +16,13 @@ import { DbtCloudTransformations } from "./DbtCloudTransformations";
 import { NormalizationForm } from "./NormalizationForm";
 
 export const ConnectionTransformationPage: React.FC = () => {
-  const { destDefinition } = useConnectionFormService();
+  const { destDefinitionVersion } = useConnectionFormService();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_TRANSFORMATION);
-  const supportsNormalization = destDefinition.normalizationConfig.supported;
-  const supportsDbt = useFeature(FeatureItem.AllowCustomDBT) && destDefinition.supportsDbt;
-  const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration) && destDefinition.supportsDbt;
+  const supportsNormalization = destDefinitionVersion.normalizationConfig.supported;
+  const supportsDbt = useFeature(FeatureItem.AllowCustomDBT) && destDefinitionVersion.supportsDbt;
+  const supportsCloudDbtIntegration =
+    useFeature(FeatureItem.AllowDBTCloudIntegration) && destDefinitionVersion.supportsDbt;
   const noSupportedTransformations = !supportsNormalization && !supportsDbt && !supportsCloudDbtIntegration;
 
   return (

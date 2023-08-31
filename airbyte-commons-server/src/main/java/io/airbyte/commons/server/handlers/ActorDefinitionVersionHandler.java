@@ -28,6 +28,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ActorDefinitionVersionHandler. Javadocs suppressed because api docs should be used as source of
@@ -83,6 +84,8 @@ public class ActorDefinitionVersionHandler {
     final ActorDefinitionVersionRead advRead = new ActorDefinitionVersionRead()
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
         .isOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 

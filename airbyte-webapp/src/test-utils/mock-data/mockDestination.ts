@@ -1,5 +1,10 @@
 import { ConnectorIds } from "area/connector/utils";
-import { DestinationDefinitionSpecificationRead, DestinationDefinitionRead } from "core/request/AirbyteClient";
+import {
+  DestinationDefinitionSpecificationRead,
+  DestinationDefinitionRead,
+  ActorDefinitionVersionRead,
+  SupportState,
+} from "core/request/AirbyteClient";
 
 export const mockDestinationDefinition: DestinationDefinitionRead = {
   destinationDefinitionId: ConnectorIds.Destinations.Postgres,
@@ -16,6 +21,20 @@ export const mockDestinationDefinition: DestinationDefinitionRead = {
     normalizationTag: "0.2.25",
     normalizationIntegrationType: "postgres",
   },
+};
+
+export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {
+  dockerRepository: "airbyte/destination-postgres",
+  dockerImageTag: "0.3.26",
+  supportsDbt: true,
+  normalizationConfig: {
+    supported: true,
+    normalizationRepository: "airbyte/normalization",
+    normalizationTag: "0.2.25",
+    normalizationIntegrationType: "postgres",
+  },
+  isOverrideApplied: false,
+  supportState: SupportState.supported,
 };
 
 export const mockDestinationDefinitionSpecification: DestinationDefinitionSpecificationRead = {

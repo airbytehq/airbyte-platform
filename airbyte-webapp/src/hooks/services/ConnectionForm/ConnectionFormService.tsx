@@ -10,8 +10,9 @@ import {
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
 
-import { ConnectionValues } from "core/api";
+import { ConnectionValues, useDestinationDefinitionVersion } from "core/api";
 import {
+  ActorDefinitionVersionRead,
   ConnectionScheduleType,
   DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
@@ -68,6 +69,7 @@ interface ConnectionFormHook {
   sourceDefinition: SourceDefinitionRead;
   sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
   destDefinition: DestinationDefinitionRead;
+  destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
   initialValues: FormikConnectionFormValues;
   schemaError?: SchemaError;
@@ -88,18 +90,24 @@ const useConnectionForm = ({
 }: ConnectionServiceProps): ConnectionFormHook => {
   const {
     source: { sourceDefinitionId },
-    destination: { destinationDefinitionId },
+    destination: { destinationId, destinationDefinitionId },
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
+  const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
   const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
     destinationDefinitionId,
     connection.destinationId
   );
 
-  const initialValues = useInitialValues(connection, destDefinition, destDefinitionSpecification, mode !== "create");
+  const initialValues = useInitialValues(
+    connection,
+    destDefinitionVersion,
+    destDefinitionSpecification,
+    mode !== "create"
+  );
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
   const formId = useUniqueFormId();
@@ -131,6 +139,7 @@ const useConnectionForm = ({
     sourceDefinition,
     sourceDefinitionSpecification,
     destDefinition,
+    destDefinitionVersion,
     destDefinitionSpecification,
     initialValues,
     schemaError,

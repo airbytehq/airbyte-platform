@@ -21,7 +21,7 @@ import { TransformationFieldHookForm } from "./TransformationFieldHookForm";
 export const OperationsSectionHookForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const {
-    destDefinition: { normalizationConfig, supportsDbt },
+    destDefinitionVersion: { normalizationConfig, supportsDbt },
   } = useConnectionFormService();
 
   const supportsNormalization = normalizationConfig.supported;
