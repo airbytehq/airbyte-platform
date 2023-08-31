@@ -52,7 +52,7 @@ export const useCreateWorkspace = () => {
   });
 };
 
-export const useDeleteCurrentWorkspace = () => {
+export const useDeleteWorkspace = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
