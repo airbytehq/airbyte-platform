@@ -3,8 +3,6 @@ const { promisify } = require("util");
 
 const checker = require("license-checker");
 
-const { version } = require("../package.json");
-
 /**
  * A list of all the allowed licenses that production dependencies can have.
  */
@@ -52,7 +50,7 @@ const ALLOWED_DEV_LICENSES = [...ALLOWED_LICENSES, "ODC-By-1.0", "MPL-2.0"];
 /**
  * A list of all packages that should be excluded from license checking.
  */
-const IGNORED_PACKAGES = [`airbyte-webapp@${version}`];
+const IGNORED_PACKAGES = [];
 
 /**
  * Overwrite licenses for specific packages manually, e.g. because they can't be detected properly.
@@ -71,6 +69,10 @@ const params = {
 function validateLicenes(licenses, allowedLicenes, usedOverwrites) {
   let licensesValid = true;
   for (const [pkg, info] of Object.entries(licenses)) {
+    if (pkg.startsWith("airbyte-webapp@")) {
+      // Skip our project itself
+      continue;
+    }
     let license = Array.isArray(info.licenses) ? `(${info.licenses.join(" OR ")})` : info.licenses;
     if (LICENSE_OVERWRITES[pkg]) {
       license = LICENSE_OVERWRITES[pkg];
