@@ -24,7 +24,10 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
     <>
       {selectedOption ? (
         <Text as="span" size="lg" className={classNames({ [styles.disabledText]: isDisabled })}>
-          {selectedOption.label}
+          <FlexContainer as="span" alignItems="center">
+            {selectedOption.icon && <FlexItem className={styles.icon}>{selectedOption.icon}</FlexItem>}
+            {selectedOption.label}
+          </FlexContainer>
         </Text>
       ) : (
         <Text as="span" size="lg" color="grey">
