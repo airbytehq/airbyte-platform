@@ -9,6 +9,7 @@ import io.airbyte.airbyte_api.generated.DestinationsApi
 import io.airbyte.airbyte_api.model.generated.DestinationCreateRequest
 import io.airbyte.airbyte_api.model.generated.DestinationPatchRequest
 import io.airbyte.airbyte_api.model.generated.DestinationPutRequest
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.DESTINATIONS_PATH
 import io.airbyte.api.server.constants.DESTINATIONS_WITH_ID_PATH
@@ -17,7 +18,6 @@ import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.PATCH
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getIdFromName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeDestinationType

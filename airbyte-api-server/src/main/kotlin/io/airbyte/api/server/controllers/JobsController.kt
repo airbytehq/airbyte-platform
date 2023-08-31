@@ -11,13 +11,13 @@ import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.JOBS_PATH
 import io.airbyte.api.server.constants.JOBS_WITH_ID_PATH
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.filters.JobsFilter
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.BadRequestProblem
 import io.airbyte.api.server.problems.UnprocessableEntityProblem

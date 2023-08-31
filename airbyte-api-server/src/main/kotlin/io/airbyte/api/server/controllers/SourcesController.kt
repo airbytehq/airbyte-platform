@@ -10,6 +10,7 @@ import io.airbyte.airbyte_api.model.generated.InitiateOauthRequest
 import io.airbyte.airbyte_api.model.generated.SourceCreateRequest
 import io.airbyte.airbyte_api.model.generated.SourcePatchRequest
 import io.airbyte.airbyte_api.model.generated.SourcePutRequest
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.PATCH
@@ -18,7 +19,6 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getIdFromName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode

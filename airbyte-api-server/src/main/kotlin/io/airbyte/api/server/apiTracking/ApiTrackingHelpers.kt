@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
-package io.airbyte.api.server.helpers
+package io.airbyte.api.server.apiTracking
 
 import io.airbyte.analytics.Deployment
 import io.airbyte.analytics.TrackingClientSingleton
@@ -31,13 +31,19 @@ private val USER_ID = "user_id"
 private val ENDPOINT = "endpoint"
 private val OPERATION = "operation"
 private val STATUS_CODE = "status_code"
-private val API_VERSION = "api_version"
 private val WORKSPACE = "workspace"
 
 fun setupTrackingClient(
-  airbyteVersion: AirbyteVersion?,
-  trackingStrategy: Configs.TrackingStrategy?,
+  airbyteVersion: AirbyteVersion,
+  deploymentMode: Configs.DeploymentMode,
+  trackingStrategy: Configs.TrackingStrategy,
+  workerEnvironment: Configs.WorkerEnvironment,
 ) {
+  log.debug("deployment mode: $deploymentMode")
+  log.debug("airbyte version: $airbyteVersion")
+  log.debug("tracking strategy: $trackingStrategy")
+  log.debug("worker environment: $workerEnvironment")
+
   // fake a deployment UUID until we want to have the public api server talking to the database
   // directly
   val deploymentId = UUID.randomUUID()
@@ -45,9 +51,9 @@ fun setupTrackingClient(
   TrackingClientSingleton.initializeWithoutDatabase(
     trackingStrategy,
     Deployment(
-      Configs.DeploymentMode.OSS,
+      deploymentMode,
       deploymentId,
-      Configs.WorkerEnvironment.KUBERNETES,
+      workerEnvironment,
     ),
     airbyteVersion,
   )
@@ -58,7 +64,6 @@ fun track(
   endpointPath: String?,
   httpOperation: String?,
   httpStatusCode: Int,
-  apiVersion: String?,
   workspaceId: Optional<UUID>,
 ) {
   val payload = mutableMapOf(
@@ -66,7 +71,6 @@ fun track(
     Pair(ENDPOINT, endpointPath),
     Pair(OPERATION, httpOperation),
     Pair(STATUS_CODE, httpStatusCode),
-    Pair(API_VERSION, apiVersion),
   )
   if (workspaceId.isPresent) {
     payload[WORKSPACE] = workspaceId.get().toString()

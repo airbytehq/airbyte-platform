@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.server.helpers
+package io.airbyte.api.server.apiTracking
 
 import io.micronaut.http.HttpStatus
 import org.zalando.problem.AbstractThrowableProblem
@@ -16,7 +16,6 @@ import javax.ws.rs.core.Response
  * Todo: This should be a middleware through a micronaut annotation so that we do not need to add this wrapper functions around all our calls.
  */
 object TrackingHelper {
-  private val API_VERSION = System.getenv("AIRBYTE_VERSION") ?: "unknown"
   private fun trackSuccess(endpointPath: String, httpOperation: String, userId: UUID, workspaceId: Optional<UUID>) {
     val statusCode = Response.Status.OK.statusCode
     track(
@@ -24,7 +23,6 @@ object TrackingHelper {
       endpointPath,
       httpOperation,
       statusCode,
-      API_VERSION,
       workspaceId,
     )
   }
@@ -62,7 +60,6 @@ object TrackingHelper {
         endpointPath,
         httpOperation,
         statusCode,
-        API_VERSION,
         Optional.empty(),
       )
     }
