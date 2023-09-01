@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
+
+import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
@@ -136,6 +139,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.processFromDestStopwatch = new Stopwatch();
   }
 
+  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
@@ -145,7 +149,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       final ReplicationContext replicationContext = getReplicationContext(syncInput);
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
-      replicationWorkerHelper.initialize(replicationContext, flags);
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
       // note: resources are closed in the opposite order in which they are declared. thus source will be
       // closed first (which is what we want).

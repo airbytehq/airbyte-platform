@@ -168,7 +168,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
           podName,
           mainContainerInfo);
 
-      ApmTraceUtils.addTagsToTrace(connectionId, jobRunConfig.getJobId(), jobRoot);
+      ApmTraceUtils.addTagsToTrace(connectionId, jobRunConfig.getAttemptId(), jobRunConfig.getJobId(), jobRoot);
 
       final String schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler.INSTANCE, new Connection(connectionId));
 

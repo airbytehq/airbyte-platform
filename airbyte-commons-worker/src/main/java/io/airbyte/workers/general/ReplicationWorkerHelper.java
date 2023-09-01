@@ -21,6 +21,7 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -122,11 +123,13 @@ class ReplicationWorkerHelper {
     hasFailed.set(true);
   }
 
-  public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags) {
+  public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags, final Path jobRoot) {
     this.replicationContext = replicationContext;
     this.replicationFeatureFlags = replicationFeatureFlags;
     this.timeTracker.trackReplicationStartTime();
     this.metricAttrs = toConnectionAttrs(replicationContext);
+    ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), replicationContext.attempt().longValue(),
+        replicationContext.jobId().toString(), jobRoot);
   }
 
   public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {

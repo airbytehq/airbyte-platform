@@ -146,10 +146,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
               syncInput.getDestinationId(), Long.parseLong(jobId),
               attempt, syncInput.getWorkspaceId());
-      ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
-      replicationWorkerHelper.initialize(replicationContext, flags);
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
       replicate(jobRoot, syncInput);
 
