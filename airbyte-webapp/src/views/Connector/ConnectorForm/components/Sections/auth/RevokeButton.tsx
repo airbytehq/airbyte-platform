@@ -11,11 +11,15 @@ import { useFormOauthRevocationAdapter } from "./useOauthRevocationAdapter";
 import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 
-export const RevokeButton: React.FC<{
+interface RevokeButtonProps {
+  sourceId: string;
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
-}> = ({ selectedConnectorDefinitionSpecification }) => {
+}
+
+export const RevokeButton: React.FC<RevokeButtonProps> = ({ sourceId, selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
   const { loading, run } = useFormOauthRevocationAdapter(
+    sourceId,
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition
   );

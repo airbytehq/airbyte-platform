@@ -6,8 +6,8 @@ import selectEvent from "react-select-event";
 
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
+import { useCompleteOAuth } from "core/api";
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
 import { FeatureItem } from "core/services/features";
@@ -23,16 +23,12 @@ jest.mock("../../../hooks/services/useDestinationHook", () => ({
   useDestinationList: () => ({ destinations: [] }),
 }));
 
-jest.mock("../../../core/domain/connector/SourceAuthService", () => ({
-  SourceAuthService: class SourceAuthService {
-    public static mockedPayload: Record<string, unknown> = {};
-    getConsentUrl() {
-      return { consentUrl: "http://example.org" };
-    }
-    completeOauth() {
-      return Promise.resolve(SourceAuthService.mockedPayload);
-    }
-  },
+jest.mock("core/api", () => ({
+  useConsentUrls: () => ({ getSourceConsentUrl: () => "http://example.com" }),
+  useCompleteOAuth: jest.fn(() => ({
+    completeSourceOAuth: () => Promise.resolve({}),
+    completeDestinationOAuth: () => Promise.resolve({}),
+  })),
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
@@ -1024,12 +1020,16 @@ describe("Connector form", () => {
 
     it("should insert values correctly and submit them", async () => {
       const container = await renderNewOAuthForm();
-      (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
-        request_succeeded: true,
-        auth_payload: {
-          access_token: "mytoken",
-        },
-      };
+      (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
+        completeDestinationOAuth: jest.fn(),
+        completeSourceOAuth: () =>
+          Promise.resolve({
+            request_succeeded: true,
+            auth_payload: {
+              access_token: "mytoken",
+            },
+          }),
+      });
 
       await executeOAuthFlow(container);
 
