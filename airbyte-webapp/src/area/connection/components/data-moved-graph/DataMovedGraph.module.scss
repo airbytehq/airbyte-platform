@@ -1,0 +1,15 @@
+@use "scss/colors";
+
+.tooltipWrapper {
+  background-color: colors.$foreground !important;
+  color: colors.$dark-blue span {
+    color: colors.$dark-blue;
+  }
+}
+
+:export {
+  graphColor: colors.$grey-100;
+  chartHoverFill: colors.$grey-50;
+  tooltipLabelColor: colors.$dark-blue;
+  tooltipItemColor: colors.$grey-700;
+}

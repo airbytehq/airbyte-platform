@@ -21,6 +21,7 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
   "connection.streamCentricUI.v2": boolean;
+  "connection.streamCentricUI.historicalOverview": boolean;
   "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "connector.airbyteCloudIpAddresses": string;
   "connector.allowlistIpBanner": boolean;

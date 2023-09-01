@@ -4,7 +4,9 @@ import { ConnectionSyncButtons } from "components/connection/ConnectionSync/Conn
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { HistoricalOverview } from "area/connection/components";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionStatusOverview } from "./ConnectionStatusOverview";
 import { ErrorMessage } from "./ErrorMessage";
@@ -16,6 +18,8 @@ export const ConnectionStatusCard: React.FC = () => {
   } = connection;
   const streamCount = streams.reduce((count, stream) => count + (stream.config?.selected ? 1 : 0), 0);
 
+  const showHistoricalOverview = useExperiment("connection.streamCentricUI.historicalOverview", false);
+
   return (
     <Card
       title={
@@ -26,6 +30,7 @@ export const ConnectionStatusCard: React.FC = () => {
       }
     >
       <ErrorMessage />
+      {showHistoricalOverview && <HistoricalOverview />}
     </Card>
   );
 };
