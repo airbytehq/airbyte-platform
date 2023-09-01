@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
@@ -30,6 +30,8 @@ const DestinationsPage: React.FC = () => {
       }, new Map<string, DestinationDefinitionRead>()),
     [destinationDefinitions]
   );
+  const definitionMap = useRef(idToDestinationDefinition);
+  definitionMap.current = idToDestinationDefinition;
 
   const onUpdateVersion = useCallback(
     async ({ id, version }: { id: string; version: string }) => {
@@ -44,7 +46,7 @@ const DestinationsPage: React.FC = () => {
           text: (
             <FormattedMessage
               id="admin.upgradeConnector.success"
-              values={{ name: idToDestinationDefinition.get(id)?.name, version }}
+              values={{ name: definitionMap.current.get(id)?.name, version }}
             />
           ),
           type: "success",
@@ -55,7 +57,7 @@ const DestinationsPage: React.FC = () => {
           text:
             formatMessage(
               { id: "admin.upgradeConnector.error" },
-              { name: idToDestinationDefinition.get(id)?.name, version }
+              { name: definitionMap.current.get(id)?.name, version }
             ) + (error.message ? `: ${error.message}` : ""),
           type: "error",
         });
@@ -63,7 +65,7 @@ const DestinationsPage: React.FC = () => {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, idToDestinationDefinition, registerNotification, updateDestinationDefinition]
+    [formatMessage, registerNotification, updateDestinationDefinition]
   );
 
   const usedDestinationDefinitions: DestinationDefinitionRead[] = useMemo(() => {

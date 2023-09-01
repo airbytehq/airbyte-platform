@@ -1,5 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
@@ -52,6 +53,8 @@ function filterByBuilderConnectors(
 }
 
 const columnHelper = createColumnHelper<ConnectorDefinition>();
+
+const MemoizedTable = React.memo(Table) as typeof Table;
 
 const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   type,
@@ -163,13 +166,15 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     [updatingDefinitionId, updatingAllConnectors]
   );
 
+  const showUpdateColumnForUsedDefinitions = showVersionUpdateColumn(usedConnectorsDefinitions);
   const usedDefinitionColumns = useMemo(
-    () => renderColumns(showVersionUpdateColumn(usedConnectorsDefinitions)),
-    [renderColumns, showVersionUpdateColumn, usedConnectorsDefinitions]
+    () => renderColumns(showUpdateColumnForUsedDefinitions),
+    [renderColumns, showUpdateColumnForUsedDefinitions]
   );
+  const showUpdateColumnForDefinitions = showVersionUpdateColumn(connectorsDefinitions);
   const definitionColumns = useMemo(
-    () => renderColumns(showVersionUpdateColumn(connectorsDefinitions)),
-    [renderColumns, showVersionUpdateColumn, connectorsDefinitions]
+    () => renderColumns(showUpdateColumnForDefinitions),
+    [renderColumns, showUpdateColumnForDefinitions]
   );
 
   const sections: Array<{ title: string; content: React.ReactNode }> = [];
@@ -189,13 +194,15 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   if (usedConnectorsDefinitions.length > 0) {
     sections.push({
       title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
-      content: <Table columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} sorting={false} />,
+      content: (
+        <MemoizedTable columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} sorting={false} />
+      ),
     });
   }
 
   sections.push({
     title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
-    content: <Table columns={definitionColumns} data={filteredConnectorsDefinitions} sorting={false} />,
+    content: <MemoizedTable columns={definitionColumns} data={filteredConnectorsDefinitions} sorting={false} />,
   });
 
   return (

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useListBuilderProjects } from "core/api";
@@ -31,6 +31,8 @@ const SourcesPage: React.FC = () => {
       }, new Map<string, SourceDefinitionRead>()),
     [sourceDefinitions]
   );
+  const definitionMap = useRef(idToSourceDefinition);
+  definitionMap.current = idToSourceDefinition;
 
   const onUpdateVersion = useCallback(
     async ({ id, version }: { id: string; version: string }) => {
@@ -45,7 +47,7 @@ const SourcesPage: React.FC = () => {
           text: (
             <FormattedMessage
               id="admin.upgradeConnector.success"
-              values={{ name: idToSourceDefinition.get(id)?.name, version }}
+              values={{ name: definitionMap.current.get(id)?.name, version }}
             />
           ),
           type: "success",
@@ -56,7 +58,7 @@ const SourcesPage: React.FC = () => {
           text:
             formatMessage(
               { id: "admin.upgradeConnector.error" },
-              { name: idToSourceDefinition.get(id)?.name, version }
+              { name: definitionMap.current.get(id)?.name, version }
             ) + (error.message ? `: ${error.message}` : ""),
           type: "error",
         });
@@ -64,7 +66,7 @@ const SourcesPage: React.FC = () => {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, idToSourceDefinition, registerNotification, updateSourceDefinition]
+    [formatMessage, registerNotification, updateSourceDefinition]
   );
 
   const usedSourceDefinitions: SourceDefinitionRead[] = useMemo(() => {

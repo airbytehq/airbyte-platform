@@ -42,6 +42,7 @@ export const VersionCell: React.FC<VersionCellProps> = ({
       id: connectorDefinitionId,
       version: latestVersion || currentVersion,
     }}
+    reinitializeDefaultValues
     schema={versionCellFormSchema}
     onSubmit={onChange}
   >

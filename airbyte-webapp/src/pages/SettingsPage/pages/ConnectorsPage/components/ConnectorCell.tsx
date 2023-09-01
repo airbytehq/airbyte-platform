@@ -21,31 +21,27 @@ export interface ConnectorCellProps {
   id: string;
 }
 
-const ConnectorCell: React.FC<ConnectorCellProps> = ({
-  connectorName,
-  img,
-  releaseStage,
-  type,
-  id,
-  currentVersion,
-}) => {
-  const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
+const ConnectorCell: React.FC<ConnectorCellProps> = React.memo(
+  ({ connectorName, img, releaseStage, type, id, currentVersion }) => {
+    const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
 
-  return (
-    <FlexContainer alignItems="center" gap="lg">
-      {allowUpdateConnectors && type === "sources" && (
-        <SourceUpdateIndicator id={id} currentVersion={currentVersion} releaseStage={releaseStage} />
-      )}
-      {allowUpdateConnectors && type === "destinations" && (
-        <DestinationUpdateIndicator id={id} currentVersion={currentVersion} />
-      )}
-      <div className={styles.iconContainer}>
-        <SvgIcon svg={img} />
-      </div>
-      <div>{connectorName}</div>
-      <ReleaseStageBadge small tooltip={false} stage={releaseStage} />
-    </FlexContainer>
-  );
-};
+    return (
+      <FlexContainer alignItems="center" gap="lg">
+        {allowUpdateConnectors && type === "sources" && (
+          <SourceUpdateIndicator id={id} currentVersion={currentVersion} releaseStage={releaseStage} />
+        )}
+        {allowUpdateConnectors && type === "destinations" && (
+          <DestinationUpdateIndicator id={id} currentVersion={currentVersion} />
+        )}
+        <div className={styles.iconContainer}>
+          <SvgIcon svg={img} />
+        </div>
+        <div>{connectorName}</div>
+        <ReleaseStageBadge small tooltip={false} stage={releaseStage} />
+      </FlexContainer>
+    );
+  }
+);
+ConnectorCell.displayName = "ConnectorCell";
 
 export default ConnectorCell;
