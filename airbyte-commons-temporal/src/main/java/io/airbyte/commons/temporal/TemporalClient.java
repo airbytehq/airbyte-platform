@@ -22,6 +22,11 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -76,6 +81,7 @@ public class TemporalClient {
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationClient notificationClient;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
+  private final MetricClient metricClient;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
                         final WorkflowClient client,
@@ -91,6 +97,8 @@ public class TemporalClient {
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
+    // TODO Inject it when MetricClient becomes injectable.
+    this.metricClient = MetricClientFactory.getMetricClient();
   }
 
   private final Set<String> workflowNames = new HashSet<>();
@@ -567,6 +575,8 @@ public class TemporalClient {
       log.info("Connection {} is deleted, and therefore cannot be updated.", connectionId);
       return;
     } catch (final UnreachableWorkflowException e) {
+      metricClient.count(OssMetricsRegistry.WORFLOW_UNREACHABLE, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
       log.error(
           String.format("Failed to retrieve ConnectionManagerWorkflow for connection %s. Repairing state by creating new workflow.", connectionId),
           e);

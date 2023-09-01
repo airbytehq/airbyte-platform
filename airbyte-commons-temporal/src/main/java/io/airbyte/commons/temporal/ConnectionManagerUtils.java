@@ -9,6 +9,11 @@ import io.airbyte.commons.temporal.exception.UnreachableWorkflowException;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
@@ -22,16 +27,21 @@ import jakarta.inject.Singleton;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Utility functions for connection manager workflows.
  */
-@NoArgsConstructor
 @Singleton
 @Slf4j
 public class ConnectionManagerUtils {
+
+  private final MetricClient metricClient;
+
+  public ConnectionManagerUtils() {
+    // TODO Inject it when MetricClient becomes injectable.
+    this.metricClient = MetricClientFactory.getMetricClient();
+  }
 
   /**
    * Send a cancellation to the workflow. It will swallow any exception and won't check if the
@@ -117,6 +127,8 @@ public class ConnectionManagerUtils {
       }
       return connectionManagerWorkflow;
     } catch (final UnreachableWorkflowException e) {
+      metricClient.count(OssMetricsRegistry.WORFLOW_UNREACHABLE, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
       log.error(
           String.format(
               "Failed to retrieve ConnectionManagerWorkflow for connection %s. "
