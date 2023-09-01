@@ -1,0 +1,28 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.roleManagementControl__button {
+  opacity: 0;
+
+  &:focus,
+  &:hover {
+    opacity: 1;
+  }
+
+  tr:hover &,
+  tr:focus-within & {
+    opacity: 1;
+  }
+}
+
+.roleManagementControl__input {
+  padding-bottom: 0;
+
+  button {
+    background-color: colors.$foreground;
+  }
+}
+
+.roleManagementControl__roleLabel_view {
+  flex-basis: 89px;
+}

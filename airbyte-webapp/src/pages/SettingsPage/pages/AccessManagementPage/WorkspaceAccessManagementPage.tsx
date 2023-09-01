@@ -11,5 +11,7 @@ export const WorkspaceAccessManagementPage: React.FC = () => {
   const { name } = useCurrentWorkspace();
   const workspaceAccessUsers = useGetWorkspaceAccessUsers();
 
-  return <AccessManagementPageContent resourceName={name} accessUsers={workspaceAccessUsers} />;
+  return (
+    <AccessManagementPageContent resourceName={name} accessUsers={workspaceAccessUsers} pageResourceType="workspace" />
+  );
 };

@@ -9,12 +9,24 @@ import { ResourceType, tableTitleDictionary } from "./useGetAccessManagementData
 
 interface AccessManagementCardProps {
   users: OrganizationUserRead[] | WorkspaceUserRead[];
-  resourceType: ResourceType;
+  tableResourceType: ResourceType;
+  pageResourceType: ResourceType;
+  pageResourceName: string;
 }
-export const AccessManagementCard: React.FC<AccessManagementCardProps> = ({ users, resourceType }) => {
+export const AccessManagementCard: React.FC<AccessManagementCardProps> = ({
+  users,
+  tableResourceType,
+  pageResourceType,
+  pageResourceName,
+}) => {
   return (
-    <Card title={<FormattedMessage id={tableTitleDictionary[resourceType]} />}>
-      <AccessManagementTable users={users} tableResourceType={resourceType} />
+    <Card title={<FormattedMessage id={tableTitleDictionary[tableResourceType]} />}>
+      <AccessManagementTable
+        users={users}
+        tableResourceType={tableResourceType}
+        pageResourceName={pageResourceName}
+        pageResourceType={pageResourceType}
+      />
     </Card>
   );
 };

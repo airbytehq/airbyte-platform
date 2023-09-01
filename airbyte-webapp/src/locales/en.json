@@ -777,8 +777,11 @@
   "settings.accessManagement.table.column.email": "Email",
   "settings.accessManagement.table.column.role": "Role",
   "settings.accessManagement.table.column.action": "Action",
-  "settings.accessManagement.button.addNewUser": "New user",
-  "settings.accessManagement.user.remove": "Remove",
+  "settings.accessManagement.user.remove": "Remove user",
+  "settings.accessManagement.changeRole": "Change role",
+  "settings.accessManagement.removePermissions": "Are you sure you want to remove permissions for the user {user} from {resource}?",
+  "settings.accessManagement.removePermissions.additionalContent": "They may still have access to this resource from other permissions.",
+  "settings.accessManagement.confirmRemovePermissions": "Remove permission",
 
   "connector.connectorCount": "{count, plural, one {# connector} other {# connectors}}",
   "connector.noSearchResults": "No connectors match your search.",

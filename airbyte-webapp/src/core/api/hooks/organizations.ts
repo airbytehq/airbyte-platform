@@ -10,6 +10,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
   detail: (organizationId: string) => [...organizationKeys.all, "details", organizationId] as const,
+  allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
   workspaces: (organizationIds: string[]) => [...organizationKeys.all, "workspaces", organizationIds] as const,
 };
@@ -37,7 +38,7 @@ export const useUpdateOrganization = () => {
 
 export const useListUsersInOrganization = (organizationId: string) => {
   const requestOptions = useRequestOptions();
-  const queryKey = [organizationKeys.listUsers(organizationId)];
+  const queryKey = organizationKeys.listUsers(organizationId);
 
   return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions));
 };

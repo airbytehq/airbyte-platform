@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.pageContent {
+  width: variables.$page-width - variables.$width-wide-menu;
+}

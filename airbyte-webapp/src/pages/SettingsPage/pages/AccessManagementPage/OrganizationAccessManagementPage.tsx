@@ -13,5 +13,11 @@ export const OrganizationAccessManagementPage: React.FC = () => {
   const { organizationName } = useOrganization(organizationId);
   const organizationAccessUsers = useGetOrganizationAccessUsers();
 
-  return <AccessManagementPageContent resourceName={organizationName} accessUsers={organizationAccessUsers} />;
+  return (
+    <AccessManagementPageContent
+      resourceName={organizationName}
+      accessUsers={organizationAccessUsers}
+      pageResourceType="organization"
+    />
+  );
 };
