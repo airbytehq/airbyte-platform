@@ -171,7 +171,7 @@ public class KubeProcessFactory implements ProcessFactory {
           internalToExternalPorts,
           args).toProcess();
     } catch (final Exception e) {
-      throw new WorkerException(e.getMessage(), e);
+      throw new WorkerException("Failed to create pod for " + jobType + " step", e);
     }
   }
 
