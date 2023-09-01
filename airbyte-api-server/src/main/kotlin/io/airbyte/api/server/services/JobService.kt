@@ -84,6 +84,12 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     } catch (e: HttpClientResponseException) {
       log.error("Config api response error for job sync: ", e)
       e.response as HttpResponse<JobInfoRead>
+    } catch (e: ReadTimeoutException) {
+      log.error("Config api response error for job sync: ", e)
+      throw UnexpectedProblem(
+        HttpStatus.REQUEST_TIMEOUT,
+        "Request timed out. Please check the latest job status to determine whether the sync started.",
+      )
     }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
