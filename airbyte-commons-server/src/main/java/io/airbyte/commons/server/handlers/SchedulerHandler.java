@@ -636,7 +636,13 @@ public class SchedulerHandler {
       final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
       for (final var operationId : standardSync.getOperationIds()) {
         final StandardSyncOperation standardSyncOperation = configRepository.getStandardSyncOperation(operationId);
-        standardSyncOperations.add(standardSyncOperation);
+        // NOTE: we must run normalization operations during resets, because we rely on them to clear the
+        // normalized tables. However, we don't want to run other operations (dbt, webhook) because those
+        // are meant to transform the data after the sync but there's no data to transform. Webhook
+        // operations particularly will fail because we don't populate some required config during resets.
+        if (StandardSyncOperation.OperatorType.NORMALIZATION.equals(standardSyncOperation.getOperatorType())) {
+          standardSyncOperations.add(standardSyncOperation);
+        }
       }
 
       final Optional<Long> jobIdOptional =

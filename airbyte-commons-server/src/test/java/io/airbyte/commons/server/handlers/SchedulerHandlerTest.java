@@ -92,12 +92,15 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.OperatorNormalization;
+import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -222,6 +225,17 @@ class SchedulerHandlerTest {
           .withSupportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP))
           .withDocumentationUrl(URI.create("unused")));
 
+  private static final StandardSyncOperation NORMALIZATION_OPERATION = new StandardSyncOperation()
+      .withOperatorType(StandardSyncOperation.OperatorType.NORMALIZATION)
+      .withOperatorNormalization(new OperatorNormalization());
+
+  private static final UUID NORMALIZATION_OPERATION_ID = UUID.randomUUID();
+
+  public static final StandardSyncOperation WEBHOOK_OPERATION = new StandardSyncOperation()
+      .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+      .withOperatorWebhook(new OperatorWebhook());
+  private static final UUID WEBHOOK_OPERATION_ID = UUID.randomUUID();
+
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
   private SecretsRepositoryWriter secretsRepositoryWriter;
@@ -322,7 +336,10 @@ class SchedulerHandlerTest {
   @Test
   @DisplayName("Test reset job creation")
   void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSync standardSync = new StandardSync().withDestinationId(DESTINATION_ID);
+    Mockito.when(configRepository.getStandardSyncOperation(NORMALIZATION_OPERATION_ID)).thenReturn(NORMALIZATION_OPERATION);
+    Mockito.when(configRepository.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(WEBHOOK_OPERATION);
+    final StandardSync standardSync =
+        new StandardSync().withDestinationId(DESTINATION_ID).withOperationIds(List.of(NORMALIZATION_OPERATION_ID, WEBHOOK_OPERATION_ID));
     Mockito.when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
     final DestinationConnection destination = new DestinationConnection()
         .withDestinationId(DESTINATION_ID)
@@ -344,7 +361,7 @@ class SchedulerHandlerTest {
     Mockito
         .when(jobCreator.createResetConnectionJob(destination, standardSync, destinationDefinition, actorDefinitionVersion, DOCKER_IMAGE_NAME,
             destinationVersion,
-            false, List.of(),
+            false, List.of(NORMALIZATION_OPERATION),
             streamsToReset, WORKSPACE_ID))
         .thenReturn(Optional.of(JOB_ID));
 
