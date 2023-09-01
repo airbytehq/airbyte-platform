@@ -10,6 +10,7 @@ import { Text } from "components/ui/Text";
 
 import { useDeletePermissions, useUpdatePermissions } from "core/api";
 import { PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
+import { Intent, useIntent } from "core/utils/rbac/intent";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RoleManagementControl.module.scss";
@@ -51,11 +52,16 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   const { formatMessage } = useIntl();
   const isEditMode = activeEditRow === permissionId;
 
+  const intentKey =
+    pageResourceType === "organization" ? Intent.UpdateOrganizationPermissions : Intent.UpdateWorkspacePermissions;
+
+  const canUpdateUserPermissions = useIntent(intentKey);
+
   if (!permissionType) {
     return null;
   }
 
-  if (pageResourceType !== tableResourceType) {
+  if (pageResourceType !== tableResourceType || !canUpdateUserPermissions) {
     return (
       <Box py="sm">
         <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />

@@ -11,6 +11,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
 import { useCurrentWorkspace } from "core/api";
+import { Intent, useIntent } from "core/utils/rbac/intent";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
@@ -52,6 +53,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
+  const canListWorkspaceUsers = useIntent(Intent.ListWorkspaceMembers);
+  const canListOrganizationUsers = useIntent(Intent.ListOrganizationMembers);
 
   const menuItems: CategoryItem[] = pageConfig?.menuConfig || [
     {
@@ -103,7 +106,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
           name: <FormattedMessage id="settings.metrics" />,
           component: MetricsPage,
         },
-        ...(isAccessManagementEnabled && !pageConfig
+        ...(isAccessManagementEnabled && !pageConfig && canListWorkspaceUsers
           ? [
               {
                 path: `${SettingsRoute.Workspace}/${SettingsRoute.AccessManagement}`,
@@ -124,7 +127,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
                 name: <FormattedMessage id="settings.generalSettings" />,
                 component: GeneralOrganizationSettingsPage,
               },
-              ...(isAccessManagementEnabled && !pageConfig
+              ...(isAccessManagementEnabled && !pageConfig && canListOrganizationUsers
                 ? [
                     {
                       path: `${SettingsRoute.Organization}/${SettingsRoute.AccessManagement}`,
