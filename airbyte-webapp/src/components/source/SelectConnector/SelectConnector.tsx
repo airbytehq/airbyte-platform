@@ -44,12 +44,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal, closeModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const [searchTerm, setSearchTerm] = useState("");
-  const defaultReleaseStages = DEFAULT_SELECTED_RELEASE_STAGES.filter((stage) =>
-    connectorDefinitions.some((definition) => definition.releaseStage === stage)
-  );
   const [releaseStagesInLocalStorage, setSelectedReleaseStages] = useLocalStorage(
     "airbyte_connector-grid-release-stage-filter",
-    defaultReleaseStages
+    []
   );
   const availableReleaseStages = RELEASE_STAGES.filter((stage) =>
     connectorDefinitions.some((d) => d.releaseStage === stage)
@@ -58,7 +55,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     availableReleaseStages.includes(releaseStage)
   );
   if (selectedReleaseStages.length === 0) {
-    selectedReleaseStages.push(...defaultReleaseStages);
+    selectedReleaseStages.push(...DEFAULT_SELECTED_RELEASE_STAGES);
   }
 
   const updateSelectedReleaseStages = (updatedSelectedReleaseStages: ReleaseStage[]) => {
