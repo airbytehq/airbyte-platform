@@ -6,18 +6,14 @@ export enum Intent {
 
   // organization
   "ListOrganizationMembers" = "ListOrganizationMembers",
-  "UpdateOrganizationPermissions" = "UpdateOrganizationPermissions",
 
   // workspace
   "ListWorkspaceMembers" = "ListWorkspaceMembers",
-  "UpdateWorkspacePermissions" = "UpdateWorkspacePermissions",
 }
 
 const intentToRbacQuery = {
   [Intent.ListOrganizationMembers]: { resourceType: "ORGANIZATION", role: "READER" },
-  [Intent.UpdateOrganizationPermissions]: { resourceType: "ORGANIZATION", role: "ADMIN" },
 
-  [Intent.UpdateWorkspacePermissions]: { resourceType: "WORKSPACE", role: "ADMIN" },
   [Intent.ListWorkspaceMembers]: { resourceType: "WORKSPACE", role: "READER" },
 } as const;
 
