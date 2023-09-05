@@ -9,13 +9,25 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { SchemaError as SchemaErrorType } from "hooks/services/useSourceHook";
 
 import styles from "./SchemaError.module.scss";
 
 export const SchemaError = ({ schemaError }: { schemaError: Exclude<SchemaErrorType, null> }) => {
   const job = LogsRequestError.extractJobInfo(schemaError);
-  const { refreshSchema } = useConnectionFormService();
+
+  /**
+   *TODO: remove after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const useConnectionFormContextProvider = doUseCreateConnectionHookForm
+    ? useConnectionHookFormService
+    : useConnectionFormService;
+  const { refreshSchema } = useConnectionFormContextProvider();
+
   return (
     <Card className={styles.card}>
       <FlexContainer direction="column">

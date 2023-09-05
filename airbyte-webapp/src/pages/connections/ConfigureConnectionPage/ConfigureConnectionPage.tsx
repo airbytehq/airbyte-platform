@@ -4,8 +4,10 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll/MainPageWithScroll";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm";
+import { CreateConnectionHookForm } from "components/connection/CreateConnectionHookForm/CreateConnectionHookForm";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import { CreateConnectionTitleBlock } from "../CreateConnectionPage/CreateConnectionTitleBlock";
@@ -14,6 +16,7 @@ export const ConfigureConnectionPage = () => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [searchParams] = useSearchParams();
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
 
   const sourceId = searchParams.get("sourceId");
   const destinationId = searchParams.get("destinationId");
@@ -46,7 +49,7 @@ export const ConfigureConnectionPage = () => {
         </PageHeaderWithNavigation>
       }
     >
-      <CreateConnectionForm />
+      {doUseCreateConnectionHookForm ? <CreateConnectionHookForm /> : <CreateConnectionForm />}
     </MainPageWithScroll>
   );
 };

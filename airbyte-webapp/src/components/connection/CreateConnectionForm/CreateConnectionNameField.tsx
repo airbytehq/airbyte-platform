@@ -7,6 +7,11 @@ import { Input } from "components/ui/Input";
 
 import { FormFieldLayout } from "../ConnectionForm/FormFieldLayout";
 
+/**
+ * @deprecated it's formik version of CreateConnectionNameField form control and will be removed in the future, use ConnectionNameHookFormCard instead
+ * @see ConnectionNameHookFormCard
+ * @constructor
+ */
 export const CreateConnectionNameField = () => {
   const { formatMessage } = useIntl();
 

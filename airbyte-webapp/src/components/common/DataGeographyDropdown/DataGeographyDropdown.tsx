@@ -14,6 +14,14 @@ interface DataGeographyDropdownProps {
   value: Geography;
 }
 
+/**
+ * @deprecated it's not form related component and will be removed in the future, use DataResidencyDropdown instead
+ * @param geographies
+ * @param isDisabled
+ * @param onChange
+ * @param value
+ * @constructor
+ */
 export const DataGeographyDropdown: React.FC<DataGeographyDropdownProps> = ({
   geographies,
   isDisabled = false,
