@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Optional;
@@ -48,7 +47,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void getUserByAuthIdTest() throws IOException {
     for (final User user : MockData.users()) {
-      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId(), AuthProvider.GOOGLE_IDENTITY_PLATFORM);
+      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId(), user.getAuthProvider());
       Assertions.assertEquals(user, userFromDb.get());
     }
   }

@@ -44,6 +44,8 @@ public class WorkspaceHelper {
   private final LoadingCache<UUID, UUID> operationToWorkspaceCache;
   private final LoadingCache<Long, UUID> jobToWorkspaceCache;
 
+  private final LoadingCache<UUID, UUID> workspaceToOrganizationCache;
+
   public WorkspaceHelper(final ConfigRepository configRepository, final JobPersistence jobPersistence) {
 
     this.sourceToWorkspaceCache = getExpiringCache(new CacheLoader<>() {
@@ -104,6 +106,15 @@ public class WorkspaceHelper {
       }
 
     });
+
+    this.workspaceToOrganizationCache = getExpiringCache(new CacheLoader<>() {
+
+      @Override
+      public UUID load(UUID workspaceId) throws Exception {
+        return configRepository.getStandardWorkspaceNoSecrets(workspaceId, false).getOrganizationId();
+      }
+
+    });
   }
 
   /**
@@ -139,6 +150,10 @@ public class WorkspaceHelper {
 
   public UUID getWorkspaceForJobIdIgnoreExceptions(final Long jobId) {
     return swallowExecutionException(() -> jobToWorkspaceCache.get(jobId));
+  }
+
+  public UUID getOrganizationForWorkspace(final UUID workspaceId) {
+    return swallowExecutionException(() -> workspaceToOrganizationCache.get(workspaceId));
   }
 
   // CONNECTION ID
