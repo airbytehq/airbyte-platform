@@ -349,7 +349,6 @@
   "sources.schemaSelectAll": "select all",
   "sources.schemaUnselectAll": "unselect all",
   "sources.settings": "Settings",
-  "sources.syncHistory": "Sync History",
   "sources.source": "Source",
   "sources.noSync": "No sync yet",
   "sources.emptySchema": "Schema is empty",
@@ -527,7 +526,7 @@
   "connection.cancelSync": "Cancel Sync",
   "connection.cancelReset": "Cancel Reset",
   "connection.linkedJobNotFound": "Job not found",
-  "connection.returnToSyncHistory": "Return to Sync History",
+  "connection.returnToJobHistory": "Return to Job History",
   "connection.updateFailed": "Failed to update connection",
 
   "connection.progress.percentage": "{percent} percent progress",

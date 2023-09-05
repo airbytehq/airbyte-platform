@@ -67,7 +67,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
         <Card
           title={
             <div className={styles.title}>
-              <FormattedMessage id="sources.syncHistory" />
+              <FormattedMessage id="connectionForm.jobHistory" />
               <div className={styles.actions}>
                 <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
               </div>
@@ -81,7 +81,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
               text={<FormattedMessage id="connection.linkedJobNotFound" />}
               description={
                 <Link to={pathname}>
-                  <FormattedMessage id="connection.returnToSyncHistory" />
+                  <FormattedMessage id="connection.returnToJobHistory" />
                 </Link>
               }
             />
