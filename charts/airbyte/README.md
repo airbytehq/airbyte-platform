@@ -2,7 +2,7 @@
 
 ![Version: 0.50.24](https://img.shields.io/badge/Version-0.50.24-informational?style=flat-square) 
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) 
-![appVersion: dev](https://img.shields.io/badge/AppVersion-dev-informational?style=flat-square)
+![appVersion: 0.50.27](https://img.shields.io/badge/AppVersion-0.50.27-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
