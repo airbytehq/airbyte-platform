@@ -77,6 +77,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportState;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
@@ -3519,6 +3520,7 @@ public class ConfigRepository {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
     final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
+
     ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
         .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
@@ -3529,6 +3531,9 @@ public class ConfigRepository {
         .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
         .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.getSupportLevel() == null ? null
+            : Enums.toEnum(actorDefinitionVersion.getSupportLevel().value(),
+                SupportLevel.class).orElseThrow())
         .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
             : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
                 ReleaseStage.class).orElseThrow())
@@ -3555,6 +3560,7 @@ public class ConfigRepository {
         .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
             Enums.toEnum(actorDefinitionVersion.getSupportState().value(), SupportState.class).orElseThrow())
         .execute();
+
     return actorDefinitionVersion.withVersionId(versionId);
   }
 

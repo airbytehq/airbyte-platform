@@ -26,6 +26,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -65,6 +66,7 @@ class ActorDefinitionVersionHandlerTest {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withVersionId(UUID.randomUUID())
+        .withSupportLevel(SupportLevel.NONE)
         .withReleaseStage(ReleaseStage.BETA)
         .withSupportState(SupportState.SUPPORTED)
         .withDockerRepository("airbyte/source-faker")
@@ -103,6 +105,7 @@ class ActorDefinitionVersionHandlerTest {
         actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(sourceIdRequestBody);
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
         .isOverrideApplied(isOverrideApplied)
+        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
@@ -140,6 +143,7 @@ class ActorDefinitionVersionHandlerTest {
         actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(destinationIdRequestBody);
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
         .isOverrideApplied(isOverrideApplied)
+        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
@@ -177,6 +181,7 @@ class ActorDefinitionVersionHandlerTest {
         actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(destinationIdRequestBody);
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
         .isOverrideApplied(isOverrideApplied)
+        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
         .supportState(io.airbyte.api.model.generated.SupportState.SUPPORTED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
@@ -218,6 +223,7 @@ class ActorDefinitionVersionHandlerTest {
 
     final ActorDefinitionVersionRead expectedRead = new ActorDefinitionVersionRead()
         .isOverrideApplied(false)
+        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
         .supportState(io.airbyte.api.model.generated.SupportState.DEPRECATED)
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())

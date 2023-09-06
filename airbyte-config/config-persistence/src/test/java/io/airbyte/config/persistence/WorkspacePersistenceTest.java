@@ -24,6 +24,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -125,6 +126,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withDockerImageTag("0.0.1")
         .withReleaseStage(releaseStage);
   }

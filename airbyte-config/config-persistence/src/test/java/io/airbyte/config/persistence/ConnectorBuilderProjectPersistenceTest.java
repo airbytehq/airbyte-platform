@@ -19,6 +19,7 @@ import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
 import java.io.IOException;
@@ -321,6 +322,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withDockerRepository("repo-" + id)
         .withDockerImageTag("0.0.1")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
 
     configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);

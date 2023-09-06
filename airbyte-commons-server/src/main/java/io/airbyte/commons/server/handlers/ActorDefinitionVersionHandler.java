@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportLevel;
 import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -87,6 +88,7 @@ public class ActorDefinitionVersionHandler {
         .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
         .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
+        .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
         .isOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
     final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);

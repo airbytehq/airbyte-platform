@@ -49,7 +49,12 @@ properties:
     description: whether this is a custom connector definition
     type: boolean
     default: false
+  supportLevel:
+    description: The level of support provided by Airbyte for this connector.
+    type: string
+    existingJavaType: io.airbyte.config.SupportLevel
   releaseStage:
+    description: Deprecated. Use supportLevel instead.
     type: string
     existingJavaType: io.airbyte.config.ReleaseStage
   releaseDate:

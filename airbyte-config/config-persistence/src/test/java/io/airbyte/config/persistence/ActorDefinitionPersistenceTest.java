@@ -24,6 +24,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -567,6 +568,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withProtocolVersion("0.2.0");
   }
 

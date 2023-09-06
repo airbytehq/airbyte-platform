@@ -100,6 +100,7 @@ create table "public"."actor_definition_version" (
   "suggested_streams" jsonb,
   "release_stage" "public"."release_stage",
   "support_state" "public"."support_state" not null default cast('supported' as support_state),
+  "support_level" "public"."support_level" not null,
   constraint "actor_definition_version_pkey"
     primary key ("id")
 );

@@ -13,6 +13,7 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.util.Collections;
@@ -84,6 +85,7 @@ public class ConnectorRegistryConverters {
         .withDocumentationUrl(def.getDocumentationUrl())
         .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
+        .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withReleaseStage(def.getReleaseStage())
         .withSuggestedStreams(def.getSuggestedStreams());
   }
@@ -108,6 +110,7 @@ public class ConnectorRegistryConverters {
         .withProtocolVersion(getProtocolVersion(def.getSpec()))
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
+        .withSupportLevel(def.getSupportLevel() == null ? SupportLevel.NONE : def.getSupportLevel())
         .withNormalizationConfig(def.getNormalizationConfig())
         .withSupportsDbt(def.getSupportsDbt());
   }

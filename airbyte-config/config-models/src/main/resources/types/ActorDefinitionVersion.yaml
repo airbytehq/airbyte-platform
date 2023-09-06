@@ -22,7 +22,12 @@ properties:
     type: string
   documentationUrl:
     type: string
+  supportLevel:
+    description: The level of support provided by Airbyte for this connector.
+    type: string
+    existingJavaType: io.airbyte.config.SupportLevel
   releaseStage:
+    description: Deprecated. Use supportLevel instead.
     type: string
     existingJavaType: io.airbyte.config.ReleaseStage
   releaseDate:

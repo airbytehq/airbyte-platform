@@ -30,6 +30,7 @@ import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ConnectorReleases;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
@@ -109,6 +110,7 @@ class ActorDefinitionHandlerHelperTest {
           .withDockerRepository(DOCKER_REPOSITORY)
           .withSpec(new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION))
           .withDocumentationUrl(DOCUMENTATION_URL.toString())
+          .withSupportLevel(SupportLevel.NONE)
           .withProtocolVersion(VALID_PROTOCOL_VERSION)
           .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
 

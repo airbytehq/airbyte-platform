@@ -34,6 +34,7 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ReleaseStage;
+import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
@@ -148,6 +149,7 @@ class DestinationDefinitionsHandlerTest {
         .withDocumentationUrl("https://hulu.com")
         .withSpec(spec)
         .withProtocolVersion("0.2.2")
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
 
@@ -168,6 +170,7 @@ class DestinationDefinitionsHandlerTest {
     return generateVersionFromDestinationDefinition(destinationDefinition)
         .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
         .withReleaseDate(null)
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withAllowedHosts(null);
   }
@@ -199,6 +202,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -216,6 +220,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -254,6 +259,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -271,6 +277,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -339,6 +346,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -356,6 +364,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -399,6 +408,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -469,6 +479,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -508,6 +519,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -572,6 +584,8 @@ class DestinationDefinitionsHandlerTest {
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
         .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
@@ -635,6 +649,8 @@ class DestinationDefinitionsHandlerTest {
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
         .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
@@ -832,6 +848,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -869,6 +886,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -926,6 +944,7 @@ class DestinationDefinitionsHandlerTest {
               Jsons.jsonNode(ImmutableMap.of("key", "val"))))
           .withTombstone(false)
           .withProtocolVersion("0.2.2")
+          .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
           .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));

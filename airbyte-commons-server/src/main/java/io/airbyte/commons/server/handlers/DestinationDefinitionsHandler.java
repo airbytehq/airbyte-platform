@@ -104,8 +104,10 @@ public class DestinationDefinitionsHandler {
           .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
           .icon(loadIcon(standardDestinationDefinition.getIcon()))
           .protocolVersion(destinationVersion.getProtocolVersion())
+          .supportLevel(ApiPojoConverters.toApiSupportLevel(destinationVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .custom(standardDestinationDefinition.getCustom())
           .supportsDbt(Objects.requireNonNullElse(destinationVersion.getSupportsDbt(), false))
           .normalizationConfig(
               ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(destinationVersion.getNormalizationConfig()))

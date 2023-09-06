@@ -15,6 +15,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.Map;
@@ -139,6 +140,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag("1.0.0")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 

@@ -49,6 +49,7 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.WebhookConfig;
@@ -406,6 +407,7 @@ public class MockData {
         .withDockerImageTag("0.0.1")
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withProtocolVersion("0.2.0");
   }
 

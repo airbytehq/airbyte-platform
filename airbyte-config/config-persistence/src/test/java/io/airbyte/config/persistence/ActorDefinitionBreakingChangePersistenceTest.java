@@ -13,6 +13,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -71,6 +72,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         .withActorDefinitionId(actorDefinitionId)
         .withDockerImageTag("1.0.0")
         .withDockerRepository("repo")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 
@@ -177,6 +179,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
     return new ActorDefinitionVersion()
         .withActorDefinitionId(ACTOR_DEFINITION_ID_1)
         .withDockerRepository("some-repo")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withDockerImageTag(version);
   }
 

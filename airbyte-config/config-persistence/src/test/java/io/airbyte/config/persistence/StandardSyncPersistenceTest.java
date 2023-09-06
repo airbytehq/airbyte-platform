@@ -32,6 +32,7 @@ import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
@@ -355,7 +356,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withDocumentationUrl("documentation-url-1")
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage);
+        .withReleaseStage(releaseStage)
+        .withSupportLevel(SupportLevel.COMMUNITY);
     configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, sourceDefVersion);
     return sourceDef;
   }
@@ -378,7 +380,9 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withDocumentationUrl("documentation-url-3")
         .withSpec(new ConnectorSpecification())
         .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage);
+        .withReleaseStage(releaseStage)
+        .withSupportLevel(SupportLevel.COMMUNITY);
+
     configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, destDefVersion);
     return destDef;
   }

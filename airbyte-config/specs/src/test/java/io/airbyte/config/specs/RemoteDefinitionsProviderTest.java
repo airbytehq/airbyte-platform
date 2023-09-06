@@ -15,6 +15,7 @@ import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.net.URI;
@@ -79,6 +80,7 @@ class RemoteDefinitionsProviderTest {
     assertEquals(URI.create("https://docs.airbyte.io/integrations/sources/stripe"), stripeSource.getSpec().getDocumentationUrl());
     assertEquals(false, stripeSource.getTombstone());
     assertEquals("0.2.1", stripeSource.getProtocolVersion());
+    assertEquals(SupportLevel.COMMUNITY, stripeSource.getSupportLevel());
   }
 
   @Test
@@ -97,6 +99,7 @@ class RemoteDefinitionsProviderTest {
     assertEquals(URI.create("https://docs.airbyte.io/integrations/destinations/s3"), s3Destination.getSpec().getDocumentationUrl());
     assertEquals(false, s3Destination.getTombstone());
     assertEquals("0.2.2", s3Destination.getProtocolVersion());
+    assertEquals(SupportLevel.COMMUNITY, s3Destination.getSupportLevel());
   }
 
   @Test

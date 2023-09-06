@@ -40,6 +40,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -391,6 +392,7 @@ class ConnectorBuilderProjectsHandlerTest {
                 .withDockerRepository("airbyte/source-declarative-manifest")
                 .withDockerImageTag(CDK_VERSION)
                 .withSpec(adaptedConnectorSpecification)
+                .withSupportLevel(SupportLevel.NONE)
                 .withReleaseStage(ReleaseStage.CUSTOM)
                 .withDocumentationUrl(A_DOCUMENTATION_URL)
                 .withProtocolVersion("0.2.0")),

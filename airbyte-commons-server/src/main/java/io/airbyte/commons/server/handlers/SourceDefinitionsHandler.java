@@ -104,8 +104,10 @@ public class SourceDefinitionsHandler {
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
           .icon(loadIcon(standardSourceDefinition.getIcon()))
           .protocolVersion(sourceVersion.getProtocolVersion())
+          .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
+          .custom(standardSourceDefinition.getCustom())
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
 

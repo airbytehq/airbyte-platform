@@ -61,6 +61,7 @@ import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
@@ -472,6 +473,8 @@ public class DbConverter {
         .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))
         .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SPEC).data(), ConnectorSpecification.class))
         .withDocumentationUrl(record.get(ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL))
+        .withSupportLevel(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL) == null ? null
+            : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, String.class), SupportLevel.class).orElseThrow())
         .withProtocolVersion(AirbyteProtocolVersion.getWithDefault(record.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)).serialize())
         .withReleaseStage(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())

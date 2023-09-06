@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -58,9 +59,10 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .execute());
     // create actor_definition_version
     database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION_VERSION, ACTOR_DEFINITION_VERSION.ID, ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID,
-        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC)
-        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"))
-        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"))
+        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC,
+        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL)
+        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
         .execute());
 
     // create workspace

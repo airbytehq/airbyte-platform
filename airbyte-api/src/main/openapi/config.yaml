@@ -4201,6 +4201,12 @@ components:
         protocolVersion:
           description: The Airbyte Protocol version supported by the connector
           type: string
+        custom:
+          description: Whether the connector is custom or not
+          type: boolean
+          default: false
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         releaseStage:
           $ref: "#/components/schemas/ReleaseStage"
         releaseDate:
@@ -4678,6 +4684,12 @@ components:
         protocolVersion:
           description: The Airbyte Protocol version supported by the connector
           type: string
+        custom:
+          description: Whether the connector is custom or not
+          type: boolean
+          default: false
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         releaseStage:
           $ref: "#/components/schemas/ReleaseStage"
         releaseDate:
@@ -4938,6 +4950,8 @@ components:
           $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
         isOverrideApplied:
           type: boolean
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         supportState:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
@@ -4987,6 +5001,12 @@ components:
         - beta
         - generally_available
         - custom
+    SupportLevel:
+      type: string
+      enum:
+        - community
+        - certified
+        - none
     # CONNECTION
     ConnectionId:
       type: string
