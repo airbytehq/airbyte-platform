@@ -20,9 +20,17 @@ export const KeycloakAuthService: React.FC<PropsWithChildren<unknown>> = ({ chil
   const oidcConfig = {
     authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
     client_id: auth.clientId,
-    redirect_uri: `${window.location.origin}/${window.location.pathname}`,
+    redirect_uri: window.location.href,
     onSigninCallback: () => {
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Remove OIDC params from URL, but don't remove other params that might be present
+      const searchParams = new URLSearchParams(window.location.search);
+      searchParams.delete("state");
+      searchParams.delete("code");
+      searchParams.delete("session_state");
+      const newUrl = searchParams.toString().length
+        ? `${window.location.pathname}?${searchParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     },
   };
 
