@@ -162,14 +162,18 @@ describe("useRbac", () => {
       ).toThrowError("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
     });
 
-    it("throws an error when non-instance query is missing and cannot find a resourceId", () => {
+    it("does not throw an error when an organization query is missing and cannot find a resourceId", () => {
       mockUseListPermissions.mockImplementation(() => ({
         permissions: [{ permissionType: "instance_admin" }],
       }));
 
-      expect(() => renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN" }))).toThrowError(
-        "Invalid RBAC query: resource ORGANIZATION with resourceId undefined"
-      );
+      renderHook(() => useRbac({ resourceType: "ORGANIZATION", role: "ADMIN" }));
+      expect(mockUseRbacPermissionsQuery).toHaveBeenCalledTimes(2);
+      expect(mockUseRbacPermissionsQuery.mock.lastCall?.[1]).toEqual({
+        resourceType: "ORGANIZATION",
+        role: "ADMIN",
+        resourceId: undefined,
+      });
 
       mockUseListPermissions.mockImplementation(() => ({
         permissions: [{ permissionType: "instance_admin" }],

@@ -27,7 +27,13 @@ export const useRbac = (query: RbacQuery | RbacQueryWithoutResourceId) => {
 
   // invariant check
   if ((!queryUsesResourceId && resourceId) || (queryUsesResourceId && !resourceId)) {
-    throw new Error(`Invalid RBAC query: resource ${resourceType} with resourceId ${resourceId}`);
+    // TODO: This is a patch to handle the fact that workspaces on cloud do not have an organization.
+    if (resourceType === "ORGANIZATION") {
+      console.log("Missing organization id");
+    } else {
+      // this will throw if there is a missing workspace id OR a resourceId is passed to an instance query
+      throw new Error(`Invalid RBAC query: resource ${resourceType} with resourceId ${resourceId}`);
+    }
   }
 
   // above invariant guarantees resourceId is defined when needed
