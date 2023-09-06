@@ -49,7 +49,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @Singleton
 @RequiresAirbyteProEnabled
-@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources"})
+@SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod"})
 public class KeycloakTokenValidator implements TokenValidator {
 
   private final HttpClient client;
@@ -101,7 +101,10 @@ public class KeycloakTokenValidator implements TokenValidator {
 
       if (StringUtils.isNotBlank(userId)) {
         log.debug("Fetching roles for user '{}'...", userId);
-        final Collection<String> roles = getRoles(userId, request);
+        // For now, give all valid Keycloak users instance_admin, until we actually create an Airbyte User
+        // with permissions for such logins.
+        final Collection<String> roles = getInstanceAdminRoles();
+        // final Collection<String> roles = getRoles(userId, request);
         log.debug("Authenticating user '{}' with roles {}...", userId, roles);
         return Authentication.build(userId, roles);
       } else {
@@ -113,10 +116,10 @@ public class KeycloakTokenValidator implements TokenValidator {
     }
   }
 
-  /**
-   * For now, we are granting ADMIN to all authenticated users. This will change with the introduction
-   * of RBAC.
-   */
+  private Collection<String> getInstanceAdminRoles() {
+    return AuthRole.buildAuthRolesSet(AuthRole.ADMIN);
+  }
+
   private Collection<String> getRoles(final String userId, final HttpRequest<?> request) {
     Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
 
