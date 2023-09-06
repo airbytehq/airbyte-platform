@@ -19,10 +19,7 @@ const localDocMiddleware = (docsPath: string): Plugin => {
         express.static(`${docsPath}/sources/google-ads.md`) as Connect.NextHandleFunction
       );
       // Server assets that can be used during. Related gradle task: :airbyte-webapp:copyDocAssets
-      server.middlewares.use(
-        "/docs/.gitbook",
-        express.static(`${docsPath}/docs/.gitbook`) as Connect.NextHandleFunction
-      );
+      server.middlewares.use("/docs/.gitbook", express.static(`${docsPath}/../.gitbook`) as Connect.NextHandleFunction);
     },
   };
 };
