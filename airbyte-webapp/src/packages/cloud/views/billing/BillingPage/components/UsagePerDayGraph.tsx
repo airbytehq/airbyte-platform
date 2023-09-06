@@ -16,8 +16,6 @@ import {
 
 import { Text } from "components/ui/Text";
 
-import { useFreeConnectorProgram } from "core/api/cloud";
-
 import { UsagePerTimeChunk } from "./calculateUsageDataObjects";
 import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerDayGraph.module.scss";
@@ -25,12 +23,9 @@ import styles from "./UsagePerDayGraph.module.scss";
 interface UsagePerDayGraphProps {
   chartData: UsagePerTimeChunk;
   minimized?: boolean;
+  hasFreeUsage?: boolean;
 }
-export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized }) => {
-  const {
-    programStatusQuery: { data: freeConnectorEnrollment },
-  } = useFreeConnectorProgram();
-  const isEnrolledInFreeConnectorProgram = freeConnectorEnrollment?.isEnrolled;
+export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized, hasFreeUsage }) => {
   const { formatMessage } = useIntl();
   const chartLinesColor = styles.grey100;
   const chartTicksColor = styles.grey;
@@ -129,7 +124,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               );
             })}
           </Bar>
-          {isEnrolledInFreeConnectorProgram && (
+          {hasFreeUsage && (
             <Bar
               key="free"
               stackId="a"

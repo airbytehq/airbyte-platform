@@ -13,7 +13,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { useStripeCheckout } from "core/api/cloud";
+import { useIsFCPEnabled, useStripeCheckout } from "core/api/cloud";
 import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { Action, Namespace } from "core/services/analytics";
@@ -26,6 +26,7 @@ import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";
 import styles from "./RemainingCredits.module.scss";
 import { useBillingPageBanners } from "../useBillingPageBanners";
+import { useDeprecatedBillingPageBanners } from "../useDeprecatedBillingPageBanners";
 
 const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
 
@@ -47,7 +48,12 @@ export const RemainingCredits: React.FC = () => {
   const { isLoading, mutateAsync: createCheckout } = useStripeCheckout();
   const analytics = useAnalyticsService();
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
-  const { bannerVariant } = useBillingPageBanners();
+  const billingPageBannerHook = useBillingPageBanners;
+  const deprecatedBillingPageBannerHook = useDeprecatedBillingPageBanners;
+
+  const isFCPEnabled = useIsFCPEnabled();
+  const { bannerVariant } = isFCPEnabled ? deprecatedBillingPageBannerHook() : billingPageBannerHook();
+
   const { emailVerified } = useAuthService();
 
   useEffectOnce(() => {

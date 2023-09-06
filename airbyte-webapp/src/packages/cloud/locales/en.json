@@ -156,7 +156,7 @@
   "credits.source": "Source",
   "credits.destination": "Destination",
   "credits.schedule": "Schedule",
-  "credits.freeUsage": "Free Connector Program",
+  "credits.freeUsage": "Free",
   "credits.billedCost": "Billed",
   "credits.totalUsage": "Total credits usage",
   "credits.stripePortalLink": "Invoice history",
@@ -193,8 +193,6 @@
 
   "sidebar.credits": "Credits",
   "sidebar.billing": "Billing",
-
-  "freeConnectorProgram.title": "Free Connector Program",
   "freeConnectorProgram.releaseStageBadge.free": "Free",
 
   "experiment.speedyConnection": "<link>Set up your first connection</link> in the next <timer></timer> and get <b>100 additional credits</b> for your trial",
