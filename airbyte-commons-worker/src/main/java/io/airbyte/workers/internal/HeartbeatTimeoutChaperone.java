@@ -7,7 +7,9 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -15,6 +17,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -112,7 +115,8 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     LOGGER.info("thread status... heartbeat thread: {} , replication thread: {}", heartbeatFuture.isDone(), runnableFuture.isDone());
 
     if (heartbeatFuture.isDone() && !runnableFuture.isDone()) {
-      if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE, new Workspace(workspaceId))) {
+      if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE,
+          new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
         runnableFuture.cancel(true);
         throw new HeartbeatTimeoutException(
             String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
