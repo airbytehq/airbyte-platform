@@ -19,7 +19,9 @@ import io.airbyte.db.factory.DatabaseCheckFactory;
 import io.airbyte.db.instance.DatabaseConstants;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
+import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
@@ -92,6 +94,11 @@ public class DatabaseBeanFactory {
   @Singleton
   public JobPersistence jobPersistence(@Named("configDatabase") final Database jobDatabase) {
     return new DefaultJobPersistence(jobDatabase);
+  }
+
+  @Singleton
+  public MetadataPersistence metadataPersistence(@Named("configDatabase") final Database jobDatabase) {
+    return new DefaultMetadataPersistence(jobDatabase);
   }
 
   @Singleton
