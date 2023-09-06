@@ -16,6 +16,9 @@ import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
@@ -46,6 +49,12 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Factory
 class ContainerOrchestratorFactory {
+
+  @Singleton
+  public MetricClient metricClient() {
+    MetricClientFactory.initialize(MetricEmittingApps.ORCHESTRATOR);
+    return MetricClientFactory.getMetricClient();
+  }
 
   @Singleton
   FeatureFlags featureFlags() {

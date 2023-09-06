@@ -11,7 +11,6 @@ import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.temporal.api.common.v1.WorkflowExecution;
@@ -38,9 +37,8 @@ public class ConnectionManagerUtils {
 
   private final MetricClient metricClient;
 
-  public ConnectionManagerUtils() {
-    // TODO Inject it when MetricClient becomes injectable.
-    this.metricClient = MetricClientFactory.getMetricClient();
+  public ConnectionManagerUtils(final MetricClient metricClient) {
+    this.metricClient = metricClient;
   }
 
   /**
