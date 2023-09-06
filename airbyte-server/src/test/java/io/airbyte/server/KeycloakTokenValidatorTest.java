@@ -116,7 +116,9 @@ class KeycloakTokenValidatorTest {
     when(permissionPersistence.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, expectedUserId, AuthProvider.KEYCLOAK))
         .thenReturn(PermissionType.ORGANIZATION_READER);
 
-    Set<String> expectedResult = Set.of("ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+    // TODO: enable this once we are ready to enable getRoles function in KeycloakTokenValidator.
+    // Set<String> expectedResult = Set.of("ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+    Set<String> expectedResult = Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
 
     StepVerifier.create(responsePublisher)
         .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, expectedResult))

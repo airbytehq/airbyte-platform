@@ -117,7 +117,10 @@ public class KeycloakTokenValidator implements TokenValidator {
   }
 
   private Collection<String> getInstanceAdminRoles() {
-    return AuthRole.buildAuthRolesSet(AuthRole.ADMIN);
+    Set<String> roles = new HashSet<>();
+    roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
+    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+    return roles;
   }
 
   private Collection<String> getRoles(final String userId, final HttpRequest<?> request) {
