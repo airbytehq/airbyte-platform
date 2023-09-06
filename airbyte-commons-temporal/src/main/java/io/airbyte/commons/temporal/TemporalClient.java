@@ -24,6 +24,7 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -88,8 +89,7 @@ public class TemporalClient {
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationClient notificationClient,
-                        final StreamResetRecordsHelper streamResetRecordsHelper,
-                        final MetricClient metricClient) {
+                        final StreamResetRecordsHelper streamResetRecordsHelper) {
     this.workspaceRoot = workspaceRoot;
     this.client = client;
     this.service = service;
@@ -97,7 +97,8 @@ public class TemporalClient {
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationClient = notificationClient;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
-    this.metricClient = metricClient;
+    // TODO Inject it when MetricClient becomes injectable.
+    this.metricClient = MetricClientFactory.getMetricClient();
   }
 
   private final Set<String> workflowNames = new HashSet<>();

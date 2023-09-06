@@ -39,7 +39,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -123,12 +122,13 @@ public class TemporalClientTest {
     when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
     streamResetPersistence = mock(StreamResetPersistence.class);
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
-    connectionManagerUtils = spy(new ConnectionManagerUtils(mock(MetricClient.class)));
+    connectionManagerUtils = spy(new ConnectionManagerUtils());
     notificationClient = spy(new NotificationClient(workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils,
-            notificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
+            notificationClient,
+            streamResetRecordsHelper));
   }
 
   @Nested
@@ -144,7 +144,8 @@ public class TemporalClientTest {
 
       temporalClient = spy(
           new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils,
-              mNotificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
+              mNotificationClient,
+              streamResetRecordsHelper));
     }
 
     @Test

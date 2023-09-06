@@ -19,9 +19,6 @@ import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -128,12 +125,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public FeatureFlags featureFlags() {
     return new EnvVariableFeatureFlags();
-  }
-
-  @Singleton
-  public MetricClient metricClient() {
-    MetricClientFactory.initialize(MetricEmittingApps.SERVER);
-    return MetricClientFactory.getMetricClient();
   }
 
   @Singleton
