@@ -105,6 +105,14 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void listInstanceUsersTest() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
+    Assertions.assertEquals(1, userPermissions.size());
+    UserPermission userPermission = userPermissions.get(0);
+    Assertions.assertEquals(MockData.CREATOR_USER_ID_1, userPermission.getUser().getUserId());
+  }
+
+  @Test
   void findUsersInWorkspaceTest() throws Exception {
     final PermissionType permissionType = permissionPersistence
         .findPermissionTypeForUserAndWorkspace(MockData.WORKSPACE_ID_2, MockData.CREATOR_USER_ID_5.toString(), AuthProvider.KEYCLOAK);

@@ -197,9 +197,23 @@ public class PermissionPersistence {
     return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
   }
 
+  public List<UserPermission> listInstanceAdminUsers() throws IOException {
+    return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
+  }
+
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
     return this.database.query(ctx -> listPermissionsForOrganization(ctx, organizationId));
+  }
 
+  private List<UserPermission> listInstanceAdminPermissions(final DSLContext ctx) {
+    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .fetch();
+
+    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
   }
 
   public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId, final AuthProvider authProvider)

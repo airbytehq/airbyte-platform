@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.SecuredUser;
@@ -28,10 +29,8 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
 /**
- * This class is migrated from cloud-server UserApiController
- * {@link io.airbyte.cloud.server.apis.UserApiController}.
- *
- * TODO: migrate all User endpoints (including some endpoints in WebBackend API) from Cloud to OSS.
+ * User related APIs. TODO: migrate all User endpoints (including some endpoints in WebBackend API)
+ * from Cloud to OSS.
  */
 @SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/users")
@@ -102,6 +101,15 @@ public class UserApiController implements UserApi {
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
+  }
+
+  // TODO: Update permission to instance admin once the permission PR is merged.
+  @Post("/list_instance_admins")
+  @Secured({READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public UserWithPermissionInfoReadList listInstanceAdminUsers() {
+    return ApiHelper.execute(() -> userHandler.listInstanceAdminUsers());
   }
 
 }

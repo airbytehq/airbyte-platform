@@ -15,6 +15,8 @@ import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.UserWithPermissionInfoRead;
+import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
@@ -44,7 +46,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * UserHandler, provides basic CRUD operation access for users. Some are migrated from Cloud
- * UserHandler {@link io.airbyte.cloud.server.handlers.UserHandler}.
+ * UserHandler.
  */
 @SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
@@ -253,6 +255,11 @@ public class UserHandler {
     return buildWorkspaceUserReadList(userPermissions, workspaceId);
   }
 
+  public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
+    return buildUserWithPermissionInfoReadList(userPermissions);
+  }
+
   private Map<User, Permission> collectUserPermissionToMap(final List<UserPermission> userPermissions) {
     return userPermissions.stream()
         .collect(Collectors.toMap(
@@ -275,6 +282,18 @@ public class UserHandler {
                 .permissionId(entry.getValue().getPermissionId())
                 .permissionType(
                     Enums.toEnum(entry.getValue().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
+            .collect(Collectors.toList()));
+  }
+
+  private UserWithPermissionInfoReadList buildUserWithPermissionInfoReadList(final List<UserPermission> userPermissions) {
+    return new UserWithPermissionInfoReadList().users(
+        collectUserPermissionToMap(userPermissions)
+            .entrySet().stream()
+            .map((Entry<User, Permission> entry) -> new UserWithPermissionInfoRead()
+                .userId(entry.getKey().getUserId())
+                .email(entry.getKey().getEmail())
+                .name(entry.getKey().getName())
+                .permissionId(entry.getValue().getPermissionId()))
             .collect(Collectors.toList()));
   }
 

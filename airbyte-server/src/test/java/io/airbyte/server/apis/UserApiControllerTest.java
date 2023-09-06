@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
+import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.json.Jsons;
@@ -96,6 +97,16 @@ class UserApiControllerTest extends BaseControllerTest {
     final String path = "/api/v1/users/list_by_workspace_id";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new WorkspaceIdRequestBody())),
+        HttpStatus.OK);
+  }
+
+  @Test
+  void testListInstanceAdminUsers() throws Exception {
+    Mockito.when(userHandler.listInstanceAdminUsers())
+        .thenReturn(new UserWithPermissionInfoReadList());
+    final String path = "/api/v1/users/list_instance_admin";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.emptyObject()),
         HttpStatus.OK);
   }
 

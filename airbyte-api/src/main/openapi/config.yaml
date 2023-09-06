@@ -3105,6 +3105,22 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
+  /v1/users/list_instance_admin:
+    post:
+      summary: List all users with instance admin permissions. Only instance admin has permission to call this.
+      tags:
+        - user
+      operationId: listInstanceAdminUsers
+      responses:
+        "200":
+          description: List all instance admin users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithPermissionInfoReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
   # PERMISSIONS
   /v1/permissions/create:
     post:
@@ -7818,7 +7834,29 @@ components:
           $ref: "#/components/schemas/PermissionType"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
-
+    UserWithPermissionInfoReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserWithPermissionInfoRead"
+    UserWithPermissionInfoRead:
+      type: object
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
     InvalidInputProperty:
       type: object
       required:
