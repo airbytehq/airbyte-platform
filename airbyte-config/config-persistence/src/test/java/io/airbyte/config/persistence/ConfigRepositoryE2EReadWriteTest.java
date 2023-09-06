@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.jooq.impl.DSL.select;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 
@@ -21,6 +22,7 @@ import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
+import io.airbyte.config.EarlySyncJob;
 import io.airbyte.config.Geography;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
@@ -861,6 +863,14 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
             .execute();
       }
     });
+  }
+
+  @Test
+  void testGetEarlySyncJobs() throws IOException {
+    // This test just verifies that the query can be run against configAPI DB.
+    // The query has been tested locally against prod DB to verify the outputs.
+    final List<EarlySyncJob> earlySyncJobs = configRepository.listEarlySyncJobs(30, 7);
+    assertNotNull(earlySyncJobs);
   }
 
 }
