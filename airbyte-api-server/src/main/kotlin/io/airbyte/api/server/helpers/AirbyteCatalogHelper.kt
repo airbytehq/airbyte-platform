@@ -135,10 +135,14 @@ object AirbyteCatalogHelper {
             // Ensure minutes value is not `*`
             Integer.valueOf(cronStrings[1])
           }
+        } catch (e: NumberFormatException) {
+          log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
+          log.debug("NumberFormatException: $e")
+          throw ConnectionConfigurationProblem.invalidCronExpressionUnderOneHour(connectionSchedule.cronExpression)
         } catch (e: IllegalArgumentException) {
           log.debug("Invalid cron expression: " + connectionSchedule.cronExpression)
           log.debug("IllegalArgumentException: $e")
-          throw ConnectionConfigurationProblem.invalidCronExpression(connectionSchedule.cronExpression)
+          throw ConnectionConfigurationProblem.invalidCronExpression(connectionSchedule.cronExpression, e.message)
         }
       }
     }
