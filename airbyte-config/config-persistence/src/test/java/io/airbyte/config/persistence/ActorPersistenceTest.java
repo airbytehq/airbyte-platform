@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -261,6 +262,102 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
 
     assertEquals(newVersionId, sourceDefinitionDefaultVersionIdAfterUpgrade);
     assertEquals(initialSourceDefaultVersionId, sourceDefaultVersionIdAfterUpgrade);
+  }
+
+  @Test
+  void testGetSourcesWithVersions() throws IOException {
+    final SourceConnection sourceConnection1 = new SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName(SOURCE_NAME);
+    configRepository.writeSourceConnectionNoSecrets(sourceConnection1);
+
+    final SourceConnection sourceConnection2 = new SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName(SOURCE_NAME);
+    configRepository.writeSourceConnectionNoSecrets(sourceConnection2);
+
+    final List<SourceConnection> sourceConnections =
+        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId()));
+    assertEquals(2, sourceConnections.size());
+    assertEquals(
+        Stream.of(sourceConnection1.getSourceId(), sourceConnection2.getSourceId()).sorted().toList(),
+        sourceConnections.stream().map(SourceConnection::getSourceId).sorted().toList());
+
+    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
+        .withActorDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withVersionId(UUID.randomUUID())
+        .withDockerImageTag(UPGRADE_IMAGE_TAG));
+
+    configRepository.setActorDefaultVersion(sourceConnection1.getSourceId(), newActorDefinitionVersion.getVersionId());
+
+    final List<SourceConnection> sourcesWithNewVersion =
+        configRepository.listSourcesWithVersionIds(List.of(newActorDefinitionVersion.getVersionId()));
+    assertEquals(1, sourcesWithNewVersion.size());
+    assertEquals(sourceConnection1.getSourceId(), sourcesWithNewVersion.get(0).getSourceId());
+
+    final List<SourceConnection> sourcesWithOldVersion =
+        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId()));
+    assertEquals(1, sourcesWithOldVersion.size());
+    assertEquals(sourceConnection2.getSourceId(), sourcesWithOldVersion.get(0).getSourceId());
+
+    final List<SourceConnection> sourcesWithBothVersions =
+        configRepository.listSourcesWithVersionIds(List.of(standardSourceDefinition.getDefaultVersionId(), newActorDefinitionVersion.getVersionId()));
+    assertEquals(2, sourcesWithBothVersions.size());
+    assertEquals(
+        Stream.of(sourceConnection1.getSourceId(), sourceConnection2.getSourceId()).sorted().toList(),
+        sourcesWithBothVersions.stream().map(SourceConnection::getSourceId).sorted().toList());
+  }
+
+  @Test
+  void testGetDestinationsWithVersions() throws IOException {
+    final DestinationConnection destinationConnection1 = new DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName(DESTINATION_NAME);
+    configRepository.writeDestinationConnectionNoSecrets(destinationConnection1);
+
+    final DestinationConnection destinationConnection2 = new DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withWorkspaceId(WORKSPACE_ID)
+        .withName(DESTINATION_NAME);
+    configRepository.writeDestinationConnectionNoSecrets(destinationConnection2);
+
+    final List<DestinationConnection> destinationConnections =
+        configRepository.listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId()));
+    assertEquals(2, destinationConnections.size());
+    assertEquals(
+        Stream.of(destinationConnection1.getDestinationId(), destinationConnection2.getDestinationId()).sorted().toList(),
+        destinationConnections.stream().map(DestinationConnection::getDestinationId).sorted().toList());
+
+    final ActorDefinitionVersion newActorDefinitionVersion = configRepository.writeActorDefinitionVersion(MockData.actorDefinitionVersion()
+        .withActorDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withVersionId(UUID.randomUUID())
+        .withDockerImageTag(UPGRADE_IMAGE_TAG));
+
+    configRepository.setActorDefaultVersion(destinationConnection1.getDestinationId(), newActorDefinitionVersion.getVersionId());
+
+    final List<DestinationConnection> destinationsWithNewVersion =
+        configRepository.listDestinationsWithVersionIds(List.of(newActorDefinitionVersion.getVersionId()));
+    assertEquals(1, destinationsWithNewVersion.size());
+    assertEquals(destinationConnection1.getDestinationId(), destinationsWithNewVersion.get(0).getDestinationId());
+
+    final List<DestinationConnection> destinationsWithOldVersion =
+        configRepository.listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId()));
+    assertEquals(1, destinationsWithOldVersion.size());
+    assertEquals(destinationConnection2.getDestinationId(), destinationsWithOldVersion.get(0).getDestinationId());
+
+    final List<DestinationConnection> destinationsWithBothVersions = configRepository
+        .listDestinationsWithVersionIds(List.of(standardDestinationDefinition.getDefaultVersionId(), newActorDefinitionVersion.getVersionId()));
+    assertEquals(2, destinationsWithBothVersions.size());
+    assertEquals(
+        Stream.of(destinationConnection1.getDestinationId(), destinationConnection2.getDestinationId()).sorted().toList(),
+        destinationsWithBothVersions.stream().map(DestinationConnection::getDestinationId).sorted().toList());
   }
 
 }

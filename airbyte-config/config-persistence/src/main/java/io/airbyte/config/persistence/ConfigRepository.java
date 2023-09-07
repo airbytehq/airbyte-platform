@@ -1603,6 +1603,38 @@ public class ConfigRepository {
   }
 
   /**
+   * Returns all active sources whose default_version_id is in a given list of version IDs.
+   *
+   * @param actorDefinitionVersionIds - list of actor definition version ids
+   * @return list of SourceConnections
+   * @throws IOException - you never know when you IO
+   */
+  public List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
+        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildSourceConnection).toList();
+  }
+
+  /**
+   * Returns all active destinations whose default_version_id is in a given list of version IDs.
+   *
+   * @param actorDefinitionVersionIds - list of actor definition version ids
+   * @return list of DestinationConnections
+   * @throws IOException - you never know when you IO
+   */
+  public List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+        .and(ACTOR.DEFAULT_VERSION_ID.in(actorDefinitionVersionIds))
+        .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildDestinationConnection).toList();
+  }
+
+  /**
    * Returns all active destinations using a definition.
    *
    * @param definitionId - id for the definition
@@ -2440,33 +2472,33 @@ public class ConfigRepository {
     return insertCatalog(airbyteCatalog, catalogHash, context, timestamp);
   }
 
-  private String generateCanonicalHash(AirbyteCatalog airbyteCatalog) {
+  private String generateCanonicalHash(final AirbyteCatalog airbyteCatalog) {
     final HashFunction hashFunction = Hashing.murmur3_32_fixed();
     try {
       return hashFunction.hashBytes(Jsons.canonicalJsonSerialize(airbyteCatalog)
           .getBytes(Charsets.UTF_8)).toString();
-    } catch (IOException e) {
+    } catch (final IOException e) {
       LOGGER.error("Failed to serialize AirbyteCatalog to canonical JSON", e);
       return null;
     }
   }
 
-  private String generateOldHash(AirbyteCatalog airbyteCatalog) {
+  private String generateOldHash(final AirbyteCatalog airbyteCatalog) {
     final HashFunction hashFunction = Hashing.murmur3_32_fixed();
     return hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
   }
 
-  private UUID lookupCatalogId(String catalogHash, AirbyteCatalog airbyteCatalog, DSLContext context) {
+  private UUID lookupCatalogId(final String catalogHash, final AirbyteCatalog airbyteCatalog, final DSLContext context) {
     if (catalogHash == null) {
       return null;
     }
     return findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
   }
 
-  private UUID insertCatalog(AirbyteCatalog airbyteCatalog,
-                             String catalogHash,
-                             DSLContext context,
-                             OffsetDateTime timestamp) {
+  private UUID insertCatalog(final AirbyteCatalog airbyteCatalog,
+                             final String catalogHash,
+                             final DSLContext context,
+                             final OffsetDateTime timestamp) {
     final UUID catalogId = UUID.randomUUID();
     context.insertInto(ACTOR_CATALOG)
         .set(ACTOR_CATALOG.ID, catalogId)
