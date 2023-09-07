@@ -78,9 +78,9 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
 
   const syncMode = (
     <>
-      <FormattedMessage id={`syncMode.${config?.syncMode}`} />
+      {config?.syncMode && <FormattedMessage id={`syncMode.${config.syncMode}`} />}
       {` | `}
-      <FormattedMessage id={`destinationSyncMode.${config?.destinationSyncMode}`} />
+      {config?.destinationSyncMode && <FormattedMessage id={`destinationSyncMode.${config.destinationSyncMode}`} />}
     </>
   );
 

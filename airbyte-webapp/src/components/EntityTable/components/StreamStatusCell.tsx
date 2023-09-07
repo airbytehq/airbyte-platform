@@ -67,13 +67,16 @@ const StreamsPerStatus: React.FC<{
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 }> = ({ streamStatuses, enabledStreams }) => {
   const sortedStreamsMap = sortStreams(enabledStreams, streamStatuses);
-  const filteredAndSortedStreams = Object.entries(sortedStreamsMap).filter(([, streams]) => !!streams.length);
+  const filteredAndSortedStreams = Object.entries(sortedStreamsMap).filter(([, streams]) => !!streams.length) as Array<
+    [ConnectionStatusIndicatorStatus, StreamWithStatus[]]
+  >;
+
   return (
     <>
       {filteredAndSortedStreams.map(([statusType, streams]) => (
         <div className={styles.tooltipContent} key={statusType}>
           <div className={styles.streamsDetail}>
-            <StreamStatusIndicator status={statusType as ConnectionStatusIndicatorStatus} />
+            <StreamStatusIndicator status={statusType} />
             <strong>{streams.length}</strong> <FormattedMessage id={`connection.stream.status.${statusType}`} />
           </div>
           <SyncingStreams streams={streams} />

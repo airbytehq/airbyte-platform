@@ -57,7 +57,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               iconType="circle"
               height={40}
               wrapperStyle={{ color: `${styles.white}` }}
-              formatter={(value) => {
+              formatter={(value: "freeUsage" | "billedCost") => {
                 return (
                   <Text as="span">
                     <FormattedMessage id={`credits.${value}`} />

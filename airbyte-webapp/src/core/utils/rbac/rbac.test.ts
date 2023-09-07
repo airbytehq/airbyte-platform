@@ -122,6 +122,7 @@ describe("useRbac", () => {
         permissions: [{ permissionType: "instance_admin" }],
       }));
     });
+    // TODO: Update test to throw once cloud workspaces are migrated to organizations + rbac.ts invariant is adjusted to require organization id
 
     it("throws an error when an workspaceId is missing", () => {
       mockUseListPermissions.mockImplementation(() => ({
