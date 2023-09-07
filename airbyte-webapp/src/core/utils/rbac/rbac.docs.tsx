@@ -37,7 +37,10 @@ const PermissionBuilder: React.FC<{
               { label: "Organization", value: RbacResourceHierarchy[1] },
               { label: "Workspace", value: RbacResourceHierarchy[2] },
             ]}
-            onSelect={setResource}
+            onSelect={(value) => {
+              value === RbacResourceHierarchy[0] && setId("");
+              setResource(value);
+            }}
           />
         </FlexItem>
         <FlexItem>
@@ -55,6 +58,7 @@ const PermissionBuilder: React.FC<{
           <Input
             placeholder="resource id"
             value={id}
+            disabled={resource === RbacResourceHierarchy[0]} // disable uuid input for Instance permissions
             onChange={(e) => {
               setId(e.target.value);
             }}
@@ -180,7 +184,7 @@ const PermisisonTestViewInner = () => {
         </strong>
         <br />
         {permissions.map((permission, index) => (
-          <div key={index}>
+          <div style={{ marginTop: 5 }} key={index}>
             <PermissionBuilder
               resource={permission.resourceType}
               setResource={(resource) => {
