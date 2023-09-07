@@ -29,6 +29,7 @@ dependencies {
     compileOnly libs.lombok
     annotationProcessor libs.lombok
     implementation libs.bundles.apache
+    implementation libs.failsafe
 
     testImplementation libs.temporal.testing
     // Needed to be able to mock final class

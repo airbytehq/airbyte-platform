@@ -35,10 +35,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ConnectionManagerUtils {
 
+  private final WorkflowClientWrapped workflowClientWrapped;
   private final MetricClient metricClient;
 
-  public ConnectionManagerUtils(final MetricClient metricClient) {
+  public ConnectionManagerUtils(final WorkflowClient workflowClient, final MetricClient metricClient) {
     this.metricClient = metricClient;
+    this.workflowClientWrapped = new WorkflowClientWrapped(workflowClient, this.metricClient);
   }
 
   /**
@@ -113,7 +115,7 @@ public class ConnectionManagerUtils {
                                                                            final Optional<T> signalArgument)
       throws DeletedWorkflowException {
     try {
-      final ConnectionManagerWorkflow connectionManagerWorkflow = getConnectionManagerWorkflow(client, connectionId);
+      final ConnectionManagerWorkflow connectionManagerWorkflow = getConnectionManagerWorkflow(connectionId);
       log.info("Retrieved existing connection manager workflow for connection {}. Executing signal.", connectionId);
       // retrieve the signal from the lambda
       final TemporalFunctionalInterfaceMarker signal = signalMethod.apply(connectionManagerWorkflow);
@@ -208,16 +210,16 @@ public class ConnectionManagerUtils {
    * @throws DeletedWorkflowException if the workflow was deleted, according to the workflow state
    * @throws UnreachableWorkflowException if the workflow is in an unreachable state
    */
-  public ConnectionManagerWorkflow getConnectionManagerWorkflow(final WorkflowClient client, final UUID connectionId)
+  public ConnectionManagerWorkflow getConnectionManagerWorkflow(final UUID connectionId)
       throws DeletedWorkflowException, UnreachableWorkflowException {
 
     final ConnectionManagerWorkflow connectionManagerWorkflow;
     final WorkflowState workflowState;
     final WorkflowExecutionStatus workflowExecutionStatus;
     try {
-      connectionManagerWorkflow = client.newWorkflowStub(ConnectionManagerWorkflow.class, getConnectionManagerName(connectionId));
+      connectionManagerWorkflow = workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow.class, getConnectionManagerName(connectionId));
       workflowState = connectionManagerWorkflow.getState();
-      workflowExecutionStatus = getConnectionManagerWorkflowStatus(client, connectionId);
+      workflowExecutionStatus = getConnectionManagerWorkflowStatus(connectionId);
     } catch (final Exception e) {
       throw new UnreachableWorkflowException(
           String.format("Failed to retrieve ConnectionManagerWorkflow for connection %s due to the following error:", connectionId),
@@ -257,19 +259,18 @@ public class ConnectionManagerUtils {
   /**
    * Get status of a connection manager workflow.
    *
-   * @param workflowClient workflow client
    * @param connectionId connection id
    * @return workflow execution status
    */
-  public WorkflowExecutionStatus getConnectionManagerWorkflowStatus(final WorkflowClient workflowClient, final UUID connectionId) {
+  private WorkflowExecutionStatus getConnectionManagerWorkflowStatus(final UUID connectionId) {
     final DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = DescribeWorkflowExecutionRequest.newBuilder()
         .setExecution(WorkflowExecution.newBuilder()
             .setWorkflowId(getConnectionManagerName(connectionId))
             .build())
-        .setNamespace(workflowClient.getOptions().getNamespace()).build();
+        .setNamespace(workflowClientWrapped.getNamespace()).build();
 
-    final DescribeWorkflowExecutionResponse describeWorkflowExecutionResponse = workflowClient.getWorkflowServiceStubs().blockingStub()
-        .describeWorkflowExecution(describeWorkflowExecutionRequest);
+    final DescribeWorkflowExecutionResponse describeWorkflowExecutionResponse =
+        workflowClientWrapped.blockingDescribeWorkflowExecution(describeWorkflowExecutionRequest);
 
     return describeWorkflowExecutionResponse.getWorkflowExecutionInfo().getStatus();
   }
@@ -277,13 +278,12 @@ public class ConnectionManagerUtils {
   /**
    * Get the job id for a connection is a workflow is running for it. Otherwise, throws.
    *
-   * @param client temporal workflow client
    * @param connectionId connection id
    * @return current job id
    */
-  public long getCurrentJobId(final WorkflowClient client, final UUID connectionId) {
+  public long getCurrentJobId(final UUID connectionId) {
     try {
-      final ConnectionManagerWorkflow connectionManagerWorkflow = getConnectionManagerWorkflow(client, connectionId);
+      final ConnectionManagerWorkflow connectionManagerWorkflow = getConnectionManagerWorkflow(connectionId);
       return connectionManagerWorkflow.getJobInformation().getJobId();
     } catch (final Exception e) {
       return ConnectionManagerWorkflow.NON_RUNNING_JOB_ID;

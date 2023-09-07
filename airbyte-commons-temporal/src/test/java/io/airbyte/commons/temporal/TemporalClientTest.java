@@ -123,7 +123,7 @@ public class TemporalClientTest {
     when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
     streamResetPersistence = mock(StreamResetPersistence.class);
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
-    connectionManagerUtils = spy(new ConnectionManagerUtils(mock(MetricClient.class)));
+    connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClient, mock(MetricClient.class)));
     notificationClient = spy(new NotificationClient(workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
