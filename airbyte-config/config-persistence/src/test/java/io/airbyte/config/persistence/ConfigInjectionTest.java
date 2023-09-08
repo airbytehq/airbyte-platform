@@ -104,7 +104,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   private void createBaseObjects() throws IOException {
     sourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     createInjection(sourceDefinition, "a");
     createInjection(sourceDefinition, "b");
@@ -112,7 +112,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     // unreachable injection, should not show up
     final StandardSourceDefinition otherSourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(otherSourceDefinition.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(otherSourceDefinition, actorDefinitionVersion2);
+    configRepository.writeConnectorMetadata(otherSourceDefinition, actorDefinitionVersion2);
     createInjection(otherSourceDefinition, "c");
   }
 

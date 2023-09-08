@@ -28,7 +28,6 @@ import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,7 +54,6 @@ public class ApplyDefinitionsHelper {
   private final SupportStateUpdater supportStateUpdater;
   private int newConnectorCount;
   private int changedConnectorCount;
-  private List<ActorDefinitionBreakingChange> allBreakingChanges;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
 
   public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
@@ -96,7 +94,6 @@ public class ApplyDefinitionsHelper {
 
     newConnectorCount = 0;
     changedConnectorCount = 0;
-    allBreakingChanges = new ArrayList<>();
 
     for (final ConnectorRegistrySourceDefinition def : protocolCompatibleSourceDefinitions) {
       applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
@@ -104,7 +101,6 @@ public class ApplyDefinitionsHelper {
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
     }
-    configRepository.writeActorDefinitionBreakingChanges(allBreakingChanges);
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       supportStateUpdater.updateSupportStates();
     }
@@ -132,13 +128,11 @@ public class ApplyDefinitionsHelper {
       return;
     }
 
-    allBreakingChanges.addAll(breakingChangesForDef);
-
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -151,7 +145,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardSourceDefinition(newSourceDef);
     }
@@ -176,13 +170,11 @@ public class ApplyDefinitionsHelper {
       return;
     }
 
-    allBreakingChanges.addAll(breakingChangesForDef);
-
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -195,7 +187,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardDestinationDefinition(newDestinationDef);
     }

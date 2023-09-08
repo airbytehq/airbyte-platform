@@ -7,7 +7,6 @@ package io.airbyte.config.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,13 +42,10 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String SOURCE_NAME = "Test Source";
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
   private static final String DOCKER_IMAGE_TAG = "0.1.0";
-  private static final String DOCKER_IMAGE_TAG_2 = "0.2.0";
   private static final String UNPERSISTED_DOCKER_IMAGE_TAG = "0.1.1";
   private static final String PROTOCOL_VERSION = "1.0.0";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value"))).withProtocolVersion(PROTOCOL_VERSION);
-  private static final ConnectorSpecification SPEC_2 = new ConnectorSpecification()
-      .withConnectionSpecification(Jsons.jsonNode(Map.of("key", "value2"))).withProtocolVersion(PROTOCOL_VERSION);
 
   private static StandardSourceDefinition baseSourceDefinition(final UUID actorDefinitionId) {
     return new StandardSourceDefinition()
@@ -99,7 +95,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     sourceDefinition = baseSourceDefinition(defId);
 
     // Make sure that the source definition exists before we start writing actor definition versions
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, initialADV);
+    configRepository.writeConnectorMetadata(sourceDefinition, initialADV);
   }
 
   @Test
@@ -153,50 +149,11 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testWriteSourceDefinitionAndDefaultVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
-    // Write initial source definition and default version
-    final UUID defId = sourceDefinition.getSourceDefinitionId();
-    final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId);
-    final StandardSourceDefinition sourceDefinition = baseSourceDefinition(defId);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, adv);
-
-    final Optional<ActorDefinitionVersion> optADVForTag = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
-    assertTrue(optADVForTag.isPresent());
-    final ActorDefinitionVersion advForTag = optADVForTag.get();
-    final StandardSourceDefinition retrievedSourceDefinition =
-        configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
-    assertEquals(retrievedSourceDefinition.getDefaultVersionId(), advForTag.getVersionId());
-
-    // Modify spec without changing docker image tag
-    final ActorDefinitionVersion modifiedADV = baseActorDefinitionVersion(defId).withSpec(SPEC_2);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, modifiedADV);
-
-    assertEquals(retrievedSourceDefinition, configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()));
-    final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
-    assertTrue(optADVForTagAfterCall2.isPresent());
-    // Versioned data does not get updated since the tag did not change - old spec is still returned
-    assertEquals(advForTag, optADVForTagAfterCall2.get());
-
-    // Modifying docker image tag creates a new version (which can contain new versioned data)
-    final ActorDefinitionVersion newADV = baseActorDefinitionVersion(defId).withDockerImageTag(DOCKER_IMAGE_TAG_2).withSpec(SPEC_2);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, newADV);
-
-    final Optional<ActorDefinitionVersion> optADVForTag2 = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG_2);
-    assertTrue(optADVForTag2.isPresent());
-    final ActorDefinitionVersion advForTag2 = optADVForTag2.get();
-
-    // Versioned data is updated as well as the version id
-    assertEquals(advForTag2, newADV.withVersionId(advForTag2.getVersionId()));
-    assertNotEquals(advForTag2.getVersionId(), advForTag.getVersionId());
-    assertNotEquals(advForTag2.getSpec(), advForTag.getSpec());
-  }
-
-  @Test
   void testWriteSourceDefinitionSupportLevelNone() throws IOException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId).withActorDefinitionId(defId).withSupportLevel(SupportLevel.NONE);
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, adv);
+    configRepository.writeConnectorMetadata(sourceDefinition, adv);
 
     final Optional<ActorDefinitionVersion> optADVForTag = configRepository.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG);
     assertTrue(optADVForTag.isPresent());
@@ -212,7 +169,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
     assertThrows(
         RuntimeException.class,
-        () -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, adv));
+        () -> configRepository.writeConnectorMetadata(sourceDefinition, adv));
   }
 
   @Test
@@ -255,7 +212,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(UUID.randomUUID());
     final ActorDefinitionVersion otherActorDefVersion =
         baseActorDefinitionVersion(defId).withActorDefinitionId(otherSourceDef.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(otherSourceDef, otherActorDefVersion);
+    configRepository.writeConnectorMetadata(otherSourceDef, otherActorDefVersion);
 
     final UUID otherActorDefVersionId = configRepository.getStandardSourceDefinition(otherSourceDef.getSourceDefinitionId()).getDefaultVersionId();
 

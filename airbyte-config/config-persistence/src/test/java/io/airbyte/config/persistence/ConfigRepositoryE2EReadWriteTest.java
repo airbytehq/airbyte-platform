@@ -85,13 +85,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
           .withVersionId(sourceDefinition.getDefaultVersionId());
-      configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
     }
     for (final StandardDestinationDefinition destinationDefinition : MockData.standardDestinationDefinitions()) {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
           .withVersionId(destinationDefinition.getDefaultVersionId());
-      configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion);
     }
     for (final SourceConnection source : MockData.sourceConnections()) {
       configRepository.writeSourceConnectionNoSecrets(source);
@@ -158,7 +158,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -216,7 +216,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -270,7 +270,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())

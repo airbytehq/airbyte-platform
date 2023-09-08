@@ -224,7 +224,7 @@ public class ConnectorBuilderProjectsHandler {
         .withSupportLevel(SupportLevel.NONE)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
+    configRepository.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();

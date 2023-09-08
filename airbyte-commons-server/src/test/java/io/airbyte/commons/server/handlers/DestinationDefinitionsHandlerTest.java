@@ -600,7 +600,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -666,7 +666,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreateForWorkspace.getWorkspaceId());
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -691,7 +691,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         null);
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
+    verify(configRepository).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
         destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
@@ -727,7 +727,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
+    verify(configRepository, never()).writeCustomConnectorMetadata(any(StandardDestinationDefinition.class), any(), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -771,8 +771,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination, updatedDestinationDefVersion, breakingChanges);
-    verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    verify(configRepository).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
     if (runSupportStateUpdaterFlagValue) {
       verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
     } else {
@@ -806,7 +805,7 @@ class DestinationDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(any(), any());
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }

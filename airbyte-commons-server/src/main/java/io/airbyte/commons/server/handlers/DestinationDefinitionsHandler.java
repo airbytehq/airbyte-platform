@@ -251,10 +251,10 @@ public class DestinationDefinitionsHandler {
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
-      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
           customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
-      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(destinationDefinition, actorDefinitionVersion,
           customDestinationDefinitionCreate.getScopeId(), ScopeType.fromValue(customDestinationDefinitionCreate.getScopeType().toString()));
     }
 
@@ -285,9 +285,8 @@ public class DestinationDefinitionsHandler {
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef =
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion, breakingChangesForDef);
+    configRepository.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef);
 
-    configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       final StandardDestinationDefinition updatedDestinationDefinition = configRepository
           .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());

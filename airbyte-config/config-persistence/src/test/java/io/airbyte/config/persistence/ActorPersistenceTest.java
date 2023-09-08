@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -43,10 +42,10 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
     configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
     standardSourceDefinition = MockData.publicSourceDefinition();
     standardDestinationDefinition = MockData.publicDestinationDefinition();
-    configRepository.writeSourceDefinitionAndDefaultVersion(standardSourceDefinition, MockData.actorDefinitionVersion()
+    configRepository.writeConnectorMetadata(standardSourceDefinition, MockData.actorDefinitionVersion()
         .withActorDefinitionId(standardSourceDefinition.getSourceDefinitionId())
         .withVersionId(standardSourceDefinition.getDefaultVersionId()));
-    configRepository.writeDestinationDefinitionAndDefaultVersion(standardDestinationDefinition, MockData.actorDefinitionVersion()
+    configRepository.writeConnectorMetadata(standardDestinationDefinition, MockData.actorDefinitionVersion()
         .withActorDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
         .withVersionId(standardDestinationDefinition.getDefaultVersionId()));
     configRepository.writeStandardWorkspaceNoSecrets(new StandardWorkspace()
@@ -122,146 +121,6 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
 
     final DestinationConnection destinationConnectionFromDb = configRepository.getDestinationConnection(destinationConnection.getDestinationId());
     assertEquals(newActorDefinitionVersion.getVersionId(), destinationConnectionFromDb.getDefaultVersionId());
-  }
-
-  @Test
-  void testSourceDefaultVersionIsUpgradedOnNonbreakingUpgrade()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final UUID sourceDefId = standardSourceDefinition.getSourceDefinitionId();
-    final SourceConnection sourceConnection = new SourceConnection()
-        .withSourceId(UUID.randomUUID())
-        .withSourceDefinitionId(sourceDefId)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(SOURCE_NAME);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-
-    final UUID initialSourceDefinitionDefaultVersionId = configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
-    final UUID initialSourceDefaultVersionId = configRepository.getSourceConnection(sourceConnection.getSourceId()).getDefaultVersionId();
-    assertNotNull(initialSourceDefinitionDefaultVersionId);
-    assertEquals(initialSourceDefinitionDefaultVersionId, initialSourceDefaultVersionId);
-
-    final UUID newVersionId = UUID.randomUUID();
-    final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
-        .withActorDefinitionId(sourceDefId)
-        .withVersionId(newVersionId)
-        .withDockerImageTag(UPGRADE_IMAGE_TAG);
-
-    configRepository.writeSourceDefinitionAndDefaultVersion(standardSourceDefinition, newVersion);
-    final UUID sourceDefinitionDefaultVersionIdAfterUpgrade = configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
-    final UUID sourceDefaultVersionIdAfterUpgrade = configRepository.getSourceConnection(sourceConnection.getSourceId()).getDefaultVersionId();
-
-    assertEquals(newVersionId, sourceDefinitionDefaultVersionIdAfterUpgrade);
-    assertEquals(newVersionId, sourceDefaultVersionIdAfterUpgrade);
-  }
-
-  @Test
-  void testDestinationDefaultVersionIsUpgradedOnNonbreakingUpgrade()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final UUID destinationDefId = standardDestinationDefinition.getDestinationDefinitionId();
-    final DestinationConnection destinationConnection = new DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withDestinationDefinitionId(destinationDefId)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(DESTINATION_NAME);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
-
-    final UUID initialDestinationDefinitionDefaultVersionId =
-        configRepository.getStandardDestinationDefinition(destinationDefId).getDefaultVersionId();
-    final UUID initialDestinationDefaultVersionId =
-        configRepository.getDestinationConnection(destinationConnection.getDestinationId()).getDefaultVersionId();
-    assertNotNull(initialDestinationDefinitionDefaultVersionId);
-    assertEquals(initialDestinationDefinitionDefaultVersionId, initialDestinationDefaultVersionId);
-
-    final UUID newVersionId = UUID.randomUUID();
-    final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
-        .withActorDefinitionId(destinationDefId)
-        .withVersionId(newVersionId)
-        .withDockerImageTag(UPGRADE_IMAGE_TAG);
-
-    configRepository.writeDestinationDefinitionAndDefaultVersion(standardDestinationDefinition, newVersion);
-    final UUID destinationDefinitionDefaultVersionIdAfterUpgrade =
-        configRepository.getStandardDestinationDefinition(destinationDefId).getDefaultVersionId();
-    final UUID destinationDefaultVersionIdAfterUpgrade =
-        configRepository.getDestinationConnection(destinationConnection.getDestinationId()).getDefaultVersionId();
-
-    assertEquals(newVersionId, destinationDefinitionDefaultVersionIdAfterUpgrade);
-    assertEquals(newVersionId, destinationDefaultVersionIdAfterUpgrade);
-  }
-
-  @Test
-  void testDestinationDefaultVersionIsNotModifiedOnBreakingUpgrade()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final UUID destinationDefId = standardDestinationDefinition.getDestinationDefinitionId();
-    final DestinationConnection destinationConnection = new DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withDestinationDefinitionId(destinationDefId)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(DESTINATION_NAME);
-    configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
-
-    final UUID initialDestinationDefinitionDefaultVersionId =
-        configRepository.getStandardDestinationDefinition(destinationDefId).getDefaultVersionId();
-    final UUID initialDestinationDefaultVersionId =
-        configRepository.getDestinationConnection(destinationConnection.getDestinationId()).getDefaultVersionId();
-    assertNotNull(initialDestinationDefinitionDefaultVersionId);
-    assertEquals(initialDestinationDefinitionDefaultVersionId, initialDestinationDefaultVersionId);
-
-    // Introduce a breaking change between 0.0.1 and UPGRADE_IMAGE_TAG to make the upgrade breaking
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(destinationDefId));
-
-    final UUID newVersionId = UUID.randomUUID();
-    final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
-        .withActorDefinitionId(destinationDefId)
-        .withVersionId(newVersionId)
-        .withDockerImageTag(UPGRADE_IMAGE_TAG);
-
-    configRepository.writeDestinationDefinitionAndDefaultVersion(standardDestinationDefinition, newVersion, breakingChangesForDef);
-    final UUID destinationDefinitionDefaultVersionIdAfterUpgrade =
-        configRepository.getStandardDestinationDefinition(destinationDefId).getDefaultVersionId();
-    final UUID destinationDefaultVersionIdAfterUpgrade =
-        configRepository.getDestinationConnection(destinationConnection.getDestinationId()).getDefaultVersionId();
-
-    assertEquals(newVersionId, destinationDefinitionDefaultVersionIdAfterUpgrade);
-    assertEquals(initialDestinationDefaultVersionId, destinationDefaultVersionIdAfterUpgrade);
-  }
-
-  @Test
-  void testSourceDefaultVersionIsNotModifiedOnBreakingUpgrade()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final UUID sourceDefId = standardSourceDefinition.getSourceDefinitionId();
-    final SourceConnection sourceConnection = new SourceConnection()
-        .withSourceId(UUID.randomUUID())
-        .withSourceDefinitionId(sourceDefId)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withName(SOURCE_NAME);
-    configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-
-    final UUID initialSourceDefinitionDefaultVersionId =
-        configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
-    final UUID initialSourceDefaultVersionId =
-        configRepository.getSourceConnection(sourceConnection.getSourceId()).getDefaultVersionId();
-    assertNotNull(initialSourceDefinitionDefaultVersionId);
-    assertEquals(initialSourceDefinitionDefaultVersionId, initialSourceDefaultVersionId);
-
-    // Introduce a breaking change between 0.0.1 and UPGRADE_IMAGE_TAG to make the upgrade breaking
-    final List<ActorDefinitionBreakingChange> breakingChangesForDef =
-        List.of(MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG).withActorDefinitionId(sourceDefId));
-
-    final UUID newVersionId = UUID.randomUUID();
-    final ActorDefinitionVersion newVersion = MockData.actorDefinitionVersion()
-        .withActorDefinitionId(sourceDefId)
-        .withVersionId(newVersionId)
-        .withDockerImageTag(UPGRADE_IMAGE_TAG);
-
-    configRepository.writeSourceDefinitionAndDefaultVersion(standardSourceDefinition, newVersion, breakingChangesForDef);
-    final UUID sourceDefinitionDefaultVersionIdAfterUpgrade =
-        configRepository.getStandardSourceDefinition(sourceDefId).getDefaultVersionId();
-    final UUID sourceDefaultVersionIdAfterUpgrade =
-        configRepository.getSourceConnection(sourceConnection.getSourceId()).getDefaultVersionId();
-
-    assertEquals(newVersionId, sourceDefinitionDefaultVersionIdAfterUpgrade);
-    assertEquals(initialSourceDefaultVersionId, sourceDefaultVersionIdAfterUpgrade);
   }
 
   @Test

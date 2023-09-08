@@ -380,7 +380,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
-    verify(configRepository, times(1)).writeCustomSourceDefinitionAndDefaultVersion(eq(new StandardSourceDefinition()
+    verify(configRepository, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_SOURCE_NAME)
         .withSourceType(SourceType.CUSTOM)

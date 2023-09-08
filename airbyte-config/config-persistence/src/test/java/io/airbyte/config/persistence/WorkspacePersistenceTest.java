@@ -205,10 +205,10 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(
+    configRepository.writeConnectorMetadata(
         createSourceDefinition(),
         createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
-    configRepository.writeDestinationDefinitionAndDefaultVersion(
+    configRepository.writeConnectorMetadata(
         createDestinationDefinition(),
         createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
 

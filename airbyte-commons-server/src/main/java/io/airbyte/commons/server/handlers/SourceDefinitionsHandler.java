@@ -251,10 +251,10 @@ public class SourceDefinitionsHandler {
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
-      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(sourceDefinition, actorDefinitionVersion,
           customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
-      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(sourceDefinition, actorDefinitionVersion,
           customSourceDefinitionCreate.getScopeId(), ScopeType.fromValue(customSourceDefinitionCreate.getScopeType().toString()));
     }
 
@@ -285,8 +285,7 @@ public class SourceDefinitionsHandler {
         currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
-    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion, breakingChangesForDef);
-    configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
 
     if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
       final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());

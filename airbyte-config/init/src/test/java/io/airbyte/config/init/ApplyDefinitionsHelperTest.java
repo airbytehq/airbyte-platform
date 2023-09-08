@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BreakingChanges;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
@@ -33,7 +32,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -137,15 +135,14 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper.apply(updateAll);
     verifyConfigRepositoryGetInteractions();
 
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES));
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3));
-    verify(configRepository).writeActorDefinitionBreakingChanges(List.of());
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(configRepository, supportStateUpdater);
@@ -165,15 +162,14 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper.apply(updateAll);
     verifyConfigRepositoryGetInteractions();
 
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(configRepository, supportStateUpdater);
@@ -193,19 +189,17 @@ class ApplyDefinitionsHelperTest {
     verifyConfigRepositoryGetInteractions();
 
     if (updateAll) {
-      verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+      verify(configRepository).writeConnectorMetadata(
           ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-      verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+      verify(configRepository).writeConnectorMetadata(
           ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
           ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-      verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     } else {
       verify(configRepository).updateStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2));
       verify(configRepository).updateStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2));
-      verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     }
     verify(supportStateUpdater).updateSupportStates();
 
@@ -229,24 +223,23 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper.apply(updateAll);
     verifyConfigRepositoryGetInteractions();
 
-    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(
+    verify(configRepository, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(postgresWithOldProtocolVersion));
-    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(
+    verify(configRepository, never()).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(s3withOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionVersion(postgresWithOldProtocolVersion),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(s3withOldProtocolVersion));
 
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
     verify(supportStateUpdater).updateSupportStates();
 
     verifyNoMoreInteractions(configRepository, supportStateUpdater);
@@ -262,25 +255,17 @@ class ApplyDefinitionsHelperTest {
     applyDefinitionsHelper.apply(true);
     verifyConfigRepositoryGetInteractions();
 
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardSourceDefinition(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeConnectorMetadata(
         ConnectorRegistryConverters.toStandardDestinationDefinition(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_2),
         ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    verify(configRepository).writeActorDefinitionBreakingChanges(getExpectedBreakingChanges());
 
     verify(supportStateUpdater, never()).updateSupportStates();
     verifyNoMoreInteractions(configRepository, supportStateUpdater);
-  }
-
-  private static List<ActorDefinitionBreakingChange> getExpectedBreakingChanges() {
-    final List<ActorDefinitionBreakingChange> breakingChanges = new ArrayList<>();
-    breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(SOURCE_POSTGRES_2));
-    breakingChanges.addAll(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(DESTINATION_S3_2));
-    return breakingChanges;
   }
 
 }

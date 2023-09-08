@@ -759,48 +759,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it (if not
-   * pre-existing) to the DB, setting the default version on the StandardSourceDefinition.
-   *
-   * @param sourceDefinition standard source definition
-   * @param actorDefinitionVersion actor definition version
-   * @param breakingChangesForDefinition - list of breaking changes for the definition
-   * @throws IOException - you never know when you IO
-   */
-  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                     final ActorDefinitionVersion actorDefinitionVersion,
-                                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
-      throws IOException {
-    database.transaction(ctx -> {
-      writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
-      return null;
-    });
-  }
-
-  /**
-   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it (if not
-   * pre-existing) to the DB, setting the default version on the StandardSourceDefinition. Assumes the
-   * definition has no breaking changes.
-   *
-   * @param sourceDefinition standard source definition
-   * @param actorDefinitionVersion actor definition version
-   * @throws IOException - you never know when you IO
-   */
-  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                     final ActorDefinitionVersion actorDefinitionVersion)
-      throws IOException {
-    writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, List.of());
-  }
-
-  private void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                      final ActorDefinitionVersion actorDefinitionVersion,
-                                                      final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                      final DSLContext ctx) {
-    ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
-  }
-
-  /**
    * Update the docker image tag for multiple actor definitions at once.
    *
    * @param actorDefinitionIds the list of actor definition ids to update
@@ -809,27 +767,6 @@ public class ConfigRepository {
    */
   public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds, final String targetImageTag) throws IOException {
     return database.transaction(ctx -> ConfigWriter.writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
-  }
-
-  /**
-   * Write custom source definition and its default version.
-   *
-   * @param sourceDefinition source definition
-   * @param defaultVersion default version
-   * @param scopeId scope id
-   * @param scopeType enum which defines if the scopeId is a workspace or organization id
-   * @throws IOException - you never know when you IO
-   */
-  public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                           final ActorDefinitionVersion defaultVersion,
-                                                           final UUID scopeId,
-                                                           final io.airbyte.config.ScopeType scopeType)
-      throws IOException {
-    database.transaction(ctx -> {
-      writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, List.of(), ctx);
-      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
-      return null;
-    });
   }
 
   private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
@@ -987,44 +924,96 @@ public class ConfigRepository {
   }
 
   /**
-   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it (if not
-   * pre-existing) to the DB, setting the default version on the StandardDestinationDefinition.
+   * Write metadata for a destination connector. Writes global metadata (destination definition) and
+   * versioned metadata (info for actor definition version to set as default). Sets the new version as
+   * the default version and updates actors accordingly, based on whether the upgrade will be breaking
+   * or not.
    *
    * @param destinationDefinition standard destination definition
    * @param actorDefinitionVersion actor definition version
    * @param breakingChangesForDefinition - list of breaking changes for the definition
    * @throws IOException - you never know when you IO
    */
-  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                          final ActorDefinitionVersion actorDefinitionVersion,
-                                                          final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
+  public void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
+                                     final ActorDefinitionVersion actorDefinitionVersion,
+                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException {
     database.transaction(ctx -> {
-      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+      writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
       return null;
     });
   }
 
   /**
-   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it (if not
-   * pre-existing) to the DB, setting the default version on the StandardDestinationDefinition.
-   * Assumes the definition has no breaking changes.
+   * Write metadata for a destination connector. Writes global metadata (destination definition) and
+   * versioned metadata (info for actor definition version to set as default). Sets the new version as
+   * the default version and updates actors accordingly, based on whether the upgrade will be breaking
+   * or not. Usage of this version of the method assumes no new breaking changes need to be persisted
+   * for the definition.
    *
    * @param destinationDefinition standard destination definition
    * @param actorDefinitionVersion actor definition version
    * @throws IOException - you never know when you IO
    */
-  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                          final ActorDefinitionVersion actorDefinitionVersion)
+  public void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
+                                     final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
-    writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, List.of());
+    writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, List.of());
   }
 
-  private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                           final ActorDefinitionVersion actorDefinitionVersion,
-                                                           final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
-                                                           final DSLContext ctx) {
+  private void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
+                                      final ActorDefinitionVersion actorDefinitionVersion,
+                                      final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                      final DSLContext ctx) {
     ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
+    writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
+    setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
+  }
+
+  /**
+   * Write metadata for a source connector. Writes global metadata (source definition, breaking
+   * changes) and versioned metadata (info for actor definition version to set as default). Sets the
+   * new version as the default version and updates actors accordingly, based on whether the upgrade
+   * will be breaking or not.
+   *
+   * @param sourceDefinition standard source definition
+   * @param actorDefinitionVersion actor definition version, containing tag to set as default
+   * @param breakingChangesForDefinition - list of breaking changes for the definition
+   * @throws IOException - you never know when you IO
+   */
+  public void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
+                                     final ActorDefinitionVersion actorDefinitionVersion,
+                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write metadata for a source connector. Writes global metadata (source definition) and versioned
+   * metadata (info for actor definition version to set as default). Sets the new version as the
+   * default version and updates actors accordingly, based on whether the upgrade will be breaking or
+   * not. Usage of this version of the method assumes no new breaking changes need to be persisted for
+   * the definition.
+   *
+   * @param sourceDefinition standard source definition
+   * @param actorDefinitionVersion actor definition version
+   * @throws IOException - you never know when you IO
+   */
+  public void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
+                                     final ActorDefinitionVersion actorDefinitionVersion)
+      throws IOException {
+    writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, List.of());
+  }
+
+  private void writeConnectorMetadata(final StandardSourceDefinition sourceDefinition,
+                                      final ActorDefinitionVersion actorDefinitionVersion,
+                                      final List<ActorDefinitionBreakingChange> breakingChangesForDefinition,
+                                      final DSLContext ctx) {
+    ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
+    writeActorDefinitionBreakingChanges(breakingChangesForDefinition, ctx);
     setActorDefinitionVersionForTagAsDefault(actorDefinitionVersion, breakingChangesForDefinition, ctx);
   }
 
@@ -1087,21 +1076,45 @@ public class ConfigRepository {
   }
 
   /**
-   * Write custom destination definition and its default version.
+   * Write metadata for a custom destination: global metadata (destination definition) and versioned
+   * metadata (actor definition version for the version to use).
    *
    * @param destinationDefinition destination definition
+   * @param defaultVersion default actor definition version
    * @param scopeId workspace or organization id
    * @param scopeType enum of workpsace or organization
    * @throws IOException - you never know when you IO
    */
-  public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
-                                                                final ActorDefinitionVersion defaultVersion,
-                                                                final UUID scopeId,
-                                                                final io.airbyte.config.ScopeType scopeType)
+  public void writeCustomConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
+                                           final ActorDefinitionVersion defaultVersion,
+                                           final UUID scopeId,
+                                           final io.airbyte.config.ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
-      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, List.of(), ctx);
+      writeConnectorMetadata(destinationDefinition, defaultVersion, List.of(), ctx);
       writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write metadata for a custom source: global metadata (source definition) and versioned metadata
+   * (actor definition version for the version to use).
+   *
+   * @param sourceDefinition source definition
+   * @param defaultVersion default actor definition version
+   * @param scopeId scope id
+   * @param scopeType enum which defines if the scopeId is a workspace or organization id
+   * @throws IOException - you never know when you IO
+   */
+  public void writeCustomConnectorMetadata(final StandardSourceDefinition sourceDefinition,
+                                           final ActorDefinitionVersion defaultVersion,
+                                           final UUID scopeId,
+                                           final io.airbyte.config.ScopeType scopeType)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeConnectorMetadata(sourceDefinition, defaultVersion, List.of(), ctx);
+      writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), scopeId, ScopeType.valueOf(scopeType.toString()), ctx);
       return null;
     });
   }
@@ -3684,13 +3697,15 @@ public class ConfigRepository {
    * already exist.
    *
    * @param breakingChanges - actor definition breaking changes to write
+   * @param ctx database context
    * @throws IOException - you never know when you io
    */
-  public void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges) throws IOException {
+  private void writeActorDefinitionBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    database.query(ctx -> ctx
-        .batch(breakingChanges.stream().map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp)).collect(Collectors.toList()))
-        .execute());
+    final List<Query> upsertQueries = breakingChanges.stream()
+        .map(breakingChange -> upsertBreakingChangeQuery(ctx, breakingChange, timestamp))
+        .collect(Collectors.toList());
+    ctx.batch(upsertQueries).execute();
   }
 
   /**

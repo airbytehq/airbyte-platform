@@ -248,7 +248,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   void givenSourceDefinition(final UUID sourceDefinitionId) throws JsonValidationException, IOException {
     final UUID workspaceId = UUID.randomUUID();
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(workspaceId));
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(
+    configRepository.writeCustomConnectorMetadata(
         MockData.customSourceDefinition().withSourceDefinitionId(sourceDefinitionId),
         MockData.actorDefinitionVersion().withActorDefinitionId(sourceDefinitionId),
         workspaceId,

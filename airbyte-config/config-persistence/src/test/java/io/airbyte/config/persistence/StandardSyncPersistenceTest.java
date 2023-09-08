@@ -358,7 +358,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withProtocolVersion(protocolVersion)
         .withReleaseStage(releaseStage)
         .withSupportLevel(SupportLevel.COMMUNITY);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, sourceDefVersion);
+    configRepository.writeConnectorMetadata(sourceDef, sourceDefVersion);
     return sourceDef;
   }
 
@@ -383,7 +383,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withReleaseStage(releaseStage)
         .withSupportLevel(SupportLevel.COMMUNITY);
 
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, destDefVersion);
+    configRepository.writeConnectorMetadata(destDef, destDefVersion);
     return destDef;
   }
 

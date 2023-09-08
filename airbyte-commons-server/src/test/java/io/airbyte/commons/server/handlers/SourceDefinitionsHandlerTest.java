@@ -536,7 +536,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -600,7 +600,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreateForWorkspace.getWorkspaceId());
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -625,7 +625,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         null);
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
+    verify(configRepository).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
         sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
@@ -661,7 +661,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any(), any());
+    verify(configRepository, never()).writeCustomConnectorMetadata(any(StandardSourceDefinition.class), any(), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -705,8 +705,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion, breakingChanges);
-    verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    verify(configRepository).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges);
     if (runSupportStateUpdaterFlagValue) {
       verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
     } else {
@@ -740,7 +739,7 @@ class SourceDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
-    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(any(), any());
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardSourceDefinition.class), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
