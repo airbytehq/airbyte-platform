@@ -11,6 +11,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
 import { useCurrentWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac/intent";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
@@ -47,11 +48,13 @@ export const SettingsRoute = {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
   const push = useNavigate();
-  const { organizationId } = useCurrentWorkspace();
+  const { organizationId, workspaceId } = useCurrentWorkspace();
   const { pathname } = useLocation();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
+  const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
+  const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
   const menuItems: CategoryItem[] = pageConfig?.menuConfig || [
     {
@@ -64,57 +67,61 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
         },
       ],
     },
-    {
-      category: <FormattedMessage id="settings.workspaceSettings" />,
-      routes: [
-        ...(newWorkspacesUI
-          ? [
+    ...(canViewWorkspaceSettings
+      ? [
+          {
+            category: <FormattedMessage id="settings.workspaceSettings" />,
+            routes: [
+              ...(newWorkspacesUI
+                ? [
+                    {
+                      path: `${SettingsRoute.Workspace}`,
+                      name: <FormattedMessage id="settings.generalSettings" />,
+                      component: GeneralWorkspaceSettingsPage,
+                    },
+                  ]
+                : []),
               {
-                path: `${SettingsRoute.Workspace}`,
-                name: <FormattedMessage id="settings.generalSettings" />,
-                component: GeneralWorkspaceSettingsPage,
+                path: `${SettingsRoute.Source}`,
+                name: <FormattedMessage id="tables.sources" />,
+                indicatorCount: countNewSourceVersion,
+                component: SourcesPage,
               },
-            ]
-          : []),
-        {
-          path: `${SettingsRoute.Source}`,
-          name: <FormattedMessage id="tables.sources" />,
-          indicatorCount: countNewSourceVersion,
-          component: SourcesPage,
-        },
-        {
-          path: `${SettingsRoute.Destination}`,
-          name: <FormattedMessage id="tables.destinations" />,
-          indicatorCount: countNewDestinationVersion,
-          component: DestinationsPage,
-        },
-        {
-          path: `${SettingsRoute.Configuration}`,
-          name: <FormattedMessage id="admin.configuration" />,
-          component: ConfigurationsPage,
-        },
-        {
-          path: `${SettingsRoute.Notifications}`,
-          name: <FormattedMessage id="settings.notifications" />,
-          component: NotificationPage,
-        },
-        {
-          path: `${SettingsRoute.Metrics}`,
-          name: <FormattedMessage id="settings.metrics" />,
-          component: MetricsPage,
-        },
-        ...(isAccessManagementEnabled && !pageConfig
-          ? [
               {
-                path: `${SettingsRoute.Workspace}/${SettingsRoute.AccessManagement}`,
-                name: <FormattedMessage id="settings.accessManagement" />,
-                component: WorkspaceAccessManagementPage,
+                path: `${SettingsRoute.Destination}`,
+                name: <FormattedMessage id="tables.destinations" />,
+                indicatorCount: countNewDestinationVersion,
+                component: DestinationsPage,
               },
-            ]
-          : []),
-      ],
-    },
-    ...(newWorkspacesUI && organizationId
+              {
+                path: `${SettingsRoute.Configuration}`,
+                name: <FormattedMessage id="admin.configuration" />,
+                component: ConfigurationsPage,
+              },
+              {
+                path: `${SettingsRoute.Notifications}`,
+                name: <FormattedMessage id="settings.notifications" />,
+                component: NotificationPage,
+              },
+              {
+                path: `${SettingsRoute.Metrics}`,
+                name: <FormattedMessage id="settings.metrics" />,
+                component: MetricsPage,
+              },
+              ...(isAccessManagementEnabled && !pageConfig
+                ? [
+                    {
+                      path: `${SettingsRoute.Workspace}/${SettingsRoute.AccessManagement}`,
+                      name: <FormattedMessage id="settings.accessManagement" />,
+                      component: WorkspaceAccessManagementPage,
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ]
+      : []),
+    ...(newWorkspacesUI && organizationId && canViewOrganizationSettings
       ? [
           {
             category: <FormattedMessage id="settings.organizationSettings" />,
