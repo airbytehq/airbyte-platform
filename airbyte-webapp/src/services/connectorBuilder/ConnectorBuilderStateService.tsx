@@ -591,7 +591,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const resolvedManifest = mode === "ui" ? manifest : ((data?.manifest ?? manifest) as ConnectorManifest);
+  const resolvedManifest =
+    mode === "ui" ? manifest : ((data?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
   const testStream = resolvedManifest.streams[testStreamIndex];
   const filteredManifest = {
     ...resolvedManifest,
