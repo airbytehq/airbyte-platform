@@ -24,7 +24,7 @@ Use intents to ask if a user can see something or perform an action. Intents bet
 The `useIntent` hook is provided to make inquiries. If an intent for your use case does not yet exist it's almost certainly the right decision to create it.
 
 ```typescript
-const canReadWorkspace = useIntent(Intent.ReadWorkspace, { workspaceId: "some-workspace" });
+const canReadWorkspace = useIntent("ReadWorkspace", { workspaceId: "some-workspace" });
 ```
 
 #### Meta details
@@ -34,7 +34,7 @@ By default, `useIntent` will locate the user ID from the Auth Service. Resource 
 If desired, the user ID can be overridden in the meta object as well.
 
 ```typescript
-const canThatUserReadThatWorkspace = useIntent(Intent.ReadWorkspace, {
+const canThatUserReadThatWorkspace = useIntent("ReadWorkspace", {
   userId: "some-user",
   workspaceId: "some-workspace",
 });

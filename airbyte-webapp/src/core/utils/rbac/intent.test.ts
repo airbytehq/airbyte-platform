@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 
-import { Intent, useIntent } from "./intent";
+import { useIntent } from "./intent";
 import { useRbac } from "./rbac";
 
 jest.mock("./rbac", () => ({
@@ -11,7 +11,7 @@ const mockUseRbac = useRbac as unknown as jest.Mock;
 describe("useIntent", () => {
   it("maps intent to query", () => {
     mockUseRbac.mockClear();
-    renderHook(() => useIntent(Intent.ListOrganizationMembers, undefined));
+    renderHook(() => useIntent("ListOrganizationMembers", undefined));
     expect(mockUseRbac).toHaveBeenCalledTimes(1);
     expect(mockUseRbac).toHaveBeenCalledWith({
       resourceType: "ORGANIZATION",
@@ -22,7 +22,7 @@ describe("useIntent", () => {
   describe("applies overriding details", () => {
     it("overrides the organizationId", () => {
       mockUseRbac.mockClear();
-      renderHook(() => useIntent(Intent.ListOrganizationMembers, { organizationId: "some-other-org" }));
+      renderHook(() => useIntent("ListOrganizationMembers", { organizationId: "some-other-org" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "ORGANIZATION",
@@ -33,7 +33,7 @@ describe("useIntent", () => {
 
     it("overrides the workspaceId", () => {
       mockUseRbac.mockClear();
-      renderHook(() => useIntent(Intent.ListWorkspaceMembers, { workspaceId: "some-other-workspace" }));
+      renderHook(() => useIntent("ListWorkspaceMembers", { workspaceId: "some-other-workspace" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "WORKSPACE",
@@ -46,7 +46,7 @@ describe("useIntent", () => {
       mockUseRbac.mockClear();
       renderHook(() =>
         // @ts-expect-error we're testing invalid object shapes
-        useIntent(Intent.ListOrganizationMembers, { workspaceId: "some-other-organization" }, mockUseRbac)
+        useIntent("ListOrganizationMembers", { workspaceId: "some-other-organization" }, mockUseRbac)
       );
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
@@ -56,7 +56,7 @@ describe("useIntent", () => {
 
       mockUseRbac.mockClear();
       // @ts-expect-error we're testing invalid object shapes
-      renderHook(() => useIntent(Intent.ListWorkspaceMembers, { organizationId: "some-other-workspace" }, mockUseRbac));
+      renderHook(() => useIntent("ListWorkspaceMembers", { organizationId: "some-other-workspace" }, mockUseRbac));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "WORKSPACE",
@@ -71,14 +71,14 @@ describe("useIntent", () => {
 
     // @TODO: if we have any instance-level intents, add checks here to exclude organizationId and workspaceId
 
-    processIntent(Intent.ListOrganizationMembers);
-    processIntent(Intent.ListOrganizationMembers, { organizationId: "org" });
+    processIntent("ListOrganizationMembers");
+    processIntent("ListOrganizationMembers", { organizationId: "org" });
     // @ts-expect-error workspaceId is not valid for ListOrganizationMembers
-    processIntent(Intent.ListOrganizationMembers, { workspaceId: "workspace" });
+    processIntent("ListOrganizationMembers", { workspaceId: "workspace" });
 
-    processIntent(Intent.ListWorkspaceMembers);
-    processIntent(Intent.ListWorkspaceMembers, { workspaceId: "workspace" });
+    processIntent("ListWorkspaceMembers");
+    processIntent("ListWorkspaceMembers", { workspaceId: "workspace" });
     // @ts-expect-error workspaceId is not valid for ListWorkspaceMembers
-    processIntent(Intent.ListWorkspaceMembers, { organizationId: "organizationId" });
+    processIntent("ListWorkspaceMembers", { organizationId: "organizationId" });
   });
 });

@@ -1,21 +1,15 @@
 import { useRbac } from "./rbac";
 import { RbacQuery, RbacQueryWithoutResourceId, RbacResource } from "./rbacPermissionsQuery";
 
-export enum Intent {
-  // instance
-
-  // organization
-  "ListOrganizationMembers" = "ListOrganizationMembers",
-
-  // workspace
-  "ListWorkspaceMembers" = "ListWorkspaceMembers",
-}
-
 const intentToRbacQuery = {
-  [Intent.ListOrganizationMembers]: { resourceType: "ORGANIZATION", role: "READER" },
+  ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "READER" },
+  UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
 
-  [Intent.ListWorkspaceMembers]: { resourceType: "WORKSPACE", role: "READER" },
+  UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
+  ListWorkspaceMembers: { resourceType: "WORKSPACE", role: "READER" },
 } as const;
+
+export type Intent = keyof typeof intentToRbacQuery;
 
 interface OrganizationIntentMeta {
   organizationId?: string;
