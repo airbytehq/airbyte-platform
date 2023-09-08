@@ -335,6 +335,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
         if (context.useAsActiveVersion) {
           updateProjectQueryCache(queryClient, context.projectId, context.sourceDefinitionId, context.version);
         }
+        queryClient.invalidateQueries(sourceDefinitionKeys.lists());
       },
     }
   );

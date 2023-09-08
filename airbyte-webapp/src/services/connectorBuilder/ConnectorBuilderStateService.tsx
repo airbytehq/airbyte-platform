@@ -175,6 +175,13 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
 
+  useEffect(() => {
+    if (name !== currentProject.name) {
+      setPreviousManifestDraft(undefined);
+      setDisplayedVersion(undefined);
+    }
+  }, [currentProject.name, name]);
+
   // use ref so that updateJsonManifest is not recreated on every change to jsonManifest
   const jsonManifestRef = useRef(jsonManifest);
   jsonManifestRef.current = jsonManifest;
