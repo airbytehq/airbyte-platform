@@ -11,7 +11,6 @@ import { Card } from "components/ui/Card";
 import { useCurrentWorkspace, useUpdateOrganization } from "core/api";
 import { useOrganization } from "core/api";
 import { OrganizationUpdateRequestBody } from "core/request/AirbyteClient";
-import { useIntent } from "core/utils/rbac/intent";
 import { useNotificationService } from "hooks/services/Notification";
 
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
@@ -38,7 +37,6 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
 
   const onSubmit = async (values: OrganizationFormValues) => {
     await updateOrganization({
@@ -73,14 +71,13 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
       }}
       schema={organizationValidationSchema}
       defaultValues={{ organizationName: organization.organizationName }}
-      disabled={!canUpdateOrganization}
     >
       <FormControl<OrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.organizationName" })}
         fieldType="input"
         name="organizationName"
       />
-      {canUpdateOrganization && <FormSubmissionButtons submitKey="form.saveChanges" />}
+      <FormSubmissionButtons submitKey="form.saveChanges" />
     </Form>
   );
 };
