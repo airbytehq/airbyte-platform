@@ -740,11 +740,11 @@ class WorkspacesHandlerTest {
         new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZAION_ID).pagination(new Pagination().pageSize(100).rowOffset(0));
     List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
-    when(workspacePersistence.listWorkspacesByOrganizationId(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
+    when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
         Optional.empty()))
             .thenReturn(expectedWorkspaces);
     WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
-    assertEquals(result.getWorkspaces().size(), 2);
+    assertEquals(2, result.getWorkspaces().size());
   }
 
   @Test
@@ -753,11 +753,11 @@ class WorkspacesHandlerTest {
         .keyword("keyword").pagination(new Pagination().pageSize(100).rowOffset(0));
     List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
-    when(workspacePersistence.listWorkspacesByOrganizationId(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
+    when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
         Optional.of("keyword")))
             .thenReturn(expectedWorkspaces);
     WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
-    assertEquals(result.getWorkspaces().size(), 2);
+    assertEquals(2, result.getWorkspaces().size());
   }
 
 }

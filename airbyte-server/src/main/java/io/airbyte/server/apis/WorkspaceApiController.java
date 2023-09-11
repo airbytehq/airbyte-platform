@@ -11,6 +11,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import io.airbyte.api.generated.WorkspaceApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
@@ -147,6 +148,14 @@ public class WorkspaceApiController implements WorkspaceApi {
   public WorkspaceReadList listWorkspacesInOrganization(@Body final ListWorkspacesInOrganizationRequestBody request) {
     // To be implemented
     return ApiHelper.execute(() -> workspacesHandler.listWorkspacesInOrganization(request));
+  }
+
+  @Post("/list_by_user_id")
+  @Secured({READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceReadList listWorkspacesByUser(@Body final ListWorkspacesByUserRequestBody request) {
+    return ApiHelper.execute(() -> workspacesHandler.listWorkspacesByUser(request));
   }
 
 }

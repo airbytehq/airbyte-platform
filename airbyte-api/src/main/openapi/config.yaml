@@ -137,7 +137,7 @@ paths:
     post:
       tags:
         - workspace
-      summary: List all workspaces registered in the current Airbyte deployment, paginated.
+      summary: List all workspaces registered in the current Airbyte deployment. This function also supports searching by keyword and pagination.
       operationId: listAllWorkspacesPaginated
       requestBody:
         content:
@@ -156,7 +156,7 @@ paths:
     post:
       tags:
         - workspace
-      summary: List all workspaces registered in the current Airbyte deployment, paginated
+      summary: List workspaces by given workspace IDs registered in the current Airbyte deployment. This function also supports pagination.
       operationId: listWorkspacesPaginated
       requestBody:
         content:
@@ -173,7 +173,7 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_by_organization_id:
     post:
-      summary: List workspaces under the given org id
+      summary: List workspaces under the given org id. This function also supports searching by keyword and pagination.
       tags:
         - workspace
       operationId: listWorkspacesInOrganization
@@ -191,7 +191,26 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-
+  /v1/workspaces/list_by_user_id:
+    post:
+      summary: List workspaces by a given user id. The function also supports searching by keyword and pagination.
+      tags:
+        - workspace
+      operationId: listWorkspacesByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListWorkspacesByUserRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved workspaces by given user id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/workspaces/get:
     post:
       tags:
@@ -3839,6 +3858,7 @@ components:
       type: object
       required:
         - workspaceIds
+        - pagination
       properties:
         workspaceIds:
           type: array
@@ -7752,6 +7772,18 @@ components:
         - organizationId
       properties:
         organizationId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        keyword:
+          type: string
+    ListWorkspacesByUserRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
           type: string
           format: uuid
         pagination:

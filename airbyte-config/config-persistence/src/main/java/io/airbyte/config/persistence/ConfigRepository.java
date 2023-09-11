@@ -203,6 +203,20 @@ public class ConfigRepository {
 
   }
 
+  /**
+   * Query object for paginated querying of resource for a user.
+   *
+   * @param userId user to fetch resources for
+   * @param includeDeleted include tombstoned resources
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record ResourcesByUserQueryPaginated(
+                                              @Nonnull UUID userId,
+                                              boolean includeDeleted,
+                                              int pageSize,
+                                              int rowOffset) {}
+
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
   private static final String OPERATION_IDS_AGG_DELIMITER = ",";

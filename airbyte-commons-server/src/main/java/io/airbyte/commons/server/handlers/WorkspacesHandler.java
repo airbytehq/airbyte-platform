@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.NotificationItem;
 import io.airbyte.api.model.generated.NotificationSettings;
@@ -35,9 +36,11 @@ import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
@@ -269,14 +272,73 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
     Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    final List<WorkspaceRead> standardWorkspaces = workspacePersistence
-        .listWorkspacesByOrganizationId(
-            new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
-                false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-            keyword)
-        .stream()
-        .map(WorkspacesHandler::buildWorkspaceRead)
-        .collect(Collectors.toList());
+    List<WorkspaceRead> standardWorkspaces;
+    if (request.getPagination() != null) {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByOrganizationIdPaginated(
+              new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
+                  false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
+              keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    } else {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByOrganizationId(request.getOrganizationId(), false, keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    }
+    return new WorkspaceReadList().workspaces(standardWorkspaces);
+  }
+
+  private WorkspaceReadList listWorkspacesByInstanceAdminUser(final ListWorkspacesByUserRequestBody request) throws IOException {
+    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
+    List<WorkspaceRead> standardWorkspaces;
+    if (request.getPagination() != null) {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByInstanceAdminUserPaginated(
+              false, request.getPagination().getPageSize(), request.getPagination().getRowOffset(),
+              keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    } else {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByInstanceAdminUser(false, keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    }
+    return new WorkspaceReadList().workspaces(standardWorkspaces);
+  }
+
+  public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
+      throws IOException {
+    // If user has instance_admin permission, list all workspaces.
+    final UserPermission userInstanceAdminPermission = permissionPersistence.getUserInstanceAdminPermission(request.getUserId());
+    if (userInstanceAdminPermission != null) {
+      return listWorkspacesByInstanceAdminUser(request);
+    }
+    // User has no instance_admin permission.
+    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
+    List<WorkspaceRead> standardWorkspaces;
+    if (request.getPagination() != null) {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByUserIdPaginated(
+              new ResourcesByUserQueryPaginated(request.getUserId(),
+                  false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
+              keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    } else {
+      standardWorkspaces = workspacePersistence
+          .listWorkspacesByUserId(request.getUserId(), false, keyword)
+          .stream()
+          .map(WorkspacesHandler::buildWorkspaceRead)
+          .collect(Collectors.toList());
+    }
     return new WorkspaceReadList().workspaces(standardWorkspaces);
   }
 
