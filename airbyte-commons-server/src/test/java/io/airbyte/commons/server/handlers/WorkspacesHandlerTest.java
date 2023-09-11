@@ -184,6 +184,10 @@ class WorkspacesHandlerTest {
         .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
             io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
         .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeSyncsDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
             io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
   }
 
@@ -199,6 +203,10 @@ class WorkspacesHandlerTest {
         .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
             io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
         .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeSyncsDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
             io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
   }
 

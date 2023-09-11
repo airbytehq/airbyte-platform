@@ -26,7 +26,7 @@ import org.mockito.Mockito;
 class WorkspaceApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateWorkspace() throws JsonValidationException, IOException {
     Mockito.when(workspacesHandler.createWorkspace(Mockito.any()))
         .thenReturn(new WorkspaceRead());
     final String path = "/api/v1/workspaces/create";
@@ -64,7 +64,7 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetBySlugWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetBySlugWorkspace() throws ConfigNotFoundException, IOException {
     Mockito.when(workspacesHandler.getWorkspaceBySlug(Mockito.any()))
         .thenReturn(new WorkspaceRead())
         .thenThrow(new ConfigNotFoundException("", ""));
@@ -78,7 +78,7 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testListWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListWorkspace() throws JsonValidationException, IOException {
     Mockito.when(workspacesHandler.listWorkspaces())
         .thenReturn(new WorkspaceReadList());
     final String path = "/api/v1/workspaces/list";
@@ -130,7 +130,7 @@ class WorkspaceApiTest extends BaseControllerTest {
   }
 
   @Test
-  void testGetWorkspaceByConnectionId() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetWorkspaceByConnectionId() throws ConfigNotFoundException {
     Mockito.when(workspacesHandler.getWorkspaceByConnectionId(Mockito.any()))
         .thenReturn(new WorkspaceRead())
         .thenThrow(new ConfigNotFoundException("", ""));

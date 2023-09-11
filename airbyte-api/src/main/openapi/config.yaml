@@ -3746,6 +3746,10 @@ components:
           $ref: "#/components/schemas/NotificationItem"
         sendOnConnectionUpdateActionRequired:
           $ref: "#/components/schemas/NotificationItem"
+        sendOnBreakingChangeWarning:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnBreakingChangeSyncsDisabled:
+          $ref: "#/components/schemas/NotificationItem"
 
     Notification:
       type: object
@@ -3792,6 +3796,8 @@ components:
         - sync_disabled_warning
         - connection_update
         - connection_update_action_required
+        - breaking_change_warning
+        - breaking_change_syncs_disabled
     NotificationRead:
       type: object
       required:

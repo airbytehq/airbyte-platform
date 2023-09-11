@@ -32,6 +32,7 @@ export interface Experiments {
   "connector.suggestedDestinationConnectors": string;
   "onboarding.speedyConnection": boolean;
   "settings.emailNotifications": boolean;
+  "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "workspaces.newWorkspacesUI": boolean;
   "settings.accessManagement": boolean;

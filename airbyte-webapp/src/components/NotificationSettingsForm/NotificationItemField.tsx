@@ -8,17 +8,24 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { FeatureItem, useFeature } from "core/services/features";
 
+import styles from "./NotificationItemField.module.scss";
 import { NotificationSettingsFormValues } from "./NotificationSettingsForm";
 import { SlackNotificationUrlInput } from "./SlackNotificationUrlInput";
 import { TestWebhookButton } from "./TestWebhookButton";
 
 interface NotificationItemFieldProps {
   emailNotificationRequired?: boolean;
+  slackNotificationUnsupported?: boolean;
   name: keyof NotificationSettingsFormValues;
 }
 
-export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ emailNotificationRequired, name }) => {
+export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({
+  emailNotificationRequired,
+  slackNotificationUnsupported,
+  name,
+}) => {
   const emailNotificationsFeature = useFeature(FeatureItem.EmailNotifications);
+  const atLeastOneNotificationTypeEnableable = emailNotificationsFeature || !slackNotificationUnsupported;
   const { setValue, trigger } = useFormContext<NotificationSettingsFormValues>();
   const field = useWatch<NotificationSettingsFormValues, keyof NotificationSettingsFormValues>({ name });
 
@@ -36,9 +43,13 @@ export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ em
     }
   };
 
+  if (!atLeastOneNotificationTypeEnableable) {
+    return null;
+  }
+
   return (
     <>
-      <div>
+      <div className={styles.notificationItemField}>
         <FlexContainer direction="column" gap="xs">
           <Text>
             <FormattedMessage id={`settings.notifications.${name}`} />
@@ -48,6 +59,7 @@ export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ em
           </Text>
         </FlexContainer>
       </div>
+
       {emailNotificationsFeature && (
         <FlexContainer justifyContent="center">
           {!emailNotificationRequired && (
@@ -60,11 +72,20 @@ export const NotificationItemField: React.FC<NotificationItemFieldProps> = ({ em
           )}
         </FlexContainer>
       )}
-      <FlexContainer justifyContent="center">
-        <Switch onChange={onToggleSlackNotification} checked={field.slack} data-testid={`${name}.slack`} />
-      </FlexContainer>
-      <SlackNotificationUrlInput name={`${name}.slackWebhookLink`} disabled={!field.slack} />
-      <TestWebhookButton disabled={!field.slack} webhookUrl={field.slackWebhookLink ?? ""} notificationTrigger={name} />
+
+      {!slackNotificationUnsupported && (
+        <>
+          <FlexContainer justifyContent="center">
+            <Switch onChange={onToggleSlackNotification} checked={field.slack} data-testid={`${name}.slack`} />
+          </FlexContainer>
+          <SlackNotificationUrlInput name={`${name}.slackWebhookLink`} disabled={!field.slack} />
+          <TestWebhookButton
+            disabled={!field.slack}
+            webhookUrl={field.slackWebhookLink ?? ""}
+            notificationTrigger={name}
+          />
+        </>
+      )}
     </>
   );
 };

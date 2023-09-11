@@ -31,5 +31,11 @@ export const mockWorkspace: WorkspaceRead = {
     sendOnSyncDisabledWarning: {
       notificationType: [],
     },
+    sendOnBreakingChangeWarning: {
+      notificationType: [],
+    },
+    sendOnBreakingChangeSyncsDisabled: {
+      notificationType: [],
+    },
   },
 };

@@ -20,6 +20,8 @@ const mockEmptyFormValues: NotificationSettingsFormValues = {
   sendOnConnectionUpdateActionRequired: mockNotificationItemFieldValue,
   sendOnSyncDisabled: mockNotificationItemFieldValue,
   sendOnSyncDisabledWarning: mockNotificationItemFieldValue,
+  sendOnBreakingChangeWarning: mockNotificationItemFieldValue,
+  sendOnBreakingChangeSyncsDisabled: mockNotificationItemFieldValue,
 };
 const mockEmptyNotificationSettings: NotificationSettings = {
   sendOnFailure: mockNotificationItem,
@@ -28,6 +30,8 @@ const mockEmptyNotificationSettings: NotificationSettings = {
   sendOnConnectionUpdateActionRequired: mockNotificationItem,
   sendOnSyncDisabled: mockNotificationItem,
   sendOnSyncDisabledWarning: mockNotificationItem,
+  sendOnBreakingChangeWarning: mockNotificationItem,
+  sendOnBreakingChangeSyncsDisabled: mockNotificationItem,
 };
 
 describe("formValuesToNotificationSettings", () => {

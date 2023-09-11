@@ -20,3 +20,7 @@ properties:
     $ref: NotificationItem.yaml
   sendOnConnectionUpdateActionRequired:
     $ref: NotificationItem.yaml
+  sendOnBreakingChangeWarning:
+    $ref: NotificationItem.yaml
+  sendOnBreakingChangeSyncsDisabled:
+    $ref: NotificationItem.yaml

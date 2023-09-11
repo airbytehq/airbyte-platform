@@ -81,6 +81,12 @@ const useWorkspace = () => {
       sendOnConnectionUpdateActionRequired: {
         notificationType: ["customerio"],
       },
+      sendOnBreakingChangeWarning: {
+        notificationType: ["customerio"],
+      },
+      sendOnBreakingChangeSyncsDisabled: {
+        notificationType: ["customerio"],
+      },
     };
 
     return await updateWorkspace({

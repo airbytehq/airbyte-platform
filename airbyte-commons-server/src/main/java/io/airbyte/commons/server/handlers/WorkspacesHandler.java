@@ -178,7 +178,9 @@ public class WorkspacesHandler {
         .sendOnConnectionUpdate(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnConnectionUpdateActionRequired(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
         .sendOnSyncDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
+        .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
+        .sendOnBreakingChangeSyncsDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
     if (workspaceCreate.getNotificationSettings() != null) {
       final NotificationSettings inputNotificationSettings = workspaceCreate.getNotificationSettings();
       if (inputNotificationSettings.getSendOnSuccess() != null) {
@@ -198,6 +200,12 @@ public class WorkspacesHandler {
       }
       if (inputNotificationSettings.getSendOnSyncDisabledWarning() != null) {
         notificationSettings.setSendOnSyncDisabledWarning(inputNotificationSettings.getSendOnSyncDisabledWarning());
+      }
+      if (inputNotificationSettings.getSendOnBreakingChangeWarning() != null) {
+        notificationSettings.setSendOnBreakingChangeWarning(inputNotificationSettings.getSendOnBreakingChangeWarning());
+      }
+      if (inputNotificationSettings.getSendOnBreakingChangeSyncsDisabled() != null) {
+        notificationSettings.setSendOnBreakingChangeSyncsDisabled(inputNotificationSettings.getSendOnBreakingChangeSyncsDisabled());
       }
     }
     return notificationSettings;
@@ -248,8 +256,7 @@ public class WorkspacesHandler {
   }
 
   @SuppressWarnings("unused")
-  public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+  public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody) throws IOException, ConfigNotFoundException {
     // for now we assume there is one workspace and it has a default uuid.
     final StandardWorkspace workspace = configRepository.getWorkspaceBySlug(slugRequestBody.getSlug(), false);
     return buildWorkspaceRead(workspace);
@@ -260,8 +267,7 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
-  public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request)
-      throws ConfigNotFoundException, IOException {
+  public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
     Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
     final List<WorkspaceRead> standardWorkspaces = workspacePersistence
         .listWorkspacesByOrganizationId(
@@ -333,7 +339,7 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
-  private String generateUniqueSlug(final String workspaceName) throws JsonValidationException, IOException {
+  private String generateUniqueSlug(final String workspaceName) throws IOException {
     final String proposedSlug = slugify.slugify(workspaceName);
 
     // todo (cgardens) - this is going to be too expensive once there are too many workspaces. needs to
