@@ -41,7 +41,9 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.DestResourceOverrides;
+import io.airbyte.featureflag.DestResourceOverrides;
+import io.airbyte.featureflag.OrchestratorResourceOverrides;
+import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -92,6 +94,7 @@ class DefaultJobCreatorTest {
   private static final StandardDestinationDefinition STANDARD_DESTINATION_DEFINITION;
   private static final ActorDefinitionVersion SOURCE_DEFINITION_VERSION;
   private static final ActorDefinitionVersion DESTINATION_DEFINITION_VERSION;
+  private static final ConfiguredAirbyteCatalog CONFIGURED_AIRBYTE_CATALOG;
   private static final long JOB_ID = 12L;
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
@@ -151,7 +154,7 @@ class DefaultJobCreatorTest {
         .withStream(CatalogHelpers.createAirbyteStream(STREAM3_NAME, NAMESPACE, Field.of(FIELD_NAME, JsonSchemaType.STRING)))
         .withSyncMode(SyncMode.FULL_REFRESH)
         .withDestinationSyncMode(DestinationSyncMode.OVERWRITE);
-    final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(stream1, stream2, stream3));
+    CONFIGURED_AIRBYTE_CATALOG = new ConfiguredAirbyteCatalog().withStreams(List.of(stream1, stream2, stream3));
 
     STANDARD_SYNC = new StandardSync()
         .withConnectionId(connectionId)
@@ -160,7 +163,7 @@ class DefaultJobCreatorTest {
         .withNamespaceFormat(null)
         .withPrefix("presto_to_hudi")
         .withStatus(StandardSync.Status.ACTIVE)
-        .withCatalog(catalog)
+        .withCatalog(CONFIGURED_AIRBYTE_CATALOG)
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId));
@@ -579,6 +582,146 @@ class DefaultJobCreatorTest {
 
     final var expectedMemLimit = StringUtils.isNotBlank(memLimitOverride) ? memLimitOverride : originalReqs.getMemoryLimit();
     assertEquals(expectedMemLimit, destConfigValues.getMemoryLimit());
+  }
+
+  @ParameterizedTest
+  @MethodSource("resourceOverrideMatrix")
+  void testOrchestratorResourceReqsOverrides(final String cpuReqOverride,
+                                             final String cpuLimitOverride,
+                                             final String memReqOverride,
+                                             final String memLimitOverride)
+      throws IOException {
+    final var overrides = new HashMap<>();
+    if (cpuReqOverride != null) {
+      overrides.put("cpu_request", cpuReqOverride);
+    }
+    if (cpuLimitOverride != null) {
+      overrides.put("cpu_limit", cpuLimitOverride);
+    }
+    if (memReqOverride != null) {
+      overrides.put("memory_request", memReqOverride);
+    }
+    if (memLimitOverride != null) {
+      overrides.put("memory_limit", memLimitOverride);
+    }
+
+    final ResourceRequirements originalReqs = new ResourceRequirements()
+        .withCpuLimit("0.8")
+        .withCpuRequest("0.8")
+        .withMemoryLimit("800Mi")
+        .withMemoryRequest("800Mi");
+
+    final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
+        new TestClient(Map.of(OrchestratorResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+
+    final var standardSync = new StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("presto to hudi")
+        .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
+        .withNamespaceFormat(null)
+        .withPrefix("presto_to_hudi")
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withCatalog(CONFIGURED_AIRBYTE_CATALOG)
+        .withSourceId(UUID.randomUUID())
+        .withDestinationId(UUID.randomUUID())
+        .withOperationIds(List.of(UUID.randomUUID()))
+        .withResourceRequirements(originalReqs);
+
+    jobCreator.createSyncJob(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
+        standardSync,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        null,
+        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(sourceResourceRequirements)),
+        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID);
+
+    final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    final var orchestratorConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getOrchestrator();
+
+    final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
+    assertEquals(expectedCpuReq, orchestratorConfigValues.getCpuRequest());
+
+    final var expectedCpuLimit = StringUtils.isNotBlank(cpuLimitOverride) ? cpuLimitOverride : originalReqs.getCpuLimit();
+    assertEquals(expectedCpuLimit, orchestratorConfigValues.getCpuLimit());
+
+    final var expectedMemReq = StringUtils.isNotBlank(memReqOverride) ? memReqOverride : originalReqs.getMemoryRequest();
+    assertEquals(expectedMemReq, orchestratorConfigValues.getMemoryRequest());
+
+    final var expectedMemLimit = StringUtils.isNotBlank(memLimitOverride) ? memLimitOverride : originalReqs.getMemoryLimit();
+    assertEquals(expectedMemLimit, orchestratorConfigValues.getMemoryLimit());
+  }
+
+  @ParameterizedTest
+  @MethodSource("resourceOverrideMatrix")
+  void testSourceResourceReqsOverrides(final String cpuReqOverride,
+                                       final String cpuLimitOverride,
+                                       final String memReqOverride,
+                                       final String memLimitOverride)
+      throws IOException {
+    final var overrides = new HashMap<>();
+    if (cpuReqOverride != null) {
+      overrides.put("cpu_request", cpuReqOverride);
+    }
+    if (cpuLimitOverride != null) {
+      overrides.put("cpu_limit", cpuLimitOverride);
+    }
+    if (memReqOverride != null) {
+      overrides.put("memory_request", memReqOverride);
+    }
+    if (memLimitOverride != null) {
+      overrides.put("memory_limit", memLimitOverride);
+    }
+
+    final ResourceRequirements originalReqs = new ResourceRequirements()
+        .withCpuLimit("0.8")
+        .withCpuRequest("0.8")
+        .withMemoryLimit("800Mi")
+        .withMemoryRequest("800Mi");
+
+    final var jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider,
+        new TestClient(Map.of(SourceResourceOverrides.INSTANCE.getKey(), Jsons.serialize(overrides))));
+
+    jobCreator.createSyncJob(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        List.of(STANDARD_SYNC_OPERATION),
+        null,
+        new StandardSourceDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withJobSpecific(List.of(
+            new JobTypeResourceLimit().withJobType(JobType.SYNC).withResourceRequirements(originalReqs)))),
+        new StandardDestinationDefinition().withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(destResourceRequirements)),
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION,
+        WORKSPACE_ID);
+
+    final ArgumentCaptor<JobConfig> configCaptor = ArgumentCaptor.forClass(JobConfig.class);
+    verify(jobPersistence, times(1)).enqueueJob(any(), configCaptor.capture());
+    final var sourceConfigValues = configCaptor.getValue().getSync().getSyncResourceRequirements().getSource();
+
+    final var expectedCpuReq = StringUtils.isNotBlank(cpuReqOverride) ? cpuReqOverride : originalReqs.getCpuRequest();
+    assertEquals(expectedCpuReq, sourceConfigValues.getCpuRequest());
+
+    final var expectedCpuLimit = StringUtils.isNotBlank(cpuLimitOverride) ? cpuLimitOverride : originalReqs.getCpuLimit();
+    assertEquals(expectedCpuLimit, sourceConfigValues.getCpuLimit());
+
+    final var expectedMemReq = StringUtils.isNotBlank(memReqOverride) ? memReqOverride : originalReqs.getMemoryRequest();
+    assertEquals(expectedMemReq, sourceConfigValues.getMemoryRequest());
+
+    final var expectedMemLimit = StringUtils.isNotBlank(memLimitOverride) ? memLimitOverride : originalReqs.getMemoryLimit();
+    assertEquals(expectedMemLimit, sourceConfigValues.getMemoryLimit());
   }
 
   private static Stream<Arguments> resourceOverrideMatrix() {

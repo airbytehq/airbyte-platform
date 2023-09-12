@@ -27,13 +27,15 @@ import io.airbyte.config.SyncResourceRequirementsKey;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.DestResourceOverrides;
 import io.airbyte.featureflag.Destination;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.DestResourceOverrides;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.OrchestratorResourceOverrides;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -183,7 +185,7 @@ public class DefaultJobCreator implements JobCreator {
     // destination based on the source to avoid oversizing orchestrator and destination when the source
     // is slow.
     final Optional<String> sourceType = getSourceType(sourceDefinition);
-    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant);
+    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant, ffContext);
     final ResourceRequirements mergedDstResourceReq =
         getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant, ffContext);
 
@@ -197,7 +199,7 @@ public class DefaultJobCreator implements JobCreator {
         .withOrchestrator(mergedOrchestratorResourceReq);
 
     if (!isReset) {
-      final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant);
+      final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant, ffContext);
       syncResourceRequirements
           .withSource(mergedSrcResourceReq)
           .withSourceStdErr(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE_STDERR, sourceType, variant))
@@ -230,35 +232,36 @@ public class DefaultJobCreator implements JobCreator {
 
   private ResourceRequirements getOrchestratorResourceRequirements(final StandardSync standardSync,
                                                                    final Optional<String> sourceType,
-                                                                   final String variant) {
+                                                                   final String variant,
+                                                                   final Context ffContext) {
     final ResourceRequirements defaultOrchestratorRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType, variant);
-    return ResourceRequirementsUtils.getResourceRequirements(
+
+    final var mergedRrsReqs = ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         defaultOrchestratorRssReqs);
+
+    final var overrides = getOrchestratorResourceOverrides(ffContext);
+
+    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRrsReqs);
   }
 
   private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync,
                                                              final StandardSourceDefinition sourceDefinition,
-                                                             final String variant) {
+                                                             final String variant,
+                                                             final Context ffContext) {
     final ResourceRequirements defaultSrcRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition), variant);
-    return ResourceRequirementsUtils.getResourceRequirements(
+
+    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirements(
         standardSync.getResourceRequirements(),
         sourceDefinition != null ? sourceDefinition.getResourceRequirements() : null,
         defaultSrcRssReqs,
         JobType.SYNC);
-  }
 
-  private ResourceRequirements getDestinationResourceOverrides(final Context ffCtx) {
-    final String destOverrides = featureFlagClient.stringVariation(DestResourceOverrides.INSTANCE, ffCtx);
-    try {
-      return ResourceRequirementsUtils.parse(destOverrides);
-    } catch (final Exception e) {
-      log.warn("Could not parse DESTINATION resource overrides from feature flag string: '{}'", destOverrides);
-      log.warn("Error parsing DESTINATION resource overrides: {}", e.getMessage());
-      return null;
-    }
+    final var overrides = getSourceResourceOverrides(ffContext);
+
+    return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
   }
 
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
@@ -278,6 +281,36 @@ public class DefaultJobCreator implements JobCreator {
     final var overrides = getDestinationResourceOverrides(ffContext);
 
     return ResourceRequirementsUtils.getResourceRequirements(overrides, mergedRssReqs);
+  }
+
+  private ResourceRequirements getDestinationResourceOverrides(final Context ffCtx) {
+    final String destOverrides = featureFlagClient.stringVariation(DestResourceOverrides.INSTANCE, ffCtx);
+    try {
+      return ResourceRequirementsUtils.parse(destOverrides);
+    } catch (final Exception e) {
+      log.warn("Could not parse DESTINATION resource overrides '{}' from feature flag string: {}", destOverrides, e.getMessage());
+      return null;
+    }
+  }
+
+  private ResourceRequirements getOrchestratorResourceOverrides(final Context ffCtx) {
+    final String orchestratorOverrides = featureFlagClient.stringVariation(OrchestratorResourceOverrides.INSTANCE, ffCtx);
+    try {
+      return ResourceRequirementsUtils.parse(orchestratorOverrides);
+    } catch (final Exception e) {
+      log.warn("Could not parse ORCHESTRATOR resource overrides '{}' from feature flag string: {}", orchestratorOverrides, e.getMessage());
+      return null;
+    }
+  }
+
+  private ResourceRequirements getSourceResourceOverrides(final Context ffCtx) {
+    final String sourceOverrides = featureFlagClient.stringVariation(SourceResourceOverrides.INSTANCE, ffCtx);
+    try {
+      return ResourceRequirementsUtils.parse(sourceOverrides);
+    } catch (final Exception e) {
+      log.warn("Could not parse SOURCE resource overrides '{}' from feature flag string: {}", sourceOverrides, e.getMessage());
+      return null;
+    }
   }
 
   private Optional<String> getSourceType(final StandardSourceDefinition sourceDefinition) {

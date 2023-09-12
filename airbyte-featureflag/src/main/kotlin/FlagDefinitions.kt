@@ -103,6 +103,12 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
+object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
+
+object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
+
+object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -128,6 +134,4 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
-
-  object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 }
