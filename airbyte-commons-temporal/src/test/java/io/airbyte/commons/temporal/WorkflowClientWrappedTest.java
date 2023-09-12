@@ -21,6 +21,8 @@ import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse;
 import io.temporal.api.workflowservice.v1.WorkflowServiceGrpc.WorkflowServiceBlockingStub;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowStub;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,9 @@ class WorkflowClientWrappedTest {
 
   static class MyWorkflow {}
 
+  private static final int maxAttempt = 3;
+  private static final int backoffDelayInMillis = 1;
+  private static final int backoffMaxDelayInMillis = 10;
   private MetricClient metricClient;
   private WorkflowServiceStubs temporalWorkflowServiceStubs;
   private WorkflowServiceBlockingStub temporalWorkflowServiceBlockingStub;
@@ -43,7 +48,7 @@ class WorkflowClientWrappedTest {
     when(temporalWorkflowServiceStubs.blockingStub()).thenReturn(temporalWorkflowServiceBlockingStub);
     temporalWorkflowClient = mock(WorkflowClient.class);
     when(temporalWorkflowClient.getWorkflowServiceStubs()).thenReturn(temporalWorkflowServiceStubs);
-    workflowClient = new WorkflowClientWrapped(temporalWorkflowClient, metricClient);
+    workflowClient = new WorkflowClientWrapped(temporalWorkflowClient, metricClient, maxAttempt, backoffDelayInMillis, backoffMaxDelayInMillis);
   }
 
   @Test
@@ -68,6 +73,29 @@ class WorkflowClientWrappedTest {
   }
 
   @Test
+  void testNewWorkflowStubWithOptions() {
+    final MyWorkflow expected = new MyWorkflow();
+    when(temporalWorkflowClient.newWorkflowStub(any(), (WorkflowOptions) any()))
+        .thenThrow(unavailable())
+        .thenReturn(expected);
+
+    final MyWorkflow actual = workflowClient.newWorkflowStub(MyWorkflow.class, WorkflowOptions.getDefaultInstance());
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void testTerminateWorkflow() {
+    final var workflowStub = mock(WorkflowStub.class);
+    when(temporalWorkflowClient.newUntypedWorkflowStub(anyString()))
+        .thenThrow(unavailable())
+        .thenReturn(workflowStub);
+
+    workflowClient.terminateWorkflow("workflow", "test terminate");
+    verify(temporalWorkflowClient, times(2)).newUntypedWorkflowStub("workflow");
+    verify(workflowStub).terminate("test terminate");
+  }
+
+  @Test
   void testBlockingDescribeWorkflowExecution() {
     final DescribeWorkflowExecutionResponse expected = mock(DescribeWorkflowExecutionResponse.class);
     when(temporalWorkflowServiceBlockingStub.describeWorkflowExecution(any()))
@@ -76,6 +104,16 @@ class WorkflowClientWrappedTest {
 
     final DescribeWorkflowExecutionResponse actual = workflowClient.blockingDescribeWorkflowExecution(mock(DescribeWorkflowExecutionRequest.class));
     assertEquals(expected, actual);
+  }
+
+  @Test
+  void testSignalsAreNotRetried() {
+    when(temporalWorkflowClient.signalWithStart(any())).thenThrow(unavailable());
+    assertThrows(StatusRuntimeException.class, () -> {
+      final var request = workflowClient.newSignalWithStartRequest();
+      workflowClient.signalWithStart(request);
+    });
+    verify(temporalWorkflowClient, times(1)).signalWithStart(any());
   }
 
   private static StatusRuntimeException unavailable() {

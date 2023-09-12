@@ -161,9 +161,8 @@ public class TemporalClientTest {
           .when(temporalClient).filterOutRunningWorkspaceId(workflowIds);
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
       temporalClient.restartClosedWorkflowByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
-      verify(mConnectionManagerUtils).safeTerminateWorkflow(eq(workflowClient), eq(connectionId),
-          anyString());
-      verify(mConnectionManagerUtils).startConnectionManagerNoSignal(eq(workflowClient), eq(connectionId));
+      verify(mConnectionManagerUtils).safeTerminateWorkflow(eq(connectionId), anyString());
+      verify(mConnectionManagerUtils).startConnectionManagerNoSignal(eq(connectionId));
     }
 
   }
@@ -309,7 +308,7 @@ public class TemporalClientTest {
     void testForceCancelConnection() {
       temporalClient.forceDeleteWorkflow(CONNECTION_ID);
 
-      verify(connectionManagerUtils).deleteWorkflowIfItExist(workflowClient, CONNECTION_ID);
+      verify(connectionManagerUtils).deleteWorkflowIfItExist(CONNECTION_ID);
     }
 
   }

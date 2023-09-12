@@ -47,11 +47,10 @@ public class ConnectionManagerUtils {
    * Send a cancellation to the workflow. It will swallow any exception and won't check if the
    * workflow is already deleted when being cancel.
    */
-  public void deleteWorkflowIfItExist(final WorkflowClient client,
-                                      final UUID connectionId) {
+  public void deleteWorkflowIfItExist(final UUID connectionId) {
     try {
       final ConnectionManagerWorkflow connectionManagerWorkflow =
-          client.newWorkflowStub(ConnectionManagerWorkflow.class, getConnectionManagerName(connectionId));
+          workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow.class, getConnectionManagerName(connectionId));
       connectionManagerWorkflow.deleteConnection();
     } catch (final Exception e) {
       log.warn("The workflow is not reachable when trying to cancel it", e);
@@ -66,18 +65,16 @@ public class ConnectionManagerUtils {
    * batched request. Batching is used to avoid race conditions between starting the workflow and
    * executing the signal.
    *
-   * @param client the WorkflowClient for interacting with temporal
    * @param connectionId the connection ID to execute this operation for
    * @param signalMethod a function that takes in a connection manager workflow and executes a signal
    *        method on it, with no arguments
    * @return the healthy connection manager workflow that was signaled
    * @throws DeletedWorkflowException if the connection manager workflow was deleted
    */
-  public ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final WorkflowClient client,
-                                                                      final UUID connectionId,
+  public ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final UUID connectionId,
                                                                       final Function<ConnectionManagerWorkflow, Proc> signalMethod)
       throws DeletedWorkflowException {
-    return signalWorkflowAndRepairIfNecessary(client, connectionId, signalMethod, Optional.empty());
+    return signalWorkflowAndRepairIfNecessary(connectionId, signalMethod, Optional.empty());
   }
 
   /**
@@ -87,7 +84,6 @@ public class ConnectionManagerUtils {
    * batched request. Batching is used to avoid race conditions between starting the workflow and
    * executing the signal.
    *
-   * @param client the WorkflowClient for interacting with temporal
    * @param connectionId the connection ID to execute this operation for
    * @param signalMethod a function that takes in a connection manager workflow and executes a signal
    *        method on it, with 1 argument
@@ -95,12 +91,11 @@ public class ConnectionManagerUtils {
    * @return the healthy connection manager workflow that was signaled
    * @throws DeletedWorkflowException if the connection manager workflow was deleted
    */
-  public <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final WorkflowClient client,
-                                                                          final UUID connectionId,
+  public <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final UUID connectionId,
                                                                           final Function<ConnectionManagerWorkflow, Proc1<T>> signalMethod,
                                                                           final T signalArgument)
       throws DeletedWorkflowException {
-    return signalWorkflowAndRepairIfNecessary(client, connectionId, signalMethod, Optional.of(signalArgument));
+    return signalWorkflowAndRepairIfNecessary(connectionId, signalMethod, Optional.of(signalArgument));
   }
 
   // This method unifies the logic of the above two, by using the optional signalArgument parameter to
@@ -109,8 +104,7 @@ public class ConnectionManagerUtils {
   // type enforcement for external calls, and means this method can assume consistent type
   // implementations for both cases.
   @SuppressWarnings({"MissingJavadocMethod", "LineLength"})
-  private <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final WorkflowClient client,
-                                                                           final UUID connectionId,
+  private <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final UUID connectionId,
                                                                            final Function<ConnectionManagerWorkflow, ? extends TemporalFunctionalInterfaceMarker> signalMethod,
                                                                            final Optional<T> signalArgument)
       throws DeletedWorkflowException {
@@ -138,12 +132,12 @@ public class ConnectionManagerUtils {
 
       // in case there is an existing workflow in a bad state, attempt to terminate it first before
       // starting a new workflow
-      safeTerminateWorkflow(client, connectionId, "Terminating workflow in unreachable state before starting a new workflow for this connection");
+      safeTerminateWorkflow(connectionId, "Terminating workflow in unreachable state before starting a new workflow for this connection");
 
-      final ConnectionManagerWorkflow connectionManagerWorkflow = newConnectionManagerWorkflowStub(client, connectionId);
+      final ConnectionManagerWorkflow connectionManagerWorkflow = newConnectionManagerWorkflowStub(connectionId);
       final ConnectionUpdaterInput startWorkflowInput = TemporalWorkflowUtils.buildStartWorkflowInput(connectionId);
 
-      final BatchRequest batchRequest = client.newSignalWithStartRequest();
+      final BatchRequest batchRequest = workflowClientWrapped.newSignalWithStartRequest();
       batchRequest.add(connectionManagerWorkflow::run, startWorkflowInput);
 
       // retrieve the signal from the lambda
@@ -155,17 +149,17 @@ public class ConnectionManagerUtils {
         batchRequest.add((Proc) signal);
       }
 
-      client.signalWithStart(batchRequest);
+      workflowClientWrapped.signalWithStart(batchRequest);
       log.info("Connection manager workflow for connection {} has been started and signaled.", connectionId);
 
       return connectionManagerWorkflow;
     }
   }
 
-  void safeTerminateWorkflow(final WorkflowClient client, final String workflowId, final String reason) {
+  void safeTerminateWorkflow(final String workflowId, final String reason) {
     log.info("Attempting to terminate existing workflow for workflowId {}.", workflowId);
     try {
-      client.newUntypedWorkflowStub(workflowId).terminate(reason);
+      workflowClientWrapped.terminateWorkflow(workflowId, reason);
     } catch (final Exception e) {
       log.warn(
           "Could not terminate temporal workflow due to the following error; "
@@ -177,25 +171,23 @@ public class ConnectionManagerUtils {
   /**
    * Terminate a temporal workflow and throw a useful exception.
    *
-   * @param client temporal workflow client
    * @param connectionId connection id
    * @param reason reason for terminating the workflow
    */
   // todo (cgardens) - what makes this safe
-  public void safeTerminateWorkflow(final WorkflowClient client, final UUID connectionId, final String reason) {
-    safeTerminateWorkflow(client, getConnectionManagerName(connectionId), reason);
+  public void safeTerminateWorkflow(final UUID connectionId, final String reason) {
+    safeTerminateWorkflow(getConnectionManagerName(connectionId), reason);
   }
 
   /**
    * Start a connection manager workflow for a connection.
    *
-   * @param client temporal workflow client
    * @param connectionId connection id
    * @return new connection manager workflow
    */
   // todo (cgardens) - what does no signal mean in this context?
-  public ConnectionManagerWorkflow startConnectionManagerNoSignal(final WorkflowClient client, final UUID connectionId) {
-    final ConnectionManagerWorkflow connectionManagerWorkflow = newConnectionManagerWorkflowStub(client, connectionId);
+  public ConnectionManagerWorkflow startConnectionManagerNoSignal(final UUID connectionId) {
+    final ConnectionManagerWorkflow connectionManagerWorkflow = newConnectionManagerWorkflowStub(connectionId);
     final ConnectionUpdaterInput input = TemporalWorkflowUtils.buildStartWorkflowInput(connectionId);
     WorkflowClient.start(connectionManagerWorkflow::run, input);
 
@@ -241,9 +233,9 @@ public class ConnectionManagerUtils {
     return connectionManagerWorkflow;
   }
 
-  Optional<WorkflowState> getWorkflowState(final WorkflowClient client, final UUID connectionId) {
+  Optional<WorkflowState> getWorkflowState(final UUID connectionId) {
     try {
-      final ConnectionManagerWorkflow connectionManagerWorkflow = client.newWorkflowStub(ConnectionManagerWorkflow.class,
+      final ConnectionManagerWorkflow connectionManagerWorkflow = workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow.class,
           getConnectionManagerName(connectionId));
       return Optional.of(connectionManagerWorkflow.getState());
     } catch (final Exception e) {
@@ -252,8 +244,8 @@ public class ConnectionManagerUtils {
     }
   }
 
-  boolean isWorkflowStateRunning(final WorkflowClient client, final UUID connectionId) {
-    return getWorkflowState(client, connectionId).map(WorkflowState::isRunning).orElse(false);
+  boolean isWorkflowStateRunning(final UUID connectionId) {
+    return getWorkflowState(connectionId).map(WorkflowState::isRunning).orElse(false);
   }
 
   /**
@@ -290,8 +282,8 @@ public class ConnectionManagerUtils {
     }
   }
 
-  public ConnectionManagerWorkflow newConnectionManagerWorkflowStub(final WorkflowClient client, final UUID connectionId) {
-    return client.newWorkflowStub(ConnectionManagerWorkflow.class,
+  private ConnectionManagerWorkflow newConnectionManagerWorkflowStub(final UUID connectionId) {
+    return workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow.class,
         TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.CONNECTION_UPDATER, getConnectionManagerName(connectionId)));
   }
 
