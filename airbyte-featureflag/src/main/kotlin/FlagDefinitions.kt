@@ -103,6 +103,8 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
+object SunsetFCP : Temporary<Boolean>(key = "platform.sunset-fcp", default = false)
+
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
