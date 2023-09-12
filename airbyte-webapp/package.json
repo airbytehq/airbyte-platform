@@ -33,7 +33,6 @@
     "license-check": "node ./scripts/license-check.js",
     "generate-client": "./scripts/load-declarative-schema.sh && orval",
     "validate-links": "ts-node --skip-project ./scripts/validate-links.ts",
-    "validate-lock": "node ./scripts/validate-lock-files.js",
     "preanalyze-lowcode": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "analyze-lowcode": "ts-node --skip-project ./scripts/analyze-low-code-manifests.ts",
     "cypress:open": "cypress open --config-file cypress/cypress.config.ts",

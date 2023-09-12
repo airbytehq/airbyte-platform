@@ -24,12 +24,11 @@ buildscript {
 
 plugins {
     id "base"
-    id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.15.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.15.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.15.0" apply false
-    id "io.airbyte.gradle.docker" version "0.15.0" apply false
-    id "io.airbyte.gradle.publish" version "0.15.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.14.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.14.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.14.0" apply false
+    id "io.airbyte.gradle.docker" version "0.14.0" apply false
+    id "io.airbyte.gradle.publish" version "0.14.0" apply false
 }
 
 repositories {
@@ -70,30 +69,6 @@ allprojects {
     group = "io.airbyte${sub.isEmpty() ? '' : ".$sub"}"
 
     version = rootProject.ext.version
-}
-
-tasks.register('archiveReports', Tar) {
-    dependsOn subprojects.collect { it.getTasksByName('checkstyleMain', true) }
-    dependsOn subprojects.collect { it.getTasksByName('checkstyleTest', true) }
-    dependsOn subprojects.collect { it.getTasksByName('jacocoTestReport', true) }
-    dependsOn subprojects.collect { it.getTasksByName('pmdMain', true) }
-    dependsOn subprojects.collect { it.getTasksByName('pmdTest', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsMain', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsTest', true) }
-    dependsOn subprojects.collect { it.getTasksByName('test', true) }
-    dependsOn subprojects.collect { it.getTasksByName('checkstyleAcceptanceTests', true) }
-    dependsOn subprojects.collect { it.getTasksByName('pmdAcceptanceTests', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsAcceptanceTests', true) }
-
-    archiveFileName = "${project.name}-reports.tar"
-    destinationDirectory = layout.buildDirectory.dir('dist')
-
-    // Collect reports from each subproject
-    subprojects.each { subproject ->
-        from("${subproject.buildDir}/reports") {
-            into("${subproject.name}/reports")
-        }
-    }
 }
 
 subprojects { sp ->
