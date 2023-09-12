@@ -202,7 +202,12 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       return false;
     }
     try {
-      return kubernetesClient.pods().withName(pod.getFullResourceName()).tailingLines(5).getLog().contains(JAVA_OOM_EXCEPTION_STRING);
+      return kubernetesClient.pods()
+          .inNamespace(pod.getMetadata().getNamespace())
+          .withName(pod.getFullResourceName())
+          .tailingLines(5)
+          .getLog()
+          .contains(JAVA_OOM_EXCEPTION_STRING);
     } catch (final Exception e) {
       // We are trying to detect if the pod OOMed, if we fail to check the logs, we don't want to add more
       // exception noise since this is an extra inspection attempt for more precise error logging.
