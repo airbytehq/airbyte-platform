@@ -11,7 +11,7 @@ metadata:
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
-  # helm install with `--set-file airbyteYml=../../airbyte.yml` to populate .Values.airbyteYml with the root-level airbyte.yml file
+  # helm install with `--set-file airbyteYml=../../configs/airbyte.yml` to populate .Values.airbyteYml with the airbyte.yml config file
   fileContents: |-
   {{ .Values.airbyteYml | nindent 4 }}
 {{- end }}

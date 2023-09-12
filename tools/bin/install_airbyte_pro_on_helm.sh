@@ -4,7 +4,7 @@
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # Now use this to get the relative path of the airbyte.yml file and airbyte-pro-values.yml file
-airbyte_yml_file_path="$script_dir/../../airbyte.yml"
+airbyte_yml_file_path="$script_dir/../../configs/airbyte.yml"
 airbyte_pro_values_yml_file_path="$script_dir/../../charts/airbyte/airbyte-pro-values.yaml"
 
 # Define the helm release name for this installation of Airbyte Pro.
