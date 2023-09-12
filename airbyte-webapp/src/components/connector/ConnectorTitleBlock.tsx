@@ -1,9 +1,9 @@
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { shouldDisplayBreakingChangeBanner, ConnectorDefinition } from "core/domain/connector";
@@ -25,15 +25,14 @@ export const ConnectorTitleBlock = <T extends Connector>({
   connectorDefinition,
   actorDefinitionVersion,
 }: ConnectorTitleBlockProps<T>) => {
-  const titleInfo =
-    connectorDefinition.releaseStage === "custom" ? (
-      `${connectorDefinition.name}`
-    ) : (
-      <FormattedMessage
-        id="connector.connectorNameAndVersion"
-        values={{ connectorName: connectorDefinition.name, version: actorDefinitionVersion.dockerImageTag }}
-      />
-    );
+  const titleInfo = connectorDefinition.custom ? (
+    `${connectorDefinition.name}`
+  ) : (
+    <FormattedMessage
+      id="connector.connectorNameAndVersion"
+      values={{ connectorName: connectorDefinition.name, version: actorDefinitionVersion.dockerImageTag }}
+    />
+  );
   return (
     <FlexContainer direction="column" gap="xl">
       <FlexContainer alignItems="center">
@@ -44,7 +43,11 @@ export const ConnectorTitleBlock = <T extends Connector>({
           </Heading>
           <FlexContainer alignItems="center">
             <Text color="grey">{titleInfo}</Text>
-            <ReleaseStageBadge stage={connectorDefinition.releaseStage} />
+            <SupportLevelBadge
+              supportLevel={actorDefinitionVersion.supportLevel}
+              custom={connectorDefinition.custom}
+              releaseStage={connectorDefinition.releaseStage}
+            />
           </FlexContainer>
         </FlexContainer>
       </FlexContainer>

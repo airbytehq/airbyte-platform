@@ -1,0 +1,27 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.badge {
+  border-radius: variables.$border-radius-pill;
+  text-transform: uppercase;
+  padding: variables.$spacing-xs variables.$spacing-sm;
+
+  &--certified {
+    color: colors.$blue-700;
+    background-color: colors.$blue-50;
+  }
+
+  &--community,
+  &--custom {
+    color: colors.$grey-800;
+    background-color: colors.$grey-100;
+  }
+
+  &--small {
+    font-size: 8px;
+  }
+
+  &--medium {
+    font-size: 9px;
+  }
+}

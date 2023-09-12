@@ -8,7 +8,11 @@ import {
   mockDestinationDefinitionSpecification,
   mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import {
+  mockSourceDefinition,
+  mockSourceDefinitionSpecification,
+  mockSourceDefinitionVersion,
+} from "test-utils/mock-data/mockSource";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
@@ -51,6 +55,7 @@ jest.mock("core/api", () => ({
     }),
     isLoading: false,
   }),
+  useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 

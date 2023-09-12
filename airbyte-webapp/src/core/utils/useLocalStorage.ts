@@ -4,7 +4,7 @@ import { useLocalStorage as useLocalStorageWithUndefinedBug } from "react-use";
 
 import { BuilderState } from "components/connectorBuilder/types";
 
-import { ReleaseStage } from "core/request/AirbyteClient";
+import { ReleaseStage, SupportLevel } from "core/request/AirbyteClient";
 import { Theme } from "hooks/theme/useAirbyteTheme";
 
 // Represents all the data we store in localStorage across the airbyte app
@@ -17,6 +17,7 @@ interface AirbyteLocalStorage {
   allowlistIpsOpen: boolean;
   airbyteTheme: Theme;
   "airbyte_connector-grid-release-stage-filter": ReleaseStage[];
+  "airbyte_connector-grid-support-level-filter": SupportLevel[];
   "airbyte_connector-grid-show-suggested-connectors": boolean;
 }
 

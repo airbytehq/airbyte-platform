@@ -40,12 +40,12 @@ export const DocumentationPanel: React.FC = () => {
     selectedConnectorDefinition &&
     "sourceType" in selectedConnectorDefinition &&
     selectedConnectorDefinition.sourceType;
-  const { releaseStage } = selectedConnectorDefinition || {};
+  const { supportLevel } = selectedConnectorDefinition || {};
   const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false) && sourceType === "api";
   const [isSchemaRequested, setIsSchemaRequested] = useState(false);
   const [isERDRequested, setIsERDRequested] = useState(false);
 
-  const { data: docs, isLoading, error } = useDocumentation(documentationUrl, releaseStage);
+  const { data: docs, isLoading, error } = useDocumentation(documentationUrl, supportLevel);
   const urlReplacerPlugin: PluggableList = useMemo<PluggableList>(() => {
     const sanitizeLinks = (url: Url, element: Element) => {
       // Relative URLs pointing to another place within the documentation.

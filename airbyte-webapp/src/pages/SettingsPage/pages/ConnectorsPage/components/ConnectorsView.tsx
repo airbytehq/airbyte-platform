@@ -15,7 +15,7 @@ import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/Ai
 import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 
-import ConnectorCell from "./ConnectorCell";
+import { ConnectorCell } from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
 import CreateConnector from "./CreateConnector";
@@ -73,7 +73,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
       if (allowUpdateConnectors) {
         return true;
       }
-      if (allowUploadCustomImage && definitions.some((definition) => definition.releaseStage === "custom")) {
+      if (allowUploadCustomImage && definitions.some((definition) => definition.custom)) {
         return true;
       }
       return false;
@@ -94,9 +94,11 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
             connectorName={props.cell.getValue()}
             img={props.row.original.icon}
             currentVersion={props.row.original.dockerImageTag}
-            releaseStage={props.row.original.releaseStage}
+            supportLevel={props.row.original.supportLevel}
+            custom={props.row.original.custom}
             id={Connector.id(props.row.original)}
             type={type}
+            releaseStage={props.row.original.releaseStage}
           />
         ),
       }),
@@ -124,13 +126,13 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </div>
               ),
               cell: (props) =>
-                allowUpdateConnectors || (allowUploadCustomImage && props.row.original.releaseStage === "custom") ? (
+                allowUpdateConnectors || (allowUploadCustomImage && props.row.original.custom) ? (
                   type === "sources" ? (
                     <UpdateSourceConnectorVersionCell
                       connectorDefinitionId={Connector.id(props.row.original)}
                       onChange={onUpdateVersion}
                       currentVersion={props.row.original.dockerImageTag}
-                      releaseStage={props.row.original.releaseStage}
+                      custom={props.row.original.custom}
                     />
                   ) : (
                     <UpdateDestinationConnectorVersionCell
@@ -191,7 +193,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     });
   }
 
-  if (usedConnectorsDefinitions.length > 0) {
+  if (filteredUsedConnectorsDefinitions.length > 0) {
     sections.push({
       title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
       content: (

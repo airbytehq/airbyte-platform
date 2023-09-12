@@ -13,7 +13,7 @@ const xminOption = "label[data-testid='radio-option.1']";
 
 export const selectServiceType = (type: string) => {
   // Make sure alpha connectors are visible in the grid, since they are hidden by default
-  cy.get("#filter-release-stage-alpha").check({ force: true });
+  cy.get("#filter-support-level-community").check({ force: true });
   cy.contains("button", type).click();
 };
 

@@ -6,7 +6,7 @@ import { Option } from "components/ui/ListBox";
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, ReleaseStage, SourceId } from "core/request/AirbyteClient";
+import { DestinationId, ReleaseStage, SourceId, SupportLevel } from "core/request/AirbyteClient";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
@@ -22,6 +22,8 @@ export interface AvailableSource {
   icon: string;
   name: string;
   releaseStage: ReleaseStage;
+  supportLevel: SupportLevel;
+  custom: boolean;
   connectedDestinations: string[];
 }
 
@@ -30,6 +32,8 @@ export interface AvailableDestination {
   icon: string;
   name: string;
   releaseStage: ReleaseStage;
+  supportLevel: SupportLevel;
+  custom: boolean;
   connectedSources: string[];
 }
 

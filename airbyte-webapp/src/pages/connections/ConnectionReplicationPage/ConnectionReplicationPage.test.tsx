@@ -12,7 +12,11 @@ import {
   mockDestinationDefinitionSpecification,
   mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import {
+  mockSourceDefinition,
+  mockSourceDefinitionSpecification,
+  mockSourceDefinitionVersion,
+} from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
@@ -56,6 +60,7 @@ jest.mock("core/api", () => ({
     mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
     isLoading: false,
   }),
+  useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 

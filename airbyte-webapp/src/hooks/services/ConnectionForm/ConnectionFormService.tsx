@@ -10,7 +10,7 @@ import {
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
 
-import { ConnectionValues, useDestinationDefinitionVersion } from "core/api";
+import { ConnectionValues, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
 import {
   ActorDefinitionVersionRead,
   ConnectionScheduleType,
@@ -68,6 +68,7 @@ interface ConnectionFormHook {
   mode: ConnectionFormMode;
   sourceDefinition: SourceDefinitionRead;
   sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
+  sourceDefinitionVersion: ActorDefinitionVersionRead;
   destDefinition: DestinationDefinitionRead;
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
@@ -89,12 +90,14 @@ const useConnectionForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
   const {
-    source: { sourceDefinitionId },
+    source: { sourceId, sourceDefinitionId },
     destination: { destinationId, destinationDefinitionId },
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
+  const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
+
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
   const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
   const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
@@ -137,6 +140,7 @@ const useConnectionForm = ({
     connection,
     mode,
     sourceDefinition,
+    sourceDefinitionVersion,
     sourceDefinitionSpecification,
     destDefinition,
     destDefinitionVersion,

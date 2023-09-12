@@ -1,5 +1,4 @@
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { Text } from "components/ui/Text";
 
 import { DestinationDefinitionId, SourceDefinitionId } from "core/request/AirbyteClient";
@@ -8,6 +7,7 @@ import { useSourceDefinitionList } from "services/connector/SourceDefinitionServ
 
 import styles from "./ConnectorDefinitionBranding.module.scss";
 import { FlexContainer } from "../Flex";
+import { SupportLevelBadge } from "../SupportLevelBadge";
 
 type ConnectorDefinitionBrandingProps = SourceDefinitionProps | DestinationDefinitionProps;
 
@@ -52,7 +52,11 @@ const SourceDefinitionBranding: React.FC<SourceDefinitionBrandingProps> = ({ sou
     <>
       <ConnectorIcon icon={sourceDefinition.icon} />
       <Text className={styles.name}>{sourceDefinition.name}</Text>
-      <ReleaseStageBadge stage={sourceDefinition.releaseStage} />
+      <SupportLevelBadge
+        supportLevel={sourceDefinition.supportLevel}
+        custom={sourceDefinition.custom}
+        releaseStage={sourceDefinition.releaseStage}
+      />
     </>
   ) : null;
 };
@@ -70,7 +74,11 @@ const DestinationDefinitionBranding: React.FC<DestinationDefinitionBrandingProps
     <>
       <ConnectorIcon icon={destinationDefinition.icon} />
       <Text className={styles.name}>{destinationDefinition.name}</Text>
-      <ReleaseStageBadge stage={destinationDefinition.releaseStage} />
+      <SupportLevelBadge
+        supportLevel={destinationDefinition.supportLevel}
+        custom={destinationDefinition.custom}
+        releaseStage={destinationDefinition.releaseStage}
+      />
     </>
   ) : null;
 };

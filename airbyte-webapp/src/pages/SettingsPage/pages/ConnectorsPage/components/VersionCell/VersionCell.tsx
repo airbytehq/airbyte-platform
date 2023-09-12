@@ -7,8 +7,6 @@ import * as yup from "yup";
 import { Form, FormControl } from "components/forms";
 import { FlexContainer } from "components/ui/Flex";
 
-import { ReleaseStage } from "core/request/AirbyteClient";
-
 import { SubmissionButton } from "./SubmissionButton";
 import styles from "./VersionCell.module.scss";
 
@@ -27,7 +25,7 @@ export interface VersionCellProps {
   onChange: (values: ConnectorVersionFormValues) => Promise<void>;
   currentVersion: string;
   latestVersion?: string;
-  releaseStage?: ReleaseStage;
+  custom?: boolean;
 }
 
 export const VersionCell: React.FC<VersionCellProps> = ({
@@ -35,7 +33,7 @@ export const VersionCell: React.FC<VersionCellProps> = ({
   onChange,
   currentVersion,
   latestVersion,
-  releaseStage,
+  custom,
 }) => (
   <Form<ConnectorVersionFormValues>
     defaultValues={{
@@ -47,7 +45,7 @@ export const VersionCell: React.FC<VersionCellProps> = ({
     onSubmit={onChange}
   >
     <VersionFormContent
-      releaseStage={releaseStage}
+      custom={custom}
       connectorDefinitionId={connectorDefinitionId}
       currentVersion={currentVersion}
       latestVersion={latestVersion}
@@ -56,12 +54,12 @@ export const VersionCell: React.FC<VersionCellProps> = ({
 );
 
 const VersionFormContent = ({
-  releaseStage,
+  custom,
   connectorDefinitionId,
   currentVersion,
   latestVersion,
 }: {
-  releaseStage?: ReleaseStage;
+  custom?: boolean;
   connectorDefinitionId: string;
   currentVersion: string;
   latestVersion?: string;
@@ -70,7 +68,7 @@ const VersionFormContent = ({
   const value = useWatch({ name: "version" });
 
   const inputLatestNote =
-    value === latestVersion && releaseStage !== ReleaseStage.custom
+    value === latestVersion && !custom
       ? formatMessage({
           id: "admin.latestNote",
         })

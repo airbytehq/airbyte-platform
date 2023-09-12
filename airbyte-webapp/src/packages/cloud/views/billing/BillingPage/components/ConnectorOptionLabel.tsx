@@ -1,8 +1,8 @@
 import classNames from "classnames";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import styles from "./ConnectorOptionLabel.module.scss";
@@ -26,7 +26,12 @@ export const ConnectorOptionLabel: React.FC<ConnectorOptionLabelProps> = ({ conn
         {connector.name}
       </Text>
       <FlexItem>
-        <ReleaseStageBadge stage={connector.releaseStage} />
+        <SupportLevelBadge
+          supportLevel={connector.supportLevel}
+          custom={connector.custom}
+          size="small"
+          releaseStage={connector.releaseStage}
+        />
       </FlexItem>
     </FlexContainer>
   );
