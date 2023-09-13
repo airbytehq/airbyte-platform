@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
@@ -15,6 +16,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.featureflag.AutoPropagateNewStreams;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +38,49 @@ public class AutoPropagateSchemaChangeHelper {
   }
 
   /**
+   * Return value for `getUpdatedSchema` method. Returns the updated catalog and a description of the
+   * changes
+   */
+  public record UpdateSchemaResult(AirbyteCatalog catalog, List<String> changeDescription) {}
+
+  /**
+   * Generate a summary of the changes that will be applied to the destination if the schema is
+   * updated.
+   *
+   * @param transform the transformation to be applied to the destination
+   * @return a list of strings describing the changes that will be applied to the destination.
+   */
+  private static String staticFormatDiff(StreamTransform transform) {
+    switch (transform.getTransformType()) {
+      case ADD_STREAM -> {
+        return String.format("Added new stream %s", transform.getStreamDescriptor().getName());
+      }
+      case REMOVE_STREAM -> {
+        return String.format("Removed stream %s", transform.getStreamDescriptor().getName());
+      }
+      case UPDATE_STREAM -> {
+        String returnValue = String.format("Modified stream %s", transform.getStreamDescriptor().getName());
+        if (transform.getUpdateStream() == null) {
+          return returnValue;
+        }
+        for (FieldTransform fieldTransform : transform.getUpdateStream()) {
+          String fieldName = String.join(".", fieldTransform.getFieldName());
+          switch (fieldTransform.getTransformType()) {
+            case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
+            case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
+            case UPDATE_FIELD_SCHEMA -> returnValue += String.format("Field type changed: %s,", fieldName);
+            default -> throw new NotSupportedException("Not supported transformation.");
+          }
+        }
+        return returnValue;
+      }
+      default -> {
+        return "Unknown Transformation";
+      }
+    }
+  }
+
+  /**
    * This is auto propagating schema changes, it replaces the stream in the old catalog by using the
    * ones from the new catalog. The list of transformations contains the information of which stream
    * to update.
@@ -46,16 +91,18 @@ public class AutoPropagateSchemaChangeHelper {
    * @param nonBreakingChangesPreference User preference for the auto propagation
    * @return an Airbyte catalog the changes being auto propagated
    */
-  public static AirbyteCatalog getUpdatedSchema(final AirbyteCatalog oldCatalog,
-                                                final AirbyteCatalog newCatalog,
-                                                final List<StreamTransform> transformations,
-                                                final NonBreakingChangesPreference nonBreakingChangesPreference,
-                                                final List<DestinationSyncMode> supportedDestinationSyncModes,
-                                                final FeatureFlagClient featureFlagClient,
-                                                final UUID workspaceId) {
+  public static UpdateSchemaResult getUpdatedSchema(final AirbyteCatalog oldCatalog,
+                                                    final AirbyteCatalog newCatalog,
+                                                    final List<StreamTransform> transformations,
+                                                    final NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                    final List<DestinationSyncMode> supportedDestinationSyncModes,
+                                                    final FeatureFlagClient featureFlagClient,
+                                                    final UUID workspaceId) {
     final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
+
+    List<String> changes = new ArrayList<>();
 
     transformations.forEach(transformation -> {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
@@ -64,6 +111,7 @@ public class AutoPropagateSchemaChangeHelper {
           if (oldCatalogPerStream.containsKey(streamDescriptor)) {
             oldCatalogPerStream.get(streamDescriptor)
                 .stream(newCatalogPerStream.get(streamDescriptor).getStream());
+            changes.add(staticFormatDiff(transformation));
           }
         }
         case ADD_STREAM -> {
@@ -81,18 +129,20 @@ public class AutoPropagateSchemaChangeHelper {
             // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
             // supported sync modes.
             oldCatalogPerStream.put(streamDescriptor, streamAndConfigurationToAdd);
+            changes.add(staticFormatDiff(transformation));
           }
         }
         case REMOVE_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             oldCatalogPerStream.remove(streamDescriptor);
+            changes.add(staticFormatDiff(transformation));
           }
         }
         default -> throw new NotSupportedException("Not supported transformation.");
       }
     });
 
-    return new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values()));
+    return new UpdateSchemaResult(new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values())), changes);
   }
 
   @VisibleForTesting

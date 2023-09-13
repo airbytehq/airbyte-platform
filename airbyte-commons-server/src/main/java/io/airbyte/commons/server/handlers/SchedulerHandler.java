@@ -758,7 +758,7 @@ public class SchedulerHandler {
         transformations,
         nonBreakingChangesPreference,
         supportedDestinationSyncModes,
-        featureFlagClient, workspaceId);
+        featureFlagClient, workspaceId).catalog();
     updateObject.setSyncCatalog(catalog);
     updateObject.setSourceCatalogId(sourceCatalogId);
   }
