@@ -1,0 +1,25 @@
+# All properties in this file will be available within Micronaut applications following the `airbyte.` prefix.
+# For example, the `initial-user` property below will be available as `airbyte.initial-user` within Airbyte Micronaut applications.
+
+# Change this to match your ingress configuration
+webapp-url: http://localhost:8000
+
+# Add user details for creation of your instance's initial user.
+initial-user:
+  email: xiaohan+11@airbyte.io 
+  first-name: songairbx
+  last-name: airby
+  username: xs
+  password: Sxhssuan19!
+
+# Add your Airbyte license key here.
+license-key: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBaXJieXRlIiwiaWF0IjoxNjg2NzM1MTMzLCJleHAiOjE3MTgyNzExMzQsImF1ZCI6ImFpcmJ5dGUuY29tIiwic3ViIjoidGltQGFpcmJ5dGUuaW8iLCJsaWNlbnNlIjoicHJvIn0.-1ZDEH0ElFHBIkBcS43hUVf09Kiq3YFJRNPi4liCa38
+
+auth:
+  # If you are using SSO, add your identity provider configs here
+  identity-providers:
+    - type: okta
+      domain: dev-93953294.okta.com
+      app-name: airbyte
+      client-id: 0oaaupbt23uHpwEhj5d7
+      client-secret: Rf6LXiD7G2aBO5ftGF18kSxYUrP56qysErDPiVIQjLpYE13wlf5To15j2YHFxzVA
