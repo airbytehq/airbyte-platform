@@ -1,9 +1,8 @@
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-// import useConnector from "hooks/services/useConnector";
-
 import { useCurrentWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac/intent";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
@@ -20,10 +19,12 @@ import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
 import { MetricsPage } from "./pages/MetricsPage";
 
 export const SettingsPage: React.FC = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const { organizationId, workspaceId } = useCurrentWorkspace();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
+  const canListWorkspaceUsers = useIntent("ListWorkspaceMembers", { workspaceId });
+  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId });
 
   const pageConfig: PageConfig = useMemo<PageConfig>(
     () => ({
@@ -77,7 +78,7 @@ export const SettingsPage: React.FC = () => {
               name: <FormattedMessage id="settings.metrics" />,
               component: MetricsPage,
             },
-            ...(newWorkspacesUI && isAccessManagementEnabled
+            ...(newWorkspacesUI && isAccessManagementEnabled && canListWorkspaceUsers
               ? [
                   {
                     path: `${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`,
@@ -88,7 +89,7 @@ export const SettingsPage: React.FC = () => {
               : []),
           ],
         },
-        ...(newWorkspacesUI && organizationId
+        ...(newWorkspacesUI && organizationId && canListOrganizationUsers
           ? [
               {
                 category: <FormattedMessage id="settings.organizationSettings" />,
@@ -113,7 +114,15 @@ export const SettingsPage: React.FC = () => {
           : []),
       ],
     }),
-    [countNewDestinationVersion, countNewSourceVersion, isAccessManagementEnabled, newWorkspacesUI, organizationId]
+    [
+      canListOrganizationUsers,
+      canListWorkspaceUsers,
+      countNewDestinationVersion,
+      countNewSourceVersion,
+      isAccessManagementEnabled,
+      newWorkspacesUI,
+      organizationId,
+    ]
   );
 
   return <SettingsPageBase pageConfig={pageConfig} />;
