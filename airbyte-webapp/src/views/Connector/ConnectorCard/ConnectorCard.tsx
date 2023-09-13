@@ -203,7 +203,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
-          {supportLevel === SupportLevel.community && <WarningMessage />}
+          <WarningMessage supportLevel={supportLevel} releaseStage={selectedConnectorDefinition?.releaseStage} />
           {props.isLoading && (
             <div className={styles.loaderContainer}>
               <Spinner />
