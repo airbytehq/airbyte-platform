@@ -70,7 +70,6 @@ public class AuthNettyServerCustomizer implements BeanCreatedEventListener<Regis
        * This is to ensure that the full HTTP request with content is provided to the authorization
        * handler.
        */
-      log.info("register authorizationServerHandler");
       channel.pipeline()
           .addFirst("authorizationServerHandler", authorizationServerHandler)
           .addFirst("aggregator", new HttpObjectAggregator(aggregatorMaxContentLength))
