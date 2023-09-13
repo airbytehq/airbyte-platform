@@ -16,6 +16,10 @@ export function removeEmptyProperties<T>(obj: T) {
   if (typeof obj !== "object" || obj === null) {
     return obj;
   }
+  if (Array.isArray(obj)) {
+    obj.forEach((item) => removeEmptyProperties(item));
+    return obj;
+  }
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       const val = (obj as Record<string, unknown>)[key];
