@@ -184,6 +184,7 @@
   "connectionForm.sourceFormat": "Mirror source structure",
   "connectionForm.destinationFormat": "Destination default",
   "connectionForm.customFormat": "Custom format",
+  "connectionForm.customFormatPreview": "Custom format - {customFormat}",
   "connectionForm.syncType.source": "Source",
   "connectionForm.syncType.destination": "Dest",
   "connectionForm.primaryKey.searchPlaceholder": "search key fields by name",
@@ -583,6 +584,8 @@
   "connection.overview.graph.uptimeStatus": "Uptime status",
   "connection.overview.graph.dataMoved": "Data moved",
 
+  "form.scheduleType": "Schedule type",
+  "form.scheduleType.message": "Set how often data should sync to the destination",
   "form.frequency": "Replication frequency",
   "form.cronExpression": "Cron expression",
   "form.cronExpression.placeholder": "Cron expression",
@@ -874,8 +877,10 @@
   "errorView.unknown": "Unknown",
   "errorView.unknownError": "Unknown error occurred",
 
+  "frequency.scheduled": "Scheduled",
   "frequency.manual": "Manual",
   "frequency.cron": "Cron",
+  "frequency.cronPreview": "Cron - {cronString} {cronTimezone}",
   "frequency.minutes": "{value} min",
   "frequency.hours": "{value, plural, one {# hour} other {# hours}}",
 

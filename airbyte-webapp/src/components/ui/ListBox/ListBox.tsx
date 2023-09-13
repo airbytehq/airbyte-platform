@@ -49,6 +49,7 @@ export interface Option<T> {
 
 export interface ListBoxProps<T> {
   className?: string;
+  optionsMenuClassName?: string;
   optionClassName?: string;
   selectedOptionClassName?: string;
   options: Array<Option<T>>;
@@ -83,6 +84,7 @@ export const ListBox = <T,>({
   onSelect,
   buttonClassName,
   controlButton: ControlButton = DefaultControlButton,
+  optionsMenuClassName,
   optionClassName,
   selectedOptionClassName,
   "data-testid": testId,
@@ -115,7 +117,7 @@ export const ListBox = <T,>({
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
-          <Listbox.Options className={styles.optionsMenu}>
+          <Listbox.Options className={classNames(styles.optionsMenu, optionsMenuClassName)}>
             {options.length > 0 && (
               <>
                 {options.map(({ label, value, icon, disabled }, index) => (

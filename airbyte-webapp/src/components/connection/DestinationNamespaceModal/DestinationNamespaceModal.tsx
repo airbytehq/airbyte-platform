@@ -3,7 +3,6 @@ import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Form, FormControl } from "components/forms";
 import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
 import { Box } from "components/ui/Box";
@@ -14,6 +13,12 @@ import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 
 import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";
+import { FormikConnectionFormValues } from "../ConnectionForm/formConfig";
+import {
+  HookFormConnectionFormValues,
+  namespaceDefinitionSchema,
+  namespaceFormatSchema,
+} from "../ConnectionForm/hookFormConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export interface DestinationNamespaceFormValues {
@@ -41,18 +46,20 @@ const NameSpaceCustomFormatInput: React.FC = () => {
 };
 
 const destinationNamespaceValidationSchema = yup.object().shape({
-  namespaceDefinition: yup
-    .mixed<NamespaceDefinitionType>()
-    .oneOf(Object.values(NamespaceDefinitionType))
-    .required("form.empty.error"),
-  namespaceFormat: yup.string().when("namespaceDefinition", {
-    is: NamespaceDefinitionType.customformat,
-    then: yup.string().trim().required("form.empty.error"),
-  }),
+  namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
+  namespaceFormat: namespaceFormatSchema,
 });
 
 interface DestinationNamespaceModalProps {
-  initialValues: Pick<FormikConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
+  /**
+   * temporary extend this interface since we use modal in Formik and react-hook-form forms
+   *TODO: remove FormikConnectionFormValues after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  initialValues: Pick<
+    FormikConnectionFormValues | HookFormConnectionFormValues,
+    "namespaceDefinition" | "namespaceFormat"
+  >;
   onCloseModal: () => void;
   onSubmit: (values: DestinationNamespaceFormValues) => void;
 }
@@ -71,8 +78,9 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
   return (
     <Form
       defaultValues={{
-        namespaceDefinition: initialValues?.namespaceDefinition ?? NamespaceDefinitionType.destination,
-        namespaceFormat: initialValues.namespaceFormat,
+        namespaceDefinition: initialValues.namespaceDefinition,
+        // eslint-disable-next-line no-template-curly-in-string
+        namespaceFormat: initialValues.namespaceFormat ?? "${SOURCE_NAMESPACE}",
       }}
       schema={destinationNamespaceValidationSchema}
       onSubmit={onSubmitCallback}

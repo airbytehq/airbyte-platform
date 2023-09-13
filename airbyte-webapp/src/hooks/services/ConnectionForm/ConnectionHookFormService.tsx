@@ -2,8 +2,6 @@
 // temporary disable eslint rule for this file during form migration
 import React, { createContext, useContext } from "react";
 
-import { FormikConnectionFormValues, useInitialValues } from "components/connection/ConnectionForm/formConfig";
-
 import { useDestinationDefinitionVersion } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -18,6 +16,10 @@ import { useGetDestinationDefinitionSpecification } from "services/connector/Des
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
+import {
+  HookFormConnectionFormValues,
+  useInitialHookFormValues,
+} from "../../../components/connection/ConnectionForm/hookFormConfig";
 import { SchemaError } from "../useSourceHook";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
@@ -62,7 +64,7 @@ interface ConnectionHookFormHook {
   destDefinition: DestinationDefinitionRead;
   destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
-  initialValues: FormikConnectionFormValues;
+  initialValues: HookFormConnectionFormValues;
   schemaError?: SchemaError;
   refreshSchema: () => Promise<void>;
   // formId: string;
@@ -94,11 +96,11 @@ const useConnectionHookForm = ({
     connection.destinationId
   );
 
-  const initialValues = useInitialValues(
+  const initialValues = useInitialHookFormValues(
     connection,
     destDefinitionVersion,
-    destDefinitionSpecification,
     mode !== "create"
+    // destDefinitionSpecification,
   );
   // const { formatMessage } = useIntl();
   // const [submitError, setSubmitError] = useState<FormError | null>(null);
@@ -150,7 +152,7 @@ const useConnectionHookForm = ({
   };
 };
 
-const ConnectionHookFormContext = createContext<ConnectionHookFormHook | null>(null);
+export const ConnectionHookFormContext = createContext<ConnectionHookFormHook | null>(null);
 
 export const ConnectionHookFormServiceProvider: React.FC<React.PropsWithChildren<ConnectionServiceProps>> = ({
   children,

@@ -16,6 +16,7 @@ import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/service
 
 import { ConnectionNameHookFormCard } from "./ConnectionNameHookFormCard";
 import styles from "./CreateConnectionHookForm.module.scss";
+import { ConnectionConfigurationHookFormCard } from "../ConnectionForm/ConnectionConfigurationHookFormCard";
 import { HookFormConnectionFormValues, useConnectionHookFormValidationSchema } from "../ConnectionForm/hookFormConfig";
 import { OperationsSectionHookForm } from "../ConnectionForm/OperationsSectionHookForm";
 import { DataResidencyHookFormCard } from "../CreateConnectionForm/DataResidencyHookFormCard";
@@ -91,42 +92,14 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
         <FlexContainer direction="column" className={styles.formContainer}>
           <ConnectionNameHookFormCard />
           {canEditDataGeographies && <DataResidencyHookFormCard />}
-          {/* <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} validateForm={validateForm} />*/}
+          <ConnectionConfigurationHookFormCard />
+          {/* SyncCatalog will be here */}
           <OperationsSectionHookForm />
-          {/* <CreateControls*/}
-          {/*  isSubmitting={isSubmitting}*/}
-          {/*  isValid={isValid && !editingTransformation}*/}
-          {/*  errorMessage={getErrorMessage(isValid, errors)}*/}
-          {/*/ >*/}
+          {/* <Submit button */}
         </FlexContainer>
       </Form>
     </Suspense>
   );
-
-  // return (
-  //   <Suspense fallback={<LoadingSchema />}>
-  //     <div className={styles.connectionFormContainer}>
-  //       <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onFormSubmit}>
-  //         {({ isSubmitting, isValid, dirty, errors, validateForm }) => (
-  //           <Form>
-  //             <CreateConnectionNameHookField />
-  //             {canEditDataGeographies && <DataResidency />}
-  //             <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} validateForm={validateForm} />
-  //             <OperationsSection
-  //               onStartEditTransformation={() => setEditingTransformation(true)}
-  //               onEndEditTransformation={() => setEditingTransformation(false)}
-  //             />
-  //             <CreateControls
-  //               isSubmitting={isSubmitting}
-  //               isValid={isValid && !editingTransformation}
-  //               errorMessage={getErrorMessage(isValid, errors)}
-  //             />
-  //           </Form>
-  //         )}
-  //       </Formik>
-  //     </div>
-  //   </Suspense>
-  // );
 };
 
 /**

@@ -27,6 +27,8 @@ import { useGetDestinationDefinitionSpecification } from "services/connector/Des
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
+import { ConnectionHookFormContext } from "./ConnectionHookFormService";
+import { useExperiment } from "../Experiment";
 import { useUniqueFormId } from "../FormChangeTracker";
 import { SchemaError } from "../useSourceHook";
 
@@ -165,7 +167,14 @@ export const ConnectionFormServiceProvider: React.FC<React.PropsWithChildren<Con
 };
 
 export const useConnectionFormService = () => {
-  const context = useContext(ConnectionFormContext);
+  /**
+   *TODO: remove conditional context after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const contextType = doUseCreateConnectionHookForm ? ConnectionHookFormContext : ConnectionFormContext;
+
+  const context = useContext(contextType as React.Context<ConnectionFormHook | null>);
   if (context === null) {
     throw new Error("useConnectionFormService must be used within a ConnectionFormProvider");
   }
