@@ -1,0 +1,33 @@
+plugins {
+    id "io.airbyte.gradle.jvm.lib"
+}
+
+configurations.all {
+    resolutionStrategy {
+        // Ensure that the versions defined in deps.toml are used
+        // instead of versions from transitive dependencies
+        force libs.flyway.core, libs.s3, libs.aws.java.sdk.s3
+    }
+}
+dependencies {
+    implementation libs.bundles.jackson
+    implementation libs.flyway.core
+    implementation libs.guava
+    implementation project(':airbyte-commons')
+    implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-models')
+    implementation project(':airbyte-db:db-lib')
+    implementation project(':airbyte-db:jooq')
+    implementation project(':airbyte-json-validation')
+    implementation libs.airbyte.protocol
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+
+    testImplementation project(':airbyte-test-utils')
+    testImplementation libs.postgresql
+    testImplementation libs.platform.testcontainers.postgresql
+    testImplementation libs.mockito.inline
+}

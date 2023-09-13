@@ -2,13 +2,13 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.services;
+package io.airbyte.data.services;
 
-import io.airbyte.commons.server.services.shared.ResourcesQueryPaginated;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;

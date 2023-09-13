@@ -2,10 +2,10 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.services;
+package io.airbyte.data.services;
 
-import io.airbyte.commons.server.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.Organization;
+import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;

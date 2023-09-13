@@ -239,9 +239,9 @@ public class ConfigRepository {
   }
 
   @VisibleForTesting
-  ConfigRepository(final Database database,
-                   final StandardSyncPersistence standardSyncPersistence,
-                   final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
+  public ConfigRepository(final Database database,
+                          final StandardSyncPersistence standardSyncPersistence,
+                          final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
     this.database = new ExceptionWrappingDatabase(database);
     this.standardSyncPersistence = standardSyncPersistence;
     this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;

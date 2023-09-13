@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.services.shared;
+package io.airbyte.data.services.shared;
 
 import jakarta.annotation.Nonnull;
 import java.util.UUID;

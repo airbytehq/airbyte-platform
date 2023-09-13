@@ -2,15 +2,15 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.services;
+package io.airbyte.data.services;
 
-import io.airbyte.commons.server.services.shared.DestinationAndDefinition;
-import io.airbyte.commons.server.services.shared.ResourcesQueryPaginated;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.data.services.shared.DestinationAndDefinition;
+import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
