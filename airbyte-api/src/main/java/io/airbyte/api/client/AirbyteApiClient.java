@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  *
  * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
  */
-@Deprecated(forRemoval = true)
+@Deprecated
 public class AirbyteApiClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteApiClient.class);
@@ -194,7 +194,7 @@ public class AirbyteApiClient {
    * @return value returned by method
    * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
-  @Deprecated(forRemoval = true)
+  @Deprecated
   public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
     return retryWithJitter(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
   }
@@ -218,7 +218,7 @@ public class AirbyteApiClient {
    * @param finalIntervalSecs retry interval before the last retry.
    * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
-  @Deprecated(forRemoval = true)
+  @Deprecated
   @VisibleForTesting
   // This is okay since we are logging the stack trace, which PMD is not detecting.
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -249,7 +249,7 @@ public class AirbyteApiClient {
    * @throws Exception exception while jittering
    * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
-  @Deprecated(forRemoval = true)
+  @Deprecated
   public static <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
     return retryWithJitterThrows(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
   }
@@ -272,7 +272,7 @@ public class AirbyteApiClient {
    * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @VisibleForTesting
-  @Deprecated(forRemoval = true)
+  @Deprecated
   // This is okay since we are logging the stack trace, which PMD is not detecting.
   @SuppressWarnings("PMD.PreserveStackTrace")
   public static <T> T retryWithJitterThrows(final Callable<T> call,
