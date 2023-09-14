@@ -130,6 +130,9 @@ class BaseConfigDatabaseTest {
               state,
               stream_reset,
               \"user\",
+              user_invitation,
+              sso_config,
+              organization_email_domain,
               workspace,
               workspace_service_account
             """));
