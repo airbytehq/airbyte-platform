@@ -5,6 +5,7 @@
 package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.airbyte.commons.temporal.exception.SizeLimitException;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -386,9 +387,13 @@ public class FailureHelper {
    * @return failure reason
    */
   public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+    final String externalMessage =
+        t instanceof SizeLimitException
+            ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
+            : "Something went wrong within the airbyte platform";
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
-        .withExternalMessage("Something went wrong within the airbyte platform");
+        .withExternalMessage(externalMessage);
   }
 
   private static Metadata jobAndAttemptMetadata(final Long jobId, final Integer attemptNumber) {

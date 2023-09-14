@@ -20,6 +20,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -123,7 +124,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(
+    return PayloadChecker.validatePayloadSize(temporalUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var hydratedSyncInput = getHydratedSyncInput(syncInput);
@@ -159,7 +160,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           return standardSyncOutput;
         },
-        () -> context);
+        () -> context));
   }
 
   private StandardSyncInput getHydratedSyncInput(final StandardSyncInput syncInput) {

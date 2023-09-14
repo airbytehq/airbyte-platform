@@ -12,6 +12,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
@@ -35,19 +36,19 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   @Override
   public SyncJobCheckConnectionInputs getCheckConnectionInputs(final SyncInputWithAttemptNumber input) {
-    return Jsons.convertValue(AirbyteApiClient.retryWithJitter(
+    return PayloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
         () -> jobsApi.getCheckInput(new io.airbyte.api.client.model.generated.CheckInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptNumber())),
-        "Create check job input."), SyncJobCheckConnectionInputs.class);
+        "Create check job input."), SyncJobCheckConnectionInputs.class));
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public JobInput getSyncWorkflowInput(final SyncInput input) {
-    return Jsons.convertValue(AirbyteApiClient.retryWithJitter(
+    return PayloadChecker.validatePayloadSize(Jsons.convertValue(AirbyteApiClient.retryWithJitter(
         () -> jobsApi.getJobInput(new io.airbyte.api.client.model.generated.SyncInput().jobId(input.getJobId())
             .attemptNumber(input.getAttemptId())),
-        "Create job input."), JobInput.class);
+        "Create job input."), JobInput.class));
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
