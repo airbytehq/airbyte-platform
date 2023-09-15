@@ -841,7 +841,6 @@ worker:
 
   debug:
     enabled: false
-    remoteDebugPort:
 
   ## Container Orchestrator
   ## enabled -- Enable or disable Orchestrator
