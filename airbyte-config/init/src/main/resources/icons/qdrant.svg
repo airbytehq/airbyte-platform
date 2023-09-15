@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="256px"
+   height="296px"
+   viewBox="0 0 256 296"
+   version="1.1"
+   preserveAspectRatio="xMidYMid"
+   id="svg6"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.3 (0e150ed, 2023-07-21)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview6"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.7972973"
+     inkscape:cx="128.55932"
+     inkscape:cy="148"
+     inkscape:window-width="1280"
+     inkscape:window-height="1387"
+     inkscape:window-x="1280"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg6" />
+  <title
+     id="title1">qdrant</title>
+  <defs
+     id="defs2">
+    <linearGradient
+       x1="162.10599"
+       y1="152.1785"
+       x2="107.50673"
+       y2="152.1785"
+       id="linearGradient-1"
+       gradientTransform="scale(0.74339194,1.3451854)"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#FF3364"
+         offset="0%"
+         id="stop1" />
+      <stop
+         stop-color="#C91540"
+         stop-opacity="0"
+         offset="100%"
+         id="stop2" />
+    </linearGradient>
+  </defs>
+  <g
+     id="g6"
+     transform="matrix(0.79634365,0,0,0.79634365,26.068013,30.29538)">
+    <polygon
+       fill="#24386c"
+       points="201.31705,271.72243 195.42272,109.21267 184.74778,66.368237 256,73.911254 256,270.49251 212.47476,295.61263 "
+       id="polygon2" />
+    <polygon
+       fill="#7589be"
+       points="127.99602,0 191.98628,36.949905 255.99515,73.899811 212.46991,99.037384 122.64963,79.334647 17.516001,122.14029 1.1370484e-14,73.899811 63.988314,36.949905 "
+       id="polygon3" />
+    <polyline
+       fill="#b2bfe8"
+       points="0.00310340412 73.8998107 43.5283462 99.037384 68.7590217 174.073816 153.949405 242.236209 128.001067 295.599243 63.9933568 258.647398 0.00310340412 221.697492 0.00310340412 73.897871"
+       id="polyline3" />
+    <polyline
+       fill="#24386c"
+       points="156.856906 202.807459 128.001067 245.347371 128.001067 295.603122 168.946605 271.978458 190.043934 240.475027"
+       id="polyline4" />
+    <polygon
+       fill="#7589be"
+       points="87.055529,124.18466 95.8787,100.67831 129.42068,84.415695 168.94641,124.18582 128.01852,195.10714 "
+       id="polygon4" />
+    <polyline
+       fill="#b2bfe8"
+       points="87.0555287 124.178837 128.001067 147.803501 128.001067 195.091621 90.131778 196.720927 67.2247763 167.471344 87.0555287 124.178856"
+       id="polyline5" />
+    <polygon
+       fill="#24386c"
+       points="168.94661,124.1769 196.81323,170.57667 163.09087,198.43942 128.00107,195.08929 128.00107,147.79962 "
+       id="polygon5" />
+    <path
+       d="m 168.9466,271.97458 43.52525,23.6266 V 99.039324 L 170.22676,74.658205 128.00107,50.277086 85.755978,74.658205 43.530286,99.039324 v 97.541926 l 42.225692,24.38112 42.245092,24.38306 40.94553,-23.646 z m 0,-100.5309 -40.94553,23.64406 -40.945541,-23.64406 v -47.26872 l 40.945541,-23.64406 40.94553,23.64406 v 47.26872"
+       fill="#dc244c"
+       id="path5" />
+    <polygon
+       fill="url(#linearGradient-1)"
+       points="87.286344,171.65704 87.286344,221.83715 128.01852,245.36289 128.01852,195.09938 "
+       id="polygon6"
+       style="fill:url(#linearGradient-1)" />
+  </g>
+</svg>
