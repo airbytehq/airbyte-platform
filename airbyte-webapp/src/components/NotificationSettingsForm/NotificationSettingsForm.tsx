@@ -164,8 +164,8 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
               <NotificationItemField name="sendOnSuccess" />
               <NotificationItemField name="sendOnConnectionUpdate" />
               <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
-              <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
               <NotificationItemField name="sendOnSyncDisabledWarning" />
+              <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
               {breakingChangeNotificationsExperimentEnabled && (
                 <>
                   <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
