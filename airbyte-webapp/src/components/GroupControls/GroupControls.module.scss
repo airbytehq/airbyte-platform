@@ -58,7 +58,7 @@ $border-width: variables.$border-thick;
 
   // only apply padding when there are children, so that empty group sections border is just a single line
   > :first-child {
-    padding-top: calc($group-spacing + $title-height/2);
+    padding-top: calc($group-spacing + variables.$spacing-md);
   }
 
   > div {
@@ -67,5 +67,10 @@ $border-width: variables.$border-thick;
 
   > :last-child {
     margin-bottom: 0;
+  }
+
+  &--error {
+    border-color: colors.$red-100;
+    box-shadow: 0 $border-width colors.$red-100 inset;
   }
 }

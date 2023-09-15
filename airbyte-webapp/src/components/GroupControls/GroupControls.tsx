@@ -1,5 +1,8 @@
 import classNames from "classnames";
 import React from "react";
+import { FormattedMessage } from "react-intl";
+
+import { PropertyError } from "views/Connector/ConnectorForm/components/Property/PropertyError";
 
 import styles from "./GroupControls.module.scss";
 
@@ -8,6 +11,7 @@ interface GroupControlsProps {
   control?: React.ReactNode;
   controlClassName?: string;
   name?: string;
+  error?: string;
 }
 
 const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
@@ -16,6 +20,7 @@ const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
   children,
   name,
   controlClassName,
+  error,
 }) => {
   return (
     // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
@@ -25,10 +30,15 @@ const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
           <div className={styles.label}>{label}</div>
           <div className={classNames(styles.control, controlClassName)}>{control}</div>
         </div>
-        <div className={styles.content} data-testid={name}>
+        <div className={classNames(styles.content, { [styles["content--error"]]: error })} data-testid={name}>
           {children}
         </div>
       </div>
+      {error && (
+        <PropertyError>
+          <FormattedMessage id={error} />
+        </PropertyError>
+      )}
     </div>
   );
 };

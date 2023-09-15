@@ -92,8 +92,8 @@ export const buildYupFormForJsonSchema = (
         Array.from(flattenedKeys.entries()).map(([key, schemaByCondition]) => {
           let mergedSchema = yup.mixed();
           if (key === selectionKey) {
-            // do not validate the selectionKey itself, as the user can't change it it doesnt matter
-            return [key, mergedSchema];
+            // Set the selection key to required, to ensure that the user has selected a condition
+            return [key, mergedSchema.required("form.empty.error")];
           }
           const allSelectionConstValuesWithThisKey = schemaByCondition.map(([constValue]) => constValue);
           schemaByCondition.forEach(([selectionConstValue, conditionalSchema]) => {
