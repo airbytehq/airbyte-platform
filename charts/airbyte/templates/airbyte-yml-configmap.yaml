@@ -15,3 +15,4 @@ metadata:
 data:
   fileContents: |-
   {{ .Values.airbyteYml | default "" | nindent 4 }}
+
