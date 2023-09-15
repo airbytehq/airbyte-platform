@@ -1,19 +1,13 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: variables.$spacing-sm;
-}
-
 .spinner {
   height: 115px; // Matches the height of the (currently) two oauth buttons
 }
 
 .google {
   background: colors.$foreground;
-  border: 1px solid colors.$grey-300;
+  border: variables.$border-thin solid colors.$grey-300;
 }
 
 .github {
@@ -23,15 +17,22 @@
   border: none;
 }
 
+.sso {
+  border: variables.$border-thin solid colors.$grey-300;
+  text-decoration: none;
+  color: black;
+}
+
 .google,
-.github {
+.github,
+.sso {
+  height: 46px;
   justify-content: center;
   display: flex;
   align-items: center;
   font-size: 16px;
   font-weight: 500;
   width: 100%;
-  margin: variables.$spacing-sm auto;
   padding: variables.$spacing-md;
   gap: variables.$spacing-md;
   border-radius: variables.$border-radius-md;
@@ -46,6 +47,10 @@
   & > img {
     height: 24px;
   }
+}
+
+.sso:hover {
+  color: black;
 }
 
 .error {

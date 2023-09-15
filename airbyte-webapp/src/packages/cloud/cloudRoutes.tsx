@@ -18,6 +18,9 @@ import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
+import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
+import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
+import { SSOPageGuard } from "./views/auth/SSOPageGuard";
 import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
 
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
@@ -175,6 +178,10 @@ export const Routing: React.FC = () => {
                   <AuthLayout>
                     <Suspense fallback={<LoadingPage />}>
                       <Routes>
+                        <Route path={CloudRoutes.Sso} element={<SSOPageGuard />}>
+                          <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
+                          <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
+                        </Route>
                         {login && <Route path={CloudRoutes.Login} element={<LoginPage login={login} />} />}
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
                         {requirePasswordReset && (

@@ -19,6 +19,7 @@ interface AirbyteLocalStorage {
   "airbyte_connector-grid-release-stage-filter": ReleaseStage[];
   "airbyte_connector-grid-support-level-filter": SupportLevel[];
   "airbyte_connector-grid-show-suggested-connectors": boolean;
+  "airbyte_show-sso-login": boolean;
 }
 
 /*

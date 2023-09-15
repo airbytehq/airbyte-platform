@@ -9,6 +9,8 @@ export enum CloudRoutes {
   // Auth routes
   Signup = "/signup",
   Login = "/login",
+  Sso = "/sso",
+  SsoBookmark = "/sso/:companyIdentifier",
   ResetPassword = "/reset-password",
 
   // Firebase action routes
