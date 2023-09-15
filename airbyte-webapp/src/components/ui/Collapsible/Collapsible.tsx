@@ -12,6 +12,7 @@ import { Text } from "../Text";
 
 interface CollapsibleProps {
   className?: string;
+  buttonClassName?: string;
   label: string;
   showErrorIndicator?: boolean;
   type?: "footer" | "inline" | "section";
@@ -23,6 +24,7 @@ interface CollapsibleProps {
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
   className,
+  buttonClassName,
   label,
   showErrorIndicator = false,
   type = "inline",
@@ -45,7 +47,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
         >
           <Disclosure.Button
             data-testid={dataTestId}
-            className={classNames(styles.button, { [styles.buttonSection]: type === "section" })}
+            className={classNames(buttonClassName, styles.button, { [styles.buttonSection]: type === "section" })}
             onClick={() => onClick?.(!open)}
           >
             <FlexContainer

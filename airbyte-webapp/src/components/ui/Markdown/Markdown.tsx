@@ -1,86 +1,104 @@
-import type { PluggableList } from "react-markdown/lib/react-markdown";
-
-import { faCopy } from "@fortawesome/free-regular-svg-icons";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import React, { useState } from "react";
-import { useIntl } from "react-intl";
-import ReactMarkdown from "react-markdown";
-import { useCopyToClipboard, useUpdateEffect } from "react-use";
-import remarkDirective from "remark-directive";
-import remarkFrontmatter from "remark-frontmatter";
+import MarkdownToJsx from "markdown-to-jsx";
+import React, { ReactNode } from "react";
+import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 
-import { Button } from "components/ui/Button";
-
+// Since we're dynamically accessing the admonition--{node.name} classes, the linter
+// can't determine that those are used, thus we need to ignore unused classes here.
+// eslint-disable-next-line css-modules/no-unused-class
 import styles from "./Markdown.module.scss";
-import { remarkAdmonitionsPlugin } from "./remarkAdmonitionsPlugin";
+import { Collapsible } from "../Collapsible";
+import { CopyButton } from "../CopyButton";
 
-interface MarkdownProps {
-  content?: string;
+type Options = Parameters<typeof MarkdownToJsx>[0]["options"];
+
+interface MarkdownToJsxProps {
   className?: string;
-  rehypePlugins?: PluggableList;
+  content: string;
+  options?: Options;
 }
 
-type CodeElementType = NonNullable<React.ComponentProps<typeof ReactMarkdown>["components"]>["code"];
+function preprocessMarkdown(markdown: string): string {
+  // Remove frontmatter (content wrapped in ---) from the beginning of the markdown.
+  let preprocessed = markdown.replace(/^\s*---\n[\s\S]*?\n---\n/, "");
 
-/**
- * Custom `code` component with a copy button to copy all text in case it's a code block (and not inline code).
- */
-const Code: CodeElementType = ({ children, node, inline, className, ...props }) => {
-  const { formatMessage } = useIntl();
-  const [, copyToClipboard] = useCopyToClipboard();
-  const [hasCopied, setHasCopied] = useState(false);
+  // Ensure there's an empty line before and after <details> tag if there isn't one
+  // already, to ensure that it is parsed as its own component.
+  // The motivation for this is that Docusaurus renders <details> properly even if
+  // there aren't empty lines surrounding it.
+  preprocessed = preprocessed.replace(/([^\n])\n<details>/g, "$1\n\n<details>");
+  preprocessed = preprocessed.replace(/<\/details>\n([^\n])/g, "</details>\n\n$1");
 
-  useUpdateEffect(() => {
-    // Whenever the "Copied" text is shown start a timer to switch it back to the original state after 3s
-    if (!hasCopied) {
-      return;
-    }
-    const timeout = window.setTimeout(() => setHasCopied(false), 3000);
-    return () => window.clearTimeout(timeout);
-  }, [hasCopied]);
+  // Replace docusaurus-style admonitions with custom admonition component.
+  preprocessed = preprocessed.replace(
+    /:::(info|warning|note|tip|caution|danger)\s*\n([\s\S]*?)\n\s*:::\s*\n/g,
+    '<admonition type="$1">$2</admonition>\n'
+  );
 
-  const copy = (text: string) => {
-    setHasCopied(true);
-    copyToClipboard(text);
-  };
+  // Apply remark plugins to the markdown.
+  // This should be ran last so that remarkGfm doesn't interfere with the above.
+  preprocessed = remark().use(remarkGfm).processSync(preprocessed).toString();
 
+  return preprocessed;
+}
+
+const Pre = ({ children, className, ...props }: { children: ReactNode; className?: string }) => {
   return (
-    <code className={classNames(className, styles.codeBlock)} {...props}>
-      {!inline && node.children[0].type === "text" && (
-        <Button
-          variant="light"
-          type="button"
-          icon={hasCopied ? <FontAwesomeIcon icon={faCheck} /> : undefined}
-          onClick={() => node.children[0].type === "text" && copy(node.children[0].value)}
-          className={styles.codeCopyButton}
-          title={formatMessage({ id: "ui.markdown.copyCode" })}
-        >
-          {hasCopied ? formatMessage({ id: "ui.markdown.copied" }) : <FontAwesomeIcon icon={faCopy} />}
-        </Button>
-      )}
+    <pre className={classNames(className, styles.codeBlock)} {...props}>
+      {React.isValidElement(children) && children.type === "code" ? (
+        <CopyButton className={styles.codeCopyButton} content={children.props.children} />
+      ) : null}
       {children}
-    </code>
+    </pre>
   );
 };
 
-export const Markdown: React.FC<MarkdownProps> = React.memo(({ content, className, rehypePlugins }) => {
+const Details = ({ children }: { children: ReactNode; className?: string }) => {
+  const detailsChildren = React.Children.toArray(children);
+  const [firstChild, ...restChildren] = detailsChildren;
+
+  let collapsibleChildren = detailsChildren;
+  let summaryText = "";
+
+  if (React.isValidElement(firstChild) && firstChild.type === "summary") {
+    summaryText = firstChild.props.children;
+    collapsibleChildren = restChildren;
+  }
+
   return (
-    <ReactMarkdown
-      // Open everything except fragment only links in a new tab
-      linkTarget={(href) => (href.startsWith("#") ? undefined : "_blank")}
-      className={classNames(styles.markdown, className)}
-      skipHtml
-      // This is not actually causing any issues, but requires to disable TS on this for now.
-      remarkPlugins={[remarkDirective, remarkAdmonitionsPlugin, remarkFrontmatter, remarkGfm]}
-      rehypePlugins={rehypePlugins}
-      children={content || ""}
-      components={{
-        code: Code,
-      }}
-    />
+    <Collapsible className={styles.details} buttonClassName={styles.detailsButton} label={summaryText}>
+      {collapsibleChildren}
+    </Collapsible>
   );
-});
-Markdown.displayName = "Markdown";
+};
+
+const Admonition = ({ children, type }: { children: ReactNode; type: string }) => {
+  return <div className={classNames(styles.admonition, styles[`admonition--${type}`])}>{children}</div>;
+};
+
+export const Markdown: React.FC<MarkdownToJsxProps> = ({ className, content, options }) => {
+  return (
+    <div className={classNames(className, styles.markdown)}>
+      <MarkdownToJsx
+        options={{
+          ...options,
+          overrides: {
+            ...options?.overrides,
+            pre: {
+              component: Pre,
+            },
+            details: {
+              component: Details,
+            },
+            admonition: {
+              component: Admonition,
+            },
+          },
+        }}
+      >
+        {preprocessMarkdown(content)}
+      </MarkdownToJsx>
+    </div>
+  );
+};
