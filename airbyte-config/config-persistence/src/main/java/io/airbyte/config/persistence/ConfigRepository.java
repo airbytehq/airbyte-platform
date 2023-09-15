@@ -2433,54 +2433,18 @@ public class ConfigRepository {
   }
 
   /**
-   * Store an Airbyte catalog in DB if it is not present already.
-   * <p>
-   * Checks in the config DB if the catalog is present already, if so returns it identifier. It is not
-   * present, it is inserted in DB with a new identifier and that identifier is returned.
+   * Store an Airbyte catalog in DB if it is not present already. Checks in the config DB if the
+   * catalog is present already, if so returns it identifier. If not present, it is inserted in DB
+   * with a new identifier and that identifier is returned.
    *
-   * @param airbyteCatalog An Airbyte catalog to cache
+   * @param airbyteCatalog the catalog to be cached
    * @param context - db context
+   * @param timestamp - timestamp
    * @return the db identifier for the cached catalog.
    */
   private UUID getOrInsertActorCatalog(final AirbyteCatalog airbyteCatalog,
                                        final DSLContext context,
                                        final OffsetDateTime timestamp) {
-    final HashFunction hashFunction = Hashing.murmur3_32_fixed();
-    final String catalogHash = hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(
-        Charsets.UTF_8)).toString();
-    final Map<UUID, AirbyteCatalog> catalogs = findCatalogByHash(catalogHash, context);
-
-    for (final Map.Entry<UUID, AirbyteCatalog> entry : catalogs.entrySet()) {
-      if (entry.getValue().equals(airbyteCatalog)) {
-        return entry.getKey();
-      }
-    }
-
-    final UUID catalogId = UUID.randomUUID();
-    context.insertInto(ACTOR_CATALOG)
-        .set(ACTOR_CATALOG.ID, catalogId)
-        .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(airbyteCatalog)))
-        .set(ACTOR_CATALOG.CATALOG_HASH, catalogHash)
-        .set(ACTOR_CATALOG.CREATED_AT, timestamp)
-        .set(ACTOR_CATALOG.MODIFIED_AT, timestamp).execute();
-    return catalogId;
-  }
-
-  /**
-   * This function will be used to gradually migrate the existing data in the database to use the
-   * canonical json serialization. It will first try to find the catalog using the canonical json
-   * serialization. If it fails, it will fallback to the old json serialization.
-   *
-   * @param airbyteCatalog the catalog to be cached
-   * @param context - db context
-   * @param timestamp - timestamp
-   * @param writeCatalogInCanonicalJson - should we write the catalog in canonical json
-   * @return the db identifier for the cached catalog.
-   */
-  private UUID getOrInsertCanonicalActorCatalog(final AirbyteCatalog airbyteCatalog,
-                                                final DSLContext context,
-                                                final OffsetDateTime timestamp,
-                                                final boolean writeCatalogInCanonicalJson) {
 
     final String canonicalCatalogHash = generateCanonicalHash(airbyteCatalog);
     UUID catalogId = lookupCatalogId(canonicalCatalogHash, airbyteCatalog, context);
@@ -2494,9 +2458,7 @@ public class ConfigRepository {
       return catalogId;
     }
 
-    final String catalogHash = writeCatalogInCanonicalJson ? canonicalCatalogHash : oldCatalogHash;
-
-    return insertCatalog(airbyteCatalog, catalogHash, context, timestamp);
+    return insertCatalog(airbyteCatalog, canonicalCatalogHash, context, timestamp);
   }
 
   private String generateCanonicalHash(final AirbyteCatalog airbyteCatalog) {
@@ -2677,41 +2639,6 @@ public class ConfigRepository {
     final UUID fetchEventID = UUID.randomUUID();
     return database.transaction(ctx -> {
       final UUID catalogId = getOrInsertActorCatalog(catalog, ctx, timestamp);
-      ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
-          .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
-          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)
-          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_CATALOG_ID, catalogId)
-          .set(ACTOR_CATALOG_FETCH_EVENT.CONFIG_HASH, configurationHash)
-          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_VERSION, connectorVersion)
-          .set(ACTOR_CATALOG_FETCH_EVENT.MODIFIED_AT, timestamp)
-          .set(ACTOR_CATALOG_FETCH_EVENT.CREATED_AT, timestamp).execute();
-      return catalogId;
-    });
-  }
-
-  /**
-   * This function will be used to gradually transition to reading and writing canonical schemas.
-   * Eventually, the writeActorCatalogFetchEvent function will be removed and this function will be
-   * renamed to writeActorCatalogFetchEvent.
-   *
-   * @param catalog - catalog that was fetched.
-   * @param actorId - actor the catalog was fetched by
-   * @param connectorVersion - version of the connector when catalog was fetched
-   * @param writeCatalogInCanonicalJson - should we write the catalog in canonical json
-   * @param configurationHash - hash of the config of the connector when catalog was fetched
-   * @return The identifier (UUID) of the fetch event inserted in the database
-   * @throws IOException - error while interacting with db
-   */
-  public UUID writeCanonicalActorCatalogFetchEvent(final AirbyteCatalog catalog,
-                                                   final UUID actorId,
-                                                   final String connectorVersion,
-                                                   final String configurationHash,
-                                                   final boolean writeCatalogInCanonicalJson)
-      throws IOException {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    final UUID fetchEventID = UUID.randomUUID();
-    return database.transaction(ctx -> {
-      final UUID catalogId = getOrInsertCanonicalActorCatalog(catalog, ctx, timestamp, writeCatalogInCanonicalJson);
       ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
           .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
           .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)

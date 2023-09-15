@@ -170,12 +170,12 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH, false);
+    configRepository.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final AirbyteCatalog secondCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("size", JsonSchemaType.NUMBER), Field.of("label", JsonSchemaType.STRING),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash, false);
+    configRepository.writeActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
 
     final String expectedCatalog =
         "{"
@@ -204,7 +204,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testWriteCanonicalActorCatalog() throws IOException, JsonValidationException, SQLException {
+  void testWriteCanonicalHashActorCatalog() throws IOException, JsonValidationException, SQLException {
     final String canonicalConfigHash = "8ad32981";
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
 
@@ -228,7 +228,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH, true);
+    configRepository.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     String expectedCatalog =
         "{"
