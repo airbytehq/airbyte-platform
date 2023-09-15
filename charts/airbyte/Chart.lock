@@ -4,39 +4,39 @@ dependencies:
   version: 1.17.1
 - name: airbyte-bootloader
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: temporal
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: webapp
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: airbyte-api-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: worker
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: pod-sweeper
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: metrics
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: cron
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: connector-builder-server
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: keycloak
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
+  version: 0.48.11
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
-  version: 0.48.10
-digest: sha256:750055e63590c45e5644fce3716e4ae35b718e6ba16610fca70be700ae67be46
-generated: "2023-09-12T15:29:37.593008122Z"
+  version: 0.48.11
+digest: sha256:8036f03f57b0bf7c395af45854c27070ee94a2bebbc30aa23bf3e20354d69261
+generated: "2023-09-15T08:04:53.373112924Z"
