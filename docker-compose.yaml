@@ -184,6 +184,7 @@ services:
       - workspace:${WORKSPACE_ROOT}
       - data:${CONFIG_ROOT}
       - ${LOCAL_ROOT}:${LOCAL_ROOT}
+      - ./configs:/app/configs:ro
     networks:
       - airbyte_internal
     depends_on:

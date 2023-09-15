@@ -94,7 +94,7 @@ spec:
       {{- end }}
       volumeMounts:
         - name: airbyte-yml-volume
-          mountPath: /app/airbyte.yml
+          mountPath: /app/configs/airbyte.yml
           subPath: fileContents
       {{- if .Values.extraVolumeMounts }}
       {{- toYaml .Values.extraVolumeMounts | nindent 8 }}

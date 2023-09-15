@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AirbytePropertySourceLoader implements PropertySourceLoader {
 
-  static final String AIRBYTE_YML_PATH = "/app/airbyte.yml";
+  static final String AIRBYTE_YML_PATH = "/app/configs/airbyte.yml";
   static final String AIRBYTE_KEY = "airbyte";
 
   final YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();

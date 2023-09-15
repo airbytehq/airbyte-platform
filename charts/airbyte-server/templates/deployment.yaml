@@ -311,11 +311,9 @@ spec:
         - name: gcs-log-creds-volume
           mountPath: /secrets/gcs-log-creds
           readOnly: true
-        {{- if eq .Values.global.edition "pro" }} # for now, only mount airbyte.yml for pro edition
         - name: airbyte-yml-volume
-          mountPath: /app/airbyte.yml
+          mountPath: /app/configs/airbyte.yml
           subPath: fileContents
-        {{- end }}
         {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -335,11 +333,9 @@ spec:
       - name: gcs-log-creds-volume
         secret:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) (.Values.global.credVolumeOverride) (eq .Values.global.deploymentMode "oss") }}
-      {{- if eq .Values.global.edition "pro" }} # for now, only mount airbyte.yml for pro edition
       - name: airbyte-yml-volume
         configMap:
           name: {{ .Release.Name }}-airbyte-yml
-      {{- end }}
       {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}
