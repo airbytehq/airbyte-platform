@@ -10,8 +10,10 @@ export const OSSAuthService: React.FC<PropsWithChildren<unknown>> = ({ children 
   const isKeycloakAuthenticationEnabled = useFeature(FeatureItem.KeycloakAuthentication);
 
   return isKeycloakAuthenticationEnabled ? (
-    <KeycloakAuthService children={children} />
+    <KeycloakAuthService>
+      <DefaultAuthService>{children}</DefaultAuthService>
+    </KeycloakAuthService>
   ) : (
-    <DefaultAuthService children={children} />
+    <DefaultAuthService>{children}</DefaultAuthService>
   );
 };
