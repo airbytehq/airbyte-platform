@@ -54,7 +54,6 @@ import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
-import io.airbyte.config.EarlySyncJob;
 import io.airbyte.config.Geography;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.OperatorNormalization;
@@ -97,6 +96,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -3855,44 +3855,48 @@ public class ConfigRepository {
   }
 
   /**
-   * This query retrieves the first successful sync jobs created in the past 7 days for each actor
-   * definition in a given workspace. It is used to mark these early syncs as free.
+   * This query retrieves successful sync jobs for connections that have been created in the past 7
+   * days OR finds the first successful sync jobs for their corresponding connections. These results
+   * are used to mark these early syncs as free.
    */
   private static final String EARLY_SYNC_JOB_QUERY =
-      "WITH EarliestActorRun AS ("
-          + " SELECT actor.actor_definition_id AS actor_definition_id, actor.workspace_id, MIN(jobs.created_at) AS earliest_job_created_at"
-          + " FROM jobs"
-          + " LEFT JOIN connection ON uuid(jobs.scope) = connection.id"
-          + " LEFT JOIN actor ON connection.source_id = actor.id"
-          + " WHERE jobs.status = 'succeeded' AND jobs.config_type = 'sync' AND jobs.created_at > now() - make_interval(days => ?)"
-          + " GROUP BY actor.actor_definition_id, actor.workspace_id"
+      // Find the first successful sync job ID for every connection.
+      // This will be used in a join below to check if a particular job is the connection's
+      // first successful sync
+      "WITH FirstSuccessfulJobIdByConnection AS ("
+          + " SELECT j2.scope, MIN(j2.id) AS min_job_id"
+          + " FROM jobs j2"
+          + " WHERE j2.status = 'succeeded' AND j2.config_type = 'sync'"
+          + " GROUP BY j2.scope"
           + ")"
-          + " SELECT jobs.id,"
-          + " CASE"
-          + " WHEN (jobs.created_at < earliest_job_created_at + make_interval(days => ?)) AND jobs.status = 'succeeded'"
-          + " THEN TRUE"
-          + " ELSE FALSE"
-          + " END AS IS_FREE"
-          + " FROM jobs"
-          + " LEFT JOIN connection ON uuid(jobs.scope) = connection.id"
-          + " LEFT JOIN actor ON connection.source_id = actor.id"
-          + " LEFT JOIN EarliestActorRun AS ear"
-          + " ON actor.workspace_id = ear.workspace_id"
-          + " AND actor.actor_definition_id = ear.actor_definition_id"
-          + " WHERE jobs.created_at > now() - make_interval(days => ?)";
+          // Left join Jobs on Connection and the above MinJobIds, and only keep successful
+          // sync jobs that have an associated Connection ID
+          + " SELECT j.id, j.created_at, c.id, c.created_at AS connection_created_at, min_job_id"
+          + " FROM jobs j"
+          + " LEFT JOIN connection c ON c.id = UUID(j.scope)"
+          + " LEFT JOIN FirstSuccessfulJobIdByConnection min_j_ids ON j.id = min_j_ids.min_job_id"
+          + " WHERE j.status = 'succeeded'"
+          + " AND j.config_type = 'sync'"
+          + " AND c.id IS NOT NULL"
+          // Keep a job if it was created within 7 days of its connection's creation,
+          // OR if it was the first successful sync job of its connection
+          + " AND ((j.created_at < c.created_at + make_interval(days => ?))"
+          + "      OR min_job_id IS NOT NULL)"
+          // Only consider jobs that were created in the last 30 days, to cut down the query size.
+          + " AND j.created_at > now() - make_interval(days => ?);";
 
-  public List<EarlySyncJob> listEarlySyncJobs(int jobsInterval, int earlySyncInterval)
+  public Set<Long> listEarlySyncJobs(int freeUsageInterval, int jobsFetchRange)
       throws IOException {
     return database.query(ctx -> getEarlySyncJobsFromResult(ctx.fetch(
-        EARLY_SYNC_JOB_QUERY, jobsInterval, earlySyncInterval, jobsInterval)));
+        EARLY_SYNC_JOB_QUERY, freeUsageInterval, jobsFetchRange)));
   }
 
-  private List<EarlySyncJob> getEarlySyncJobsFromResult(Result<Record> result) {
-    // Transform the result to a list of early sync jobs
-    List<EarlySyncJob> earlySyncJobs = new ArrayList<>();
+  private Set<Long> getEarlySyncJobsFromResult(Result<Record> result) {
+    // Transform the result to a list of early sync job ids
+    // the rest of the fields are not used, we aim to keep the set small
+    Set<Long> earlySyncJobs = new HashSet<>();
     for (Record record : result) {
-      EarlySyncJob job = new EarlySyncJob((Long) record.get("id"), (Boolean) record.get("is_free"));
-      earlySyncJobs.add(job);
+      earlySyncJobs.add((Long) record.get("id"));
     }
     return earlySyncJobs;
   }
