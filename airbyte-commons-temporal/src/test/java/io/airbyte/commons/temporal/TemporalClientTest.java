@@ -123,12 +123,15 @@ public class TemporalClientTest {
     when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
     streamResetPersistence = mock(StreamResetPersistence.class);
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
-    connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClient, mock(MetricClient.class)));
+    final var metricClient = mock(MetricClient.class);
+    final var workflowClientWrapped = new WorkflowClientWrapped(workflowClient, metricClient);
+    final var workflowServiceStubsWrapped = new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient);
+    connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
     notificationClient = spy(new NotificationClient(workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
-        spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils,
-            notificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
+        spy(new TemporalClient(workspaceRoot, workflowClientWrapped, workflowServiceStubsWrapped,
+            streamResetPersistence, connectionManagerUtils, notificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
   }
 
   @Nested
@@ -142,9 +145,11 @@ public class TemporalClientTest {
       mConnectionManagerUtils = mock(ConnectionManagerUtils.class);
       mNotificationClient = mock(NotificationClient.class);
 
+      final var metricClient = mock(MetricClient.class);
       temporalClient = spy(
-          new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils,
-              mNotificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
+          new TemporalClient(workspaceRoot, new WorkflowClientWrapped(workflowClient, metricClient),
+              new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence,
+              mConnectionManagerUtils, mNotificationClient, streamResetRecordsHelper, metricClient));
     }
 
     @Test

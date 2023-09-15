@@ -35,8 +35,6 @@ import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsResponse;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest;
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsResponse;
-import io.temporal.client.WorkflowClient;
-import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -74,8 +72,8 @@ public class TemporalClient {
   private static final int DELAY_BETWEEN_QUERY_MS = 10;
 
   private final Path workspaceRoot;
-  private final WorkflowClient client;
-  private final WorkflowServiceStubs service;
+  private final WorkflowClientWrapped workflowClientWrapped;
+  private final WorkflowServiceStubsWrapped serviceStubsWrapped;
   private final StreamResetPersistence streamResetPersistence;
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationClient notificationClient;
@@ -83,16 +81,16 @@ public class TemporalClient {
   private final MetricClient metricClient;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
-                        final WorkflowClient client,
-                        final WorkflowServiceStubs service,
+                        final WorkflowClientWrapped workflowClientWrapped,
+                        final WorkflowServiceStubsWrapped serviceStubsWrapped,
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationClient notificationClient,
                         final StreamResetRecordsHelper streamResetRecordsHelper,
                         final MetricClient metricClient) {
     this.workspaceRoot = workspaceRoot;
-    this.client = client;
-    this.service = service;
+    this.workflowClientWrapped = workflowClientWrapped;
+    this.serviceStubsWrapped = serviceStubsWrapped;
     this.streamResetPersistence = streamResetPersistence;
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationClient = notificationClient;
@@ -125,13 +123,13 @@ public class TemporalClient {
     ByteString token;
     ListClosedWorkflowExecutionsRequest workflowExecutionsRequest =
         ListClosedWorkflowExecutionsRequest.newBuilder()
-            .setNamespace(client.getOptions().getNamespace())
+            .setNamespace(workflowClientWrapped.getNamespace())
             .build();
 
     final Set<UUID> workflowExecutionInfos = new HashSet<>();
     do {
       final ListClosedWorkflowExecutionsResponse listOpenWorkflowExecutionsRequest =
-          service.blockingStub().listClosedWorkflowExecutions(workflowExecutionsRequest);
+          serviceStubsWrapped.blockingStubListClosedWorkflowExecutions(workflowExecutionsRequest);
       final WorkflowType connectionManagerWorkflowType = WorkflowType.newBuilder().setName(ConnectionManagerWorkflow.class.getSimpleName()).build();
       workflowExecutionInfos.addAll(listOpenWorkflowExecutionsRequest.getExecutionsList().stream()
           .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == connectionManagerWorkflowType
@@ -142,7 +140,7 @@ public class TemporalClient {
 
       workflowExecutionsRequest =
           ListClosedWorkflowExecutionsRequest.newBuilder()
-              .setNamespace(client.getOptions().getNamespace())
+              .setNamespace(workflowClientWrapped.getNamespace())
               .setNextPageToken(token)
               .build();
 
@@ -167,11 +165,11 @@ public class TemporalClient {
     ByteString token;
     ListOpenWorkflowExecutionsRequest openWorkflowExecutionsRequest =
         ListOpenWorkflowExecutionsRequest.newBuilder()
-            .setNamespace(client.getOptions().getNamespace())
+            .setNamespace(workflowClientWrapped.getNamespace())
             .build();
     do {
       final ListOpenWorkflowExecutionsResponse listOpenWorkflowExecutionsRequest =
-          service.blockingStub().listOpenWorkflowExecutions(openWorkflowExecutionsRequest);
+          serviceStubsWrapped.blockingStubListOpenWorkflowExecutions(openWorkflowExecutionsRequest);
       final Set<String> workflowExecutionInfos = listOpenWorkflowExecutionsRequest.getExecutionsList().stream()
           .map((workflowExecutionInfo -> workflowExecutionInfo.getExecution().getWorkflowId()))
           .collect(Collectors.toSet());
@@ -180,7 +178,7 @@ public class TemporalClient {
 
       openWorkflowExecutionsRequest =
           ListOpenWorkflowExecutionsRequest.newBuilder()
-              .setNamespace(client.getOptions().getNamespace())
+              .setNamespace(workflowClientWrapped.getNamespace())
               .setNextPageToken(token)
               .build();
 
@@ -506,11 +504,11 @@ public class TemporalClient {
   }
 
   private <T> T getWorkflowStub(final Class<T> workflowClass, final TemporalJobType jobType) {
-    return client.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
   }
 
   private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue) {
-    return client.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
+    return workflowClientWrapped.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
   }
 
   /**

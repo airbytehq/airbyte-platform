@@ -6,6 +6,9 @@ package io.airbyte.commons.temporal.config;
 
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
+import io.airbyte.commons.temporal.WorkflowClientWrapped;
+import io.airbyte.commons.temporal.WorkflowServiceStubsWrapped;
+import io.airbyte.metrics.lib.MetricClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.temporal.client.WorkflowClient;
@@ -20,16 +23,32 @@ import java.nio.file.Path;
 @Factory
 public class TemporalBeanFactory {
 
+  /**
+   * WorkflowServiceStubs shouldn't be used directly, use WorkflowServiceStubsWrapped instead.
+   */
   @Singleton
-  public WorkflowServiceStubs temporalService(final TemporalUtils temporalUtils, final TemporalSdkTimeouts temporalSdkTimeouts) {
+  WorkflowServiceStubs temporalService(final TemporalUtils temporalUtils, final TemporalSdkTimeouts temporalSdkTimeouts) {
     return temporalUtils.createTemporalService(temporalSdkTimeouts);
   }
 
   @Singleton
-  public WorkflowClient workflowClient(
-                                       final TemporalUtils temporalUtils,
-                                       final WorkflowServiceStubs temporalService) {
+  public WorkflowServiceStubsWrapped temporalServiceWrapped(final WorkflowServiceStubs workflowServiceStubs, final MetricClient metricClient) {
+    return new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient);
+  }
+
+  /**
+   * WorkflowClient shouldn't be used directly, use WorkflowClientWrapped instead.
+   */
+  @Singleton
+  WorkflowClient workflowClient(
+                                final TemporalUtils temporalUtils,
+                                final WorkflowServiceStubs temporalService) {
     return TemporalWorkflowUtils.createWorkflowClient(temporalService, temporalUtils.getNamespace());
+  }
+
+  @Singleton
+  public WorkflowClientWrapped workflowClientWrapped(final WorkflowClient workflowClient, final MetricClient metricClient) {
+    return new WorkflowClientWrapped(workflowClient, metricClient);
   }
 
   @Singleton

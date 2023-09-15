@@ -5,22 +5,14 @@
 package io.airbyte.commons.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
-import dev.failsafe.Failsafe;
-import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
-import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse;
 import io.temporal.client.BatchRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
-import java.time.Duration;
 
 /**
  * Wrapper around a temporal.client.WorkflowClient. The interface is a subset of the methods that we
@@ -29,30 +21,25 @@ import java.time.Duration;
  */
 public class WorkflowClientWrapped {
 
-  private static final int DEFAULT_MAX_ATTEMPT = 3;
-  private static final int DEFAULT_BACKOFF_DELAY_IN_MILLIS = 1000;
-  private static final int DEFAULT_BACKOFF_MAX_DELAY_IN_MILLIS = 10000;
   private final WorkflowClient temporalWorkflowClient;
-  private final MetricClient metricClient;
-  private final int maxAttempt;
-  private final int backoffDelayInMillis;
-  private final int backoffMaxDelayInMillis;
+  private final RetryHelper retryHelper;
 
   public WorkflowClientWrapped(final WorkflowClient workflowClient, final MetricClient metricClient) {
-    this(workflowClient, metricClient, DEFAULT_MAX_ATTEMPT, DEFAULT_BACKOFF_DELAY_IN_MILLIS, DEFAULT_BACKOFF_MAX_DELAY_IN_MILLIS);
+    this(workflowClient,
+        metricClient,
+        RetryHelper.DEFAULT_MAX_ATTEMPT,
+        RetryHelper.DEFAULT_BACKOFF_DELAY_IN_MILLIS,
+        RetryHelper.DEFAULT_BACKOFF_MAX_DELAY_IN_MILLIS);
   }
 
   @VisibleForTesting
   WorkflowClientWrapped(final WorkflowClient workflowClient,
                         final MetricClient metricClient,
-                        int maxAttempt,
-                        int backoffDelayInMillis,
-                        int backoffMaxDelayInMillis) {
+                        final int maxAttempt,
+                        final int backoffDelayInMillis,
+                        final int backoffMaxDelayInMillis) {
     this.temporalWorkflowClient = workflowClient;
-    this.metricClient = metricClient;
-    this.maxAttempt = maxAttempt;
-    this.backoffDelayInMillis = backoffDelayInMillis;
-    this.backoffMaxDelayInMillis = backoffMaxDelayInMillis;
+    this.retryHelper = new RetryHelper(metricClient, maxAttempt, backoffDelayInMillis, backoffMaxDelayInMillis);
   }
 
   /**
@@ -125,22 +112,7 @@ public class WorkflowClientWrapped {
    * avoid generating additional noise.
    */
   private <T> T withRetries(final CheckedSupplier<T> call, final String name) {
-    final var retry = RetryPolicy.builder()
-        .handleIf(this::shouldRetry)
-        .withMaxAttempts(maxAttempt)
-        .withBackoff(Duration.ofMillis(backoffDelayInMillis), Duration.ofMillis(backoffMaxDelayInMillis))
-        .onRetry((a) -> metricClient.count(OssMetricsRegistry.TEMPORAL_API_TRANSIENT_ERROR_RETRY, 1,
-            new MetricAttribute(MetricTags.ATTEMPT_NUMBER, String.valueOf(a.getAttemptCount())),
-            new MetricAttribute(MetricTags.FAILURE_ORIGIN, name),
-            new MetricAttribute(MetricTags.FAILURE_TYPE, a.getLastException().getClass().getName())))
-        .build();
-    return Failsafe.with(retry).get(call);
-  }
-
-  private boolean shouldRetry(final Throwable t) {
-    // We are retrying Status.UNAVAILABLE because it is often sign of an unexpected connection
-    // termination.
-    return t instanceof StatusRuntimeException && Status.UNAVAILABLE.equals(((StatusRuntimeException) t).getStatus());
+    return retryHelper.withRetries(call, name);
   }
 
 }

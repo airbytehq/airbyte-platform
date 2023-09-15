@@ -38,9 +38,9 @@ public class ConnectionManagerUtils {
   private final WorkflowClientWrapped workflowClientWrapped;
   private final MetricClient metricClient;
 
-  public ConnectionManagerUtils(final WorkflowClient workflowClient, final MetricClient metricClient) {
+  public ConnectionManagerUtils(final WorkflowClientWrapped workflowClientWrapped, final MetricClient metricClient) {
+    this.workflowClientWrapped = workflowClientWrapped;
     this.metricClient = metricClient;
-    this.workflowClientWrapped = new WorkflowClientWrapped(workflowClient, this.metricClient);
   }
 
   /**
