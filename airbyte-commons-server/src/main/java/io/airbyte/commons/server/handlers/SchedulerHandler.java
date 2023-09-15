@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import io.airbyte.api.model.generated.AdvancedAuth;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
@@ -27,7 +26,6 @@ import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
-import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.DestinationUpdate;
@@ -40,8 +38,6 @@ import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
-import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -54,12 +50,10 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
-import io.airbyte.commons.server.converters.OauthModelConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
-import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
@@ -69,7 +63,6 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
@@ -102,7 +95,6 @@ import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
@@ -150,6 +142,7 @@ public class SchedulerHandler {
   private final JobCreator jobCreator;
   private final SyncJobFactory jobFactory;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
+  private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
   // TODO: Convert to be fully using micronaut
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -170,7 +163,8 @@ public class SchedulerHandler {
                           final JobCreator jobCreator,
                           final SyncJobFactory jobFactory,
                           final JobNotifier jobNotifier,
-                          final JobTracker jobTracker) {
+                          final JobTracker jobTracker,
+                          final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
     this(
         configRepository,
         secretsRepositoryWriter,
@@ -190,7 +184,8 @@ public class SchedulerHandler {
         jobCreator,
         jobFactory,
         jobNotifier,
-        jobTracker);
+        jobTracker,
+        connectorDefinitionSpecificationHandler);
   }
 
   @VisibleForTesting
@@ -212,7 +207,8 @@ public class SchedulerHandler {
                    final JobCreator jobCreator,
                    final SyncJobFactory jobFactory,
                    final JobNotifier jobNotifier,
-                   final JobTracker jobTracker) {
+                   final JobTracker jobTracker,
+                   final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -230,6 +226,7 @@ public class SchedulerHandler {
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.jobCreator = jobCreator;
     this.jobFactory = jobFactory;
+    this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -451,8 +448,10 @@ public class SchedulerHandler {
       final UUID destinationDefinitionId =
           configRepository.getDestinationDefinitionFromConnection(connectionRead.getConnectionId()).getDestinationDefinitionId();
       final var supportedDestinationSyncModes =
-          getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
-              .workspaceId(sourceAutoPropagateChange.getWorkspaceId())).getSupportedDestinationSyncModes();
+          connectorDefinitionSpecificationHandler
+              .getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
+                  .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
+              .getSupportedDestinationSyncModes();
 
       if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
         applySchemaChange(updateObject.getConnectionId(),
@@ -513,85 +512,6 @@ public class SchedulerHandler {
     }
 
     return sourceDiscoverSchemaRead;
-  }
-
-  public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final SourceConnection source = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion =
-        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), sourceIdRequestBody.getSourceId());
-    final ConnectorSpecification spec = sourceVersion.getSpec();
-
-    return getSourceSpecificationRead(sourceDefinition, spec);
-  }
-
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    final UUID sourceDefinitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
-    final StandardSourceDefinition source = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-    final ActorDefinitionVersion sourceVersion =
-        actorDefinitionVersionHelper.getSourceVersion(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
-    final ConnectorSpecification spec = sourceVersion.getSpec();
-
-    return getSourceSpecificationRead(source, spec);
-  }
-
-  private SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
-                                                                       final ConnectorSpecification spec) {
-    final SourceDefinitionSpecificationRead specRead = new SourceDefinitionSpecificationRead()
-        .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(ConfigType.GET_SPEC)))
-        .connectionSpecification(spec.getConnectionSpecification())
-        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId());
-
-    if (spec.getDocumentationUrl() != null) {
-      specRead.documentationUrl(spec.getDocumentationUrl().toString());
-    }
-
-    final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
-    advancedAuth.ifPresent(specRead::setAdvancedAuth);
-
-    return specRead;
-  }
-
-  public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final DestinationConnection destination = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
-    final StandardDestinationDefinition destinationDefinition =
-        configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
-            destinationIdRequestBody.getDestinationId());
-    final ConnectorSpecification spec = destinationVersion.getSpec();
-    return getDestinationSpecificationRead(destinationDefinition, spec);
-  }
-
-  @SuppressWarnings("LineLength")
-  public DestinationDefinitionSpecificationRead getDestinationSpecification(
-                                                                            final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    final UUID destinationDefinitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
-    final StandardDestinationDefinition destination = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
-    final ConnectorSpecification spec = destinationVersion.getSpec();
-
-    return getDestinationSpecificationRead(destination, spec);
-  }
-
-  private DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
-                                                                                 final ConnectorSpecification spec) {
-    final DestinationDefinitionSpecificationRead specRead = new DestinationDefinitionSpecificationRead()
-        .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(ConfigType.GET_SPEC)))
-        .supportedDestinationSyncModes(Enums.convertListTo(spec.getSupportedDestinationSyncModes(), DestinationSyncMode.class))
-        .connectionSpecification(spec.getConnectionSpecification())
-        .documentationUrl(spec.getDocumentationUrl().toString())
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
-
-    final Optional<AdvancedAuth> advancedAuth = OauthModelConverter.getAdvancedAuth(spec);
-    advancedAuth.ifPresent(specRead::setAdvancedAuth);
-
-    return specRead;
   }
 
   public JobInfoRead syncConnection(final ConnectionIdRequestBody connectionIdRequestBody)

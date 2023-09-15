@@ -10,7 +10,7 @@ import io.airbyte.api.generated.DestinationDefinitionSpecificationApi;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
-import io.airbyte.commons.server.handlers.SchedulerHandler;
+import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -23,10 +23,10 @@ import io.micronaut.security.rules.SecurityRule;
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class DestinationDefinitionSpecificationApiController implements DestinationDefinitionSpecificationApi {
 
-  private final SchedulerHandler schedulerHandler;
+  private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
-  public DestinationDefinitionSpecificationApiController(final SchedulerHandler schedulerHandler) {
-    this.schedulerHandler = schedulerHandler;
+  public DestinationDefinitionSpecificationApiController(final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
+    this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
   }
 
   @SuppressWarnings("LineLength")
@@ -35,7 +35,7 @@ public class DestinationDefinitionSpecificationApiController implements Destinat
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionSpecificationRead getDestinationDefinitionSpecification(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
-    return ApiHelper.execute(() -> schedulerHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId));
+    return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId));
   }
 
   @Post("/get_for_destination")
@@ -43,7 +43,7 @@ public class DestinationDefinitionSpecificationApiController implements Destinat
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(final DestinationIdRequestBody destinationIdRequestBody) {
-    return ApiHelper.execute(() -> schedulerHandler.getSpecificationForDestinationId(destinationIdRequestBody));
+    return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSpecificationForDestinationId(destinationIdRequestBody));
   }
 
 }

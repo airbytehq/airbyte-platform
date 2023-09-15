@@ -38,7 +38,6 @@ import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationUpdate;
@@ -56,8 +55,6 @@ import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
-import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -258,6 +255,7 @@ class SchedulerHandlerTest {
   private SyncJobFactory jobFactory;
   private JobNotifier jobNotifier;
   private JobTracker jobTracker;
+  private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -294,10 +292,15 @@ class SchedulerHandlerTest {
     jobFactory = mock(SyncJobFactory.class);
     jobNotifier = mock(JobNotifier.class);
     jobTracker = mock(JobTracker.class);
+    connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
 
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
     featureFlagClient = mock(TestClient.class);
+
+    when(connectorDefinitionSpecificationHandler.getDestinationSpecification(any())).thenReturn(new DestinationDefinitionSpecificationRead()
+        .supportedDestinationSyncModes(
+            List.of(io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE, io.airbyte.api.model.generated.DestinationSyncMode.APPEND)));
 
     schedulerHandler = new SchedulerHandler(
         configRepository,
@@ -313,7 +316,7 @@ class SchedulerHandlerTest {
         webUrlHelper,
         actorDefinitionVersionHelper,
         featureFlagClient,
-        streamResetPersistence, oAuthConfigSupplier, jobCreator, jobFactory, jobNotifier, jobTracker);
+        streamResetPersistence, oAuthConfigSupplier, jobCreator, jobFactory, jobNotifier, jobTracker, connectorDefinitionSpecificationHandler);
   }
 
   @Test
@@ -474,137 +477,6 @@ class SchedulerHandlerTest {
     verify(jsonSchemaValidator).ensure(CONNECTOR_SPECIFICATION.getConnectionSpecification(), source.getConfiguration());
     verify(synchronousSchedulerClient).createSourceCheckConnectionJob(submittedSource, sourceVersion, false, null);
     verify(actorDefinitionVersionHelper, times(2)).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
-  }
-
-  @Test
-  void testGetSourceSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
-        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
-
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withName(NAME)
-        .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
-        .thenReturn(sourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId()))
-        .thenReturn(new ActorDefinitionVersion()
-            .withDockerImageTag(SOURCE_DOCKER_TAG)
-            .withSpec(CONNECTOR_SPECIFICATION));
-
-    final SourceDefinitionSpecificationRead response = schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
-
-    verify(configRepository).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
-    assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
-  }
-
-  @Test
-  void testGetSourceSpecForSourceId() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final UUID sourceId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceDefinitionId = UUID.randomUUID();
-
-    final SourceIdRequestBody sourceIdRequestBody =
-        new SourceIdRequestBody()
-            .sourceId(sourceId);
-
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withName(NAME)
-        .withSourceDefinitionId(sourceDefinitionId);
-    when(configRepository.getSourceConnection(sourceId)).thenReturn(
-        new SourceConnection()
-            .withSourceId(sourceId)
-            .withWorkspaceId(workspaceId)
-            .withSourceDefinitionId(sourceDefinitionId));
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionId))
-        .thenReturn(sourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId))
-        .thenReturn(new ActorDefinitionVersion()
-            .withDockerRepository(SOURCE_DOCKER_REPO)
-            .withDockerImageTag(SOURCE_DOCKER_TAG)
-            .withSpec(CONNECTOR_SPECIFICATION));
-
-    final SourceDefinitionSpecificationRead response = schedulerHandler.getSpecificationForSourceId(sourceIdRequestBody);
-
-    verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, workspaceId, sourceId);
-    assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
-  }
-
-  @Test
-  void testGetSourceSpecWithoutDocs() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
-        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
-
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withName(NAME)
-        .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
-        .thenReturn(sourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId()))
-        .thenReturn(new ActorDefinitionVersion()
-            .withDockerRepository(SOURCE_DOCKER_REPO)
-            .withDockerImageTag(SOURCE_DOCKER_TAG)
-            .withSpec(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL));
-
-    final SourceDefinitionSpecificationRead response = schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
-
-    verify(configRepository).getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
-    verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
-    assertEquals(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL.getConnectionSpecification(), response.getConnectionSpecification());
-  }
-
-  @Test
-  void testGetDestinationSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
-        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
-
-    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-        .withName(NAME)
-        .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
-        .thenReturn(destinationDefinition);
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
-        destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
-            .thenReturn(new ActorDefinitionVersion()
-                .withDockerImageTag(DESTINATION_DOCKER_TAG)
-                .withSpec(CONNECTOR_SPECIFICATION));
-
-    final DestinationDefinitionSpecificationRead response = schedulerHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
-
-    verify(configRepository).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
-    verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
-        destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
-    assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
-  }
-
-  @Test
-  void testGetDestinationSpecForDestinationId() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final UUID destinationId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID destinationDefinitionId = UUID.randomUUID();
-    final DestinationIdRequestBody destinationIdRequestBody =
-        new DestinationIdRequestBody()
-            .destinationId(destinationId);
-
-    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-        .withName(NAME)
-        .withDestinationDefinitionId(destinationDefinitionId);
-    when(configRepository.getDestinationConnection(destinationId)).thenReturn(
-        new DestinationConnection()
-            .withDestinationId(destinationId)
-            .withWorkspaceId(workspaceId)
-            .withDestinationDefinitionId(destinationDefinitionId));
-    when(configRepository.getStandardDestinationDefinition(destinationDefinitionId))
-        .thenReturn(destinationDefinition);
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId))
-        .thenReturn(new ActorDefinitionVersion()
-            .withDockerImageTag(DESTINATION_DOCKER_TAG)
-            .withSpec(CONNECTOR_SPECIFICATION));
-
-    final DestinationDefinitionSpecificationRead response = schedulerHandler.getSpecificationForDestinationId(destinationIdRequestBody);
-
-    verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-    assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
   @Test

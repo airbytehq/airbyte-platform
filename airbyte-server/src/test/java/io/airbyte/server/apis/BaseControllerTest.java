@@ -10,6 +10,7 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
+import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
 import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
@@ -190,6 +191,15 @@ abstract class BaseControllerTest {
   @Replaces(SchedulerHandler.class)
   SchedulerHandler mmSchedulerHandler() {
     return schedulerHandler;
+  }
+
+  ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler = Mockito.mock(ConnectorDefinitionSpecificationHandler.class);
+
+  @MockBean(ConnectorDefinitionSpecificationHandler.class)
+  @Replaces(ConnectorDefinitionSpecificationHandler.class)
+
+  ConnectorDefinitionSpecificationHandler mmConnectorDefinitionSpecificationHandler() {
+    return connectorDefinitionSpecificationHandler;
   }
 
   SourceDefinitionsHandler sourceDefinitionsHandler = Mockito.mock(SourceDefinitionsHandler.class);
