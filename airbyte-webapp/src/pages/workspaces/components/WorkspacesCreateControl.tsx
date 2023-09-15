@@ -1,3 +1,4 @@
+import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +12,9 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Icon } from "components/ui/Icon";
 
-import { useCreateWorkspace, useListWorkspaces } from "core/api";
+import { useListWorkspaces } from "core/api";
+import { CloudWorkspaceRead } from "core/api/types/CloudApi";
+import { WorkspaceRead } from "core/request/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -24,9 +27,12 @@ const CreateWorkspaceFormValidationSchema = yup.object().shape({
   name: yup.string().trim().required("form.empty.error"),
 });
 
-export const WorkspacesCreateControl: React.FC = () => {
+interface WorkspacesCreateControlProps {
+  createWorkspace: UseMutateAsyncFunction<WorkspaceRead | CloudWorkspaceRead, unknown, string, unknown>;
+}
+
+export const WorkspacesCreateControl: React.FC<WorkspacesCreateControlProps> = ({ createWorkspace }) => {
   const navigate = useNavigate();
-  const { mutateAsync: createWorkspace } = useCreateWorkspace();
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();

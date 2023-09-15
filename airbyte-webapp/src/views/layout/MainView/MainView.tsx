@@ -11,6 +11,7 @@ import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
 import { useConfig } from "config";
+import { useListWorkspacesAsync } from "core/api";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -33,12 +34,13 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { trackError } = useAppMonitoringService();
   const { hasNewVersions } = useGetConnectorsOutOfDate();
   const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
+  const { data: workspaces, isLoading } = useListWorkspacesAsync();
 
   return (
     <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
       <SideBar>
         <AirbyteHomeLink />
-        {newWorkspacesUI && <WorkspacesPicker />}
+        {newWorkspacesUI && <WorkspacesPicker loading={isLoading} workspaces={workspaces} />}
         <MenuContent>
           <MainNavItems />
           <MenuContent>
