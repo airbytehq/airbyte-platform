@@ -549,7 +549,8 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public void setFeedback(final UUID workspaceId) throws IOException {
-    database.query(ctx -> ctx.update(WORKSPACE).set(WORKSPACE.FEEDBACK_COMPLETE, true).where(WORKSPACE.ID.eq(workspaceId)).execute());
+    database.query(ctx -> ctx.update(WORKSPACE).set(WORKSPACE.FEEDBACK_COMPLETE, true).set(WORKSPACE.UPDATED_AT, OffsetDateTime.now())
+        .where(WORKSPACE.ID.eq(workspaceId)).execute());
   }
 
   /**
@@ -789,6 +790,7 @@ public class ConfigRepository {
     // We are updating the same version since connector builder projects have a different concept of
     // versioning.
     ctx.update(ACTOR_DEFINITION_VERSION)
+        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
         .execute();
@@ -1077,13 +1079,15 @@ public class ConfigRepository {
 
   private void updateDefaultVersionIdForActorsOnVersion(final UUID previousDefaultVersionId, final UUID newDefaultVersionId, final DSLContext ctx) {
     ctx.update(ACTOR)
-        .set(Tables.ACTOR.DEFAULT_VERSION_ID, newDefaultVersionId)
-        .where(Tables.ACTOR.DEFAULT_VERSION_ID.eq(previousDefaultVersionId))
+        .set(ACTOR.UPDATED_AT, OffsetDateTime.now())
+        .set(ACTOR.DEFAULT_VERSION_ID, newDefaultVersionId)
+        .where(ACTOR.DEFAULT_VERSION_ID.eq(previousDefaultVersionId))
         .execute();
   }
 
   private void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId, final DSLContext ctx) {
     ctx.update(ACTOR_DEFINITION)
+        .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
         .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
         .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId))
         .execute();
@@ -2124,6 +2128,7 @@ public class ConfigRepository {
       ctx.deleteFrom(CONNECTION_OPERATION)
           .where(CONNECTION_OPERATION.OPERATION_ID.eq(standardSyncOperationId)).execute();
       ctx.update(OPERATION)
+          .set(OPERATION.UPDATED_AT, OffsetDateTime.now())
           .set(OPERATION.TOMBSTONE, true)
           .where(OPERATION.ID.eq(standardSyncOperationId)).execute();
       return null;
@@ -3003,6 +3008,7 @@ public class ConfigRepository {
    */
   public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
     return database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT).set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, true)
+        .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
         .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)).execute()) > 0;
   }
 
@@ -3069,6 +3075,7 @@ public class ConfigRepository {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(projectId))
           .execute();
       return null;
@@ -3087,6 +3094,7 @@ public class ConfigRepository {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
               .and(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)))
           .execute();
@@ -3120,6 +3128,7 @@ public class ConfigRepository {
     database.transaction(ctx -> {
       writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
       ctx.update(ACTOR_DEFINITION)
+          .set(ACTOR_DEFINITION.UPDATED_AT, OffsetDateTime.now())
           .set(ACTOR_DEFINITION.NAME, name)
           .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId).and(ACTOR_DEFINITION.PUBLIC.eq(false)))
           .execute();
@@ -3138,6 +3147,7 @@ public class ConfigRepository {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, actorDefinitionId)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
           .execute();
       return null;
@@ -3658,6 +3668,7 @@ public class ConfigRepository {
   public void setActorDefaultVersion(final UUID actorId, final UUID actorDefinitionVersionId) throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR)
         .set(Tables.ACTOR.DEFAULT_VERSION_ID, actorDefinitionVersionId)
+        .set(Tables.ACTOR.UPDATED_AT, OffsetDateTime.now())
         .where(Tables.ACTOR.ID.eq(actorId))
         .execute());
   }
@@ -3735,6 +3746,7 @@ public class ConfigRepository {
       throws IOException {
     database.query(ctx -> ctx.update(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE, Enums.toEnum(supportState.value(), SupportState.class).orElseThrow())
+        .set(Tables.ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
         .execute());
   }
@@ -3812,17 +3824,17 @@ public class ConfigRepository {
           // Only consider jobs that were created in the last 30 days, to cut down the query size.
           + " AND j.created_at > now() - make_interval(days => ?);";
 
-  public Set<Long> listEarlySyncJobs(int freeUsageInterval, int jobsFetchRange)
+  public Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange)
       throws IOException {
     return database.query(ctx -> getEarlySyncJobsFromResult(ctx.fetch(
         EARLY_SYNC_JOB_QUERY, freeUsageInterval, jobsFetchRange)));
   }
 
-  private Set<Long> getEarlySyncJobsFromResult(Result<Record> result) {
+  private Set<Long> getEarlySyncJobsFromResult(final Result<Record> result) {
     // Transform the result to a list of early sync job ids
     // the rest of the fields are not used, we aim to keep the set small
-    Set<Long> earlySyncJobs = new HashSet<>();
-    for (Record record : result) {
+    final Set<Long> earlySyncJobs = new HashSet<>();
+    for (final Record record : result) {
       earlySyncJobs.add((Long) record.get("id"));
     }
     return earlySyncJobs;
