@@ -10,6 +10,8 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import io.airbyte.api.generated.AttemptApi;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
+import io.airbyte.api.model.generated.CreateNewAttemptNumberRequest;
+import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
@@ -46,6 +48,17 @@ public class AttemptApiController implements AttemptApi {
   public AttemptInfoRead getAttemptForJob(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
         .execute(() -> attemptHandler.getAttemptForJob(requestBody.getJobId(), requestBody.getAttemptNumber()));
+  }
+
+  @Override
+  @Post(uri = "/create_new_attempt_number",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({ADMIN})
+  @SecuredWorkspace
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(CreateNewAttemptNumberRequest createNewAttemptNumberRequest) {
+    return ApiHelper
+        .execute(() -> attemptHandler.createNewAttemptNumber(createNewAttemptNumberRequest.getJobId()));
   }
 
   @Override

@@ -3348,6 +3348,37 @@ paths:
               schema:
                 type: string
                 format: binary
+  /v1/attempt/create_new_attempt_number:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For worker to create a new attempt number.
+      operationId: createNewAttemptNumber
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                title: CreateNewAttemptNumberResponse
+                type: object
+                required:
+                  - attemptNumber
+                properties:
+                  attemptNumber:
+                    $ref: "#/components/schemas/AttemptNumber"
   /v1/attempt/set_workflow_in_attempt:
     post:
       tags:
