@@ -90,7 +90,7 @@ public class JobNotifier {
                          final UUID workspaceId,
                          final StandardWorkspace workspace) {
     final UUID connectionId = UUID.fromString(job.getScope());
-    NotificationSettings notificationSettings = workspace.getNotificationSettings();
+    final NotificationSettings notificationSettings = workspace.getNotificationSettings();
     try {
       final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
@@ -99,39 +99,14 @@ public class JobNotifier {
           actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
-      final String sourceConnector = sourceDefinition.getName();
-      final String destinationConnector = destinationDefinition.getName();
-      final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
-      final String jobDescription = getJobDescription(job, failReason);
-      final String logUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId);
       final Map<String, Object> jobMetadata = TrackingMetadata.generateJobAttemptMetadata(job);
       final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
       final Map<String, Object> destinationMetadata =
           TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
-      NotificationItem notificationItem = null;
-      if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
-        notificationItem = notificationSettings.getSendOnFailure();
-        sendNotification(notificationItem, FAILURE_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector, destinationConnector,
-                standardSync.getName(), jobDescription, logUrl, job.getId()));
-      } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
-        notificationItem = notificationSettings.getSendOnSuccess();
-        sendNotification(notificationItem, SUCCESS_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector, destinationConnector,
-                standardSync.getName(), jobDescription, logUrl, job.getId()));
-      } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
-        notificationItem = notificationSettings.getSendOnSyncDisabled();
-        sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(), sourceConnector, destinationConnector,
-                jobDescription,
-                workspaceId, connectionId));
-      } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
-        notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
-        sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(), sourceConnector, destinationConnector,
-                jobDescription,
-                workspaceId, connectionId));
-      }
+
+      final NotificationItem notificationItem = createAndSend(notificationSettings, action, connectionId,
+          destinationDefinition, job, reason, sourceDefinition, standardSync, workspace, workspaceId);
+
       if (notificationItem != null) {
         final Map<String, Object> notificationMetadata = buildNotificationMetadata(connectionId, notificationItem);
         trackingClient.track(
@@ -159,7 +134,7 @@ public class JobNotifier {
   Map<String, Object> buildNotificationMetadata(final UUID connectionId, final NotificationItem notificationItem) {
     final Builder<String, Object> notificationMetadata = ImmutableMap.builder();
     notificationMetadata.put("connection_id", connectionId);
-    for (var notificationType : notificationItem.getNotificationType()) {
+    for (final var notificationType : notificationItem.getNotificationType()) {
       if (NotificationType.SLACK.equals(notificationType)
           && notificationItem.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
         // flag as slack if the webhook URL is also pointing to slack
@@ -175,10 +150,11 @@ public class JobNotifier {
   }
 
   private void submitToMetricClient(final String action, final String notificationClient) {
-    MetricAttribute metricTriggerAttribute = new MetricAttribute(NOTIFICATION_TRIGGER, action);
-    MetricAttribute metricClientAttribute = new MetricAttribute(NOTIFICATION_CLIENT, notificationClient);
+    final MetricAttribute metricTriggerAttribute = new MetricAttribute(NOTIFICATION_TRIGGER, action);
+    final MetricAttribute metricClientAttribute = new MetricAttribute(NOTIFICATION_CLIENT, notificationClient);
 
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute, metricTriggerAttribute);
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute,
+        metricTriggerAttribute);
   }
 
   /**
@@ -207,13 +183,16 @@ public class JobNotifier {
 
   private String getJobDescription(final Job job, final String reason) {
     final Instant jobStartedDate = Instant.ofEpochSecond(job.getStartedAtInSecond().orElse(job.getCreatedAtInSecond()));
-    final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
+    final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL)
+        .withZone(ZoneId.systemDefault());
     final Instant jobUpdatedDate = Instant.ofEpochSecond(job.getUpdatedAtInSecond());
     final Instant adjustedJobUpdatedDate = jobUpdatedDate.equals(jobStartedDate) ? Instant.now() : jobUpdatedDate;
     final Duration duration = Duration.between(jobStartedDate, adjustedJobUpdatedDate);
-    final String durationString = DurationFormatUtils.formatDurationWords(duration.toMillis(), true, true);
+    final String durationString = DurationFormatUtils.formatDurationWords(duration.toMillis(),
+        true, true);
 
-    return String.format("sync started on %s, running for %s%s.", formatter.format(jobStartedDate), durationString, reason);
+    return String.format("sync started on %s, running for %s%s.",
+        formatter.format(jobStartedDate), durationString, reason);
   }
 
   public void failJob(final String reason, final Job job) {
@@ -234,7 +213,7 @@ public class JobNotifier {
 
   private void sendNotification(final NotificationItem notificationItem,
                                 final String notificationTrigger,
-                                ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
+                                final ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
     if (notificationItem == null) {
       // Note: we may be able to implement a log notifier to log notification message only.
       LOGGER.info("No notification item found for the desired notification event found. Skipping notification.");
@@ -247,12 +226,58 @@ public class JobNotifier {
           LOGGER.warn("Failed to successfully notify: {}", notificationItem);
         }
         submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType());
-      } catch (Exception ex) {
+      } catch (final Exception ex) {
         LOGGER.error("Failed to notify: {} due to an exception. Not blocking.", notificationItem, ex);
         // Do not block.
       }
     }
 
+  }
+
+  private NotificationItem createAndSend(final NotificationSettings notificationSettings,
+                                         final String action,
+                                         final UUID connectionId,
+                                         final StandardDestinationDefinition destinationDefinition,
+                                         final Job job,
+                                         final String reason,
+                                         final StandardSourceDefinition sourceDefinition,
+                                         final StandardSync standardSync,
+                                         final StandardWorkspace workspace,
+                                         final UUID workspaceId) {
+    NotificationItem notificationItem = null;
+    final String sourceConnector = sourceDefinition.getName();
+    final String destinationConnector = destinationDefinition.getName();
+    final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
+    final String jobDescription = getJobDescription(job, failReason);
+    final String logUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId);
+
+    if (notificationSettings != null) {
+      if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnFailure();
+        sendNotification(notificationItem, FAILURE_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector,
+                destinationConnector, standardSync.getName(), jobDescription, logUrl, job.getId()));
+      } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSuccess();
+        sendNotification(notificationItem, SUCCESS_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector,
+                destinationConnector, standardSync.getName(), jobDescription, logUrl, job.getId()));
+      } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSyncDisabled();
+        sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(),
+                sourceConnector, destinationConnector, jobDescription, workspaceId, connectionId));
+      } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
+        notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
+        sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
+            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(),
+                sourceConnector, destinationConnector, jobDescription, workspaceId, connectionId));
+      }
+    } else {
+      LOGGER.warn("Unable to send notification:  notification settings are not present.");
+    }
+
+    return notificationItem;
   }
 
 }

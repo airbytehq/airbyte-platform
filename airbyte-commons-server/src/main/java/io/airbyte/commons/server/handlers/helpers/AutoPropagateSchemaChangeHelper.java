@@ -51,7 +51,7 @@ public class AutoPropagateSchemaChangeHelper {
    * @param transform the transformation to be applied to the destination
    * @return a list of strings describing the changes that will be applied to the destination.
    */
-  private static String staticFormatDiff(StreamTransform transform) {
+  private static String staticFormatDiff(final StreamTransform transform) {
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
         return String.format("Added new stream %s", transform.getStreamDescriptor().getName());
@@ -64,8 +64,8 @@ public class AutoPropagateSchemaChangeHelper {
         if (transform.getUpdateStream() == null) {
           return returnValue;
         }
-        for (FieldTransform fieldTransform : transform.getUpdateStream()) {
-          String fieldName = String.join(".", fieldTransform.getFieldName());
+        for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
+          final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
             case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
             case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
@@ -103,7 +103,7 @@ public class AutoPropagateSchemaChangeHelper {
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
 
-    List<String> changes = new ArrayList<>();
+    final List<String> changes = new ArrayList<>();
 
     transformations.forEach(transformation -> {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
@@ -154,6 +154,13 @@ public class AutoPropagateSchemaChangeHelper {
         airbyteStreamAndConfiguration -> airbyteStreamAndConfiguration));
   }
 
+  /**
+   * Tests whether the provided catalog diff contains a breaking change.
+   *
+   * @param diff A {@link CatalogDiff}.
+   * @return {@code true} if any breaking field transforms are included in the diff, {@code false}
+   *         otherwise.
+   */
   @VisibleForTesting
   public static boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
