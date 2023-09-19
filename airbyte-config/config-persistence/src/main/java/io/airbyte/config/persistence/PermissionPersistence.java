@@ -14,6 +14,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
+import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -196,9 +197,101 @@ public class PermissionPersistence {
     return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
   }
 
+  public List<UserPermission> listInstanceAdminUsers() throws IOException {
+    return this.database.query(ctx -> listInstanceAdminPermissions(ctx));
+  }
+
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
     return this.database.query(ctx -> listPermissionsForOrganization(ctx, organizationId));
+  }
 
+  private List<UserPermission> listInstanceAdminPermissions(final DSLContext ctx) {
+    var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .fetch();
+
+    return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+  }
+
+  private UserPermission getUserInstanceAdminPermission(final DSLContext ctx, final UUID userId) {
+    var record = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.instance_admin))
+        .and(PERMISSION.USER_ID.eq(userId))
+        .fetchOne();
+    if (record == null) {
+      return null;
+    }
+    return buildUserPermissionFromRecord(record);
+  }
+
+  /**
+   * Check and get instance_admin permission for a user.
+   *
+   * @param userId user id
+   * @return UserPermission User details with instance_admin permission, null if user does not have
+   *         instance_admin role.
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
+    return this.database.query(ctx -> getUserInstanceAdminPermission(ctx, userId));
+  }
+
+  public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId, final AuthProvider authProvider)
+      throws IOException {
+    return this.database.query(ctx -> findPermissionTypeForUserAndWorkspace(ctx, workspaceId, authUserId, authProvider));
+  }
+
+  private PermissionType findPermissionTypeForUserAndWorkspace(final DSLContext ctx,
+                                                               final UUID workspaceId,
+                                                               final String authUserId,
+                                                               final AuthProvider authProvider) {
+    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
+        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(USER.AUTH_PROVIDER.eq(Enums.toEnum(authProvider.value(), io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider.class).get()))
+        .fetchOne();
+    if (record == null) {
+      return null;
+    }
+
+    final var jooqPermissionType = record.get(PERMISSION.PERMISSION_TYPE, io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class);
+
+    return Enums.toEnum(jooqPermissionType.getLiteral(), PermissionType.class).get();
+  }
+
+  public PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId, final AuthProvider authProvider)
+      throws IOException {
+    return this.database.query(ctx -> findPermissionTypeForUserAndOrganization(ctx, organizationId, authUserId, authProvider));
+  }
+
+  private PermissionType findPermissionTypeForUserAndOrganization(final DSLContext ctx,
+                                                                  final UUID organizationId,
+                                                                  final String authUserId,
+                                                                  final AuthProvider authProvider) {
+    var record = ctx.select(PERMISSION.PERMISSION_TYPE)
+        .from(PERMISSION)
+        .join(USER)
+        .on(PERMISSION.USER_ID.eq(USER.ID))
+        .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
+        .and(USER.AUTH_USER_ID.eq(authUserId))
+        .and(USER.AUTH_PROVIDER.eq(Enums.toEnum(authProvider.value(), io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider.class).get()))
+        .fetchOne();
+
+    if (record == null) {
+      return null;
+    }
+
+    final var jooqPermissionType = record.get(PERMISSION.PERMISSION_TYPE, io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class);
+    return Enums.toEnum(jooqPermissionType.getLiteral(), PermissionType.class).get();
   }
 
   private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {

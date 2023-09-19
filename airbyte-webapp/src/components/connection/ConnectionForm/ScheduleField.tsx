@@ -106,6 +106,10 @@ export const ScheduleField: React.FC = () => {
       return value.basicSchedule;
     }
 
+    if (!scheduleType) {
+      return null;
+    }
+
     return formatMessage({
       id: `frequency.${scheduleType}`,
     }).toLowerCase();

@@ -4,6 +4,7 @@
 
 package io.airbyte.metrics.lib;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
@@ -134,27 +135,39 @@ class ApmTraceUtilsTest {
     final UUID connectionID = UUID.randomUUID();
     final String jobId = UUID.randomUUID().toString();
     final Path jobRoot = Path.of("dev", "null");
+    final Long attemptNumber = Long.valueOf(2L);
 
-    ApmTraceUtils.addTagsToTrace(connectionID, jobId, jobRoot);
+    ApmTraceUtils.addTagsToTrace(connectionID, attemptNumber, jobId, jobRoot);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString());
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
 
     clearInvocations(span);
-    ApmTraceUtils.addTagsToTrace(null, jobId, jobRoot);
+    ApmTraceUtils.addTagsToTrace(null, null, jobId, jobRoot);
     verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString());
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
 
     clearInvocations(span);
-    ApmTraceUtils.addTagsToTrace(connectionID, jobId, null);
+    ApmTraceUtils.addTagsToTrace(connectionID, null, jobId, null);
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString());
     verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
     verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
 
     clearInvocations(span);
-    ApmTraceUtils.addTagsToTrace((UUID) null, null, null);
+    ApmTraceUtils.addTagsToTrace(null, attemptNumber, jobId, null);
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString());
+    verify(span, times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), jobRoot.toString());
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
+
+    clearInvocations(span);
+    ApmTraceUtils.addTagsToTrace((UUID) null, null, null, null);
     verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString());
+    verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString());
     verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId);
     verify(span, never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString());
   }

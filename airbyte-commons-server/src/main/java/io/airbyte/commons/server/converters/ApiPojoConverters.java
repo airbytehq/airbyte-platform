@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.SupportState;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
@@ -232,6 +233,13 @@ public class ApiPojoConverters {
       return null;
     }
     return ReleaseStage.fromValue(releaseStage.value());
+  }
+
+  public static SupportLevel toApiSupportLevel(final io.airbyte.config.SupportLevel supportLevel) {
+    if (supportLevel == null) {
+      return SupportLevel.NONE;
+    }
+    return SupportLevel.fromValue(supportLevel.value());
   }
 
   public static SupportState toApiSupportState(final io.airbyte.config.ActorDefinitionVersion.SupportState supportState) {

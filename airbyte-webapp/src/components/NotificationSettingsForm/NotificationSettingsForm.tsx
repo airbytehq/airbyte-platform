@@ -27,6 +27,7 @@ import { formValuesToNotificationSettings } from "./formValuesToNotificationSett
 import { NotificationItemField } from "./NotificationItemField";
 import styles from "./NotificationSettingsForm.module.scss";
 import { notificationSettingsToFormValues } from "./notificationSettingsToFormValues";
+import { useExperiment } from "../../hooks/services/Experiment";
 
 interface NotificationSettingsFormProps {
   updateNotificationSettings: (notificationSettings: NotificationSettings) => Promise<WorkspaceRead>;
@@ -34,6 +35,7 @@ interface NotificationSettingsFormProps {
 
 export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> = ({ updateNotificationSettings }) => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
+  const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications", false);
   const { notificationSettings, email } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();
@@ -54,7 +56,7 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
         notificationKeys.map(async (key) => {
           const notification = values[key];
 
-          // If slack is not set as a notification type, or if the webhook has not changed, we can skip the validation
+          // If Slack is not set as a notification type, or if the webhook has not changed, we can skip the validation
           if (
             !notification.slack ||
             (!methods.formState.dirtyFields[key]?.slack && !methods.formState.dirtyFields[key]?.slackWebhookLink)
@@ -109,7 +111,7 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
       trackError(e, {
         name: "notification_settings_update_error",
         formValues: values,
-        requestPayloas: newNotificationSettings,
+        requestPayload: newNotificationSettings,
       });
       registerNotification({
         id: "notification_settings_update",
@@ -162,8 +164,18 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
               <NotificationItemField name="sendOnSuccess" />
               <NotificationItemField name="sendOnConnectionUpdate" />
               <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
-              <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
               <NotificationItemField name="sendOnSyncDisabledWarning" />
+              <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
+              {breakingChangeNotificationsExperimentEnabled && (
+                <>
+                  <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
+                  <NotificationItemField
+                    name="sendOnBreakingChangeSyncsDisabled"
+                    emailNotificationRequired
+                    slackNotificationUnsupported
+                  />
+                </>
+              )}
             </div>
             <Box mt="lg">
               <FormSubmissionButtons submitKey="form.saveChanges" />
@@ -188,6 +200,8 @@ export interface NotificationSettingsFormValues {
   sendOnConnectionUpdateActionRequired: NotificationItemFieldValue;
   sendOnSyncDisabled: NotificationItemFieldValue;
   sendOnSyncDisabledWarning: NotificationItemFieldValue;
+  sendOnBreakingChangeWarning: NotificationItemFieldValue;
+  sendOnBreakingChangeSyncsDisabled: NotificationItemFieldValue;
 }
 
 const notificationItemSchema: SchemaOf<NotificationItemFieldValue> = yup.object({
@@ -206,6 +220,8 @@ const validationSchema: SchemaOf<NotificationSettingsFormValues> = yup.object({
   sendOnConnectionUpdateActionRequired: notificationItemSchema,
   sendOnSyncDisabled: notificationItemSchema,
   sendOnSyncDisabledWarning: notificationItemSchema,
+  sendOnBreakingChangeWarning: notificationItemSchema,
+  sendOnBreakingChangeSyncsDisabled: notificationItemSchema,
 });
 
 export const notificationKeys: Array<keyof NotificationSettings> = [
@@ -215,6 +231,8 @@ export const notificationKeys: Array<keyof NotificationSettings> = [
   "sendOnConnectionUpdateActionRequired",
   "sendOnSyncDisabled",
   "sendOnSyncDisabledWarning",
+  "sendOnBreakingChangeWarning",
+  "sendOnBreakingChangeSyncsDisabled",
 ];
 
 export const notificationTriggerMap: Record<keyof NotificationSettings, NotificationTrigger> = {
@@ -224,4 +242,6 @@ export const notificationTriggerMap: Record<keyof NotificationSettings, Notifica
   sendOnConnectionUpdateActionRequired: NotificationTrigger.connection_update_action_required,
   sendOnSyncDisabled: NotificationTrigger.sync_disabled,
   sendOnSyncDisabledWarning: NotificationTrigger.sync_disabled_warning,
+  sendOnBreakingChangeWarning: NotificationTrigger.breaking_change_warning,
+  sendOnBreakingChangeSyncsDisabled: NotificationTrigger.breaking_change_syncs_disabled,
 };

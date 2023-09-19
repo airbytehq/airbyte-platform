@@ -13,7 +13,6 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -48,6 +47,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -110,7 +110,9 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
     return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
         () -> {
           final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
           final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
@@ -126,18 +128,19 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
             final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
             workerFactory =
                 getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-                    () -> context, input.getConnectionId(), input.getWorkspaceId());
+                    input.getConnectionId(), input.getWorkspaceId());
           } else {
             workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig, resourceRequirements);
           }
+          final var worker = workerFactory.get();
+          cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution<OperatorDbtInput, Void> temporalAttemptExecution =
               new TemporalAttemptExecution<>(
                   workspaceRoot, workerEnvironment, logConfigs,
                   jobRunConfig,
-                  workerFactory,
-                  inputSupplier,
-                  new CancellationHandler.TemporalCancellationHandler(context),
+                  worker,
+                  inputSupplier.get(),
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context);
@@ -167,7 +170,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                                                                                        final WorkerConfigs workerConfigs,
                                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                        final JobRunConfig jobRunConfig,
-                                                                                                       final Supplier<ActivityExecutionContext> activityContext,
                                                                                                        final UUID connectionId,
                                                                                                        final UUID workspaceId) {
 
@@ -178,9 +180,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         jobRunConfig,
         workerConfigs,
         containerOrchestratorConfig.get(),
-        activityContext,
         serverPort,
-        temporalUtils,
         featureFlagClient);
   }
 

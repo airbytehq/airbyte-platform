@@ -566,7 +566,7 @@ server:
     enabled: true
     initialDelaySeconds: 30
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -581,7 +581,7 @@ server:
     enabled: true
     initialDelaySeconds: 10
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -841,7 +841,6 @@ worker:
 
   debug:
     enabled: false
-    remoteDebugPort:
 
   ## Container Orchestrator
   ## enabled -- Enable or disable Orchestrator
@@ -1520,7 +1519,7 @@ connector-builder-server:
     enabled: true
     initialDelaySeconds: 30
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -1535,7 +1534,7 @@ connector-builder-server:
     enabled: true
     initialDelaySeconds: 10
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -1593,7 +1592,7 @@ airbyte-api-server:
     enabled: true
     initialDelaySeconds: 30
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -1608,7 +1607,7 @@ airbyte-api-server:
     enabled: true
     initialDelaySeconds: 10
     periodSeconds: 10
-    timeoutSeconds: 1
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 

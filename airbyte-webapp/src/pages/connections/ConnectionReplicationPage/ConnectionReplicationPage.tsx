@@ -18,8 +18,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message/Message";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { toWebBackendConnectionUpdate } from "core/domain/connection";
-import { SchemaChange } from "core/request/AirbyteClient";
+import { ConnectionValues, useGetStateTypeQuery } from "core/api";
+import { SchemaChange, WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
@@ -32,10 +32,24 @@ import {
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
-import { useConnectionService, ValuesProps } from "hooks/services/useConnectionHook";
 
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";
+
+const toWebBackendConnectionUpdate = (connection: WebBackendConnectionRead): WebBackendConnectionUpdate => ({
+  name: connection.name,
+  connectionId: connection.connectionId,
+  namespaceDefinition: connection.namespaceDefinition,
+  namespaceFormat: connection.namespaceFormat,
+  prefix: connection.prefix,
+  syncCatalog: connection.syncCatalog,
+  scheduleData: connection.scheduleData,
+  scheduleType: connection.scheduleType,
+  status: connection.status,
+  resourceRequirements: connection.resourceRequirements,
+  operations: connection.operations,
+  sourceCatalogId: connection.catalogId,
+});
 
 const ValidateFormOnSchemaRefresh: React.FC = () => {
   const { schemaHasBeenRefreshed } = useConnectionEditService();
@@ -88,7 +102,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
 
 export const ConnectionReplicationPage: React.FC = () => {
   const analyticsService = useAnalyticsService();
-  const connectionService = useConnectionService();
+  const getStateType = useGetStateTypeQuery();
   const workspaceId = useCurrentWorkspaceId();
 
   const { formatMessage } = useIntl();
@@ -106,7 +120,7 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const saveConnection = useCallback(
     async (
-      values: ValuesProps,
+      values: ConnectionValues,
       { skipReset, catalogHasChanged }: { skipReset: boolean; catalogHasChanged: boolean }
     ) => {
       const connectionAsUpdate = toWebBackendConnectionUpdate(connection);
@@ -189,7 +203,7 @@ export const ConnectionReplicationPage: React.FC = () => {
       // endpoint.
       try {
         if (catalogChangesRequireReset) {
-          const stateType = await connectionService.getStateType(connection.connectionId);
+          const stateType = await getStateType(connection.connectionId);
           const result = await openModal<boolean>({
             title: formatMessage({ id: "connection.resetModalTitle" }),
             size: "md",
@@ -223,7 +237,7 @@ export const ConnectionReplicationPage: React.FC = () => {
       connection.syncCatalog.streams,
       connection.connectionId,
       setSubmitError,
-      connectionService,
+      getStateType,
       openModal,
       formatMessage,
       saveConnection,

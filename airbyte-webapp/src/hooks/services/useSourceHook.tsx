@@ -1,17 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
+import { ConnectionConfiguration } from "area/connector/types";
 import { useConfig } from "config";
-import { useSuspenseQuery } from "core/api";
+import { useSuspenseQuery, useRemoveConnectionsFromList } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
-import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceService } from "core/domain/connector/SourceService";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
 
-import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";

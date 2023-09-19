@@ -25,6 +25,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.util.Collections;
@@ -72,6 +73,7 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withSupportLevel(SupportLevel.CERTIFIED)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion("doesnt matter")
@@ -96,6 +98,7 @@ class ConnectorRegistryConvertersTest {
         .withDockerImageTag(DOCKER_TAG)
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
+        .withSupportLevel(SupportLevel.CERTIFIED)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -105,6 +108,32 @@ class ConnectorRegistryConvertersTest {
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
     assertEquals(expectedBreakingChanges, ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef));
+  }
+
+  @Test
+  void testConvertRegistrySourceDefaults() {
+    final SuggestedStreams suggestedStreams = new SuggestedStreams().withStreams(List.of("stream1", "stream2"));
+    final ConnectorRegistrySourceDefinition registrySourceDef = new ConnectorRegistrySourceDefinition()
+        .withSourceDefinitionId(DEF_ID)
+        .withName(CONNECTOR_NAME)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withDocumentationUrl(DOCS_URL)
+        .withSpec(SPEC)
+        .withTombstone(false)
+        .withPublic(true)
+        .withCustom(false)
+        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
+        .withReleaseDate(RELEASE_DATE)
+        .withProtocolVersion("doesnt matter")
+        .withAllowedHosts(ALLOWED_HOSTS)
+        .withResourceRequirements(RESOURCE_REQUIREMENTS)
+        .withSuggestedStreams(suggestedStreams)
+        .withMaxSecondsBetweenMessages(10L)
+        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
+
+    final ActorDefinitionVersion convertedAdv = ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef);
+    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel());
   }
 
   @Test
@@ -124,9 +153,10 @@ class ConnectorRegistryConvertersTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withSupportLevel(SupportLevel.CERTIFIED)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
-        .withProtocolVersion("doesnt matter")
+        .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withNormalizationConfig(normalizationConfig)
@@ -147,6 +177,7 @@ class ConnectorRegistryConvertersTest {
         .withDockerImageTag(DOCKER_TAG)
         .withSpec(SPEC)
         .withDocumentationUrl(DOCS_URL)
+        .withSupportLevel(SupportLevel.CERTIFIED)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
@@ -157,6 +188,30 @@ class ConnectorRegistryConvertersTest {
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
     assertEquals(expectedBreakingChanges, ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef));
+  }
+
+  @Test
+  void testConvertRegistryDestinationDefaults() {
+    final ConnectorRegistryDestinationDefinition registryDestinationDef = new ConnectorRegistryDestinationDefinition()
+        .withDestinationDefinitionId(DEF_ID)
+        .withName(CONNECTOR_NAME)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withDocumentationUrl(DOCS_URL)
+        .withSpec(SPEC)
+        .withTombstone(false)
+        .withPublic(true)
+        .withCustom(false)
+        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
+        .withReleaseDate(RELEASE_DATE)
+        .withProtocolVersion(PROTOCOL_VERSION)
+        .withAllowedHosts(ALLOWED_HOSTS)
+        .withResourceRequirements(RESOURCE_REQUIREMENTS)
+        .withSupportsDbt(true)
+        .withReleases(new ConnectorReleases().withBreakingChanges(registryBreakingChanges));
+
+    final ActorDefinitionVersion convertedAdv = ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef);
+    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel());
   }
 
   @Test

@@ -8,12 +8,13 @@ import {
   createWorkspace,
   deleteWorkspace,
   getWorkspace,
+  listUsersInWorkspace,
   listWorkspaces,
   updateWorkspace,
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
-import { WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
+import { WorkspaceRead, WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -21,6 +22,8 @@ export const workspaceKeys = {
   all: [SCOPE_USER, "workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
+  allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
+  listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
   state: (workspaceId: string) => [...workspaceKeys.all, "state", workspaceId] as const,
 };
@@ -50,7 +53,7 @@ export const useCreateWorkspace = () => {
   });
 };
 
-export const useDeleteCurrentWorkspace = () => {
+export const useDeleteWorkspace = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
@@ -123,14 +126,19 @@ export const useGetWorkspaceQuery = (workspaceId: string) => {
 
 export const useGetWorkspace = (
   workspaceId: string,
-  options?: {
-    staleTime: number;
-  }
+  options?: Parameters<typeof useSuspenseQuery<WorkspaceRead>>[2]
 ) => {
   const queryKey = getWorkspaceQueryKey(workspaceId);
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
   return useSuspenseQuery(queryKey, queryFn, options);
+};
+
+export const useListUsersInWorkspace = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = workspaceKeys.listUsers(workspaceId);
+
+  return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
 export const useUpdateWorkspace = () => {

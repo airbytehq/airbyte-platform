@@ -1,7 +1,0 @@
-@use "scss/colors";
-@use "scss/variables";
-
-.editControls {
-  margin: 0 -#{variables.$spacing-xl};
-  padding: variables.$spacing-xl variables.$spacing-xl 0;
-}

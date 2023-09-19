@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { CheckBox } from "components/ui/CheckBox";
@@ -10,7 +11,7 @@ import styles from "./FilterReleaseStage.module.scss";
 
 interface FilterReleaseStageProps {
   selectedReleaseStages: ReleaseStage[];
-  onUpdateSelectedReleaseStages: React.Dispatch<React.SetStateAction<ReleaseStage[]>>;
+  onUpdateSelectedReleaseStages: (newReleaseStages: ReleaseStage[]) => void;
   availableReleaseStages: ReleaseStage[];
 }
 
@@ -21,14 +22,24 @@ export const FilterReleaseStage: React.FC<FilterReleaseStageProps> = ({
 }) => {
   const handleChange = (stage: ReleaseStage, isSelected: boolean) => {
     if (isSelected) {
-      onUpdateSelectedReleaseStages((stages) => [...stages, stage]);
+      onUpdateSelectedReleaseStages([...selectedReleaseStages, stage]);
     } else {
-      onUpdateSelectedReleaseStages((stages) => stages.filter((s) => s !== stage));
+      onUpdateSelectedReleaseStages(selectedReleaseStages.filter((s) => s !== stage));
     }
   };
 
+  // It's possible that there are no custom connectors, so that filter is hidden. But that filter might
+  // still be technically selected, because we cache the user's selection in local storage.
+  // In that case we want to know how many of the filters that _are_ visible have been selected.
+  const numberOfVisiblySelectedReleaseStages = useMemo(() => {
+    return selectedReleaseStages.filter((stage) => availableReleaseStages.includes(stage)).length;
+  }, [selectedReleaseStages, availableReleaseStages]);
+
   return (
     <FlexContainer gap="xl">
+      <Text>
+        <FormattedMessage id="connector.filterBy" />
+      </Text>
       {availableReleaseStages.map((stage) => {
         const id = `filter-release-stage-${stage}`;
         const isChecked = selectedReleaseStages.includes(stage);
@@ -38,6 +49,7 @@ export const FilterReleaseStage: React.FC<FilterReleaseStageProps> = ({
               <CheckBox
                 checkboxSize="sm"
                 checked={isChecked}
+                disabled={isChecked && numberOfVisiblySelectedReleaseStages <= 1}
                 onChange={() => handleChange(stage, !isChecked)}
                 id={id}
               />

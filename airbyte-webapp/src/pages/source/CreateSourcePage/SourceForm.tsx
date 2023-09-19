@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
@@ -6,8 +6,9 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { ConnectionConfiguration } from "core/domain/connection";
-import { SourceDefinitionRead } from "core/request/AirbyteClient";
+import { ConnectionConfiguration } from "area/connector/types";
+import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { Connector } from "core/domain/connector";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { FormError } from "core/utils/errorStatusMessage";
 import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
@@ -54,6 +55,11 @@ export const SourceForm: React.FC<SourceFormProps> = ({
     isLoading,
   } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId);
 
+  const selectedSourceDefinition = useMemo(
+    () => sourceDefinitions.find((s) => Connector.id(s) === selectedSourceDefinitionId),
+    [sourceDefinitions, selectedSourceDefinitionId]
+  );
+
   const onDropDownSelect = (sourceDefinitionId: string) => {
     setSourceDefinitionId(sourceDefinitionId);
   };
@@ -88,6 +94,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}
       jobInfo={LogsRequestError.extractJobInfo(error)}
+      supportLevel={selectedSourceDefinition?.supportLevel}
     />
   );
 };

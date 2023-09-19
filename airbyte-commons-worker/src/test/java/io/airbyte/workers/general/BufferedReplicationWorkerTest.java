@@ -37,8 +37,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning,
-        false);
+        onReplicationRunning);
   }
 
   // BufferedReplicationWorkerTests.

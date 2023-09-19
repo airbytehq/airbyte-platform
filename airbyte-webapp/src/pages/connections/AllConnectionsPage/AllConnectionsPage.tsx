@@ -11,8 +11,8 @@ import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
 
+import { useConnectionList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import ConnectionsTable from "./ConnectionsTable";
 import { ConnectionRoutePaths } from "../../routePaths";

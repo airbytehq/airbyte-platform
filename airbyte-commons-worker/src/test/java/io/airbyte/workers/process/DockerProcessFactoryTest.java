@@ -123,7 +123,6 @@ class DockerProcessFactoryTest {
 
     final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
     when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
-    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
 
     final DockerProcessFactory processFactory =
         new DockerProcessFactory(

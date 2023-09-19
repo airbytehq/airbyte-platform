@@ -4,18 +4,14 @@
 
 package io.airbyte.config.persistence;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -24,26 +20,23 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
-
-  private static final String UPDATED_IMAGE_TAG = "0.0.2";
 
   private ConfigRepository configRepository;
 
@@ -81,7 +74,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   private void assertReturnsSrcDef(final StandardSourceDefinition srcDef) throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(srcDef, actorDefinitionVersion);
     assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
         configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
   }
@@ -89,7 +82,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private void assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(final StandardSourceDefinition srcDef)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(srcDef, actorDefinitionVersion);
     assertEquals(
         srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId())
             .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES),
@@ -97,13 +90,13 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSourceDefinitionFromSource() throws JsonValidationException, IOException {
+  void testGetSourceDefinitionFromSource() throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardSourceDefinition srcDef = createBaseSourceDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
     final SourceConnection source = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(srcDef, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(source);
 
     assertEquals(srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
@@ -111,13 +104,13 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testSourceDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetSourceDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardSourceDefinition srcDef = createBaseSourceDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId());
     final SourceConnection source = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeSourceDefinitionAndDefaultVersion(srcDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(srcDef, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(source);
 
     final UUID connectionId = UUID.randomUUID();
@@ -147,7 +140,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
       if (!isTombstone) {
         notTombstoneSourceDefinitions.add(sourceDefinition);
       }
-      configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
       sourceDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId());
     }
 
@@ -175,19 +168,19 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   void assertReturnsDestDef(final StandardDestinationDefinition destDef) throws ConfigNotFoundException, IOException, JsonValidationException {
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion);
     assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
         configRepository.getStandardDestinationDefinition(destDef.getDestinationDefinitionId()));
   }
 
   @Test
-  void testDestinationDefinitionFromDestination() throws JsonValidationException, IOException {
+  void testGetDestinationDefinitionFromDestination() throws JsonValidationException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion);
     configRepository.writeDestinationConnectionNoSecrets(dest);
 
     assertEquals(destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
@@ -195,13 +188,13 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testDestinationDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testGetDestinationDefinitionsFromConnection() throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     final StandardDestinationDefinition destDef = createBaseDestDef().withTombstone(false);
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
     final DestinationConnection dest = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion);
     configRepository.writeDestinationConnectionNoSecrets(dest);
 
     final UUID connectionId = UUID.randomUUID();
@@ -231,7 +224,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
       if (!isTombstone) {
         notTombstoneDestinationDefinitions.add(destinationDefinition);
       }
-      configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion);
       destinationDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId());
     }
 
@@ -255,9 +248,9 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     sourceVer2.setDockerImageTag(targetImageTag);
     final ActorDefinitionVersion sourceVer3 = createBaseActorDefVersion(sourceDef3.getSourceDefinitionId());
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef1, sourceVer1);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef2, sourceVer2);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef3, sourceVer3);
+    configRepository.writeConnectorMetadata(sourceDef1, sourceVer1);
+    configRepository.writeConnectorMetadata(sourceDef2, sourceVer2);
+    configRepository.writeConnectorMetadata(sourceDef3, sourceVer3);
 
     final int updatedDefinitions = configRepository
         .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
@@ -281,23 +274,23 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     final StandardSourceDefinition sourceDefInUse = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion3 = createBaseActorDefVersion(sourceDefInUse.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefInUse, actorDefinitionVersion3);
+    configRepository.writeConnectorMetadata(sourceDefInUse, actorDefinitionVersion3);
     final SourceConnection sourceConnection = createSource(sourceDefInUse.getSourceDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeSourceConnectionNoSecrets(sourceConnection);
 
     final StandardSourceDefinition sourceDefNotInUse = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion4 = createBaseActorDefVersion(sourceDefNotInUse.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefNotInUse, actorDefinitionVersion4);
+    configRepository.writeConnectorMetadata(sourceDefNotInUse, actorDefinitionVersion4);
 
     final StandardDestinationDefinition destDefInUse = createBaseDestDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destDefInUse.getDestinationDefinitionId());
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDefInUse, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(destDefInUse, actorDefinitionVersion);
     final DestinationConnection destinationConnection = createDest(destDefInUse.getDestinationDefinitionId(), workspace.getWorkspaceId());
     configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
 
     final StandardDestinationDefinition destDefNotInUse = createBaseDestDef();
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(destDefNotInUse.getDestinationDefinitionId());
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDefNotInUse, actorDefinitionVersion2);
+    configRepository.writeConnectorMetadata(destDefNotInUse, actorDefinitionVersion2);
 
     assertTrue(configRepository.getActorDefinitionIdsInUse().contains(sourceDefInUse.getSourceDefinitionId()));
     assertTrue(configRepository.getActorDefinitionIdsInUse().contains(destDefInUse.getDestinationDefinitionId()));
@@ -309,11 +302,11 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void testGetActorDefinitionIdsToDefaultVersionsMap() throws IOException {
     final StandardSourceDefinition sourceDef = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDef.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDef, actorDefinitionVersion);
 
     final StandardDestinationDefinition destDef = createBaseDestDef();
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(destDef.getDestinationDefinitionId());
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, actorDefinitionVersion2);
+    configRepository.writeConnectorMetadata(destDef, actorDefinitionVersion2);
 
     final Map<UUID, ActorDefinitionVersion> actorDefIdToDefaultVersionId = configRepository.getActorDefinitionIdsToDefaultVersionsMap();
     assertEquals(actorDefIdToDefaultVersionId.size(), 2);
@@ -322,157 +315,11 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testWriteSourceDefinitionAndDefaultVersion()
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    // Initial insert
-    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
-    final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion1);
-
-    StandardSourceDefinition sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
-    final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
-
-    assertTrue(actorDefinitionVersionFromDB.isPresent());
-    final UUID firstVersionId = actorDefinitionVersionFromDB.get().getVersionId();
-
-    assertEquals(actorDefinitionVersion1.withVersionId(firstVersionId), actorDefinitionVersionFromDB.get());
-    assertEquals(firstVersionId, sourceDefinitionFromDB.getDefaultVersionId());
-    assertEquals(sourceDefinition.withDefaultVersionId(firstVersionId), sourceDefinitionFromDB);
-
-    // Updating an existing source definition/version
-    final StandardSourceDefinition sourceDefinition2 = sourceDefinition.withName("updated name");
-    final ActorDefinitionVersion actorDefinitionVersion2 =
-        createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(UPDATED_IMAGE_TAG);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition2, actorDefinitionVersion2);
-
-    sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
-    final Optional<ActorDefinitionVersion> actorDefinitionVersion2FromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
-
-    assertTrue(actorDefinitionVersion2FromDB.isPresent());
-    final UUID newADVId = actorDefinitionVersion2FromDB.get().getVersionId();
-
-    assertNotEquals(firstVersionId, newADVId);
-    assertEquals(newADVId, sourceDefinitionFromDB.getDefaultVersionId());
-    assertEquals(sourceDefinition2.withDefaultVersionId(newADVId), sourceDefinitionFromDB);
-  }
-
-  @Test
-  void testWriteDestinationDefinitionAndDefaultVersion()
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    // Initial insert
-    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
-    final ActorDefinitionVersion actorDefinitionVersion1 = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
-
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion1);
-
-    StandardDestinationDefinition destinationDefinitionFromDB =
-        configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
-    final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion1.getActorDefinitionId(), actorDefinitionVersion1.getDockerImageTag());
-
-    assertTrue(actorDefinitionVersionFromDB.isPresent());
-    final UUID firstVersionId = actorDefinitionVersionFromDB.get().getVersionId();
-
-    assertEquals(actorDefinitionVersion1.withVersionId(firstVersionId), actorDefinitionVersionFromDB.get());
-    assertEquals(firstVersionId, destinationDefinitionFromDB.getDefaultVersionId());
-    assertEquals(destinationDefinition.withDefaultVersionId(firstVersionId), destinationDefinitionFromDB);
-
-    // Updating an existing destination definition/version
-    final StandardDestinationDefinition destinationDefinition2 = destinationDefinition.withName("updated name");
-    final ActorDefinitionVersion actorDefinitionVersion2 =
-        createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(UPDATED_IMAGE_TAG);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition2, actorDefinitionVersion2);
-
-    destinationDefinitionFromDB = configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
-    final Optional<ActorDefinitionVersion> actorDefinitionVersion2FromDB =
-        configRepository.getActorDefinitionVersion(actorDefinitionVersion2.getActorDefinitionId(), actorDefinitionVersion2.getDockerImageTag());
-
-    assertTrue(actorDefinitionVersion2FromDB.isPresent());
-    final UUID newADVId = actorDefinitionVersion2FromDB.get().getVersionId();
-
-    assertNotEquals(firstVersionId, newADVId);
-    assertEquals(newADVId, destinationDefinitionFromDB.getDefaultVersionId());
-    assertEquals(destinationDefinition2.withDefaultVersionId(newADVId), destinationDefinitionFromDB);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"1.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"})
-  void testCustomImageTagsDoNotBreakCustomConnectorUpgrade(final String dockerImageTag) throws IOException {
-    // Initial insert
-    final StandardSourceDefinition customSourceDefinition = createBaseSourceDef().withCustom(true);
-    final StandardDestinationDefinition customDestinationDefinition = createBaseDestDef().withCustom(true);
-    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId());
-    final ActorDefinitionVersion destinationActorDefinitionVersion =
-        createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(customSourceDefinition, sourceActorDefinitionVersion);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(customDestinationDefinition, destinationActorDefinitionVersion);
-
-    // Update
-    assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(customSourceDefinition,
-        createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
-    assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(customDestinationDefinition,
-        createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"1.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"})
-  void testImageTagExpectationsNorNonCustomConnectorUpgradesWithoutBreakingChanges(final String dockerImageTag) throws IOException {
-    // Initial insert
-    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
-    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
-    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-    final ActorDefinitionVersion destinationActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, sourceActorDefinitionVersion);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, destinationActorDefinitionVersion);
-
-    // Update
-    assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
-        createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
-    assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
-        createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag), List.of()));
-  }
-
-  @ParameterizedTest
-  @CsvSource({"0.0.1, true", "dev, true", "test, false", "1.9.1-dev.33a53e6236, true", "97b69a76-1f06-4680-8905-8beda74311d0, false"})
-  void testImageTagExpectationsNorNonCustomConnectorUpgradesWithBreakingChanges(final String dockerImageTag, final boolean upgradeShouldSucceed)
-      throws IOException {
-    // Initial insert
-    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
-    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
-    final ActorDefinitionVersion sourceActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-    final ActorDefinitionVersion destinationActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, sourceActorDefinitionVersion);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, destinationActorDefinitionVersion);
-
-    final List<ActorDefinitionBreakingChange> sourceBreakingChanges = createBreakingChangesForDef(sourceDefinition.getSourceDefinitionId());
-    final List<ActorDefinitionBreakingChange> destinationBreakingChanges =
-        createBreakingChangesForDef(destinationDefinition.getDestinationDefinitionId());
-
-    // Update
-    if (upgradeShouldSucceed) {
-      assertDoesNotThrow(() -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
-          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
-      assertDoesNotThrow(() -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
-          createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
-          destinationBreakingChanges));
-    } else {
-      assertThrows(IllegalArgumentException.class, () -> configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition,
-          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag), sourceBreakingChanges));
-      assertThrows(IllegalArgumentException.class, () -> configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition,
-          createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
-          destinationBreakingChanges));
-    }
-  }
-
-  @Test
   void testUpdateStandardSourceDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final StandardSourceDefinition sourceDefinitionFromDB =
         configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
@@ -505,7 +352,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId());
 
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion);
 
     final StandardDestinationDefinition destinationDefinitionFromDB =
         configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
@@ -567,16 +414,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withProtocolVersion("0.2.0");
-  }
-
-  private List<ActorDefinitionBreakingChange> createBreakingChangesForDef(final UUID actorDefId) {
-    return List.of(new ActorDefinitionBreakingChange()
-        .withActorDefinitionId(actorDefId)
-        .withVersion(new Version("1.0.0"))
-        .withMessage("This is a breaking change")
-        .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
-        .withUpgradeDeadline("2025-01-21"));
   }
 
   private static StandardSourceDefinition createBaseSourceDefWithoutMaxSecondsBetweenMessages() {

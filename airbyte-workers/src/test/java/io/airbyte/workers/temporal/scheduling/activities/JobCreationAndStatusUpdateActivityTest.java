@@ -13,16 +13,17 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
@@ -35,14 +36,11 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
-import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
@@ -64,14 +62,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -80,20 +77,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class JobCreationAndStatusUpdateActivityTest {
 
   public static final String REASON = "reason";
-  @Mock
-  private SyncJobFactory mJobFactory;
 
   @Mock
   private JobPersistence mJobPersistence;
-
-  @Mock
-  private Path mPath;
-
-  @Mock
-  private WorkerEnvironment mWorkerEnvironment;
-
-  @Mock
-  private LogConfigs mLogConfigs;
 
   @Mock
   private JobNotifier mJobNotifier;
@@ -110,7 +96,9 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private JobsApi jobsApi;
 
-  @InjectMocks
+  @Mock
+  private AttemptApi attemptApi;
+
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -134,6 +122,13 @@ class JobCreationAndStatusUpdateActivityTest {
       .withFailures(Collections.singletonList(
           new FailureReason()
               .withFailureOrigin(FailureOrigin.SOURCE)));
+
+  @BeforeEach
+  void beforeEach() {
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
+        mJobPersistence, mJobNotifier, mJobtracker, mConfigRepository, mJobErrorReporter, jobsApi,
+        attemptApi);
+  }
 
   @Nested
   class Creation {
@@ -216,60 +211,25 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @DisplayName("Test exception errors are properly wrapped")
-    void createAttemptThrowException() throws IOException {
-      Mockito.when(mJobPersistence.getJob(JOB_ID))
-          .thenThrow(new IOException());
-
-      Assertions.assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
-          JOB_ID)))
-          .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
-    }
-
-    @Test
     @DisplayName("Test attempt creation")
-    void createAttemptNumber() throws IOException {
-      final Job mJob = Mockito.mock(Job.class);
-      Mockito.when(mJob.getAttemptsCount())
-          .thenReturn(ATTEMPT_NUMBER);
+    void createAttemptNumber() throws ApiException {
+      Mockito.when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
+          .thenReturn(new CreateNewAttemptNumberResponse().attemptNumber(ATTEMPT_NUMBER_1));
 
-      Mockito.when(mJobPersistence.getJob(JOB_ID))
-          .thenReturn(mJob);
-
-      final Path path = Path.of("test");
-      Mockito.when(mPath.resolve(Mockito.anyString()))
-          .thenReturn(path);
-
-      final Path expectedRoot = TemporalUtils.getJobRoot(mPath, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
-      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
-
-      Mockito.when(mJobPersistence.createAttempt(JOB_ID, expectedLogPath))
-          .thenReturn(ATTEMPT_NUMBER_1);
-
-      final LogClientSingleton mLogClientSingleton = Mockito.mock(LogClientSingleton.class);
-      try (final MockedStatic<LogClientSingleton> utilities = Mockito.mockStatic(LogClientSingleton.class)) {
-        utilities.when(() -> LogClientSingleton.getInstance())
-            .thenReturn(mLogClientSingleton);
-
-        final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
-            JOB_ID));
-
-        verify(mLogClientSingleton).setJobMdc(mWorkerEnvironment, mLogConfigs, expectedRoot);
-        Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
-      }
+      final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(JOB_ID));
+      Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
     }
 
     @Test
     @DisplayName("Test exception errors are properly wrapped")
-    void createAttemptNumberThrowException() throws IOException {
-      Mockito.when(mJobPersistence.getJob(JOB_ID))
-          .thenThrow(new IOException());
+    void createAttemptNumberThrowException() throws ApiException {
+      Mockito.when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
+          .thenThrow(new ApiException());
 
       Assertions.assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
           JOB_ID)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
+          .hasCauseInstanceOf(ApiException.class);
     }
 
   }

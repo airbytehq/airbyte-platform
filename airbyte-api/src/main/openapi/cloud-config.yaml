@@ -239,9 +239,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CloudWorkspaceReadList"
-  /v1/cloud_workspaces/list_workspaces_by_most_recently_running_jobs:
+  /v1/cloud_workspaces/list_active_workspaces_by_most_recently_running_jobs:
     post:
-      operationId: listWorkspacesByMostRecentlyRunningJobs
+      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
       requestBody:
         content:
           application/json:
@@ -1006,6 +1006,8 @@ components:
       enum:
         # - auth0
         - google_identity_platform
+        - airbyte
+        - keycloak
     # WORKSPACE
     WorkspaceUserRead:
       type: object
@@ -1411,6 +1413,13 @@ components:
         - generally_available
         - custom
 
+    ActorSupportLevel:
+      type: string
+      enum:
+        - community
+        - certified
+        - none
+
     ConnectionProto:
       type: object
       required:
@@ -1423,12 +1432,16 @@ components:
         - sourceConnectionName
         - sourceIcon
         - sourceReleaseStage
+        - sourceSupportLevel
+        - sourceCustom
         - destinationId
         - destinationDefinitionId
         - destinationDefinitionName
         - destinationConnectionName
         - destinationIcon
         - destinationReleaseStage
+        - destinationSupportLevel
+        - destinationCustom
       properties:
         connectionId:
           type: string
@@ -1460,6 +1473,13 @@ components:
         sourceIcon:
           description: Icon of the source actor.
           type: string
+        sourceCustom:
+          description: True if the source is custom
+          type: boolean
+          default: false
+        sourceSupportLevel:
+          description: Support Level of source actor.
+          $ref: "#/components/schemas/ActorSupportLevel"
         sourceReleaseStage:
           description: Release stage of source actor.
           $ref: "#/components/schemas/ActorReleaseStage"
@@ -1478,6 +1498,13 @@ components:
         destinationIcon:
           description: Icon of the destination actor.
           type: string
+        destinationCustom:
+          description: True if the destination is custom
+          type: boolean
+          default: false
+        destinationSupportLevel:
+          description: Support Level of destination actor.
+          $ref: "#/components/schemas/ActorSupportLevel"
         destinationReleaseStage:
           description: Release stage of destination actor.
           $ref: "#/components/schemas/ActorReleaseStage"

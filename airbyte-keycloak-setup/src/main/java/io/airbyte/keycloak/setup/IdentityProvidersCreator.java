@@ -42,7 +42,8 @@ public class IdentityProvidersCreator {
   public void createIdps(final RealmResource keycloakRealm) {
     // Create Identity Providers
     if (identityProviderConfigurations == null || identityProviderConfigurations.isEmpty()) {
-      throw new RuntimeException("No providers found in config");
+      log.info("No identity providers configured. Skipping IDP setup.");
+      return;
     }
 
     for (final IdentityProviderConfiguration provider : identityProviderConfigurations) {

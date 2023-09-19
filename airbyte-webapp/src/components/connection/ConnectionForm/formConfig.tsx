@@ -4,20 +4,14 @@ import * as yup from "yup";
 
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
+import { NormalizationType } from "area/connection/types";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "area/connection/utils";
-import { useCurrentWorkspace } from "core/api";
-import { SyncSchema } from "core/domain/catalog";
+import { isDbtTransformation, isNormalizationTransformation, isWebhookTransformation } from "area/connection/utils";
+import { ConnectionValues, useCurrentWorkspace } from "core/api";
 import {
-  isDbtTransformation,
-  isNormalizationTransformation,
-  isWebhookTransformation,
-  NormalizationType,
-} from "core/domain/connection/operation";
-import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
-import {
+  ActorDefinitionVersionRead,
   ConnectionScheduleData,
   ConnectionScheduleType,
-  DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
   DestinationSyncMode,
   Geography,
@@ -29,11 +23,12 @@ import {
   SchemaChange,
   SyncMode,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
+import { SyncSchema } from "core/domain/catalog";
+import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
-import { ValuesProps } from "hooks/services/useConnectionHook";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
 import { frequencyConfig } from "./frequencyConfig";
@@ -53,7 +48,7 @@ export interface FormikConnectionFormValues {
   geography: Geography;
 }
 
-export type ConnectionFormValues = ValuesProps;
+export type ConnectionFormValues = ConnectionValues;
 
 export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
   [SyncMode.incremental, DestinationSyncMode.append_dedup],
@@ -320,7 +315,7 @@ export const getInitialNormalization = (
 
 export const useInitialValues = (
   connection: ConnectionOrPartialConnection,
-  destDefinition: DestinationDefinitionRead,
+  destDefinitionVersion: ActorDefinitionVersionRead,
   destDefinitionSpecification: DestinationDefinitionSpecificationRead,
   isNotCreateMode?: boolean
 ): FormikConnectionFormValues => {
@@ -387,11 +382,11 @@ export const useInitialValues = (
 
     const operations = connection.operations ?? [];
 
-    if (destDefinition.supportsDbt) {
+    if (destDefinitionVersion.supportsDbt) {
       initialValues.transformations = getInitialTransformations(operations);
     }
 
-    if (destDefinition.normalizationConfig?.supported) {
+    if (destDefinitionVersion.normalizationConfig?.supported) {
       initialValues.normalization = getInitialNormalization(operations, isNotCreateMode);
     }
 
@@ -410,8 +405,8 @@ export const useInitialValues = (
     connection.scheduleType,
     connection.source.name,
     defaultNonBreakingChangesPreference,
-    destDefinition.supportsDbt,
-    destDefinition.normalizationConfig,
+    destDefinitionVersion.supportsDbt,
+    destDefinitionVersion.normalizationConfig,
     initialSchema,
     isNotCreateMode,
     workspace,

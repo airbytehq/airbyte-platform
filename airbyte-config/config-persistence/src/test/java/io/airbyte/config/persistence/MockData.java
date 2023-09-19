@@ -49,6 +49,7 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardSyncState;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.WebhookConfig;
@@ -131,6 +132,8 @@ public class MockData {
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
+  static final UUID CREATOR_USER_ID_5 = UUID.randomUUID();
+
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
   static final UUID PERMISSION_ID_2 = UUID.randomUUID();
@@ -138,6 +141,8 @@ public class MockData {
   static final UUID PERMISSION_ID_4 = UUID.randomUUID();
 
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_6 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_7 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
@@ -229,7 +234,18 @@ public class MockData {
         .withEmail("user-4@whatever.com")
         .withNews(true);
 
-    return Arrays.asList(user1, user2, user3, user4);
+    final User user5 = new User()
+        .withUserId(CREATOR_USER_ID_5)
+        .withName("user-5")
+        .withAuthUserId(CREATOR_USER_ID_5.toString())
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+        .withDefaultWorkspaceId(null)
+        .withStatus(User.Status.REGISTERED)
+        .withCompanyName("company-5")
+        .withEmail("user-5@whatever.com")
+        .withNews(true);
+
+    return Arrays.asList(user1, user2, user3, user4, user5);
   }
 
   public static List<Permission> permissions() {
@@ -263,7 +279,19 @@ public class MockData {
         .withOrganizationId(ORGANIZATION_ID_1)
         .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
-    return Arrays.asList(permission1, permission2, permission3, permission4, permission5);
+    final Permission permission6 = new Permission()
+        .withPermissionId(PERMISSION_ID_6)
+        .withUserId(CREATOR_USER_ID_5)
+        .withWorkspaceId(WORKSPACE_ID_2)
+        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+    final Permission permission7 = new Permission()
+        .withPermissionId(PERMISSION_ID_7)
+        .withUserId(CREATOR_USER_ID_5)
+        .withOrganizationId(ORGANIZATION_ID_2)
+        .withPermissionType(PermissionType.ORGANIZATION_READER);
+
+    return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
   }
 
   public static List<Organization> organizations() {
@@ -379,6 +407,7 @@ public class MockData {
         .withDockerImageTag("0.0.1")
         .withDockerRepository("repository-4")
         .withSpec(connectorSpecification())
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withProtocolVersion("0.2.0");
   }
 

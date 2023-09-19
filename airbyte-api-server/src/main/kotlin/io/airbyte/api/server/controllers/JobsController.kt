@@ -11,13 +11,14 @@ import io.airbyte.airbyte_api.model.generated.JobStatusEnum
 import io.airbyte.airbyte_api.model.generated.JobTypeEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
 import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.DELETE
+import io.airbyte.api.server.constants.ENDPOINT_API_USER_INFO_HEADER
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.JOBS_PATH
 import io.airbyte.api.server.constants.JOBS_WITH_ID_PATH
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.filters.JobsFilter
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.BadRequestProblem
 import io.airbyte.api.server.problems.UnprocessableEntityProblem
@@ -27,6 +28,11 @@ import io.airbyte.api.server.services.UserService
 import io.micronaut.http.annotation.Controller
 import java.time.OffsetDateTime
 import java.util.UUID
+import javax.ws.rs.DELETE
+import javax.ws.rs.GET
+import javax.ws.rs.HeaderParam
+import javax.ws.rs.Path
+import javax.ws.rs.PathParam
 import javax.ws.rs.core.Response
 
 @Controller(JOBS_PATH)
@@ -35,7 +41,13 @@ open class JobsController(
   private val userService: UserService,
   private val connectionService: ConnectionService,
 ) : JobsApi {
-  override fun cancelJob(jobId: Long, userInfo: String?): Response {
+
+  @DELETE
+  @Path("/{jobId}")
+  override fun cancelJob(
+    @PathParam("jobId") jobId: Long,
+    @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val jobResponse: Any? = TrackingHelper.callWithTracker(
@@ -130,7 +142,12 @@ open class JobsController(
     }
   }
 
-  override fun getJob(jobId: Long, userInfo: String?): Response {
+  @GET
+  @Path("/{jobId}")
+  override fun getJob(
+    @PathParam("jobId") jobId: Long,
+    @HeaderParam(ENDPOINT_API_USER_INFO_HEADER) userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val jobResponse: Any? = TrackingHelper.callWithTracker(

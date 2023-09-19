@@ -175,6 +175,13 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
 
+  useEffect(() => {
+    if (name !== currentProject.name) {
+      setPreviousManifestDraft(undefined);
+      setDisplayedVersion(undefined);
+    }
+  }, [currentProject.name, name]);
+
   // use ref so that updateJsonManifest is not recreated on every change to jsonManifest
   const jsonManifestRef = useRef(jsonManifest);
   jsonManifestRef.current = jsonManifest;
@@ -213,6 +220,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
           const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
           // set jsonManifest first so that a save isn't triggered
           setJsonManifest(convertedManifest);
+          setPersistedState({ name: currentProject.name, manifest: convertedManifest });
           setValue("formValues", convertedFormValues, { shouldValidate: true });
           setValue("mode", "ui");
         } catch (e) {
@@ -240,6 +248,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       analyticsService,
       closeConfirmationModal,
       convertToBuilderFormValues,
+      currentProject.name,
       jsonManifest,
       openConfirmationModal,
       projectId,
@@ -441,7 +450,7 @@ export function useInitializedBuilderProject() {
       // could not resolve manifest, use default form values
       return [
         DEFAULT_BUILDER_FORM_VALUES,
-        false,
+        true,
         convertJsonToYaml(builderProject.declarativeManifest?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES),
       ];
     }
@@ -449,7 +458,7 @@ export function useInitializedBuilderProject() {
       return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(resolvedManifest)];
     } catch (e) {
       // could not convert to form values, use default form values
-      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(DEFAULT_JSON_MANIFEST_VALUES)];
+      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(resolvedManifest)];
     }
   }, [builderProject.declarativeManifest?.manifest, resolvedManifest]);
 
@@ -582,7 +591,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const resolvedManifest = mode === "ui" ? manifest : ((data?.manifest ?? manifest) as ConnectorManifest);
+  const resolvedManifest =
+    mode === "ui" ? manifest : ((data?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
   const testStream = resolvedManifest.streams[testStreamIndex];
   const filteredManifest = {
     ...resolvedManifest,

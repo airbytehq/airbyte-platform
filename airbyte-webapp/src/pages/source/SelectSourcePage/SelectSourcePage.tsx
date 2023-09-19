@@ -7,16 +7,18 @@ import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
+import { useSuggestedSources } from "area/connector/utils";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 
 export const SelectSourcePage: React.FC = () => {
   const navigate = useNavigate();
   const sourceDefinitions = useAvailableSourceDefinitions();
+  const suggestedSourceDefinitionIds = useSuggestedSources();
 
   return (
     <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
-      <Box px="md" pt="2xl" pb="md">
+      <Box px="xl" pt="2xl" pb="md">
         <PageContainer centered>
           <Heading as="h2" size="lg">
             <FormattedMessage id="sources.selectSourceTitle" />
@@ -28,6 +30,7 @@ export const SelectSourcePage: React.FC = () => {
           connectorType="source"
           connectorDefinitions={sourceDefinitions}
           onSelectConnectorDefinition={(id) => navigate(`./${id}`)}
+          suggestedConnectorDefinitionIds={suggestedSourceDefinitionIds}
         />
       </Box>
     </>

@@ -7,11 +7,13 @@ import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
+import { useSuggestedDestinations } from "area/connector/utils";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 
 export const SelectDestinationPage: React.FC = () => {
   const navigate = useNavigate();
   const destinationDefinitions = useAvailableDestinationDefinitions();
+  const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   return (
     <>
@@ -28,6 +30,7 @@ export const SelectDestinationPage: React.FC = () => {
           connectorType="destination"
           connectorDefinitions={destinationDefinitions}
           onSelectConnectorDefinition={(id) => navigate(`./${id}`)}
+          suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
         />
       </Box>
     </>

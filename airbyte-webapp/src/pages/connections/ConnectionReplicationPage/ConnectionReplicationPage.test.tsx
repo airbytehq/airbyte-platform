@@ -10,17 +10,22 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import {
+  mockSourceDefinition,
+  mockSourceDefinitionSpecification,
+  mockSourceDefinitionVersion,
+} from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import { useGetConnectionQuery } from "core/api";
+import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import * as connectionHook from "hooks/services/useConnectionHook";
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
 
@@ -48,6 +53,15 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useGetConnectionQuery: jest.fn(() => async () => mockConnection),
+  useGetConnection: () => mockConnection,
+  useGetStateTypeQuery: () => async () => "global",
+  useUpdateConnection: () => ({
+    mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
+    isLoading: false,
+  }),
+  useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
@@ -79,18 +93,7 @@ describe("ConnectionReplicationPage", () => {
   };
 
   const setupSpies = (getConnection?: () => Promise<void>) => {
-    const getConnectionImpl: any = {
-      getConnection: getConnection ?? (() => new Promise(() => null) as any),
-    };
-    jest.spyOn(connectionHook, "useGetConnection").mockImplementation(() => mockConnection as any);
-    jest.spyOn(connectionHook, "useWebConnectionService").mockImplementation(() => getConnectionImpl);
-    jest.spyOn(connectionHook, "useUpdateConnection").mockImplementation(
-      () =>
-        ({
-          mutateAsync: async (connection: WebBackendConnectionUpdate) => connection,
-          isLoading: false,
-        } as any)
-    );
+    (useGetConnectionQuery as jest.Mock).mockImplementation(() => getConnection);
   };
 
   beforeEach(() => {
@@ -116,7 +119,8 @@ describe("ConnectionReplicationPage", () => {
   });
 
   it("should show loading if the schema is refreshing", async () => {
-    setupSpies();
+    // Return pending promise
+    setupSpies(() => new Promise(() => null));
 
     const renderResult = await render();
     await act(async () => {

@@ -17,9 +17,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.IngestBreakingChanges;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
@@ -27,7 +28,6 @@ import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,18 +51,20 @@ public class ApplyDefinitionsHelper {
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
   private final FeatureFlagClient featureFlagClient;
+  private final SupportStateUpdater supportStateUpdater;
   private int newConnectorCount;
   private int changedConnectorCount;
-  private List<ActorDefinitionBreakingChange> allBreakingChanges;
   private static final Logger LOGGER = LoggerFactory.getLogger(ApplyDefinitionsHelper.class);
 
   public ApplyDefinitionsHelper(@Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider,
                                 final JobPersistence jobPersistence,
                                 final ConfigRepository configRepository,
-                                final FeatureFlagClient featureFlagClient) {
+                                final FeatureFlagClient featureFlagClient,
+                                final SupportStateUpdater supportStateUpdater) {
     this.definitionsProvider = definitionsProvider;
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
+    this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -92,7 +94,6 @@ public class ApplyDefinitionsHelper {
 
     newConnectorCount = 0;
     changedConnectorCount = 0;
-    allBreakingChanges = new ArrayList<>();
 
     for (final ConnectorRegistrySourceDefinition def : protocolCompatibleSourceDefinitions) {
       applySourceDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
@@ -100,8 +101,8 @@ public class ApplyDefinitionsHelper {
     for (final ConnectorRegistryDestinationDefinition def : protocolCompatibleDestinationDefinitions) {
       applyDestinationDefinition(actorDefinitionIdsToDefaultVersionsMap, def, actorDefinitionIdsInUse, updateAll);
     }
-    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(allBreakingChanges);
+    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
+      supportStateUpdater.updateSupportStates();
     }
 
     LOGGER.info("New connectors added: {}", newConnectorCount);
@@ -127,13 +128,11 @@ public class ApplyDefinitionsHelper {
       return;
     }
 
-    allBreakingChanges.addAll(breakingChangesForDef);
-
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newSourceDef.getSourceDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -146,7 +145,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeSourceDefinitionAndDefaultVersion(newSourceDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newSourceDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardSourceDefinition(newSourceDef);
     }
@@ -171,13 +170,11 @@ public class ApplyDefinitionsHelper {
       return;
     }
 
-    allBreakingChanges.addAll(breakingChangesForDef);
-
     final boolean connectorIsNew = !actorDefinitionIdsAndDefaultVersions.containsKey(newDestinationDef.getDestinationDefinitionId());
     if (connectorIsNew) {
       LOGGER.info("Adding new connector {}:{}", newDef.getDockerRepository(), newDef.getDockerImageTag());
       newConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
       return;
     }
 
@@ -190,7 +187,7 @@ public class ApplyDefinitionsHelper {
           currentDefaultADV.getDockerImageTag(),
           newADV.getDockerImageTag());
       changedConnectorCount++;
-      configRepository.writeDestinationDefinitionAndDefaultVersion(newDestinationDef, newADV, breakingChangesForDef);
+      configRepository.writeConnectorMetadata(newDestinationDef, newADV, breakingChangesForDef);
     } else {
       configRepository.updateStandardDestinationDefinition(newDestinationDef);
     }

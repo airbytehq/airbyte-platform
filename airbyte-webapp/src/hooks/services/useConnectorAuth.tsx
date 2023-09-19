@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
-import { useConfig } from "config";
+import { useCompleteOAuth, useConsentUrls } from "core/api";
 import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
-import { DestinationAuthService } from "core/domain/connector/DestinationAuthService";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
-import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
@@ -20,7 +18,6 @@ import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormCon
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";
-import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 import { useQuery } from "../useQuery";
 
 let windowObjectReference: Window | null = null; // global variable
@@ -61,21 +58,10 @@ export function useConnectorAuth(): {
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   const { workspaceId } = useCurrentWorkspace();
-  const { apiUrl } = useConfig();
+  const { getDestinationConsentUrl, getSourceConsentUrl } = useConsentUrls();
+  const { completeDestinationOAuth, completeSourceOAuth } = useCompleteOAuth();
   const notificationService = useNotificationService();
   const { connectorId } = useConnectorForm();
-
-  // TODO: move to separate initFacade and use refs instead
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
-
-  const sourceAuthService = useMemo(
-    () => new SourceAuthService(apiUrl, requestAuthMiddleware),
-    [apiUrl, requestAuthMiddleware]
-  );
-  const destinationAuthService = useMemo(
-    () => new DestinationAuthService(apiUrl, requestAuthMiddleware),
-    [apiUrl, requestAuthMiddleware]
-  );
 
   return {
     getConsentUrl: async (
@@ -94,7 +80,7 @@ export function useConnectorAuth(): {
             oAuthInputConfiguration,
             sourceId: connectorId,
           };
-          const response = await sourceAuthService.getConsentUrl(payload);
+          const response = await getSourceConsentUrl(payload);
 
           return { consentUrl: response.consentUrl, payload };
         }
@@ -105,7 +91,7 @@ export function useConnectorAuth(): {
           oAuthInputConfiguration,
           destinationId: connectorId,
         };
-        const response = await destinationAuthService.getConsentUrl(payload);
+        const response = await getDestinationConsentUrl(payload);
 
         return { consentUrl: response.consentUrl, payload };
       } catch (e) {
@@ -139,14 +125,11 @@ export function useConnectorAuth(): {
       params: SourceOauthConsentRequest | DestinationOauthConsentRequest,
       queryParams: Record<string, unknown>
     ): Promise<CompleteOAuthResponse> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: any = {
+      const payload = {
         ...params,
         queryParams,
       };
-      return (payload as SourceOauthConsentRequest).sourceDefinitionId
-        ? sourceAuthService.completeOauth(payload)
-        : destinationAuthService.completeOauth(payload);
+      return "sourceDefinitionId" in payload ? completeSourceOAuth(payload) : completeDestinationOAuth(payload);
     },
   };
 }

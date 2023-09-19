@@ -14,10 +14,10 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { AuthRequirePasswordReset } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 
@@ -39,9 +39,12 @@ const ResetPasswordButton: React.FC = () => {
   );
 };
 
-export const ResetPasswordPage: React.FC = () => {
+interface ResetPasswordPageProps {
+  requirePasswordReset: AuthRequirePasswordReset;
+}
+
+export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ requirePasswordReset }) => {
   const { formatMessage } = useIntl();
-  const { requirePasswordReset } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   useTrackPage(PageTrackingCodes.RESET_PASSWORD);

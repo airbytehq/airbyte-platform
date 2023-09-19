@@ -1,7 +1,7 @@
 import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { useCurrentUser } from "core/services/auth";
 import { SCOPE_USER } from "services/Scope";
 
 import {

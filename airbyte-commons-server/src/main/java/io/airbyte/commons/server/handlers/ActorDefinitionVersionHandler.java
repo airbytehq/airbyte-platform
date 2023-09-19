@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportLevel;
 import static io.airbyte.commons.server.converters.ApiPojoConverters.toApiSupportState;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -19,6 +20,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.validation.json.JsonValidationException;
@@ -27,6 +29,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ActorDefinitionVersionHandler. Javadocs suppressed because api docs should be used as source of
@@ -58,10 +61,10 @@ public class ActorDefinitionVersionHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceConnection sourceConnection = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId());
-    final ActorDefinitionVersion actorDefinitionVersion =
-        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
-    final boolean isActorDefaultVersion = actorDefinitionVersion.getVersionId().equals(sourceConnection.getDefaultVersionId());
-    return createActorDefinitionVersionRead(actorDefinitionVersion, isActorDefaultVersion);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, sourceConnection.getWorkspaceId(),
+            sourceConnection.getSourceId());
+    return createActorDefinitionVersionRead(versionWithOverrideStatus);
   }
 
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
@@ -69,20 +72,24 @@ public class ActorDefinitionVersionHandler {
     final DestinationConnection destinationConnection = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
-    final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
-        destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
-    final boolean isActorDefaultVersion = actorDefinitionVersion.getVersionId().equals(destinationConnection.getDefaultVersionId());
-    return createActorDefinitionVersionRead(actorDefinitionVersion, isActorDefaultVersion);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition,
+            destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
+    return createActorDefinitionVersionRead(versionWithOverrideStatus);
   }
 
   @VisibleForTesting
-  ActorDefinitionVersionRead createActorDefinitionVersionRead(final ActorDefinitionVersion actorDefinitionVersion, final boolean isActorDefault)
+  ActorDefinitionVersionRead createActorDefinitionVersionRead(final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus)
       throws IOException {
+    final ActorDefinitionVersion actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion();
     final ActorDefinitionVersionRead advRead = new ActorDefinitionVersionRead()
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
+        .supportsDbt(Objects.requireNonNullElse(actorDefinitionVersion.getSupportsDbt(), false))
+        .normalizationConfig(ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(actorDefinitionVersion.getNormalizationConfig()))
         .supportState(toApiSupportState(actorDefinitionVersion.getSupportState()))
-        .isActorDefaultVersion(isActorDefault);
+        .supportLevel(toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
+        .isOverrideApplied(versionWithOverrideStatus.isOverrideApplied());
 
     final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion);
 

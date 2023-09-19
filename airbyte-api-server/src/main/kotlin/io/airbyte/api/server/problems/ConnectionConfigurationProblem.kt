@@ -85,10 +85,17 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
-    fun invalidCronExpression(cronExpression: String): ConnectionConfigurationProblem {
+    fun invalidCronExpressionUnderOneHour(cronExpression: String): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "The cron expression " + cronExpression +
           " is not valid or is less than the one hour minimum. The seconds and minutes values cannot be `*`.",
+      )
+    }
+
+    fun invalidCronExpression(cronExpression: String, message: String?): ConnectionConfigurationProblem {
+      return ConnectionConfigurationProblem(
+        "The cron expression $cronExpression is not valid. Error: $message" +
+          ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
       )
     }
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+// This import should be refactored to use our custom useLocalStorage hook, but requires a larger refactor
+// eslint-disable-next-line no-restricted-imports
 import { useLocalStorage } from "react-use";
 
 import { Box } from "components/ui/Box";
@@ -17,7 +19,7 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { DestinationRead, ReleaseStage, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
+import { DestinationRead, SourceRead, SupportLevel, SynchronousJobRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
@@ -46,6 +48,7 @@ interface ConnectorCardBaseProps {
   onDeleteClick?: () => void;
   onConnectorDefinitionSelect?: (id: string) => void;
   availableConnectorDefinitions: ConnectorDefinition[];
+  supportLevel?: SupportLevel;
 
   // used in ConnectorCard and ConnectorForm
   formType: "source" | "destination";
@@ -83,6 +86,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   fetchingConnectorError,
   reloadConfig,
   headerBlock,
+  supportLevel,
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
@@ -199,11 +203,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
-          {selectedConnectorDefinition &&
-            (selectedConnectorDefinition.releaseStage === ReleaseStage.alpha ||
-              selectedConnectorDefinition.releaseStage === ReleaseStage.beta) && (
-              <WarningMessage stage={selectedConnectorDefinition.releaseStage} />
-            )}
+          <WarningMessage supportLevel={supportLevel} releaseStage={selectedConnectorDefinition?.releaseStage} />
           {props.isLoading && (
             <div className={styles.loaderContainer}>
               <Spinner />

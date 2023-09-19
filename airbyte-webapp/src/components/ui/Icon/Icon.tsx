@@ -6,6 +6,7 @@ import { ReactComponent as ArrowLeftIcon } from "./icons/arrowLeftIcon.svg";
 import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
 import { ReactComponent as ArticleIcon } from "./icons/articleIcon.svg";
 import { ReactComponent as CalendarIcon } from "./icons/calendarIcon.svg";
+import { ReactComponent as CertifiedIcon } from "./icons/certifiedIcon.svg";
 import { ReactComponent as CheckIcon } from "./icons/checkIcon.svg";
 import { ReactComponent as ChevronDownIcon } from "./icons/chevronDownIcon.svg";
 import { ReactComponent as ChevronLeftIcon } from "./icons/chevronLeftIcon.svg";
@@ -29,7 +30,6 @@ import { ReactComponent as EyeIcon } from "./icons/eyeIcon.svg";
 import { ReactComponent as FileIcon } from "./icons/fileIcon.svg";
 import { ReactComponent as FlashIcon } from "./icons/flashIcon.svg";
 import { ReactComponent as FolderIcon } from "./icons/folderIcon.svg";
-import { ReactComponent as GAIcon } from "./icons/gAIcon.svg";
 import { ReactComponent as GearIcon } from "./icons/gearIcon.svg";
 import { ReactComponent as GlobeIcon } from "./icons/globeIcon.svg";
 import { ReactComponent as GridIcon } from "./icons/gridIcon.svg";
@@ -98,6 +98,7 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   calendar: CalendarIcon,
+  certified: CertifiedIcon,
   check: CheckIcon,
   chevronDown: ChevronDownIcon,
   chevronLeft: ChevronLeftIcon,
@@ -121,7 +122,6 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   file: FileIcon,
   flash: FlashIcon,
   folder: FolderIcon,
-  gA: GAIcon,
   gear: GearIcon,
   globe: GlobeIcon,
   grid: GridIcon,

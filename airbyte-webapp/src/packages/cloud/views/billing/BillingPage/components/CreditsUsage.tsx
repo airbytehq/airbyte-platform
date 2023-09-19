@@ -13,7 +13,7 @@ import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 export const CreditsUsage: React.FC = () => {
-  const { freeAndPaidUsageByTimeChunk } = useCreditsContext();
+  const { freeAndPaidUsageByTimeChunk, hasFreeUsage } = useCreditsContext();
 
   return (
     <Card className={styles.card}>
@@ -28,7 +28,7 @@ export const CreditsUsage: React.FC = () => {
                 <FormattedMessage id="credits.totalCreditsUsage" />
               </Heading>
             </Box>
-            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeChunk} />
+            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeChunk} hasFreeUsage={hasFreeUsage} />
           </Box>
           <Box pt="xl">
             <Box pl="lg">

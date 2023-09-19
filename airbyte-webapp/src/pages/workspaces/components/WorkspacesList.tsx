@@ -1,3 +1,4 @@
+import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -5,16 +6,20 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useListWorkspaces } from "core/api";
+import { CloudWorkspaceRead } from "core/api/types/CloudApi";
+import { WorkspaceRead } from "core/request/AirbyteClient";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 import { WorkspacesCreateControl } from "./WorkspacesCreateControl";
 
-export const WorkspacesList: React.FC = () => {
-  const { workspaces } = useListWorkspaces();
+interface WorkspacesListProps {
+  workspaces: WorkspaceRead[] | CloudWorkspaceRead[];
+  createWorkspace: UseMutateAsyncFunction<WorkspaceRead | CloudWorkspaceRead, unknown, string, unknown>;
+}
+export const WorkspacesList: React.FC<WorkspacesListProps> = ({ workspaces, createWorkspace }) => {
   return (
     <FlexContainer direction="column">
-      <WorkspacesCreateControl />
+      <WorkspacesCreateControl createWorkspace={createWorkspace} />
       {workspaces.length ? (
         workspaces.map((workspace, index) => (
           <WorkspaceItem

@@ -1,6 +1,6 @@
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { BuilderPrompt } from "components/connectorBuilder/BuilderPrompt";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
@@ -22,8 +22,12 @@ export const ConnectorButton = <T extends ConnectorDefinition>({ definition, onC
         {definition.name}
       </Text>
 
-      <span className={styles.releaseStage}>
-        <ReleaseStageBadge stage={definition.releaseStage} />
+      <span className={styles.supportLevel}>
+        <SupportLevelBadge
+          supportLevel={definition.supportLevel}
+          custom={definition.custom}
+          releaseStage={definition.releaseStage}
+        />
       </span>
     </button>
   );

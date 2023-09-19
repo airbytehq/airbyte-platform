@@ -74,9 +74,9 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final StandardSync sync = Jsons.clone(MockData.standardSyncs().get(0)).withOperationIds(Collections.emptyList());
 
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
     configRepository.writeSourceConnectionNoSecrets(sourceConnection);
-    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion2);
+    configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2);
     configRepository.writeDestinationConnectionNoSecrets(destinationConnection);
     configRepository.writeStandardSync(sync);
 

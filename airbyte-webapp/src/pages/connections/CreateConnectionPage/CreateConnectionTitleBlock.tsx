@@ -3,15 +3,15 @@ import { FormattedMessage } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
-import { DestinationRead, ReleaseStage, SourceRead } from "core/request/AirbyteClient";
+import { useCurrentWorkspace, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import { DestinationRead, ReleaseStage, SourceRead, SupportLevel } from "core/request/AirbyteClient";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
@@ -92,32 +92,46 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
 // todo: these can pull from params once that PR is here
 const SourceBlock: React.FC<{ source?: SourceRead }> = ({ source }) => {
   const sourceDefinition = useSourceDefinition(source?.sourceDefinitionId);
+  const sourceDefinitionVersion = useSourceDefinitionVersion(source?.sourceId);
 
-  return <ConnectorPlaceholder icon={source?.icon} name={source?.name} stage={sourceDefinition?.releaseStage} />;
+  return (
+    <ConnectorPlaceholder
+      icon={source?.icon}
+      name={source?.name}
+      supportLevel={sourceDefinitionVersion?.supportLevel}
+      custom={sourceDefinition?.custom}
+      releaseStage={sourceDefinition?.releaseStage}
+    />
+  );
 };
 
 const DestinationBlock: React.FC<{ destination?: DestinationRead }> = ({ destination }) => {
   const destinationDefinition = useDestinationDefinition(destination?.destinationDefinitionId);
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(destination?.destinationId);
 
   return (
     <ConnectorPlaceholder
       icon={destination?.icon}
       name={destination?.name}
-      stage={destinationDefinition?.releaseStage}
+      supportLevel={destinationDefinitionVersion?.supportLevel}
+      custom={destinationDefinition?.custom}
+      releaseStage={destinationDefinition?.releaseStage}
     />
   );
 };
 
-const ConnectorPlaceholder: React.FC<{ icon?: string; name?: string; stage?: ReleaseStage }> = ({
-  icon,
-  name,
-  stage,
-}) => {
+const ConnectorPlaceholder: React.FC<{
+  icon?: string;
+  name?: string;
+  supportLevel?: SupportLevel;
+  custom?: boolean;
+  releaseStage?: ReleaseStage;
+}> = ({ icon, name, supportLevel, custom, releaseStage }) => {
   return (
     <FlexContainer alignItems="center" gap="sm">
       {icon ? <ConnectorIcon icon={icon} /> : <div className={styles.iconPlaceholder} />}
       {name ? <Text>{name}</Text> : <div className={styles.namePlaceholder} />}
-      {stage && <ReleaseStageBadge stage={stage} />}
+      {supportLevel && <SupportLevelBadge supportLevel={supportLevel} custom={custom} releaseStage={releaseStage} />}
     </FlexContainer>
   );
 };

@@ -1,4 +1,9 @@
-import { SourceDefinitionRead, SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
+import {
+  ActorDefinitionVersionRead,
+  SourceDefinitionRead,
+  SourceDefinitionSpecificationRead,
+  SupportState,
+} from "core/request/AirbyteClient";
 
 import { ConnectorIds } from "../../area/connector/utils";
 
@@ -12,6 +17,20 @@ export const mockSourceDefinition: SourceDefinitionRead = {
   protocolVersion: "0.2.0",
   releaseStage: "generally_available",
   sourceType: "database",
+  supportLevel: "certified",
+  custom: false,
+};
+
+export const mockSourceDefinitionVersion: ActorDefinitionVersionRead = {
+  dockerRepository: "airbyte/source-postgres",
+  dockerImageTag: "1.0.39",
+  supportsDbt: false,
+  normalizationConfig: {
+    supported: false,
+  },
+  isOverrideApplied: false,
+  supportState: SupportState.supported,
+  supportLevel: "certified",
 };
 
 export const mockSourceDefinitionSpecification: SourceDefinitionSpecificationRead = {

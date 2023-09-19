@@ -1,12 +1,12 @@
-import { SettingsRoute } from "pages/SettingsPage/SettingsPage";
+import { SettingsRoutePaths } from "pages/routePaths";
 
-export const CloudSettingsRoutes = {
-  Configuration: SettingsRoute.Configuration,
-  Notifications: SettingsRoute.Notifications,
-  Account: SettingsRoute.Account,
-  Source: SettingsRoute.Source,
-  Destination: SettingsRoute.Destination,
-  DataResidency: SettingsRoute.DataResidency,
+export const CloudSettingsRoutePaths = {
+  Configuration: SettingsRoutePaths.Configuration,
+  Notifications: SettingsRoutePaths.Notifications,
+  Account: SettingsRoutePaths.Account,
+  Source: SettingsRoutePaths.Source,
+  Destination: SettingsRoutePaths.Destination,
+  DataResidency: SettingsRoutePaths.DataResidency,
 
   Workspace: "workspaces",
   AccessManagement: "access-management",

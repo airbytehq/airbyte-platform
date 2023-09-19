@@ -157,6 +157,9 @@ export const ErrorMessage: React.FC = () => {
         actionBtnText: formatMessage({
           id: "connectionForm.breakingChange.source.buttonLabel",
         }),
+        actionBtnProps: {
+          className: styles.breakingChangeButton,
+        },
         type: errorType,
         iconOverride: "warning",
       } as const;
@@ -187,6 +190,9 @@ export const ErrorMessage: React.FC = () => {
         actionBtnText: formatMessage({
           id: "connectionForm.breakingChange.destination.buttonLabel",
         }),
+        actionBtnProps: {
+          className: styles.breakingChangeButton,
+        },
         type: errorType,
         iconOverride: "warning",
       } as const;

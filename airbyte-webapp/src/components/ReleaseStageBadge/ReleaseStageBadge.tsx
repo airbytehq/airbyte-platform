@@ -4,8 +4,8 @@ import { FormattedMessage } from "react-intl";
 import { GAIcon } from "components/icons/GAIcon";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useIsFCPEnabled } from "core/api/cloud";
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { FreeTag } from "packages/cloud/components/experiments/FreeConnectorProgram";
 
 import styles from "./ReleaseStageBadge.module.scss";
@@ -20,7 +20,7 @@ interface ReleaseStageBadgeProps {
 }
 
 export const ReleaseStageBadge: React.FC<ReleaseStageBadgeProps> = ({ stage, small, tooltip = true }) => {
-  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
+  const fcpEnabled = useIsFCPEnabled();
 
   if (!stage) {
     return null;

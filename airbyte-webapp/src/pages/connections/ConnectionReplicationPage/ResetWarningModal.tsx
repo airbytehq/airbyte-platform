@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useUnmount } from "react-use";
 
 import { LabeledSwitch } from "components";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { ConnectionStateType } from "core/request/AirbyteClient";
-import { useModalService } from "hooks/services/Modal";
 
 interface ResetWarningModalProps {
   onClose: (withReset: boolean) => void;
@@ -16,14 +14,9 @@ interface ResetWarningModalProps {
 }
 
 export const ResetWarningModal: React.FC<ResetWarningModalProps> = ({ onCancel, onClose, stateType }) => {
-  const { closeModal } = useModalService();
   const { formatMessage } = useIntl();
   const [withReset, setWithReset] = useState(true);
   const requireFullReset = stateType === ConnectionStateType.legacy;
-
-  useUnmount(() => {
-    closeModal();
-  });
 
   return (
     <>

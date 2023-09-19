@@ -12,6 +12,7 @@ import { OperationsSection } from "components/connection/ConnectionForm/Operatio
 import LoadingSchema from "components/LoadingSchema";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCreateConnection } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
@@ -22,7 +23,6 @@ import {
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateConnection } from "hooks/services/useConnectionHook";
 import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/services/useSourceHook";
 
 import styles from "./CreateConnectionForm.module.scss";

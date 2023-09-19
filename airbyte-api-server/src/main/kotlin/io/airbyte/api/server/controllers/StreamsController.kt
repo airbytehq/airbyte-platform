@@ -13,9 +13,9 @@ import io.airbyte.airbyte_api.model.generated.StreamProperties
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SyncMode
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.STREAMS_PATH
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.problems.UnexpectedProblem
 import io.airbyte.api.server.services.DestinationService

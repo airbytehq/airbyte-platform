@@ -2,11 +2,11 @@ import { useIntl } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 
+import { useCurrentUser } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./UpcomingFeaturesPage.module.scss";
-import { useCurrentUser } from "../services/auth/AuthService";
 const UpcomingFeaturesPage = () => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();

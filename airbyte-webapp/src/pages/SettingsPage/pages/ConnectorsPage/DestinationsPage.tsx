@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
+import { useNotificationService } from "hooks/services/Notification";
 import { useUpdateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";
@@ -16,12 +17,21 @@ const DestinationsPage: React.FC = () => {
   const destinationDefinitions = useAvailableDestinationDefinitions();
   const { destinations } = useDestinationList();
 
-  const [feedbackList, setFeedbackList] = useState<Record<string, string>>({});
-  const feedbackListRef = useRef(feedbackList);
-  feedbackListRef.current = feedbackList;
-
   const { mutateAsync: updateDestinationDefinition } = useUpdateDestinationDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
+
+  const { registerNotification } = useNotificationService();
+
+  const idToDestinationDefinition = useMemo(
+    () =>
+      destinationDefinitions.reduce((map, destinationDefinition) => {
+        map.set(destinationDefinition.destinationDefinitionId, destinationDefinition);
+        return map;
+      }, new Map<string, DestinationDefinitionRead>()),
+    [destinationDefinitions]
+  );
+  const definitionMap = useRef(idToDestinationDefinition);
+  definitionMap.current = idToDestinationDefinition;
 
   const onUpdateVersion = useCallback(
     async ({ id, version }: { id: string; version: string }) => {
@@ -31,34 +41,43 @@ const DestinationsPage: React.FC = () => {
           destinationDefinitionId: id,
           dockerImageTag: version,
         });
-        setFeedbackList({ ...feedbackListRef.current, [id]: "success" });
-      } catch (e) {
-        const messageId = e.status === 422 ? "form.imageCannotFound" : "form.someError";
-        setFeedbackList({
-          ...feedbackListRef.current,
-          [id]: formatMessage({ id: messageId }),
+        registerNotification({
+          id: `destination.update.success.${id}.${version}`,
+          text: (
+            <FormattedMessage
+              id="admin.upgradeConnector.success"
+              values={{ name: definitionMap.current.get(id)?.name, version }}
+            />
+          ),
+          type: "success",
+        });
+      } catch (error) {
+        registerNotification({
+          id: `destination.update.error.${id}.${version}`,
+          text:
+            formatMessage(
+              { id: "admin.upgradeConnector.error" },
+              { name: definitionMap.current.get(id)?.name, version }
+            ) + (error.message ? `: ${error.message}` : ""),
+          type: "error",
         });
       } finally {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, updateDestinationDefinition]
+    [formatMessage, registerNotification, updateDestinationDefinition]
   );
 
-  const usedDestinationDefinitions = useMemo<DestinationDefinitionRead[]>(() => {
-    const destinationDefinitionMap = new Map<string, DestinationDefinitionRead>();
-    destinations.forEach((destination) => {
-      const destinationDefinition = destinationDefinitions.find(
-        (destinationDefinition) => destinationDefinition.destinationDefinitionId === destination.destinationDefinitionId
-      );
-
-      if (destinationDefinition) {
-        destinationDefinitionMap.set(destinationDefinition.destinationDefinitionId, destinationDefinition);
-      }
-    });
-
-    return Array.from(destinationDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [destinations, destinationDefinitions]);
+  const usedDestinationDefinitions: DestinationDefinitionRead[] = useMemo(() => {
+    const usedDestinationDefinitionIds = new Set<string>(
+      destinations.map((destination) => destination.destinationDefinitionId)
+    );
+    return destinationDefinitions
+      .filter((destinationDefinition) =>
+        usedDestinationDefinitionIds.has(destinationDefinition.destinationDefinitionId)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [destinationDefinitions, destinations]);
 
   return (
     <ConnectorsView
@@ -67,7 +86,6 @@ const DestinationsPage: React.FC = () => {
       usedConnectorsDefinitions={usedDestinationDefinitions}
       connectorsDefinitions={destinationDefinitions}
       updatingDefinitionId={updatingDefinitionId}
-      feedbackList={feedbackList}
     />
   );
 };

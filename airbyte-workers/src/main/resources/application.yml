@@ -2,6 +2,9 @@ micronaut:
   application:
     name: airbyte-workers
   server:
+    netty:
+      aggregator:
+        max-content-length: 52428800 # 50MB
     port: 9000
   caches:
     # used by RecordMetricActivity to cache repeated calls to workspaceApi.getWorkspaceByConnectionId.
@@ -18,7 +21,7 @@ airbyte:
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
     check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
-    discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:5}
+    discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

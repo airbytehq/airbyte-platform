@@ -17,7 +17,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.temporal.CancellationHandler;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -52,6 +52,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Check connection activity temporal implementation for the control plane.
@@ -70,6 +71,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
+  private final TemporalUtils temporalUtils;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -81,7 +83,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      @Value("${airbyte.version}") final String airbyteVersion,
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                     final FeatureFlags featureFlags) {
+                                     final FeatureFlags featureFlags,
+                                     final TemporalUtils temporalUtils) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -93,6 +96,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
+    this.temporalUtils = temporalUtils;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -112,19 +116,26 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         .withConnectionConfiguration(fullConfig);
 
     final ActivityExecutionContext context = Activity.getExecutionContext();
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    final TemporalAttemptExecution<StandardCheckConnectionInput, ConnectorJobOutput> temporalAttemptExecution =
-        new TemporalAttemptExecution<>(
-            workspaceRoot, workerEnvironment, logConfigs,
-            args.getJobRunConfig(),
-            getWorkerFactory(args.getLauncherConfig(), rawInput.getResourceRequirements()),
-            () -> input,
-            new CancellationHandler.TemporalCancellationHandler(context),
-            airbyteApiClient,
-            airbyteVersion,
-            () -> context);
-
-    return temporalAttemptExecution.get();
+    return temporalUtils.withBackgroundHeartbeat(cancellationCallback,
+        () -> {
+          final var worker = getWorkerFactory(args.getLauncherConfig(), rawInput.getResourceRequirements()).get();
+          cancellationCallback.set(worker::cancel);
+          final TemporalAttemptExecution<StandardCheckConnectionInput, ConnectorJobOutput> temporalAttemptExecution =
+              new TemporalAttemptExecution<>(
+                  workspaceRoot,
+                  workerEnvironment,
+                  logConfigs,
+                  args.getJobRunConfig(),
+                  worker,
+                  input,
+                  airbyteApiClient,
+                  airbyteVersion,
+                  () -> context);
+          return temporalAttemptExecution.get();
+        },
+        () -> context);
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)

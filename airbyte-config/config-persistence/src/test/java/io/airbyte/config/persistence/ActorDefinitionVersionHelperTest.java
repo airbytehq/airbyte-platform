@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,6 +21,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -94,8 +96,10 @@ class ActorDefinitionVersionHelperTest {
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -107,8 +111,10 @@ class ActorDefinitionVersionHelperTest {
     when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     when(mConfigRepository.getSourceConnection(ACTOR_ID)).thenReturn(new SourceConnection().withDefaultVersionId(DEFAULT_VERSION_ID));
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -120,8 +126,10 @@ class ActorDefinitionVersionHelperTest {
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(OVERRIDDEN_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertTrue(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -165,8 +173,10 @@ class ActorDefinitionVersionHelperTest {
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -178,8 +188,10 @@ class ActorDefinitionVersionHelperTest {
     when(mFeatureFlagClient.boolVariation(UseActorScopedDefaultVersions.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     when(mConfigRepository.getDestinationConnection(ACTOR_ID)).thenReturn(new DestinationConnection().withDefaultVersionId(DEFAULT_VERSION_ID));
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -191,8 +203,10 @@ class ActorDefinitionVersionHelperTest {
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
 
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(OVERRIDDEN_VERSION, actual);
+    final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
+        actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertTrue(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test

@@ -1,8 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { getConnectionListQueryKey, useConnectionListQuery } from "core/api";
+import { useCurrentUser } from "core/services/auth";
 
 import { getListCloudWorkspacesAsyncQueryKey, useListCloudWorkspacesAsyncQuery } from "./cloudWorkspaces";
 import { getListUsersQueryKey, useListUsersQuery } from "./users";

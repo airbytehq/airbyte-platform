@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from "react";
 
-import { useLocalStorageFixed } from "../../core/utils/useLocalStorageFixed";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 
 export type Theme = "airbyteThemeLight" | "airbyteThemeDark";
 
@@ -19,7 +19,7 @@ export const AirbyteThemeProvider: React.FC<React.PropsWithChildren<AirbyteTheme
   children,
   themeOverride,
 }) => {
-  const [storedTheme, setStoredTheme] = useLocalStorageFixed<Theme>(
+  const [storedTheme, setStoredTheme] = useLocalStorage(
     "airbyteTheme",
     getPreferredColorScheme() === "dark" ? "airbyteThemeDark" : "airbyteThemeLight"
   );

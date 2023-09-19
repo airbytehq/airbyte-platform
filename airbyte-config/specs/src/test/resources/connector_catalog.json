@@ -104,7 +104,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "b4c5d105-31fd-4817-96b6-cb923bfc04cb",
@@ -207,6 +208,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "alpha",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -425,6 +427,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "generally_available",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -634,6 +637,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "beta",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -720,7 +724,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "81740ce8-d764-4ea7-94df-16bb41de36ae",
@@ -766,7 +771,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "ce0d828e-1dc4-496c-b122-2da42e637e48",
@@ -952,7 +958,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "072d5540-f236-4294-ba7c-ade8fd918496",
@@ -1141,7 +1148,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "8ccd8909-4e99-4141-b48d-4984b70b2d89",
@@ -1234,7 +1242,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "68f351a7-2745-4bef-ad7f-996b8e51bb8c",
@@ -1338,7 +1347,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "a7bcc9d8-13b3-4e49-b80d-d020b90045e3",
@@ -1373,7 +1383,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "18081484-02a5-4662-8dba-b270b582f321",
@@ -1492,7 +1503,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "ca8f6566-e555-4b40-943a-545bf123117a",
@@ -1891,6 +1903,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "beta",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -1939,7 +1952,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "356668e2-7e34-47f3-a3b0-67a8a481b692",
@@ -1982,7 +1996,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "a4cbd2d1-8dbe-4818-b8bc-b90ad782d12a",
@@ -2055,7 +2070,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "d4353156-9217-4cad-8dd7-c108fd4f74cf",
@@ -2294,7 +2310,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "294a4790-429b-40ae-9516-49826b9702e1",
@@ -2470,7 +2487,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "af7c921e-5892-4ff2-b6c1-4a5ab258fb7e",
@@ -2510,7 +2528,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "8b746512-8c2e-6ac1-4adc-b59faafd473c",
@@ -2666,7 +2685,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "ca81ee7c-3163-4246-af40-094cc31e5e42",
@@ -2848,7 +2868,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "3986776d-2319-4de9-8af8-db14c0996e72",
@@ -3038,7 +3059,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
@@ -3351,7 +3373,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "2340cbba-358e-11ec-8d3d-0242ac130203",
@@ -3499,7 +3522,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "e06ad785-ad6f-4647-b2e8-3027a5c59454",
@@ -3559,7 +3583,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "d4d3fef9-e319-45c2-881a-bd02ce44cc9f",
@@ -3623,7 +3648,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "f7a7d195-377f-cf5b-70a5-be6b819019dc",
@@ -3851,6 +3877,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "beta",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -3912,7 +3939,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "4816b78f-1489-44c1-9060-4b19d5fa9362",
@@ -4315,6 +4343,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "generally_available",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -4388,7 +4417,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "3dc6f384-cd6b-4be3-ad16-a41450899bf0",
@@ -4456,7 +4486,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
@@ -4958,6 +4989,7 @@
       "public": true,
       "custom": false,
       "releaseStage": "generally_available",
+      "supportLevel": "community",
       "resourceRequirements": {
         "jobSpecific": [
           {
@@ -5027,7 +5059,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "14c6e7ea-97ed-4f5e-a7b5-25e9a80b8212",
@@ -5076,7 +5109,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "c6b0a29e-1da9-4512-9002-7bfd0cba2246",
@@ -5211,7 +5245,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "983fd355-6bf3-4709-91b5-37afa391eeb6",
@@ -5330,7 +5365,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e55879a8-0ef8-4557-abcf-ab34c53ec460",
@@ -5581,7 +5617,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "fa9f58c6-2d03-4237-aaa4-07d75e0c1396",
@@ -5627,7 +5664,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "47f17145-fe20-4ef5-a548-e29b048adf84",
@@ -5664,7 +5702,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "798ae795-5189-42b6-b64e-3cb91db93338",
@@ -5714,7 +5753,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "59c5501b-9f95-411e-9269-7143c939adbd",
@@ -5759,7 +5799,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "bfd1ddf8-ae8a-4620-b1d7-55597d2ba08c",
@@ -5803,7 +5844,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "47f25999-dd5e-4636-8c39-e7cea2453331",
@@ -5937,7 +5979,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "63cea06f-1c75-458d-88fe-ad48c7cb27fd",
@@ -6002,7 +6045,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "686473f1-76d9-4994-9cc7-9b13da46147c",
@@ -6055,7 +6099,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b6604cbd-1b12-4c08-8767-e140d0fb0877",
@@ -6102,7 +6147,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "bad83517-5e54-4a3d-9b53-63e85fbd4d7c",
@@ -6273,7 +6319,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "dfffecb7-9a13-43e9-acdc-b92af7997ca9",
@@ -6312,7 +6359,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "cc88c43f-6f53-4e8a-8c4d-b284baaf9635",
@@ -6354,7 +6402,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "0b5c867e-1b12-4d02-ab74-97b2184ff6d7",
@@ -6399,7 +6448,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "72d405a3-56d8-499f-a571-667c03406e43",
@@ -6432,7 +6482,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "50bd8338-7c4e-46f1-8c7f-3ef95de19fdd",
@@ -6550,7 +6601,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e2b40e36-aa0e-4bed-b41b-bcea6fa348b1",
@@ -6598,7 +6650,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e7778cfc-e97c-4458-9ecb-b4f2bba8946c",
@@ -6957,7 +7010,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "dfd88b22-b603-4c3d-aad7-3701784586b1",
@@ -7014,7 +7068,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "778daa7c-feaf-4db6-96f3-70fd645acc77",
@@ -7261,7 +7316,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "6f2ac653-8623-43c4-8950-19218c7caf3d",
@@ -7319,7 +7375,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "ec4b9503-13cb-48ab-a4ab-6ade4be46567",
@@ -7372,7 +7429,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "ef69ef6e-aa7f-4af1-a01d-ef775033524e",
@@ -7523,7 +7581,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "5e6175e5-68e1-4c17-bff9-56103bbb0d80",
@@ -7577,7 +7636,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "253487c0-2246-43ba-a21f-5116b20a2c50",
@@ -7730,7 +7790,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "eff3616a-f9c3-11eb-9a03-0242ac130003",
@@ -7861,7 +7922,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "d19ae824-e289-4b14-995a-0632eb46d246",
@@ -7897,7 +7959,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "eb4c9e00-db83-4d63-a386-39cfa91012a8",
@@ -8031,7 +8094,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "71607ba1-c0ac-4799-8049-7f4b90dd50f7",
@@ -8141,7 +8205,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "ed9dfefa-1bbc-419d-8c5e-4d78f0ef6734",
@@ -8183,7 +8248,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "59f1e50a-331f-4f09-b3e8-2e8d4d355f44",
@@ -8215,7 +8281,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "36c891d9-4bd9-43ac-bad2-10e12756272c",
@@ -8343,7 +8410,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "6acf6b55-4f1e-4fca-944e-1a3caef8aba8",
@@ -8392,7 +8460,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "d8313939-3782-41b0-be29-b3ca20d8dd3a",
@@ -8440,7 +8509,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "2e875208-0c0b-4ee4-9e92-1cb3156ea799",
@@ -8480,7 +8550,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "95e8cffd-b8c4-4039-968e-d32fb4a69bde",
@@ -8520,7 +8591,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "cd06e646-31bf-4dc8-af48-cbc6530fcad3",
@@ -8558,7 +8630,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "789f8e7a-2d28-11ec-8d3d-0242ac130003",
@@ -8589,7 +8662,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "137ece28-5434-455c-8f34-69dc3782f451",
@@ -8692,7 +8766,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "7b86879e-26c5-4ef6-a5ce-2be5c7b46d1e",
@@ -8745,7 +8820,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "00405b19-9768-4e0c-b1ae-9fc2ee2b2a8c",
@@ -8801,7 +8877,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b03a9f3e-22a5-11eb-adc1-0242ac120002",
@@ -8925,7 +9002,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "9e0556f4-69df-4522-a3fb-03264d36b348",
@@ -8987,7 +9065,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "c7cb421b-942e-4468-99ee-e369bcabaec5",
@@ -9036,7 +9115,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b5ea17b1-f170-46dc-bc31-cc744ca984c1",
@@ -9314,7 +9394,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "eaf50f04-21dd-4620-913b-2a83f5635227",
@@ -9480,7 +9561,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "12928b32-bf0a-4f1e-964f-07e12e37153a",
@@ -9566,7 +9648,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "80a54ea2-9959-4040-aac1-eee42423ec9b",
@@ -9712,7 +9795,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b2e713cd-cc36-4c0a-b5bd-b47cb8a0561e",
@@ -9844,7 +9928,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "722ba4bf-06ec-45a4-8dd5-72e4a5cf3903",
@@ -9899,7 +9984,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "435bb9a5-7887-4809-aa58-28c27df0d7ad",
@@ -10094,7 +10180,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "1d4fdb25-64fc-4569-92da-fcdca79a8372",
@@ -10246,7 +10333,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b39a7370-74c3-45a6-ac3a-380d48520a83",
@@ -10524,7 +10612,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "7f0455fb-4518-4ec0-b7a3-d808bf8081cc",
@@ -10592,7 +10681,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "95bcc041-1d1a-4c2e-8802-0ca5b1bfa36a",
@@ -10639,7 +10729,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "d913b0f2-cc51-4e55-a44c-8ba1697b9239",
@@ -10697,7 +10788,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "3052c77e-8b91-47e2-97a0-a29a22794b4b",
@@ -10729,7 +10821,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "6371b14b-bc68-4236-bfbd-468e8df8e968",
@@ -10763,7 +10856,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "af6d50ee-dddf-4126-a8ee-7faee990774f",
@@ -10809,7 +10903,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "decd338e-5647-4c0b-adf4-da0e75f5a750",
@@ -11201,7 +11296,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "d60a46d4-709f-4092-a6b7-2457f7d455f5",
@@ -11237,7 +11333,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b08e4776-d1de-4e80-ab5c-1e51dad934a2",
@@ -11300,7 +11397,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "45d2e135-2ede-49e1-939f-3e3ec357a65e",
@@ -11340,7 +11438,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "cd42861b-01fc-4658-a8ab-5d11d0510f01",
@@ -11388,7 +11487,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e87ffa8e-a3b5-f69c-9076-6011339de1f6",
@@ -11462,7 +11562,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "db04ecd1-42e7-4115-9cec-95812905c626",
@@ -11591,7 +11692,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "69589781-7828-43c5-9f63-8925b1c1ccc2",
@@ -11888,7 +11990,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "a827c52e-791c-4135-a245-e233c5255199",
@@ -12008,7 +12111,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b117307c-14b6-41aa-9422-947e34922962",
@@ -12160,7 +12264,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "2470e835-feaf-4db6-96f3-70fd645acc77",
@@ -12234,7 +12339,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "fbb5fbe2-16ad-4cf4-af7d-ff9d9c316c87",
@@ -12274,7 +12380,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "cdaf146a-9b75-49fd-9dd2-9d64a0bb4781",
@@ -12323,7 +12430,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "9da77001-af33-4bcd-be46-6252bf9342b9",
@@ -12475,7 +12583,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "2fed2292-5586-480c-af92-9944e39fe12d",
@@ -12519,7 +12628,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "374ebc65-6636-4ea0-925c-7d35999a8ffc",
@@ -12603,7 +12713,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "200330b2-ea62-4d11-ac6d-cfe3e3f8ab2b",
@@ -12675,7 +12786,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e2d65910-8c8b-40a1-ae7d-ee2416b2bfa2",
@@ -12876,7 +12988,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "77225a51-cd15-4a13-af02-65816bd0ecf4",
@@ -13039,7 +13152,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e094cb9a-26de-4645-8761-65c0c425d1de",
@@ -13104,7 +13218,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "badc5925-0485-42be-8caa-b34096cb71b5",
@@ -13164,7 +13279,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "d1aa448b-7c54-498e-ad95-263cbebcd2db",
@@ -13197,7 +13313,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "4bfac00d-ce15-44ff-95b9-9e3c3e8fbd35",
@@ -13366,7 +13483,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "b9dc6155-672e-42ea-b10d-9f1f1fb95ab1",
@@ -13424,7 +13542,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "e7eff203-90bf-43e5-a240-19ea3056c474",
@@ -13471,7 +13590,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "c4cfaeda-c757-489a-8aba-859fb08b6970",
@@ -13522,7 +13642,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "ef580275-d9a9-48bb-af5e-db0f5855be04",
@@ -13564,7 +13685,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "afa734e4-3571-11ec-991a-1e0031268139",
@@ -13625,7 +13747,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "beta"
+      "releaseStage": "beta",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "40d24d0f-b8f9-4fe0-9e6c-b06c0f3f45e4",
@@ -13778,7 +13901,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "325e0640-e7b3-4e24-b823-3361008f603f",
@@ -13938,7 +14062,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "79c1aa37-dae3-42ae-b333-d1c105477715",
@@ -14080,7 +14205,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "generally_available"
+      "releaseStage": "generally_available",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "f1e4c7f6-db5c-4035-981f-d35ab4998794",
@@ -14126,7 +14252,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     },
     {
       "sourceDefinitionId": "3dc3037c-5ce8-4661-adc2-f7a9e3c5ece5",
@@ -14179,7 +14306,8 @@
       },
       "public": true,
       "custom": false,
-      "releaseStage": "alpha"
+      "releaseStage": "alpha",
+      "supportLevel": "community"
     }
   ]
 }

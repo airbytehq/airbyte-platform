@@ -41,9 +41,11 @@ object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-str
 
 object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
 
-object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
+object CatalogCanonicalJson : Temporary<Boolean>(key = "catalog-canonical-json", default = false)
 
-object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)
+object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
+
+object FetchEarlySyncJobs : Temporary<Boolean>(key = "billing.fetch-early-sync-jobs", default = false)
 
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key = "should-run-on-gke-dataplane", default = false)
 
@@ -61,9 +63,9 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
-object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = false)
+object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
-object IngestBreakingChanges : Temporary<Boolean>(key = "connectors.ingestBreakingChanges", default = true)
+object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
 
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
@@ -99,7 +101,15 @@ object UseCustomK8sScheduler : Temporary<String>(key = "platform.use-custom-k8s-
 
 object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideActorDefinitionFromList", default = false)
 
-object UseNewStateMessageProcessing : Temporary<Boolean>(key = "platform.use-new-state-message-processing", default = false)
+object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
+
+object SunsetFCP : Temporary<Boolean>(key = "platform.sunset-fcp", default = false)
+
+object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
+
+object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
+
+object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {

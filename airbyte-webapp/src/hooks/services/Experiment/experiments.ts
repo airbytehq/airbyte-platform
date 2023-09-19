@@ -7,29 +7,35 @@
  */
 
 export interface Experiments {
-  "autopropagation.enabled": boolean;
-  "connector.orderOverwrite": Record<string, number>;
-  "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
-  "authPage.signup.hideName": boolean;
   "authPage.signup.hideCompanyName": boolean;
-  "onboarding.speedyConnection": boolean;
-  "connection.onboarding.sources": string;
-  "connection.onboarding.destinations": string;
+  "authPage.signup.hideName": boolean;
+  "autopropagation.enabled": boolean;
+  "billing.newTrialPolicy": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.streamCentricUI.v2": boolean;
-  "connection.streamCentricUI.lateMultiplier": number;
-  "connection.streamCentricUI.errorMultiplier": number;
-  "connection.streamCentricUI.numberOfLogsToLoad": number;
+  "connection.onboarding.destinations": string;
+  "connection.onboarding.sources": string;
   "connection.searchableJobLogs": boolean;
-  "connector.showRequestSchemabutton": boolean;
+  "connection.streamCentricUI.errorMultiplier": number;
+  "connection.streamCentricUI.lateMultiplier": number;
+  "connection.streamCentricUI.numberOfLogsToLoad": number;
+  "connection.streamCentricUI.v2": boolean;
+  "connection.streamCentricUI.historicalOverview": boolean;
   "connection.syncCatalog.simplifiedCatalogRow": boolean;
-  "upcomingFeaturesPage.url": string;
-  "billing.newTrialPolicy": boolean;
-  "connector.allowlistIpBanner": boolean;
-  "settings.emailNotifications": boolean;
   "connector.airbyteCloudIpAddresses": string;
-  "connector.updateMethodSelection": boolean;
+  "connector.allowlistIpBanner": boolean;
+  "connector.orderOverwrite": Record<string, number>;
+  "connector.shortSetupGuides": boolean;
+  "connector.showRequestSchemabutton": boolean;
+  "connector.suggestedSourceConnectors": string;
+  "connector.suggestedDestinationConnectors": string;
+  "onboarding.speedyConnection": boolean;
+  "settings.emailNotifications": boolean;
+  "settings.breakingChangeNotifications": boolean;
+  "upcomingFeaturesPage.url": string;
   "workspaces.newWorkspacesUI": boolean;
+  "settings.accessManagement": boolean;
+  "platform.sunset-fcp": boolean;
+  "form.createConnectionHookForm": boolean;
 }

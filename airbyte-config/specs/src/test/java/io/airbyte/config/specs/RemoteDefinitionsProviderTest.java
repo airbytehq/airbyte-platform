@@ -15,11 +15,12 @@ import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URL;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +80,7 @@ class RemoteDefinitionsProviderTest {
     assertEquals(URI.create("https://docs.airbyte.io/integrations/sources/stripe"), stripeSource.getSpec().getDocumentationUrl());
     assertEquals(false, stripeSource.getTombstone());
     assertEquals("0.2.1", stripeSource.getProtocolVersion());
+    assertEquals(SupportLevel.COMMUNITY, stripeSource.getSupportLevel());
   }
 
   @Test
@@ -97,10 +99,11 @@ class RemoteDefinitionsProviderTest {
     assertEquals(URI.create("https://docs.airbyte.io/integrations/destinations/s3"), s3Destination.getSpec().getDocumentationUrl());
     assertEquals(false, s3Destination.getTombstone());
     assertEquals("0.2.2", s3Destination.getProtocolVersion());
+    assertEquals(SupportLevel.COMMUNITY, s3Destination.getSupportLevel());
   }
 
   @Test
-  void testGetInvalidDefinitionId() throws Exception {
+  void testGetInvalidDefinitionId() {
     webServer.enqueue(validCatalogResponse);
     webServer.enqueue(validCatalogResponse);
 
@@ -117,7 +120,7 @@ class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  void testGetSourceDefinitions() throws Exception {
+  void testGetSourceDefinitions() {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
@@ -128,7 +131,7 @@ class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  void testGetDestinationDefinitions() throws Exception {
+  void testGetDestinationDefinitions() {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
@@ -157,7 +160,7 @@ class RemoteDefinitionsProviderTest {
     });
 
     assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
-    assertTrue(ex.getCause() instanceof HttpTimeoutException);
+    assertEquals(ex.getCause().getClass(), InterruptedIOException.class);
   }
 
   @Test
@@ -175,7 +178,7 @@ class RemoteDefinitionsProviderTest {
     final String baseUrl = "https://connectors.airbyte.com/files/";
     final RemoteDefinitionsProvider definitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
-    final URI registryUrl = definitionsProvider.getRegistryUrl();
+    final URL registryUrl = definitionsProvider.getRegistryUrl();
     assertEquals(String.format("https://connectors.airbyte.com/files/registries/v0/%s_registry.json", deploymentMode.toLowerCase()),
         registryUrl.toString());
   }
@@ -188,7 +191,7 @@ class RemoteDefinitionsProviderTest {
     final String version = "1.0.0";
     final RemoteDefinitionsProvider definitionsProvider =
         new RemoteDefinitionsProvider(baseUrl, DeploymentMode.valueOf(deploymentMode), TimeUnit.SECONDS.toMillis(1));
-    final URI registryEntryUrl = definitionsProvider.getRegistryEntryUrl(connectorName, version);
+    final URL registryEntryUrl = definitionsProvider.getRegistryEntryUrl(connectorName, version);
     assertEquals(String.format("https://connectors.airbyte.com/files/metadata/airbyte/source-github/1.0.0/%s.json", deploymentMode.toLowerCase()),
         registryEntryUrl.toString());
   }

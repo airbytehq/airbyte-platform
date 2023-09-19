@@ -6,6 +6,7 @@ import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
 import { SourceDefinitionService } from "core/domain/connector/SourceDefinitionService";
 import { isDefined } from "core/utils/common";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
@@ -123,6 +124,7 @@ export const useCreateSourceDefinition = () => {
 export const useUpdateSourceDefinition = () => {
   const service = useGetSourceDefinitionService();
   const queryClient = useQueryClient();
+  const { trackError } = useAppMonitoringService();
 
   return useMutation<
     SourceDefinitionRead,
@@ -147,6 +149,9 @@ export const useUpdateSourceDefinition = () => {
       });
 
       queryClient.invalidateQueries(connectorDefinitionKeys.count());
+    },
+    onError: (error: Error) => {
+      trackError(error);
     },
   });
 };

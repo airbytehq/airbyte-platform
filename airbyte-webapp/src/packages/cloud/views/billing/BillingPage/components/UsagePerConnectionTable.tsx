@@ -5,9 +5,9 @@ import { FormattedMessage } from "react-intl";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Table } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
@@ -79,7 +79,12 @@ export const UsagePerConnectionTable: React.FC = () => {
               <TextWithOverflowTooltip size="sm" className={styles.cellText}>
                 {props.cell.getValue()}
               </TextWithOverflowTooltip>
-              <ReleaseStageBadge stage={props.row.original.connection.sourceReleaseStage} />
+              <SupportLevelBadge
+                supportLevel={props.row.original.connection.sourceSupportLevel}
+                custom={props.row.original.connection.sourceCustom}
+                size="small"
+                releaseStage={props.row.original.connection.sourceReleaseStage}
+              />
             </FlexContainer>
           </Link>
         ),
@@ -125,7 +130,12 @@ export const UsagePerConnectionTable: React.FC = () => {
               >
                 {props.cell.getValue()}
               </TextWithOverflowTooltip>
-              <ReleaseStageBadge stage={props.row.original.connection.destinationReleaseStage} />
+              <SupportLevelBadge
+                supportLevel={props.row.original.connection.destinationSupportLevel}
+                custom={props.row.original.connection.destinationCustom}
+                size="small"
+                releaseStage={props.row.original.connection.destinationReleaseStage}
+              />
             </FlexContainer>
           </Link>
         ),

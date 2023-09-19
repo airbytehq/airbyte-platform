@@ -7,9 +7,8 @@ import { TableItemTitle } from "components/ConnectorBlocks";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useConnectionList } from "core/api";
 import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 

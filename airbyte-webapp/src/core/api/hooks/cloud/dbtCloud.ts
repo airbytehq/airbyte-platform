@@ -154,7 +154,7 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
         // FIXME: remove this once we migrate to react-hook-form since it will handle onError and OnSuccess
         registerNotification({
           id: "connection.updateFailed",
-          text: formatMessage({ id: "notification.connection.updateFailed" }),
+          text: formatMessage({ id: "connection.updateFailed" }),
         });
       }
     },

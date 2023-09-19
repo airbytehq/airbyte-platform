@@ -42,6 +42,7 @@ public class StateApiController implements StateApi {
 
   @Post("/create_or_update_safe")
   @Secured({EDITOR})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionState createOrUpdateStateSafe(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) {

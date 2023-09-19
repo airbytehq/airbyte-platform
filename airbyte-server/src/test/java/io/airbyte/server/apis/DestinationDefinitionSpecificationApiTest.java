@@ -25,7 +25,7 @@ class DestinationDefinitionSpecificationApiTest extends BaseControllerTest {
 
   @Test
   void testCheckConnectionToDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(schedulerHandler.getDestinationSpecification(Mockito.any()))
+    Mockito.when(connectorDefinitionSpecificationHandler.getDestinationSpecification(Mockito.any()))
         .thenReturn(new DestinationDefinitionSpecificationRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_definition_specifications/get";

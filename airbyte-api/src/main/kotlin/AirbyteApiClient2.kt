@@ -52,39 +52,20 @@ class AirbyteApiClient2
     httpClient: OkHttpClient = OkHttpClient(),
   ) {
 
-    val connectionApi: ConnectionApi
-    val connectorBuilderProjectApi: ConnectorBuilderProjectApi
-    val destinationDefinitionApi: DestinationDefinitionApi
-    val destinationApi: DestinationApi
-    val destinationSpecificationApi: DestinationDefinitionSpecificationApi
-    val jobsApi: JobsApi
-    val jobRetryStatesApi: JobRetryStatesApi
-    val operationApi: OperationApi
-    val sourceDefinitionApi: SourceDefinitionApi
-    val sourceApi: SourceApi
-    val sourceDefinitionSpecificationApi: SourceDefinitionSpecificationApi
-    val workspaceApi: WorkspaceApi
-    val healthApi: HealthApi
-    val attemptApi: AttemptApi
-    val stateApi: StateApi
-    val streamStatusesApi: StreamStatusesApi
-
-    init {
-      connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
-      connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
-      destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
-      destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
-      destinationSpecificationApi = DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
-      jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
-      jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
-      operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
-      sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
-      sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
-      sourceDefinitionSpecificationApi = SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
-      workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
-      healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
-      attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
-      stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
-      streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
-    }
+    val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
+    val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
+    val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+    val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
+    val destinationSpecificationApi = DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+    val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
+    val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)
+    val operationApi = OperationApi(basePath = basePath, client = httpClient, policy = policy)
+    val sourceDefinitionApi = SourceDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
+    val sourceApi = SourceApi(basePath = basePath, client = httpClient, policy = policy)
+    val sourceDefinitionSpecificationApi = SourceDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+    val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
+    val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
+    val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
+    val stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
+    val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
   }

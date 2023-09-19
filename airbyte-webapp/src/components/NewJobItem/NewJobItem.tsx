@@ -1,7 +1,7 @@
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { Suspense, useRef } from "react";
+import { Suspense, useCallback, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
@@ -60,8 +60,30 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   useEffectOnce(() => {
     if (attemptLink.jobId === String(jobWithAttempts.job.id)) {
       wrapperRef.current?.scrollIntoView();
+      openJobLogsModal(attemptLink.attemptId ? Number(attemptLink.attemptId) - 1 : undefined);
     }
   });
+
+  const openJobLogsModal = useCallback(
+    (initialAttemptIndex?: number) => {
+      openModal({
+        size: "full",
+        title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
+        content: () => (
+          <Suspense
+            fallback={
+              <div className={styles.newJobItem__modalLoading}>
+                <Spinner />
+              </div>
+            }
+          >
+            <JobLogsModalContent jobId={jobWithAttempts.job.id} initialAttemptIndex={initialAttemptIndex} />
+          </Suspense>
+        ),
+      });
+    },
+    [connection.name, formatMessage, jobWithAttempts.job.id, openModal]
+  );
 
   const handleClick = (optionClicked: DropdownMenuOptionType) => {
     switch (optionClicked.value) {
@@ -120,21 +142,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
         });
         break;
       case ContextMenuOptions.OpenLogsModal:
-        openModal({
-          size: "full",
-          title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
-          content: () => (
-            <Suspense
-              fallback={
-                <div className={styles.newJobItem__modalLoading}>
-                  <Spinner />
-                </div>
-              }
-            >
-              <JobLogsModalContent jobId={jobWithAttempts.job.id} />
-            </Suspense>
-          ),
-        });
+        openJobLogsModal();
         break;
       case ContextMenuOptions.CopyLinkToJob:
         const url = new URL(window.location.href);

@@ -9,12 +9,12 @@ import io.airbyte.airbyte_api.model.generated.WorkspaceCreateRequest
 import io.airbyte.airbyte_api.model.generated.WorkspaceOAuthCredentialsRequest
 import io.airbyte.airbyte_api.model.generated.WorkspaceResponse
 import io.airbyte.airbyte_api.model.generated.WorkspaceUpdateRequest
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.DELETE
 import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.WORKSPACES_PATH
 import io.airbyte.api.server.constants.WORKSPACES_WITH_ID_PATH
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.services.UserService
 import io.airbyte.api.server.services.WorkspaceService

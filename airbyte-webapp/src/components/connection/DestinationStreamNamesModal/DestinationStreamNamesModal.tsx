@@ -12,6 +12,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
 
 export const enum StreamNameDefinitionValueType {
@@ -55,7 +56,12 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
 });
 
 interface DestinationStreamNamesModalProps {
-  initialValues: Pick<FormikConnectionFormValues, "prefix">;
+  /**
+   * temporary extend this interface since we use modal in Formik and react-hook-form forms
+   *TODO: remove FormikConnectionFormValues after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  initialValues: Pick<FormikConnectionFormValues | HookFormConnectionFormValues, "prefix">;
   onCloseModal: () => void;
   onSubmit: (value: DestinationStreamNamesFormValues) => void;
 }

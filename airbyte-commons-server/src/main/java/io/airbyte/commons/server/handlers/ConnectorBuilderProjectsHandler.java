@@ -28,6 +28,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -220,9 +221,10 @@ public class ConnectorBuilderProjectsHandler {
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withReleaseStage(ReleaseStage.CUSTOM)
+        .withSupportLevel(SupportLevel.NONE)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
+    configRepository.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
 
     return source.getSourceDefinitionId();

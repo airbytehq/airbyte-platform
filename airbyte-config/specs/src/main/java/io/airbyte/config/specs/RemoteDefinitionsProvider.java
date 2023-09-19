@@ -4,8 +4,9 @@
 
 package io.airbyte.config.specs;
 
+import static io.micronaut.http.HttpHeaders.ACCEPT;
+
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.api.client.http.HttpStatusCodes;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.json.Jsons;
@@ -18,13 +19,13 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.micronaut.cache.annotation.CacheConfig;
 import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.http.MediaType;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,15 +48,15 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RemoteDefinitionsProvider.class);
 
-  private static final HttpClient httpClient = HttpClient.newHttpClient();
+  private final OkHttpClient okHttpClient;
+
   private final URI remoteRegistryBaseUrl;
   private final DeploymentMode deploymentMode;
-  private final Duration timeout;
+  private static final int NOT_FOUND = 404;
 
   private URI parsedRemoteRegistryBaseUrlOrDefault(final String remoteRegistryBaseUrl) {
     try {
       if (remoteRegistryBaseUrl == null || remoteRegistryBaseUrl.isEmpty()) {
-        LOGGER.error("Remote connector registry base URL cannot be null or empty. Falling back to default");
         return new URI(AirbyteCatalogConstants.REMOTE_REGISTRY_BASE_URL);
       } else {
         return new URI(remoteRegistryBaseUrl);
@@ -70,8 +74,10 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     LOGGER.info("Creating remote definitions provider for URL '{}' and registry '{}'...", remoteRegistryBaseUrlUri, deploymentMode);
 
     this.remoteRegistryBaseUrl = remoteRegistryBaseUrlUri;
-    this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
     this.deploymentMode = deploymentMode;
+    this.okHttpClient = new OkHttpClient.Builder()
+        .callTimeout(Duration.ofMillis(remoteCatalogTimeoutMs))
+        .build();
   }
 
   private Map<UUID, ConnectorRegistrySourceDefinition> getSourceDefinitionsMap() {
@@ -144,13 +150,21 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   }
 
   @VisibleForTesting
-  URI getRegistryUrl() {
-    return remoteRegistryBaseUrl.resolve(String.format("registries/v0/%s_registry.json", getRegistryName()));
+  URL getRegistryUrl() {
+    try {
+      return new URL(remoteRegistryBaseUrl + String.format("registries/v0/%s_registry.json", getRegistryName()));
+    } catch (final MalformedURLException e) {
+      throw new RuntimeException("Invalid URL format", e);
+    }
   }
 
   @VisibleForTesting
-  URI getRegistryEntryUrl(final String connectorName, final String version) {
-    return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/%s.json", connectorName, version, getRegistryName()));
+  URL getRegistryEntryUrl(final String connectorName, final String version) {
+    try {
+      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/%s.json", connectorName, version, getRegistryName())).toURL();
+    } catch (final MalformedURLException e) {
+      throw new RuntimeException("Invalid URL format", e);
+    }
   }
 
   /**
@@ -160,17 +174,20 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
    */
   @Cacheable
   public ConnectorRegistry getRemoteConnectorRegistry() {
-    try {
-      final HttpRequest request = HttpRequest.newBuilder(getRegistryUrl()).timeout(timeout).header("accept", "application/json").build();
+    final Request request = new Request.Builder()
+        .url(getRegistryUrl())
+        .header(ACCEPT, MediaType.APPLICATION_JSON)
+        .build();
 
-      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (errorStatusCode(response)) {
+    try (Response response = okHttpClient.newCall(request).execute()) {
+      if (response.isSuccessful() && response.body() != null) {
+        final String responseBody = response.body().string();
+        LOGGER.info("Fetched latest remote definitions ({})", responseBody.hashCode());
+        return Jsons.deserialize(responseBody, ConnectorRegistry.class);
+      } else {
         throw new IOException(
-            "getRemoteConnectorRegistry request ran into status code error: " + response.statusCode() + " with message: " + response.getClass());
+            "getRemoteConnectorRegistry request ran into status code error: " + response.code() + " with message: " + response.message());
       }
-
-      LOGGER.info("Fetched latest remote definitions ({})", response.body().hashCode());
-      return Jsons.deserialize(response.body(), ConnectorRegistry.class);
     } catch (final Exception e) {
       throw new RuntimeException("Failed to fetch remote connector registry", e);
     }
@@ -178,27 +195,24 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
 
   @VisibleForTesting
   Optional<JsonNode> getConnectorRegistryEntryJson(final String connectorName, final String version) {
-    try {
-      final URI registryEntryPath = getRegistryEntryUrl(connectorName, version);
-      final HttpRequest request = HttpRequest.newBuilder(registryEntryPath).timeout(timeout).header("accept", "application/json").build();
+    final URL registryEntryPath = getRegistryEntryUrl(connectorName, version);
+    final Request request = new Request.Builder()
+        .url(registryEntryPath)
+        .header(ACCEPT, MediaType.APPLICATION_JSON)
+        .build();
 
-      final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() == HttpStatusCodes.STATUS_CODE_NOT_FOUND) {
-        // 404s mean we don't have a registry entry for this connector version
+    try (Response response = okHttpClient.newCall(request).execute()) {
+      if (response.code() == NOT_FOUND) {
         return Optional.empty();
-      } else if (errorStatusCode(response)) {
+      } else if (response.isSuccessful() && response.body() != null) {
+        return Optional.of(Jsons.deserialize(response.body().string()));
+      } else {
         throw new IOException(
-            "getConnectorRegistryEntry request ran into status code error: " + response.statusCode() + " with message: " + response.getClass());
+            "getConnectorRegistryEntry request ran into status code error: " + response.code() + " with message: " + response.message());
       }
-
-      return Optional.of(Jsons.deserialize(response.body()));
-    } catch (final IOException | InterruptedException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(String.format("Failed to fetch connector registry entry for %s:%s", connectorName, version), e);
     }
-  }
-
-  private static Boolean errorStatusCode(final HttpResponse<String> response) {
-    return response.statusCode() >= 400;
   }
 
 }

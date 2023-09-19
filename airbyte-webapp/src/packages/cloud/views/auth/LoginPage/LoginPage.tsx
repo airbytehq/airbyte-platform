@@ -15,11 +15,11 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { AuthLogin, useAuthService } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { LoginFormErrorCodes } from "packages/cloud/services/auth/types";
 
 import styles from "./LoginPage.module.scss";
@@ -48,9 +48,13 @@ const LoginButton: React.FC = () => {
   );
 };
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  login: AuthLogin;
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
+  const { loginWithOAuth } = useAuthService();
   const { formatMessage } = useIntl();
-  const { login } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
 
@@ -92,8 +96,12 @@ export const LoginPage: React.FC = () => {
         <FormattedMessage id="login.loginTitle" />
       </Heading>
 
-      <OAuthLogin />
-      <Separator />
+      {loginWithOAuth && (
+        <>
+          <OAuthLogin loginWithOAuth={loginWithOAuth} />
+          <Separator />
+        </>
+      )}
 
       <Form<LoginPageFormValues>
         defaultValues={{

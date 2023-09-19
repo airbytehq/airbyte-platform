@@ -16,6 +16,7 @@ import styles from "./SchemaError.module.scss";
 export const SchemaError = ({ schemaError }: { schemaError: Exclude<SchemaErrorType, null> }) => {
   const job = LogsRequestError.extractJobInfo(schemaError);
   const { refreshSchema } = useConnectionFormService();
+
   return (
     <Card className={styles.card}>
       <FlexContainer direction="column">

@@ -4,9 +4,11 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Box } from "components/ui/Box";
 import { ExternalLink } from "components/ui/Link";
 
-import { NormalizationType } from "core/domain/connection";
+import { NormalizationType } from "area/connection/types";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { LabeledRadioButtonFormControl } from "./LabeledRadioButtonFormControl";
 
@@ -19,7 +21,15 @@ import { LabeledRadioButtonFormControl } from "./LabeledRadioButtonFormControl";
  */
 export const NormalizationHookFormField: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { mode } = useConnectionFormService();
+  /**
+   *TODO: remove after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const useConnectionFormContextProvider = doUseCreateConnectionHookForm
+    ? useConnectionHookFormService
+    : useConnectionFormService;
+  const { mode } = useConnectionFormContextProvider();
 
   return (
     <Box mt="lg" mb="lg">

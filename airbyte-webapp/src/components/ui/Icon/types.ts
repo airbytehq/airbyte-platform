@@ -1,6 +1,7 @@
 export type IconType =
   | "article"
   | "calendar"
+  | "certified"
   | "check"
   | "chevronDown"
   | "chevronLeft"
@@ -24,7 +25,6 @@ export type IconType =
   | "file"
   | "flash"
   | "folder"
-  | "gA"
   | "gear"
   | "globe"
   | "grid"

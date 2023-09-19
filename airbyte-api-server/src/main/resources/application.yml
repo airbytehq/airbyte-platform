@@ -18,7 +18,7 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
   http:
     client:
-      read-timeout: 20s
+      read-timeout: ${READ_TIMEOUT:150s}
       max-content-length: 52428800 # 50MB
 
 airbyte:

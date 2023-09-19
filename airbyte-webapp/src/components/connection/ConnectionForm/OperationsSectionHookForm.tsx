@@ -6,23 +6,16 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { FeatureItem, useFeature } from "core/services/features";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
 
 import { NormalizationHookFormField } from "./NormalizationHookFormField";
 import { TransformationFieldHookForm } from "./TransformationFieldHookForm";
 
-// not sure if we need to pass these callbacks, since we don't control modal via parent prop state
-// but leaving them here just as note
-// interface OperationsSectionHookFormProps {
-//   onStartEditTransformation?: () => void;
-//   onEndEditTransformation?: () => void;
-// }
-
 export const OperationsSectionHookForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const {
-    destDefinition: { normalizationConfig, supportsDbt },
-  } = useConnectionFormService();
+    destDefinitionVersion: { normalizationConfig, supportsDbt },
+  } = useConnectionHookFormService();
 
   const supportsNormalization = normalizationConfig.supported;
   const supportsTransformations = useFeature(FeatureItem.AllowCustomDBT) && supportsDbt;

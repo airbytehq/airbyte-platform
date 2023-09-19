@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { LabeledRadioButton } from "components";
 import { ExternalLink } from "components/ui/Link";
 
-import { NormalizationType } from "core/domain/connection/operation";
+import { NormalizationType } from "area/connection/types";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 

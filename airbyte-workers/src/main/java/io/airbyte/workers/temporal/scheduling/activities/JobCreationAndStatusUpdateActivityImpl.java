@@ -9,24 +9,23 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
@@ -39,10 +38,8 @@ import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -60,32 +57,26 @@ import lombok.extern.slf4j.Slf4j;
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
   private final JobPersistence jobPersistence;
-  private final Path workspaceRoot;
-  private final WorkerEnvironment workerEnvironment;
-  private final LogConfigs logConfigs;
   private final JobNotifier jobNotifier;
   private final JobTracker jobTracker;
   private final JobErrorReporter jobErrorReporter;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobsApi jobsApi;
+  private final AttemptApi attemptApi;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobPersistence jobPersistence,
-                                                @Named("workspaceRoot") final Path workspaceRoot,
-                                                final WorkerEnvironment workerEnvironment,
-                                                final LogConfigs logConfigs,
                                                 final JobNotifier jobNotifier,
                                                 final JobTracker jobTracker,
                                                 final ConfigRepository configRepository,
                                                 final JobErrorReporter jobErrorReporter,
-                                                final JobsApi jobsApi) {
+                                                final JobsApi jobsApi,
+                                                final AttemptApi attemptApi) {
     this.jobPersistence = jobPersistence;
-    this.workspaceRoot = workspaceRoot;
-    this.workerEnvironment = workerEnvironment;
-    this.logConfigs = logConfigs;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
     this.jobErrorReporter = jobErrorReporter;
     this.jobsApi = jobsApi;
+    this.attemptApi = attemptApi;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -101,6 +92,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       final JobInfoRead jobInfoRead = jobsApi.createJob(new JobCreate().connectionId(input.getConnectionId()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
       log.error("Unable to create job for connection {}", input.getConnectionId(), e);
       throw new RetryableException(e);
     }
@@ -113,17 +105,10 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     try {
       final long jobId = input.getJobId();
-      final Job job = jobPersistence.getJob(jobId);
-
-      final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
-      final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
-      final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);
-      jobCreationAndStatusUpdateHelper.emitAttemptCreatedEvent(job, persistedAttemptNumber);
-
-      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, jobRoot);
-      return new AttemptNumberCreationOutput(persistedAttemptNumber);
-    } catch (final IOException e) {
+      final var response = attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(jobId));
+      return new AttemptNumberCreationOutput(response.getAttemptNumber());
+    } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }

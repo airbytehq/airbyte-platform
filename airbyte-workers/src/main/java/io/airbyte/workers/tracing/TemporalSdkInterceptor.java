@@ -44,6 +44,11 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
   static final String ERROR_MESSAGE_TAG = DDTags.ERROR_MSG;
 
   /**
+   * The {@code error.type} tag name.
+   */
+  static final String ERROR_TYPE_TAG = "error.type";
+
+  /**
    * Error message tag key name that contains the Temporal exit error message.
    */
   static final Set<String> ERROR_MESSAGE_TAG_KEYS = Set.of(ERROR_MSG_TAG, ERROR_MESSAGE_TAG);
@@ -52,6 +57,11 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
    * Temporal exit error message text.
    */
   static final String EXIT_ERROR_MESSAGE = "exit";
+
+  /**
+   * Temporal destroy workflow thread error type.
+   */
+  static final String DESTROY_WORKFLOW_ERROR_TYPE = "DestroyWorkflowThreadError";
 
   @Override
   public Collection<? extends MutableSpan> onTraceComplete(final Collection<? extends MutableSpan> trace) {
@@ -66,7 +76,7 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
         return;
       }
 
-      if (isExitTrace(t)) {
+      if (isExitTrace(t) || isDestroyThreadTrace(t)) {
         t.setError(false);
       }
 
@@ -100,6 +110,24 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
         && (safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME)
             || safeEquals(trace.getResourceName(), CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME)
             || safeEquals(trace.getResourceName(), SYNC_WORKFLOW_IMPL_RESOURCE_NAME));
+  }
+
+  /**
+   * Test whether the provided {@link MutableSpan} contains a Temporal destroy thread error.
+   *
+   * @param trace The {@link MutableSpan} to be tested.
+   * @return {@code true} if the {@link MutableSpan} contains a Temporal destroy thread error or
+   *         {@code false} otherwise.
+   */
+  @VisibleForTesting
+  boolean isDestroyThreadTrace(final MutableSpan trace) {
+    if (trace == null) {
+      return false;
+    }
+
+    return trace.isError()
+        && trace.getTags().getOrDefault(ERROR_TYPE_TAG, "").toString().endsWith(DESTROY_WORKFLOW_ERROR_TYPE)
+        && safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME);
   }
 
   /**

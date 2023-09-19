@@ -11,6 +11,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Keys.CONNECTION__CON
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
@@ -24,6 +25,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
@@ -58,6 +60,8 @@ class MetricRepositoryTest {
 
   private static final UUID SRC_DEF_ID = UUID.randomUUID();
   private static final UUID DST_DEF_ID = UUID.randomUUID();
+  private static final UUID SRC_DEF_VER_ID = UUID.randomUUID();
+  private static final UUID DST_DEF_VER_ID = UUID.randomUUID();
   private static MetricRepository db;
   private static DSLContext ctx;
 
@@ -78,6 +82,13 @@ class MetricRepositoryTest {
         .values(SRC_DEF_ID, "srcDef", ActorType.source)
         .values(DST_DEF_ID, "dstDef", ActorType.destination)
         .values(UUID.randomUUID(), "dstDef", ActorType.destination)
+        .execute();
+
+    ctx.insertInto(ACTOR_DEFINITION_VERSION, ACTOR_DEFINITION_VERSION.ID, ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID,
+        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC,
+        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL)
+        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
         .execute();
 
     // drop constraints to simplify test set up
@@ -318,10 +329,11 @@ class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION, ACTOR.ACTOR_TYPE,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+          ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -345,10 +357,11 @@ class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION, ACTOR.ACTOR_TYPE,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+          ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
@@ -374,10 +387,11 @@ class MetricRepositoryTest {
 
       final var srcId = UUID.randomUUID();
       final var dstId = UUID.randomUUID();
-      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION, ACTOR.ACTOR_TYPE,
+      ctx.insertInto(ACTOR, ACTOR.ID, ACTOR.WORKSPACE_ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+          ACTOR.ACTOR_TYPE,
           ACTOR.TOMBSTONE)
-          .values(srcId, workspaceId, SRC_DEF_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
-          .values(dstId, workspaceId, DST_DEF_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
+          .values(srcId, workspaceId, SRC_DEF_ID, SRC_DEF_VER_ID, SRC, JSONB.valueOf("{}"), ActorType.source, false)
+          .values(dstId, workspaceId, DST_DEF_ID, DST_DEF_VER_ID, DEST, JSONB.valueOf("{}"), ActorType.destination, false)
           .execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,

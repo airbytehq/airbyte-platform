@@ -1,16 +1,14 @@
+import classNames from "classnames";
 import React from "react";
+import { useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 
 import { Form, FormControl } from "components/forms";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
-
-import { ReleaseStage } from "core/request/AirbyteClient";
+import { FlexContainer } from "components/ui/Flex";
 
 import { SubmissionButton } from "./SubmissionButton";
 import styles from "./VersionCell.module.scss";
-import { VersionChangeResult } from "./VersionChangeResult";
-import { useUpdatingState } from "../ConnectorsViewContext";
 
 const versionCellFormSchema = yup.object().shape({
   id: yup.string().trim().required("form.empty.error"),
@@ -27,7 +25,7 @@ export interface VersionCellProps {
   onChange: (values: ConnectorVersionFormValues) => Promise<void>;
   currentVersion: string;
   latestVersion?: string;
-  releaseStage?: ReleaseStage;
+  custom?: boolean;
 }
 
 export const VersionCell: React.FC<VersionCellProps> = ({
@@ -35,48 +33,64 @@ export const VersionCell: React.FC<VersionCellProps> = ({
   onChange,
   currentVersion,
   latestVersion,
-  releaseStage,
+  custom,
+}) => (
+  <Form<ConnectorVersionFormValues>
+    defaultValues={{
+      id: connectorDefinitionId,
+      version: latestVersion || currentVersion,
+    }}
+    reinitializeDefaultValues
+    schema={versionCellFormSchema}
+    onSubmit={onChange}
+  >
+    <VersionFormContent
+      custom={custom}
+      connectorDefinitionId={connectorDefinitionId}
+      currentVersion={currentVersion}
+      latestVersion={latestVersion}
+    />
+  </Form>
+);
+
+const VersionFormContent = ({
+  custom,
+  connectorDefinitionId,
+  currentVersion,
+  latestVersion,
+}: {
+  custom?: boolean;
+  connectorDefinitionId: string;
+  currentVersion: string;
+  latestVersion?: string;
 }) => {
   const { formatMessage } = useIntl();
-  const { feedbackList } = useUpdatingState();
-  const feedback = feedbackList[connectorDefinitionId];
+  const value = useWatch({ name: "version" });
 
   const inputLatestNote =
-    feedback !== "success" && releaseStage !== ReleaseStage.custom
+    value === latestVersion && !custom
       ? formatMessage({
           id: "admin.latestNote",
         })
       : undefined;
 
   return (
-    <Form<ConnectorVersionFormValues>
-      defaultValues={{
-        id: connectorDefinitionId,
-        version: latestVersion || currentVersion,
-      }}
-      schema={versionCellFormSchema}
-      onSubmit={onChange}
-    >
-      <FlexContainer justifyContent="flex-end" alignItems="center" className={styles.versionCell}>
-        <FlexItem>
-          <VersionChangeResult feedback={feedback} />
-        </FlexItem>
-        <div className={styles.inputField} data-before={inputLatestNote}>
-          <FormControl
-            name="version"
-            fieldType="input"
-            className={styles.versionInput}
-            containerControlClassName={styles.inputContainer}
-            type="text"
-            autoComplete="off"
-          />
-        </div>
-        <SubmissionButton
-          connectorDefinitionId={connectorDefinitionId}
-          currentVersion={currentVersion}
-          latestVersion={latestVersion}
+    <FlexContainer justifyContent="flex-end" alignItems="center" className={styles.versionCell}>
+      <div className={styles.inputField} data-before={inputLatestNote}>
+        <FormControl
+          name="version"
+          fieldType="input"
+          className={classNames(styles.versionInput, { [styles.noLatest]: inputLatestNote === undefined })}
+          containerControlClassName={styles.inputContainer}
+          type="text"
+          autoComplete="off"
         />
-      </FlexContainer>
-    </Form>
+      </div>
+      <SubmissionButton
+        connectorDefinitionId={connectorDefinitionId}
+        currentVersion={currentVersion}
+        latestVersion={latestVersion}
+      />
+    </FlexContainer>
   );
 };

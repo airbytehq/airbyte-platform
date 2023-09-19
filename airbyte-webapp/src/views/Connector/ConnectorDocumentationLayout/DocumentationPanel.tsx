@@ -1,12 +1,7 @@
-import type { Url } from "url";
-
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { PluggableList } from "react-markdown/lib/react-markdown";
 import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
-import rehypeSlug from "rehype-slug";
-import urls from "rehype-urls";
 import { match } from "ts-pattern";
 
 import { LoadingPage } from "components";
@@ -33,6 +28,42 @@ export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string 
 };
 type TabsType = "setupGuide" | "schema" | "erd";
 
+const ImgRelativePathReplacer: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = ({ src, alt, ...props }) => {
+  const newSrc = src && src.startsWith("../../") ? src.replace("../../", `${EMBEDDED_DOCS_PATH}/`) : src;
+  return <img src={newSrc} alt={alt} {...props} />;
+};
+
+const LinkRelativePathReplacer: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement>> = ({
+  href,
+  children,
+  ...props
+}) => {
+  // Relative URLs pointing to another place within the documentation.
+  if (href && href.startsWith("../../")) {
+    // In links replace with a link to the external documentation instead
+    // The external path is the markdown URL without the "../../" prefix and the .md extension
+    const docPath = href.replace(/^\.\.\/\.\.\/(.*?)(\.md)?$/, "$1");
+    const docLink = `${links.docsLink}/${docPath}`;
+    return (
+      <a {...props} href={docLink} target="_blank" rel="noreferrer">
+        {children}
+      </a>
+    );
+  } else if (href && href.startsWith("#")) {
+    return (
+      <a {...props} href={href}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <a {...props} href={href} target="_blank" rel="noreferrer">
+      {children}
+    </a>
+  );
+};
+
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
@@ -40,29 +71,12 @@ export const DocumentationPanel: React.FC = () => {
     selectedConnectorDefinition &&
     "sourceType" in selectedConnectorDefinition &&
     selectedConnectorDefinition.sourceType;
-  const { releaseStage } = selectedConnectorDefinition || {};
+  const { supportLevel } = selectedConnectorDefinition || {};
   const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false) && sourceType === "api";
   const [isSchemaRequested, setIsSchemaRequested] = useState(false);
   const [isERDRequested, setIsERDRequested] = useState(false);
 
-  const { data: docs, isLoading, error } = useDocumentation(documentationUrl, releaseStage);
-  const urlReplacerPlugin: PluggableList = useMemo<PluggableList>(() => {
-    const sanitizeLinks = (url: Url, element: Element) => {
-      // Relative URLs pointing to another place within the documentation.
-      if (url.path?.startsWith("../../")) {
-        if (element.tagName === "img") {
-          // In images replace relative URLs with links to our bundled assets
-          return url.path.replace("../../", `${EMBEDDED_DOCS_PATH}/`);
-        }
-        // In links replace with a link to the external documentation instead
-        // The external path is the markdown URL without the "../../" prefix and the .md extension
-        const docPath = url.path.replace(/^\.\.\/\.\.\/(.*?)(\.md)?$/, "$1");
-        return `${links.docsLink}/${docPath}`;
-      }
-      return url.href;
-    };
-    return [[urls, sanitizeLinks], [rehypeSlug]];
-  }, []);
+  const { data: docs, isLoading, error } = useDocumentation(documentationUrl, supportLevel);
 
   const location = useLocation();
 
@@ -119,7 +133,16 @@ export const DocumentationPanel: React.FC = () => {
                 ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
                 : formatMessage({ id: "connector.setupGuide.notFound" })
             }
-            rehypePlugins={urlReplacerPlugin}
+            options={{
+              overrides: {
+                img: {
+                  component: ImgRelativePathReplacer,
+                },
+                a: {
+                  component: LinkRelativePathReplacer,
+                },
+              },
+            }}
           />
         ))
         .with("schema", () => (

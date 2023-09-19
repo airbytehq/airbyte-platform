@@ -12,6 +12,8 @@ export const calculateAvailableSourcesAndDestinations = (rawConsumptionData: Con
           id: currentConsumptionItem.connection.sourceId,
           icon: currentConsumptionItem.connection.sourceIcon,
           releaseStage: currentConsumptionItem.connection.sourceReleaseStage,
+          supportLevel: currentConsumptionItem.connection.sourceSupportLevel,
+          custom: currentConsumptionItem.connection.sourceCustom,
           connectedDestinations: [currentConsumptionItem.connection.destinationId],
         };
       } else {
@@ -32,6 +34,8 @@ export const calculateAvailableSourcesAndDestinations = (rawConsumptionData: Con
           id: currentConsumptionItem.connection.destinationId,
           icon: currentConsumptionItem.connection.destinationIcon,
           releaseStage: currentConsumptionItem.connection.destinationReleaseStage,
+          supportLevel: currentConsumptionItem.connection.destinationSupportLevel,
+          custom: currentConsumptionItem.connection.destinationCustom,
           connectedSources: [currentConsumptionItem.connection.sourceId],
         };
       } else {

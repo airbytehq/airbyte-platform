@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { User as FirebaseUser, AuthErrorCodes } from "firebase/auth";
-import React, { useCallback, useContext, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
@@ -10,35 +10,19 @@ import { UserRead } from "core/api/types/CloudApi";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { AuthProviders, AuthContextApi, OAuthLoginState, AuthContext, useAuthService } from "core/services/auth";
 import { trackSignup } from "core/utils/fathom";
+import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
-import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
 import { SignupFormValues } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
 
-import { FREE_EMAIL_SERVICE_PROVIDERS } from "./freeEmailProviders";
 import { actions, AuthServiceState, authStateReducer, initialState } from "./reducer";
 import { EmailLinkErrorCodes } from "./types";
-
-export type AuthUpdatePassword = (email: string, currentPassword: string, newPassword: string) => Promise<void>;
-
-export type AuthRequirePasswordReset = (email: string) => Promise<void>;
-export type AuthConfirmPasswordReset = (code: string, newPassword: string) => Promise<void>;
-
-export type AuthLogin = (values: { email: string; password: string }) => Promise<void>;
-
-export type AuthSignUp = (form: SignupFormValues) => Promise<void>;
-
-export type AuthChangeName = (name: string) => Promise<void>;
-
-export type AuthSendEmailVerification = () => Promise<void>;
-export type AuthVerifyEmail = (code: string) => Promise<void>;
-export type AuthLogout = () => Promise<void>;
-
-type OAuthLoginState = "waiting" | "loading" | "done";
 
 export enum FirebaseAuthMessageId {
   NetworkFailure = "firebase.auth.error.networkRequestFailed",
@@ -47,35 +31,12 @@ export enum FirebaseAuthMessageId {
   DefaultError = "firebase.auth.error.default",
 }
 
-interface AuthContextApi {
-  user: UserRead | null;
-  inited: boolean;
-  emailVerified: boolean;
-  isLoading: boolean;
-  loggedOut: boolean;
-  providers: string[] | null;
-  hasPasswordLogin: () => boolean;
-  hasCorporateEmail: (email?: string) => boolean;
-  login: AuthLogin;
-  loginWithOAuth: (provider: OAuthProviders) => Observable<OAuthLoginState>;
-  signUpWithEmailLink: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
-  signUp: AuthSignUp;
-  updatePassword: AuthUpdatePassword;
-  updateName: AuthChangeName;
-  requirePasswordReset: AuthRequirePasswordReset;
-  confirmPasswordReset: AuthConfirmPasswordReset;
-  sendEmailVerification: AuthSendEmailVerification;
-  verifyEmail: AuthVerifyEmail;
-  logout: AuthLogout;
-}
-
-export const AuthContext = React.createContext<AuthContextApi | null>(null);
-
 export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const [state, { loggedIn, emailVerified, authInited, loggedOut, updateUserName }] = useTypesafeReducer<
     AuthServiceState,
     typeof actions
   >(authStateReducer, initialState, actions);
+  const [, setSpeedyConnectionTimestamp] = useLocalStorage("exp-speedy-connection-timestamp", "");
   const auth = useAuth();
   const userService = useGetUserService();
   const analytics = useAnalyticsService();
@@ -102,7 +63,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       companyName: userData.companyName ?? "",
       news: userData.news ?? false,
     });
-    const isCorporate = ctx.hasCorporateEmail(user.email);
+    const isCorporate = isCorporateEmail(user.email);
 
     analytics.track(Namespace.USER, Action.CREATE, {
       actionDescription: "New user registered",
@@ -137,10 +98,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
           // errors in between creating the firebase user and the database user originally.
           const user = await createAirbyteUser(currentUser);
           // exp-speedy-connection
-          localStorage.setItem(
-            "exp-speedy-connection-timestamp",
-            String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000))
-          );
+          setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
           await onAfterAuth(currentUser, user);
         } else {
           throw e;
@@ -181,9 +139,6 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       providers: state.providers,
       hasPasswordLogin(): boolean {
         return !!state.providers?.includes("password");
-      },
-      hasCorporateEmail(email: string | undefined = state.currentUser?.email): boolean {
-        return !FREE_EMAIL_SERVICE_PROVIDERS.some((provider) => email?.endsWith(`@${provider}`));
       },
       async login(values: { email: string; password: string }): Promise<void> {
         await authService.login(values.email, values.password);
@@ -306,10 +261,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
 
         if (auth.currentUser) {
           // exp-speedy-connection
-          localStorage.setItem(
-            "exp-speedy-connection-timestamp",
-            String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000))
-          );
+          setSpeedyConnectionTimestamp(String(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)));
           await onAfterAuth(auth.currentUser);
         }
       },
@@ -320,24 +272,6 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   );
 
   return <AuthContext.Provider value={ctx}>{children}</AuthContext.Provider>;
-};
-
-export const useAuthService = (): AuthContextApi => {
-  const authService = useContext(AuthContext);
-  if (!authService) {
-    throw new Error("useAuthService must be used within a AuthenticationService.");
-  }
-
-  return authService;
-};
-
-export const useCurrentUser = (): UserRead => {
-  const { user } = useAuthService();
-  if (!user) {
-    throw new Error("useCurrentUser must be used only within authorised flow");
-  }
-
-  return user;
 };
 
 export const useIsForeignWorkspace = () => {

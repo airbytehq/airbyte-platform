@@ -220,6 +220,44 @@ public class CatalogConverter {
         .withStreams(streams);
   }
 
+  /**
+   * Set the default sync modes for an un-configured stream based on the stream properties.
+   * <p>
+   * The logic is: - source-defined cursor and source-defined primary key -> INCREMENTAL, APPEND-DEDUP
+   * - source-defined cursor only or nothing defined by the source -> FULL REFRESH, OVERWRITE -
+   * source-defined cursor and full refresh not available as a sync method -> INCREMENTAL, APPEND
+   *
+   * @param streamToConfigure the stream for which we're picking a sync mode
+   * @param config the config to which we'll write the sync mode
+   */
+  public static void configureDefaultSyncModesForNewStream(final AirbyteStream streamToConfigure, final AirbyteStreamConfiguration config) {
+    final boolean hasSourceDefinedCursor = streamToConfigure.getSourceDefinedCursor() != null && streamToConfigure.getSourceDefinedCursor();
+    final boolean hasSourceDefinedPrimaryKey =
+        streamToConfigure.getSourceDefinedPrimaryKey() != null && !streamToConfigure.getSourceDefinedPrimaryKey().isEmpty();
+    final boolean supportsFullRefresh = streamToConfigure.getSupportedSyncModes().contains(SyncMode.FULL_REFRESH);
+    if (hasSourceDefinedCursor && hasSourceDefinedPrimaryKey) { // Source-defined cursor and primary key
+      config
+          .syncMode(SyncMode.INCREMENTAL)
+          .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
+          .primaryKey(streamToConfigure.getSourceDefinedPrimaryKey());
+    } else if (hasSourceDefinedCursor && supportsFullRefresh) { // Source-defined cursor but no primary key.
+      // NOTE: we prefer Full Refresh | Overwrite to avoid the risk of an Incremental | Append sync
+      // blowing up their destination.
+      config
+          .syncMode(SyncMode.FULL_REFRESH)
+          .destinationSyncMode(DestinationSyncMode.OVERWRITE);
+    } else if (hasSourceDefinedCursor) { // Source-defined cursor but no primary key *and* no full-refresh supported.
+      // If *only* incremental is supported, we go with it.
+      config
+          .syncMode(SyncMode.INCREMENTAL)
+          .destinationSyncMode(DestinationSyncMode.APPEND);
+    } else { // No source-defined cursor at all.
+      config
+          .syncMode(SyncMode.FULL_REFRESH)
+          .destinationSyncMode(DestinationSyncMode.OVERWRITE);
+    }
+  }
+
   @SuppressWarnings("LineLength")
   private static io.airbyte.api.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(final io.airbyte.api.model.generated.AirbyteStream stream,
                                                                                                         final Boolean suggestingStreams,
@@ -239,11 +277,7 @@ public class CatalogConverter {
     result.setSuggested(isSelected);
     result.setSelected(isSelected);
 
-    if (stream.getSupportedSyncModes().size() > 0) {
-      result.setSyncMode(stream.getSupportedSyncModes().get(0));
-    } else {
-      result.setSyncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL);
-    }
+    configureDefaultSyncModesForNewStream(stream, result);
 
     return result;
   }
@@ -330,6 +364,42 @@ public class CatalogConverter {
   // field selection data.
   private static String streamDescriptorToStringForFieldSelection(final StreamDescriptor streamDescriptor) {
     return String.format("%s/%s", streamDescriptor.getNamespace(), streamDescriptor.getName());
+  }
+
+  /**
+   * Ensure that the configured sync modes are compatible with the source and the destination.
+   * <p>
+   * When we discover a new stream -- either during manual or auto schema refresh -- we want to pick
+   * some default sync modes. This depends both on the source-supported sync modes -- represented in
+   * the discovered catalog -- and the destination-supported sync modes. The latter is tricky because
+   * the place where we're generating the default configuration isn't associated with a particular
+   * destination.
+   * <p>
+   * A longer-term fix would be to restructure how we generate this default config, but for now we use
+   * this to ensure that we've chosen defaults that work for the relevant sync.
+   *
+   * @param streamAndConfiguration the stream and configuration to check
+   * @param supportedDestinationSyncModes the sync modes supported by the destination
+   */
+  public static void ensureCompatibleDestinationSyncMode(AirbyteStreamAndConfiguration streamAndConfiguration,
+                                                         List<DestinationSyncMode> supportedDestinationSyncModes) {
+    if (supportedDestinationSyncModes.contains(streamAndConfiguration.getConfig().getDestinationSyncMode())) {
+      return;
+    }
+    final var sourceSupportsFullRefresh = streamAndConfiguration.getStream().getSupportedSyncModes().contains(SyncMode.FULL_REFRESH);
+    final var destinationSupportsOverwrite = supportedDestinationSyncModes.contains(DestinationSyncMode.OVERWRITE);
+    if (sourceSupportsFullRefresh && destinationSupportsOverwrite) {
+      // We prefer to fall back to Full Refresh | Overwrite if possible.
+      streamAndConfiguration.getConfig().syncMode(SyncMode.FULL_REFRESH).destinationSyncMode(DestinationSyncMode.OVERWRITE);
+    } else {
+      // If *that* isn't possible, we pick something that *is* supported. This isn't ideal, but we don't
+      // have a clean way
+      // to fail in this case today.
+      final var supportedSyncMode = streamAndConfiguration.getStream().getSupportedSyncModes().get(0);
+      final var supportedDestinationSyncMode = supportedDestinationSyncModes.get(0);
+      LOGGER.warn("Default sync modes are incompatible, so falling back to {} | {}", supportedSyncMode, supportedDestinationSyncMode);
+      streamAndConfiguration.getConfig().syncMode(supportedSyncMode).destinationSyncMode(supportedDestinationSyncMode);
+    }
   }
 
 }

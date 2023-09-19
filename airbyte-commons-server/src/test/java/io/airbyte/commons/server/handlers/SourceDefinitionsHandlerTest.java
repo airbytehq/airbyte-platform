@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +35,7 @@ import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceReadList;
+import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
@@ -53,11 +55,12 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
@@ -92,6 +95,7 @@ class SourceDefinitionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private SourceHandler sourceHandler;
+  private SupportStateUpdater supportStateUpdater;
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
@@ -104,6 +108,7 @@ class SourceDefinitionsHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     sourceHandler = mock(SourceHandler.class);
+    supportStateUpdater = mock(SupportStateUpdater.class);
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     sourceDefinition = generateSourceDefinition();
@@ -111,7 +116,7 @@ class SourceDefinitionsHandlerTest {
     featureFlagClient = mock(TestClient.class);
     sourceDefinitionsHandler =
         new SourceDefinitionsHandler(configRepository, uuidSupplier, actorDefinitionHandlerHelper, remoteDefinitionsProvider, sourceHandler,
-            featureFlagClient);
+            supportStateUpdater, featureFlagClient);
   }
 
   private StandardSourceDefinition generateSourceDefinition() {
@@ -136,6 +141,7 @@ class SourceDefinitionsHandlerTest {
         .withDockerRepository("dockerstuff")
         .withDockerImageTag("12.3")
         .withSpec(spec)
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")))
@@ -156,6 +162,7 @@ class SourceDefinitionsHandlerTest {
     return generateVersionFromSourceDefinition(sourceDefinition)
         .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
         .withReleaseDate(null)
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withAllowedHosts(null);
   }
@@ -177,6 +184,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -191,6 +199,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -224,6 +233,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -238,6 +248,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -299,6 +310,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -313,6 +325,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -349,6 +362,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -411,6 +425,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -444,6 +459,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -506,6 +522,8 @@ class SourceDefinitionsHandlerTest {
         .sourceDefinitionId(newSourceDefinition.getSourceDefinitionId())
         .icon(SourceDefinitionsHandler.loadIcon(newSourceDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.COMMUNITY)
         .releaseStage(ReleaseStage.CUSTOM)
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
@@ -518,7 +536,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -567,6 +585,8 @@ class SourceDefinitionsHandlerTest {
         .sourceDefinitionId(newSourceDefinition.getSourceDefinitionId())
         .icon(SourceDefinitionsHandler.loadIcon(newSourceDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.COMMUNITY)
         .releaseStage(ReleaseStage.CUSTOM)
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
             ._default(new io.airbyte.api.model.generated.ResourceRequirements()
@@ -580,7 +600,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreateForWorkspace.getWorkspaceId());
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -605,7 +625,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         null);
-    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
+    verify(configRepository).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
         sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
@@ -641,7 +661,7 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any(), any());
+    verify(configRepository, never()).writeCustomConnectorMetadata(any(StandardSourceDefinition.class), any(), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -649,24 +669,26 @@ class SourceDefinitionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  void testUpdateSource(final boolean ingestBreakingChangesFF) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(ingestBreakingChangesFF);
+  void testUpdateSource(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
 
-    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
-    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
-        .thenReturn(sourceDefinitionVersion);
-    final SourceDefinitionRead currentSource = sourceDefinitionsHandler
-        .getSourceDefinition(
-            new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinition.getSourceDefinitionId()));
-    final String currentTag = currentSource.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttag";
-    assertNotEquals(newDockerImageTag, currentTag);
-
     final StandardSourceDefinition updatedSource =
         Jsons.clone(sourceDefinition).withDefaultVersionId(null);
     final ActorDefinitionVersion updatedSourceDefVersion =
         generateVersionFromSourceDefinition(updatedSource)
-            .withDockerImageTag(newDockerImageTag);
+            .withDockerImageTag(newDockerImageTag)
+            .withVersionId(UUID.randomUUID());
+
+    final StandardSourceDefinition persistedUpdatedSource =
+        Jsons.clone(updatedSource).withDefaultVersionId(updatedSourceDefVersion.getVersionId());
+
+    when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
+        .thenReturn(sourceDefinition) // Call at the beginning of the method
+        .thenReturn(persistedUpdatedSource); // Call after we've persisted
+
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(sourceDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom())).thenReturn(updatedSourceDefVersion);
@@ -683,12 +705,13 @@ class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
-    verify(configRepository).writeSourceDefinitionAndDefaultVersion(updatedSource, updatedSourceDefVersion, breakingChanges);
-    if (ingestBreakingChangesFF) {
-      verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    verify(configRepository).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges);
+    if (runSupportStateUpdaterFlagValue) {
+      verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
+    } else {
+      verifyNoInteractions(supportStateUpdater);
     }
-
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 
   @Test
@@ -716,7 +739,7 @@ class SourceDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
         sourceDefinition.getCustom());
-    verify(configRepository, never()).writeSourceDefinitionAndDefaultVersion(any(), any());
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardSourceDefinition.class), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -757,6 +780,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -791,6 +815,7 @@ class SourceDefinitionsHandlerTest {
         .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
         .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()))
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
         .resourceRequirements(new io.airbyte.api.model.generated.ActorDefinitionResourceRequirements()
@@ -824,6 +849,32 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).deleteActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION);
   }
 
+  @Test
+  @DisplayName("should transform support level none to none")
+  void testNoneSupportLevel() {
+    final ConnectorRegistrySourceDefinition registrySourceDefinition = new ConnectorRegistrySourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("some-source")
+        .withDocumentationUrl("https://airbyte.com")
+        .withDockerRepository("dockerrepo")
+        .withDockerImageTag("1.2.4")
+        .withIcon("source.svg")
+        .withSpec(new ConnectorSpecification().withConnectionSpecification(
+            Jsons.jsonNode(ImmutableMap.of("key", "val"))))
+        .withTombstone(false)
+        .withSupportLevel(io.airbyte.config.SupportLevel.NONE)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
+        .withReleaseDate(TODAY_DATE_STRING)
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+    when(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
+
+    final SourceDefinitionRead expectedRead =
+        SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+            ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
+
+    assertEquals(expectedRead.getSupportLevel(), SupportLevel.NONE);
+  }
+
   @SuppressWarnings("TypeName")
   @Nested
   @DisplayName("listLatest")
@@ -842,6 +893,7 @@ class SourceDefinitionsHandlerTest {
           .withSpec(new ConnectorSpecification().withConnectionSpecification(
               Jsons.jsonNode(ImmutableMap.of("key", "val"))))
           .withTombstone(false)
+          .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
           .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
@@ -851,10 +903,11 @@ class SourceDefinitionsHandlerTest {
       assertEquals(1, sourceDefinitionReadList.size());
 
       final var sourceDefinitionRead = sourceDefinitionReadList.get(0);
-      assertEquals(
+      final SourceDefinitionRead expectedRead =
           SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
-              ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition)),
-          sourceDefinitionRead);
+              ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition));
+
+      assertEquals(expectedRead, sourceDefinitionRead);
     }
 
     @Test

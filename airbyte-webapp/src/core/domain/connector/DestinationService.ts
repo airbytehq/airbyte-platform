@@ -1,4 +1,4 @@
-import { ConnectionConfiguration } from "core/domain/connection";
+import { ConnectionConfiguration } from "area/connector/types";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { LogsRequestError } from "core/request/LogsRequestError";
 

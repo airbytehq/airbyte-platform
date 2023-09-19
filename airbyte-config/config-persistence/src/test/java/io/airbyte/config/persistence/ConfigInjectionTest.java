@@ -15,6 +15,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
 import java.util.Map;
@@ -103,7 +104,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   private void createBaseObjects() throws IOException {
     sourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     createInjection(sourceDefinition, "a");
     createInjection(sourceDefinition, "b");
@@ -111,7 +112,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     // unreachable injection, should not show up
     final StandardSourceDefinition otherSourceDefinition = createBaseSourceDef();
     final ActorDefinitionVersion actorDefinitionVersion2 = createBaseActorDefVersion(otherSourceDefinition.getSourceDefinitionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(otherSourceDefinition, actorDefinitionVersion2);
+    configRepository.writeConnectorMetadata(otherSourceDefinition, actorDefinitionVersion2);
     createInjection(otherSourceDefinition, "c");
   }
 
@@ -139,6 +140,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(actorDefId)
         .withDockerRepository("source-image-" + actorDefId)
         .withDockerImageTag("1.0.0")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
   }
 

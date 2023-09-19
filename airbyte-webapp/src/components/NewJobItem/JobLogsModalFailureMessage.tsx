@@ -39,7 +39,7 @@ export const JobLogsModalFailureMessage: React.FC<JobLogsModalFailureMessageProp
   }
 
   return (
-    <Box px="xl" pb="md">
+    <Box px="md" pb="md">
       {failureToShow === "internal" && (
         <Disclosure>
           {({ open }) => (

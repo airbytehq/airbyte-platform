@@ -10,7 +10,7 @@ import io.airbyte.api.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.server.handlers.SchedulerHandler;
+import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -23,10 +23,10 @@ import io.micronaut.security.rules.SecurityRule;
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceDefinitionSpecificationApiController implements SourceDefinitionSpecificationApi {
 
-  private final SchedulerHandler schedulerHandler;
+  private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
 
-  public SourceDefinitionSpecificationApiController(final SchedulerHandler schedulerHandler) {
-    this.schedulerHandler = schedulerHandler;
+  public SourceDefinitionSpecificationApiController(ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
+    this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
   }
 
   @SuppressWarnings("LineLength")
@@ -35,7 +35,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
-    return ApiHelper.execute(() -> schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
+    return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
   }
 
   @Post("/get_for_source")
@@ -43,7 +43,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody) {
-    return ApiHelper.execute(() -> schedulerHandler.getSpecificationForSourceId(sourceIdRequestBody));
+    return ApiHelper.execute(() -> connectorDefinitionSpecificationHandler.getSpecificationForSourceId(sourceIdRequestBody));
   }
 
 }

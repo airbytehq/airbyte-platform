@@ -11,7 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
-import { ConnectionConfiguration } from "core/domain/connection";
+import { ConnectionConfiguration } from "area/connector/types";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";

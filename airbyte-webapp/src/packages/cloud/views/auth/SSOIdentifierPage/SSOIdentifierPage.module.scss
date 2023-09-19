@@ -1,0 +1,6 @@
+@use "scss/variables";
+
+.ssoIdentifierPage {
+  width: variables.$width-login-form;
+  max-width: 100%;
+}

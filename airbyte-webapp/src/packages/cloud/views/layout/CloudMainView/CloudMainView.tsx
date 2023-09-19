@@ -8,17 +8,19 @@ import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexItem } from "components/ui/Flex";
 import { ThemeToggle } from "components/ui/ThemeToggle";
+import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
 import { useCurrentWorkspace } from "core/api";
-import { useGetCloudWorkspaceAsync } from "core/api/cloud";
+import { useGetCloudWorkspaceAsync, useListCloudWorkspacesAsync } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
+import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { RoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
@@ -34,11 +36,11 @@ import styles from "./CloudMainView.module.scss";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
-import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
+  const { data: workspaces, isLoading } = useListCloudWorkspacesAsync();
 
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
@@ -47,14 +49,14 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   // exp-speedy-connection
   const { isExperimentVariant } = useExperimentSpeedyConnection();
 
-  const { hasCorporateEmail } = useAuthService();
+  const { user } = useAuthService();
 
   const isTrial = isNewTrialPolicy
     ? cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
       cloudWorkspace?.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
     : Boolean(cloudWorkspace?.trialExpiryTimestamp);
 
-  const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
+  const showExperimentBanner = isExperimentVariant && isTrial && user && isCorporateEmail(user.email);
 
   return (
     <div className={classNames(styles.mainContainer)}>
@@ -62,13 +64,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         <SideBar>
           <AirbyteHomeLink />
           {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
-          <WorkspacePopout>
-            {({ onOpen, value }) => (
-              <button className={styles.workspaceButton} onClick={onOpen} data-testid="workspaceButton">
-                {value}
-              </button>
-            )}
-          </WorkspacePopout>
+          <WorkspacesPicker loading={isLoading} workspaces={workspaces} />
           <MenuContent>
             <MainNavItems />
             <MenuContent>

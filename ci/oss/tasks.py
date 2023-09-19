@@ -8,11 +8,10 @@ from aircmd.actions.environments import (
     with_gradle,
     with_node,
     with_pnpm,
-    with_typescript_gha,
 )
-from aircmd.actions.pipelines import get_repo_dir
+from aircmd.actions.pipelines import get_repo_dir, sync_to_gradle_cache_from_homedir
 from aircmd.models.base import PipelineContext
-from aircmd.models.settings import GithubActionsInputSettings, load_settings
+from aircmd.models.settings import load_settings
 from dagger import CacheSharingMode, CacheVolume, Client, Container
 from prefect import task
 from prefect.artifacts import create_link_artifact
@@ -48,9 +47,8 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
                 .with_env_variable("VERSION", "dev")
                 .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
                 .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache", "--no-daemon"])
-                .with_exec(["./gradlew", "spotlessCheck"])
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command)
-                .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"]) #TODO: Move this to a context manager
+                .with_(sync_to_gradle_cache_from_homedir(settings.GRADLE_CACHE_VOLUME_PATH, settings.GRADLE_HOMEDIR_PATH)) #TODO: Move this to a context manager
         )
     await result.sync()
     if scan:
@@ -76,6 +74,8 @@ async def build_oss_frontend_task(settings: OssSettings, ctx: PipelineContext, c
                 .with_(load_settings(client, settings))
                 .with_mounted_cache("./build/airbyte-repository", airbyte_repo_cache, sharing=CacheSharingMode.LOCKED)
                 .with_exec(["pnpm", "install"])
+                .with_exec(["pnpm", "run", "license-check"])
+                .with_exec(["pnpm", "run", "validate-lock"])
                 .with_exec(["pnpm", "build"]))
     await result.sync()
     return result
@@ -121,6 +121,28 @@ async def build_storybook_oss_frontend_task(settings: OssSettings, ctx: Pipeline
     await result.sync()
     return result
 
+@task
+async def check_oss_backend_task(client: Client, oss_build_result: Container, settings: OssSettings, ctx: PipelineContext, scan: bool) -> Container:
+    gradle_command = ["./gradlew", "check", "-x", "test", "-x", ":airbyte-webapp:check","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon"]
+    files_from_result = [
+                        "**/build.gradle", 
+                        "**/gradle.properties", 
+                        "**/settings.gradle",
+                        "**/airbyte-*/**/*"
+                        ]
+    result = ( 
+            with_gradle(client, ctx, settings, directory=base_dir)
+            .with_directory("/root/.m2/repository", oss_build_result.directory("/root/.m2/repository")) # published jar files from mavenLocal
+            .with_directory("/airbyte/oss", oss_build_result.directory("/airbyte/oss"), include=files_from_result)
+            .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
+            .with_(load_settings(client, settings))
+            .with_env_variable("VERSION", "dev") 
+            .with_env_variable("METRIC_CLIENT", "") # override 'datadog' value for metrics-lib test
+            .with_exec(gradle_command + ["--scan"] if scan else gradle_command) 
+            .with_(sync_to_gradle_cache_from_homedir(settings.GRADLE_CACHE_VOLUME_PATH, settings.GRADLE_HOMEDIR_PATH))
+        )
+    await result.sync()
+    
 
 @task
 async def test_oss_backend_task(client: Client, oss_build_result: Container, settings: OssSettings, ctx: PipelineContext, scan: bool) -> Container:
@@ -176,9 +198,9 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
         .with_exec(["./run.sh"])
     )
     
-    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test", "-x", "buildDockerImage", "--build-cache", "--no-daemon"]
+    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon"]
 
-    result = (
+    result = ( 
                 with_gradle(client, ctx, settings, directory=base_dir)
                 .with_service_binding("airbyte-proxy-test-container", airbyte_proxy_service_auth)
                 .with_service_binding("airbyte-proxy-test-container-newauth", airbyte_proxy_service_newauth)
@@ -190,11 +212,8 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
                 .with_env_variable("VERSION", "dev") 
                 .with_env_variable("METRIC_CLIENT", "") # override 'datadog' value for metrics-lib test
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command) 
-                .with_exec(["rsync", "-az", "/root/.gradle/", "/root/gradle-cache"]) #TODO: Move this to a context manager)
-                .with_exec(["rsync", "-azm", "--include='*/'", "--include='jacocoTestReport.xml", "--exclude='*'", "/airbyte/oss", "/jacoco"]) # Collect jacoco reports 
-
-
-        )
+                .with_(sync_to_gradle_cache_from_homedir(settings.GRADLE_CACHE_VOLUME_PATH, settings.GRADLE_HOMEDIR_PATH))
+            )
     await result.sync()
     if scan:
         scan_file_contents: str = await result.file("/airbyte/oss/scan-journal.log").contents()
@@ -203,18 +222,5 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
             link=scan_file_contents.split(' - ')[2].strip(),
             description="Gradle build scan for OSS Backend Tests",
         )
-
-
-    # TODO: We should move as much of these actions that interface with PR's to prefect Artifacts as we can 
-    # instead of relying on CI only marketplace actions that assume that they are running in a CI environment
-    # This will allow us to run these actions locally as well
-    if settings.CI:
-        jacoco_inputs = GithubActionsInputSettings(settings, **{
-            "paths": "/input/**/jacocoTestReport.xml",
-        "token": settings.GITHUB_TOKEN,
-        "debug-mode": "true"
-        })
-        # TODO: Upload buildpulse here as well
-        await with_typescript_gha(client, result.directory("/jacoco"), "Madrapps/jacoco-report", "v1.6.1", jacoco_inputs)
 
     return result

@@ -491,25 +491,25 @@ export function hasIncrementalSyncUserInput(
   );
 }
 
+export const getInferredAuthValue = (authenticator: BuilderFormAuthenticator, authKey: string) => {
+  if (authenticator.type === "SessionTokenAuthenticator") {
+    return Reflect.get(authenticator.login_requester.authenticator, authKey);
+  }
+  return Reflect.get(authenticator, authKey);
+};
+
 export function getInferredInputList(
-  global: BuilderFormValues["global"],
+  authenticator: BuilderFormAuthenticator,
   inferredInputOverrides: BuilderFormValues["inferredInputOverrides"],
   startDateInput: boolean,
   endDateInput: boolean
 ): BuilderFormInput[] {
-  const authKeyToInferredInput = authTypeToKeyToInferredInput(global.authenticator);
+  const authKeyToInferredInput = authTypeToKeyToInferredInput(authenticator);
   const authKeys = Object.keys(authKeyToInferredInput);
   const inputs = authKeys.flatMap((authKey) => {
     if (
       authKeyToInferredInput[authKey].as_config_path ||
-      extractInterpolatedConfigKey(
-        Reflect.get(
-          global.authenticator.type === "SessionTokenAuthenticator"
-            ? global.authenticator.login_requester.authenticator
-            : global.authenticator,
-          authKey
-        )
-      ) === authKeyToInferredInput[authKey].key
+      extractInterpolatedConfigKey(getInferredAuthValue(authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
       return [authKeyToInferredInput[authKey]];
     }
@@ -738,7 +738,7 @@ export const authenticatorSchema = yup.object({
   }),
   session_token_path: yup.mixed().when("type", {
     is: SESSION_TOKEN_AUTHENTICATOR,
-    then: yup.array().of(yup.string()).min(1).required(REQUIRED_ERROR),
+    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR).required(REQUIRED_ERROR),
     otherwise: strip,
   }),
   expiration_duration: yup.mixed().when("type", {
@@ -978,7 +978,7 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   }
   if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
     const builderLoginRequester = globalSettings.authenticator.login_requester;
-    const { base, path } = splitUrl(builderLoginRequester.url);
+    const { base, path } = splitUrl(builderLoginRequester.url ?? "");
     return {
       ...globalSettings.authenticator,
       login_requester: {
@@ -1340,7 +1340,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const orderedInputs = orderInputs(
     values.inputs,
     getInferredInputList(
-      values.global,
+      values.global.authenticator,
       values.inferredInputOverrides,
       hasIncrementalSyncUserInput(values.streams, "start_datetime"),
       hasIncrementalSyncUserInput(values.streams, "end_datetime")

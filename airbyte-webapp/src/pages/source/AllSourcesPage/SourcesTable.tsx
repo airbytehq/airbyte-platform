@@ -5,8 +5,8 @@ import { ImplementationTable } from "components/EntityTable";
 import { EntityTableDataItem } from "components/EntityTable/types";
 import { getEntityTableData } from "components/EntityTable/utils";
 
+import { useConnectionList } from "core/api";
 import { SourceRead } from "core/request/AirbyteClient";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 
 interface SourcesTableProps {
   sources: SourceRead[];

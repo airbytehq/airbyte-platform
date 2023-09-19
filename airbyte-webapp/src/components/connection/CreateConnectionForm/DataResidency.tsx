@@ -16,6 +16,10 @@ interface DataResidencyProps {
   name?: string;
 }
 
+/**
+ * @deprecated it's formik version of DataResidency form control and will be removed in the future, use DataResidencyHookForm instead
+ * @see DataResidencyHookFormCard
+ */
 export const DataResidency: React.FC<DataResidencyProps> = ({ name = "geography" }) => {
   const { formatMessage } = useIntl();
   const { setFieldValue } = useFormikContext();

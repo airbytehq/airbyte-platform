@@ -1,6 +1,8 @@
-# for now, only include this for Pro. TODO: also use for Community edition, ie to establish
-# the username and password for the initial admin user.
-{{- if eq .Values.global.edition "pro" }}
+# The ConfigMap that contains the airbyte.yml content. For this to work helm must be started with
+# --set-file airbyteYml=<path_to_configs>/airbyte.yml
+# For Airbyte Enterprise our installation script automatically specifies this, for Community
+# users will need to specify it, if they want to use the airbyte.yml config file.
+# If nothing is specified we'll assume an empty config.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,7 +13,6 @@ metadata:
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 data:
-  # helm install with `--set-file airbyteYml=../../airbyte.yml` to populate .Values.airbyteYml with the root-level airbyte.yml file
   fileContents: |-
-  {{ .Values.airbyteYml | nindent 4 }}
-{{- end }}
+  {{ .Values.airbyteYml | default "" | nindent 4 }}
+

@@ -4,6 +4,7 @@
 
 package io.airbyte.metrics.lib;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
@@ -77,11 +78,14 @@ public class ApmTraceUtils {
    * All tags added via this method will use the default {@link #TAG_PREFIX} namespace. Any null
    * values will be ignored.
    */
-  public static void addTagsToTrace(final UUID connectionId, final String jobId, final Path jobRoot) {
+  public static void addTagsToTrace(final UUID connectionId, final Long attemptNumber, final String jobId, final Path jobRoot) {
     final Map<String, Object> tags = new HashMap<>();
 
     if (connectionId != null) {
       tags.put(CONNECTION_ID_KEY, connectionId);
+    }
+    if (attemptNumber != null) {
+      tags.put(ATTEMPT_NUMBER_KEY, attemptNumber);
     }
     if (jobId != null) {
       tags.put(JOB_ID_KEY, jobId);

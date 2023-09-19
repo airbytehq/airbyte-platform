@@ -12,7 +12,9 @@ import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
+import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
@@ -111,6 +113,12 @@ public class DatabaseBeanFactory {
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public JobPersistence jobPersistence(@Named("jobsDatabase") final Database jobDatabase) {
     return new DefaultJobPersistence(jobDatabase);
+  }
+
+  @Singleton
+  @Requires(env = WorkerMode.CONTROL_PLANE)
+  public MetadataPersistence metadataPersistence(@Named("jobsDatabase") final Database jobDatabase) {
+    return new DefaultMetadataPersistence(jobDatabase);
   }
 
 }

@@ -26,7 +26,7 @@ class SourceDefinitionSpecificationApiTest extends BaseControllerTest {
 
   @Test
   void testCreateCustomSourceDefinition() throws IOException, JsonValidationException, ConfigNotFoundException {
-    Mockito.when(schedulerHandler.getSourceDefinitionSpecification(Mockito.any()))
+    Mockito.when(connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(Mockito.any()))
         .thenReturn(new SourceDefinitionSpecificationRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/source_definition_specifications/get";

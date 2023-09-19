@@ -8,17 +8,14 @@ import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_DBT_NORMALIZATION
 import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.temporal.activity.ActivityExecutionContext;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * Dbt Launcher Worker.
@@ -35,9 +32,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
                            final JobRunConfig jobRunConfig,
                            final WorkerConfigs workerConfigs,
                            final ContainerOrchestratorConfig containerOrchestratorConfig,
-                           final Supplier<ActivityExecutionContext> activityContext,
                            final Integer serverPort,
-                           final TemporalUtils temporalUtils,
                            final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
@@ -50,9 +45,7 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
         containerOrchestratorConfig,
         workerConfigs.getResourceRequirements(),
         Void.class,
-        activityContext,
         serverPort,
-        temporalUtils,
         workerConfigs,
         featureFlagClient,
         // Custom connector does not use Dbt at this moment, thus this flag for runnning job under

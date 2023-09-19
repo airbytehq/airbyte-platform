@@ -69,6 +69,14 @@ public final class DatabaseConstants {
 
   public static final String WORKSPACE_TABLE = "workspace";
 
+  public static final String ORGANIZATION_TABLE = "organization";
+
+  public static final String USER_INVITATION_TABLE = "user_invitation";
+
+  public static final String ORGANIZATION_EMAIL_DOMAIN_TABLE = "organization_email_domain";
+
+  public static final String SSO_CONFIG_TABLE = "sso_config";
+
   /**
    * Private constructor to prevent instantiation.
    */

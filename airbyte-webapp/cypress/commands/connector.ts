@@ -11,6 +11,7 @@ import {
   enterPokemonName,
   enterSchema,
   openOptionalFields,
+  selectXmin,
 } from "pages/createConnectorPage";
 
 export const fillPostgresForm = (
@@ -37,6 +38,7 @@ export const fillPostgresForm = (
   enterSchema(schema);
   enterUsername(username);
   enterPassword(password);
+  selectXmin();
 };
 
 export const fillPokeAPIForm = (name: string, pokeName: string) => {

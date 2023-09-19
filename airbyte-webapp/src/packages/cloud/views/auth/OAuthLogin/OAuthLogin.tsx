@@ -1,13 +1,17 @@
+import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import { OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
+import { useLocalStorage } from "core/utils/useLocalStorage";
+import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import githubLogo from "./assets/github-logo.svg";
 import googleLogo from "./assets/google-logo.svg";
@@ -31,12 +35,25 @@ const GoogleButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   );
 };
 
-export const OAuthLogin: React.FC = () => {
+const SsoButton: React.FC = () => {
+  return (
+    <Link className={styles.sso} to={CloudRoutes.Sso}>
+      <FontAwesomeIcon icon={faIdCardClip} />
+      <FormattedMessage id="login.sso.continueWithSSO" tagName="span" />
+    </Link>
+  );
+};
+
+interface OAuthLoginProps {
+  loginWithOAuth: AuthOAuthLogin;
+}
+
+export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const { formatMessage } = useIntl();
-  const { loginWithOAuth } = useAuthService();
   const stateSubscription = useRef<Subscription>();
   const [errorCode, setErrorCode] = useState<string>();
   const [isLoading, setLoading] = useState(false);
+  const [showSsoLogin] = useLocalStorage("airbyte_show-sso-login", false);
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -81,19 +98,20 @@ export const OAuthLogin: React.FC = () => {
   const errorMessage = errorCode ? getErrorMessage(errorCode) : undefined;
 
   return (
-    <div>
+    <>
       {isLoading && (
         <FlexContainer justifyContent="center" alignItems="center" className={styles.spinner}>
           <Spinner />
         </FlexContainer>
       )}
       {!isLoading && (
-        <div className={styles.buttons}>
+        <>
           <GoogleButton onClick={() => login("google")} />
           <GitHubButton onClick={() => login("github")} />
-        </div>
+          {showSsoLogin && <SsoButton />}
+        </>
       )}
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
-    </div>
+    </>
   );
 };

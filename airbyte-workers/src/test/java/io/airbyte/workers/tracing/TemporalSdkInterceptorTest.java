@@ -8,6 +8,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_
 import static io.airbyte.workers.tracing.TemporalSdkInterceptor.CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME;
 import static io.airbyte.workers.tracing.TemporalSdkInterceptor.ERROR_MESSAGE_TAG;
 import static io.airbyte.workers.tracing.TemporalSdkInterceptor.ERROR_MSG_TAG;
+import static io.airbyte.workers.tracing.TemporalSdkInterceptor.ERROR_TYPE_TAG;
 import static io.airbyte.workers.tracing.TemporalSdkInterceptor.EXIT_ERROR_MESSAGE;
 import static io.airbyte.workers.tracing.TemporalSdkInterceptor.SYNC_WORKFLOW_IMPL_RESOURCE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -252,6 +253,40 @@ class TemporalSdkInterceptorTest {
     otherTemporalTraceWithExitErrorAndOtherResourceName.setResourceName(OTHER_RESOURCE);
     otherTemporalTraceWithExitErrorAndOtherResourceName.setTag(ERROR_MESSAGE_TAG, EXIT_ERROR_MESSAGE);
     assertEquals(false, interceptor.isExitTrace(otherTemporalTraceWithExitErrorAndOtherResourceName));
+  }
+
+  @Test
+  void testIsDestroyThreadTrace() {
+    final var interceptor = new TemporalSdkInterceptor();
+
+    assertEquals(false, interceptor.isDestroyThreadTrace(null));
+    assertEquals(false, interceptor.isDestroyThreadTrace(new DummySpan()));
+
+    final var temporalTraceWithOperationName = new DummySpan();
+    temporalTraceWithOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
+    assertEquals(false, interceptor.isExitTrace(temporalTraceWithOperationName));
+
+    final var temporalTraceWithResourceName = new DummySpan();
+    temporalTraceWithResourceName.setResourceName(CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME);
+    assertEquals(false, interceptor.isExitTrace(temporalTraceWithResourceName));
+
+    final var temporalTraceWithErrorTypeAndOperationName = new DummySpan();
+    temporalTraceWithErrorTypeAndOperationName.setError(true);
+    temporalTraceWithErrorTypeAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
+    temporalTraceWithErrorTypeAndOperationName.setTag(ERROR_TYPE_TAG, "io.temporal.internal.sync.DestroyWorkflowThreadError");
+    assertEquals(true, interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOperationName));
+
+    final var temporalTraceWithOtherErrorTypeAndOperationName = new DummySpan();
+    temporalTraceWithOtherErrorTypeAndOperationName.setError(true);
+    temporalTraceWithOtherErrorTypeAndOperationName.setOperationName(WORKFLOW_TRACE_OPERATION_NAME);
+    temporalTraceWithOtherErrorTypeAndOperationName.setTag(ERROR_TYPE_TAG, "DestroyThreadError");
+    assertEquals(false, interceptor.isDestroyThreadTrace(temporalTraceWithOtherErrorTypeAndOperationName));
+
+    final var temporalTraceWithErrorTypeAndOtherOperationName = new DummySpan();
+    temporalTraceWithErrorTypeAndOtherOperationName.setError(true);
+    temporalTraceWithErrorTypeAndOtherOperationName.setOperationName(OTHER_OPERATION);
+    temporalTraceWithErrorTypeAndOtherOperationName.setTag(ERROR_TYPE_TAG, "io.temporal.internal.sync.DestroyWorkflowThreadError");
+    assertEquals(false, interceptor.isDestroyThreadTrace(temporalTraceWithErrorTypeAndOtherOperationName));
   }
 
   @Test

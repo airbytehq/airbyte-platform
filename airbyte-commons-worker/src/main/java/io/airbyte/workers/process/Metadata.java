@@ -19,6 +19,7 @@ public final class Metadata {
   static final String WORKER_POD_LABEL_KEY = "airbyte";
   static final String WORKER_POD_LABEL_VALUE = "job-pod";
   public static final String CONNECTION_ID_LABEL_KEY = "connection_id";
+  static final String IMAGE_NAME = "image_name";
 
   /**
    * These are more readable forms of {@link io.airbyte.config.JobTypeResourceLimit.JobType}.

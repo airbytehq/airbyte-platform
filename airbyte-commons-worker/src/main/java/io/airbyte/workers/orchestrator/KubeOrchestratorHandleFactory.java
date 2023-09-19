@@ -6,7 +6,6 @@ package io.airbyte.workers.orchestrator;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.functional.CheckedSupplier;
-import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -45,18 +44,15 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   private final ContainerOrchestratorConfig containerOrchestratorConfig;
   private final WorkerConfigsProvider workerConfigsProvider;
   private final FeatureFlagClient featureFlagClient;
-  private final TemporalUtils temporalUtils;
   private final Integer serverPort;
 
   public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
                                        final FeatureFlagClient featureFlagClient,
-                                       final TemporalUtils temporalUtils,
                                        @Value("${micronaut.server.port}") final Integer serverPort) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.featureFlagClient = featureFlagClient;
-    this.temporalUtils = temporalUtils;
     this.serverPort = serverPort;
   }
 
@@ -78,9 +74,7 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         destinationLauncherConfig,
         jobRunConfig,
         syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
-        activityContext,
         serverPort,
-        temporalUtils,
         workerConfigs,
         featureFlagClient);
   }

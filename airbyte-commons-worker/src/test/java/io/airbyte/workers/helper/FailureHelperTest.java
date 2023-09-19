@@ -4,17 +4,23 @@
 
 package io.airbyte.workers.helper;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.commons.temporal.exception.SizeLimitException;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.temporal.api.enums.v1.RetryState;
+import io.temporal.failure.ActivityFailure;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -203,6 +209,17 @@ class FailureHelperTest {
     final FailureReason failureReason = FailureHelper.unknownOriginFailure(t, jobId, attemptNumber);
     assertEquals(FailureOrigin.UNKNOWN, failureReason.getFailureOrigin());
     assertEquals("An unknown failure occurred", failureReason.getExternalMessage());
+  }
+
+  @Test
+  void testExceptionChainContains() {
+    final Throwable t =
+        new ActivityFailure(1L, 2L, "act", "actId", RetryState.RETRY_STATE_NON_RETRYABLE_FAILURE, "id",
+            new RuntimeException("oops",
+                new SizeLimitException("oops too big")));
+    assertTrue(FailureHelper.exceptionChainContains(t, ActivityFailure.class));
+    assertTrue(FailureHelper.exceptionChainContains(t, SizeLimitException.class));
+    assertFalse(FailureHelper.exceptionChainContains(t, WorkerException.class));
   }
 
 }

@@ -1,0 +1,107 @@
+import { Canvas, Controls, Meta, Story } from "@storybook/addon-docs";
+import { FlexContainer, FlexItem } from "../../../components/ui/Flex";
+import { PermissionTestView } from "./rbac.docs.tsx";
+
+<Meta title="RBAC" />
+
+# RBAC
+
+## Intents
+
+Use intents to ask if a user can see something or perform an action. Intents better reflect our intention in the code and map to a specific permission. This allows us to change the related permission in one place, and to stay focused on the task at hand while developing instead of recalling specific roles and permissions.
+
+(based on https://docs.google.com/spreadsheets/d/1rC7yuWVmDuRBgDKun2KNQ5wXH2jfGj0nqiCdZTDWEVk/edit#gid=855220348)
+
+| Intent               | Query                                                    |
+| -------------------- | -------------------------------------------------------- |
+| **ReadWorkspace**    | `{resource: "WORKSPACE", role: "READER", resourceId}`    |
+| **CreateWorkspace**  | `{resource: "ORGANIZATION", role: "EDITOR", resourceId}` |
+| **UpdateConnection** | `{resource: "WORKSPACE", role: "EDITOR", resourceId}`    |
+| **ReadBilling**      | `{resource: "ORGANIZATION", role: "ADMIN", resourceId}`  |
+
+### Usage
+
+The `useIntent` hook is provided to make inquiries. If an intent for your use case does not yet exist it's almost certainly the right decision to create it.
+
+```typescript
+const canReadWorkspace = useIntent("ReadWorkspace", { workspaceId: "some-workspace" });
+```
+
+#### Meta details
+
+By default, `useIntent` will locate the user ID from the Auth Service. Resource ID's such as organization ID or workspace ID must be passed in via the `meta` object.
+
+If desired, the user ID can be overridden in the meta object as well.
+
+```typescript
+const canThatUserReadThatWorkspace = useIntent("ReadWorkspace", {
+  userId: "some-user",
+  workspaceId: "some-workspace",
+});
+```
+
+```typescript
+interface MetaDetails {
+  userId?: string;
+  organizationId?: string;
+  workspaceId?: string;
+}
+```
+
+### Direct RBAC querying
+
+If for some reason an intent does not make sense for your use case, `useRbac` is available to pass a specific query to.
+
+`useRbac(permissions: RbacPermission[], query: RbacQuery | RbacQueryWithoutResourceId)`
+
+---
+
+Alternatively, if you want or need to bypass React context altogether, `useRbacPermissionsQuery` will do just that.
+
+`useRbacPermissionsQuery(permissions: RbacPermission[], query: RbacQuery)`
+
+## Interactive Demo
+
+This calls the same function as the webapp and shows how different user permissions affect the result. Organization+Workspace relationship relies on a webapp backend server running locally.
+
+<PermissionTestView />
+
+## Engine implementation notes
+
+Need a way for code to ask if a user can `ADMIN|WRITE|READ` a given `INSTANCE|ORGANIZATION|WORKSPACE`. An RBAC query should be of the form:
+
+```typescript
+query = { role, resource, resourceId }; // does user have Role at Resource
+```
+
+Any granted role also satisfies a lower role (`Admin->Editor->Reader`), and any Resource+Role copies that role to lower resources (`Instace->Organization->Workspace`). Together, these rules transform e.g. Organization Editor into:
+
+| _resource_                        | _role_     | _reason_                                    |
+| --------------------------------- | ---------- | ------------------------------------------- |
+| **Organization** (by id)          | **Editor** | granted permission                          |
+|                                   | **Reader** | editor bestows reader                       |
+| **Workspace** (when owned by org) | **Editor** | organization bestows workspace, copies role |
+|                                   | **Reader** | editor bestows reader                       |
+
+A static mapping of one permission to all of the Permissions it can be satisfied by could be used; alternatively, we can encode the hierarchy of resources and another of roles, and if both hierarchies are satisfied then 🌟.
+
+The following code is shortened from our implementation of this approach, with the full function performing additional assertions and enabling Organization+Workspace relationships.
+
+```typescript
+const RbacRoleHierarchy = ["ADMIN", "EDITOR", "READER"] as const;
+const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
+
+const doesUserHaveAccess = (permissions: PermissionRead[], query: RbacQuery) => {
+  const queryRoleHierarchy = RbacRoleHierarchy.indexOf(query.role);
+  const queryResourceHierarchy = RbacResourceHierarchy.indexOf(query.resource);
+
+  return !!permissions.some((permission) => {
+    const [permissionResource, permissionRole] = partitionPermissionType(permission.permissionType);
+
+    const permissionRoleHierarchy = RbacRoleHierarchy.indexOf(permissionRole);
+    const permissionResourceHierarchy = RbacResourceHierarchy.indexOf(permissionResource);
+
+    return permissionRoleHierarchy <= queryRoleHierarchy && permissionResourceHierarchy <= queryResourceHierarchy;
+  });
+};
+```

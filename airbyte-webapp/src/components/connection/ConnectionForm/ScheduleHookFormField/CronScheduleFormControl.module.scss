@@ -1,0 +1,14 @@
+@use "scss/variables";
+
+.cronZonesOptionsMenu {
+  overflow: auto;
+  max-height: variables.$height-long-listbox-options-list;
+}
+
+.cronZoneOption {
+  overflow: visible;
+}
+
+.cronZonesListBoxBtn {
+  min-width: calc(variables.$height-long-listbox-options-list / 2);
+}

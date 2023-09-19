@@ -8,6 +8,8 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
+import { CloudWorkspaceReadList } from "core/api/types/CloudApi";
+import { WorkspaceReadList } from "core/request/AirbyteClient";
 
 import styles from "./WorkspacesPicker.module.scss";
 import { WorkspacesPickerList } from "./WorkspacesPickerList";
@@ -24,7 +26,11 @@ const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonH
 
 WorkspaceButton.displayName = "WorkspaceButton";
 
-export const WorkspacesPicker = () => {
+interface WorkspacePickerProps {
+  workspaces?: WorkspaceReadList | CloudWorkspaceReadList;
+  loading: boolean;
+}
+export const WorkspacesPicker: React.FC<WorkspacePickerProps> = ({ workspaces, loading }) => {
   const currentWorkspace = useCurrentWorkspace();
 
   const { x, y, reference, floating, strategy } = useFloating({
@@ -39,7 +45,7 @@ export const WorkspacesPicker = () => {
         <>
           <Popover.Button ref={reference} as={WorkspaceButton}>
             <span className={styles.workspacesPicker__buttonContent}>
-              <Text color="grey" bold className={styles.workspacesPicker__buttonText}>
+              <Text color="grey" bold className={styles.workspacesPicker__buttonText} align="center">
                 {currentWorkspace.name}
               </Text>
               <Icon type="chevronDown" color="disabled" />
@@ -64,7 +70,7 @@ export const WorkspacesPicker = () => {
                   {currentWorkspace.name}
                 </Text>
               </Box>
-              <WorkspacesPickerList closePicker={close} />
+              <WorkspacesPickerList loading={loading} workspaces={workspaces} closePicker={close} />
             </div>
           </Popover.Panel>
         </>

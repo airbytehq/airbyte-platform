@@ -158,18 +158,18 @@
 
   &.typeSecondary {
     background-color: colors.$transparentColor;
-    color: colors.$grey-300;
-    border: 1px solid colors.$grey-200;
+    color: colors.$grey-400;
+    border: 1px solid colors.$grey-300;
     box-shadow: none;
 
     &:hover {
-      border-color: colors.$grey-300;
-      color: colors.$grey-400;
+      border-color: colors.$grey-400;
+      color: colors.$grey-500;
     }
 
     &:active {
-      border-color: colors.$grey-400;
-      color: colors.$grey-400;
+      border-color: colors.$grey-500;
+      color: colors.$grey-500;
     }
   }
 

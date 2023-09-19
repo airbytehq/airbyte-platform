@@ -30,7 +30,10 @@ export const AuthSection: React.FC = () => {
         <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
           <AuthButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
           {supportsRevokingTokens && hasAuthFieldValues && connectorId && (
-            <RevokeButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
+            <RevokeButton
+              sourceId={connectorId}
+              selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
+            />
           )}
         </FlexContainer>
       </SectionContainer>

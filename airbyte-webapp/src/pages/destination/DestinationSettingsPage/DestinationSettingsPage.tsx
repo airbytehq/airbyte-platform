@@ -4,10 +4,10 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
+import { useConnectionList, useDestinationDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { useConnectionList } from "hooks/services/useConnectionHook";
 import {
   useDeleteDestination,
   useInvalidateDestination,
@@ -26,6 +26,7 @@ export const DestinationSettingsPage: React.FC = () => {
 
   const { connections: connectionsWithDestination } = useConnectionList({ destinationId: [destination.destinationId] });
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(
     destination.destinationDefinitionId,
     destination.destinationId
@@ -90,6 +91,7 @@ export const DestinationSettingsPage: React.FC = () => {
         reloadConfig={reloadDestination}
         onSubmit={onSubmitForm}
         onDeleteClick={onDeleteClick}
+        supportLevel={destinationDefinitionVersion.supportLevel}
       />
     </div>
   );

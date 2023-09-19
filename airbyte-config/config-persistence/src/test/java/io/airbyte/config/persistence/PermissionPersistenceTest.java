@@ -6,8 +6,10 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -100,6 +102,28 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   void listUsersInWorkspaceTest() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(MockData.WORKSPACE_ID_1);
     Assertions.assertEquals(2, userPermissions.size());
+  }
+
+  @Test
+  void listInstanceUsersTest() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
+    Assertions.assertEquals(1, userPermissions.size());
+    UserPermission userPermission = userPermissions.get(0);
+    Assertions.assertEquals(MockData.CREATOR_USER_ID_1, userPermission.getUser().getUserId());
+  }
+
+  @Test
+  void findUsersInWorkspaceTest() throws Exception {
+    final PermissionType permissionType = permissionPersistence
+        .findPermissionTypeForUserAndWorkspace(MockData.WORKSPACE_ID_2, MockData.CREATOR_USER_ID_5.toString(), AuthProvider.KEYCLOAK);
+    Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, permissionType);
+  }
+
+  @Test
+  void findUsersInOrganizationTest() throws Exception {
+    final PermissionType permissionType = permissionPersistence
+        .findPermissionTypeForUserAndOrganization(MockData.ORGANIZATION_ID_2, MockData.CREATOR_USER_ID_5.toString(), AuthProvider.KEYCLOAK);
+    Assertions.assertEquals(PermissionType.ORGANIZATION_READER, permissionType);
   }
 
 }

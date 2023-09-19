@@ -28,28 +28,6 @@ $sidebar-workspace-font-weight: 400;
   }
 }
 
-.workspaceButton {
-  overflow: hidden;
-  cursor: pointer;
-  display: block;
-  height: 21px;
-  width: 85px;
-  border: variables.$border-thin solid colors.$grey-100;
-  border-radius: variables.$border-radius-lg;
-  background-color: colors.$grey-30;
-  padding: 0 variables.$spacing-md;
-  font-size: $sidebar-workspace-font-size;
-  font-weight: $sidebar-workspace-font-weight;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-align: center;
-  outline: none;
-
-  &:focus-visible {
-    outline: 1px solid colors.$foreground;
-  }
-}
-
 .themeContainer {
   padding: variables.$spacing-md;
 }

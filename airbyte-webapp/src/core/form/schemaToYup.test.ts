@@ -122,7 +122,7 @@ it("should build correct mixed schema structure for conditional case", () => {
     start_date: yup.string().trim().required("form.empty.error").transform(String),
     max_objects: yup.number().transform((x) => x),
     credentials: yup.object().shape({
-      type: yup.mixed(),
+      type: yup.mixed().required("form.empty.error"),
       api_key: yup
         .mixed()
         // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useContext, useMemo } from "react";
+import React, { useCallback, useContext, useMemo } from "react";
 
 import { Toast } from "components/ui/Toast";
 
@@ -17,7 +17,7 @@ export const NotificationService = React.memo(({ children }: { children: React.R
     typeof actions
   >(notificationServiceReducer, initialState, actions);
 
-  const notificationService: NotificationServiceApi = useMemo(
+  const baseNotificationService: NotificationServiceApi = useMemo(
     () => ({
       addNotification,
       deleteNotificationById,
@@ -27,15 +27,24 @@ export const NotificationService = React.memo(({ children }: { children: React.R
     []
   );
 
-  const registerNotification = (notification: Notification) => {
-    addNotification({ ...notification, timeout: notification.timeout ?? notification.type !== "error" });
-  };
+  const registerNotification = useCallback(
+    (notification: Notification) => {
+      addNotification({ ...notification, timeout: notification.timeout ?? notification.type !== "error" });
+    },
+    [addNotification]
+  );
+
+  const notificationService = useMemo(
+    () => ({
+      ...baseNotificationService,
+      addNotification: registerNotification,
+    }),
+    [baseNotificationService, registerNotification]
+  );
 
   return (
     <>
-      <notificationServiceContext.Provider value={{ ...notificationService, addNotification: registerNotification }}>
-        {children}
-      </notificationServiceContext.Provider>
+      <notificationServiceContext.Provider value={notificationService}>{children}</notificationServiceContext.Provider>
       <motion.div className={styles.notifications}>
         <AnimatePresence>
           {state.notifications

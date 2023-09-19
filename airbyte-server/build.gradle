@@ -65,7 +65,6 @@ dependencies {
     implementation libs.bundles.datadog
     implementation libs.sentry.java
     implementation libs.swagger.annotations
-    implementation libs.javax.ws.rs.api
     implementation libs.google.cloud.storage
 
     runtimeOnly libs.javax.databind

@@ -40,9 +40,7 @@ import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
-import io.airbyte.featureflag.CanonicalCatalogSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Source;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -379,28 +377,9 @@ public class SourceHandler {
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
       throws JsonValidationException, IOException {
     final AirbyteCatalog persistenceCatalog = CatalogConverter.toProtocol(request.getCatalog());
-    final UUID catalogId;
-
-    if (shouldWriteCanonicalActorCatalog(request)) {
-      catalogId = writeCanonicalActorCatalog(persistenceCatalog, request);
-    } else {
-      catalogId = writeActorCatalog(persistenceCatalog, request);
-    }
+    final UUID catalogId = writeActorCatalog(persistenceCatalog, request);
 
     return new DiscoverCatalogResult().catalogId(catalogId);
-  }
-
-  private boolean shouldWriteCanonicalActorCatalog(final SourceDiscoverSchemaWriteRequestBody request) {
-    return request.getSourceId() != null && featureFlagClient.boolVariation(CanonicalCatalogSchema.INSTANCE, new Source(request.getSourceId()));
-  }
-
-  private UUID writeCanonicalActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request)
-      throws IOException {
-    return configRepository.writeCanonicalActorCatalogFetchEvent(
-        persistenceCatalog,
-        request.getSourceId(),
-        request.getConnectorVersion(),
-        request.getConfigurationHash());
   }
 
   private UUID writeActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request) throws IOException {

@@ -15,7 +15,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.temporal.CancellationHandler;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -48,6 +48,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -67,6 +68,7 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
+  private final TemporalUtils temporalUtils;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                           final ProcessFactory processFactory,
@@ -77,7 +79,8 @@ public class SpecActivityImpl implements SpecActivity {
                           @Value("${airbyte.version}") final String airbyteVersion,
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                          final FeatureFlags featureFlags) {
+                          final FeatureFlags featureFlags,
+                          final TemporalUtils temporalUtils) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -88,6 +91,7 @@ public class SpecActivityImpl implements SpecActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
+    this.temporalUtils = temporalUtils;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -102,20 +106,27 @@ public class SpecActivityImpl implements SpecActivity {
         () -> new JobGetSpecConfig().withDockerImage(launcherConfig.getDockerImage()).withIsCustomConnector(launcherConfig.getIsCustomConnector());
 
     final ActivityExecutionContext context = Activity.getExecutionContext();
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    final TemporalAttemptExecution<JobGetSpecConfig, ConnectorJobOutput> temporalAttemptExecution = new TemporalAttemptExecution<>(
-        workspaceRoot,
-        workerEnvironment,
-        logConfigs,
-        jobRunConfig,
-        getWorkerFactory(launcherConfig),
-        inputSupplier,
-        new CancellationHandler.TemporalCancellationHandler(context),
-        airbyteApiClient,
-        airbyteVersion,
+    return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
+        () -> {
+          final var worker = getWorkerFactory(launcherConfig).get();
+          cancellationCallback.set(worker::cancel);
+          final TemporalAttemptExecution<JobGetSpecConfig, ConnectorJobOutput> temporalAttemptExecution = new TemporalAttemptExecution<>(
+              workspaceRoot,
+              workerEnvironment,
+              logConfigs,
+              jobRunConfig,
+              worker,
+              inputSupplier.get(),
+              airbyteApiClient,
+              airbyteVersion,
+              () -> context);
+
+          return temporalAttemptExecution.get();
+        },
         () -> context);
-
-    return temporalAttemptExecution.get();
   }
 
   private CheckedSupplier<Worker<JobGetSpecConfig, ConnectorJobOutput>, Exception> getWorkerFactory(

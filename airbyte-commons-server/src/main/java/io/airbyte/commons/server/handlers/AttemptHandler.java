@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
+import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
@@ -13,11 +14,18 @@ import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.models.Job;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -35,10 +43,29 @@ public class AttemptHandler {
   private final JobPersistence jobPersistence;
 
   private final JobConverter jobConverter;
+  private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
+  private final Path workspaceRoot;
 
-  public AttemptHandler(final JobPersistence jobPersistence, final JobConverter jobConverter) {
+  public AttemptHandler(final JobPersistence jobPersistence,
+                        final JobConverter jobConverter,
+                        final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
+                        @Named("workspaceRoot") final Path workspaceRoot) {
     this.jobPersistence = jobPersistence;
     this.jobConverter = jobConverter;
+    this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
+    this.workspaceRoot = workspaceRoot;
+  }
+
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+
+    final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
+    final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+    final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
+    jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.emitAttemptCreatedEvent(job, persistedAttemptNumber);
+
+    return new CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber);
   }
 
   public AttemptInfoRead getAttemptForJob(final long jobId, final int attemptNo) throws IOException {

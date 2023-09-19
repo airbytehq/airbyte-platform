@@ -9,16 +9,15 @@ import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsV
 import { UsersSettingsView } from "packages/cloud/views/users/UsersSettingsView";
 import { DataResidencyView } from "packages/cloud/views/workspaces/DataResidencyView";
 import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
-import SettingsPage from "pages/SettingsPage";
 import {
   DestinationsPage as SettingsDestinationPage,
   SourcesPage as SettingsSourcesPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 // import ConfigurationsPage from "pages/SettingsPage/pages/ConfigurationsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
-import { PageConfig } from "pages/SettingsPage/SettingsPage";
+import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
 
-import { CloudSettingsRoutes } from "./routePaths";
+import { CloudSettingsRoutePaths } from "./routePaths";
 
 export const CloudSettingsPage: React.FC = () => {
   // TODO: uncomment when supported in cloud
@@ -33,7 +32,7 @@ export const CloudSettingsPage: React.FC = () => {
           category: <FormattedMessage id="settings.userSettings" />,
           routes: [
             {
-              path: CloudSettingsRoutes.Account,
+              path: CloudSettingsRoutePaths.Account,
               name: <FormattedMessage id="settings.account" />,
               component: AccountSettingsView,
             },
@@ -52,7 +51,7 @@ export const CloudSettingsPage: React.FC = () => {
           category: <FormattedMessage id="settings.workspaceSettings" />,
           routes: [
             {
-              path: CloudSettingsRoutes.Workspace,
+              path: CloudSettingsRoutePaths.Workspace,
               name: <FormattedMessage id="settings.generalSettings" />,
               component: WorkspaceSettingsView,
               id: "workspaceSettings.generalSettings",
@@ -60,20 +59,20 @@ export const CloudSettingsPage: React.FC = () => {
             ...(supportsDataResidency
               ? [
                   {
-                    path: CloudSettingsRoutes.DataResidency,
+                    path: CloudSettingsRoutePaths.DataResidency,
                     name: <FormattedMessage id="settings.dataResidency" />,
                     component: DataResidencyView,
                   },
                 ]
               : []),
             {
-              path: CloudSettingsRoutes.Source,
+              path: CloudSettingsRoutePaths.Source,
               name: <FormattedMessage id="tables.sources" />,
               // indicatorCount: countNewSourceVersion,
               component: SettingsSourcesPage,
             },
             {
-              path: CloudSettingsRoutes.Destination,
+              path: CloudSettingsRoutePaths.Destination,
               name: <FormattedMessage id="tables.destinations" />,
               // indicatorCount: countNewDestinationVersion,
               component: SettingsDestinationPage,
@@ -84,13 +83,13 @@ export const CloudSettingsPage: React.FC = () => {
             //   component: ConfigurationsPage,
             // },
             {
-              path: CloudSettingsRoutes.AccessManagement,
+              path: CloudSettingsRoutePaths.AccessManagement,
               name: <FormattedMessage id="settings.accessManagementSettings" />,
               component: UsersSettingsView,
               id: "workspaceSettings.accessManagementSettings",
             },
             {
-              path: CloudSettingsRoutes.Notifications,
+              path: CloudSettingsRoutePaths.Notifications,
               name: <FormattedMessage id="settings.notifications" />,
               component: NotificationPage,
             },
@@ -102,7 +101,7 @@ export const CloudSettingsPage: React.FC = () => {
                 category: <FormattedMessage id="settings.integrationSettings" />,
                 routes: [
                   {
-                    path: CloudSettingsRoutes.DbtCloud,
+                    path: CloudSettingsRoutePaths.DbtCloud,
                     name: <FormattedMessage id="settings.integrationSettings.dbtCloudSettings" />,
                     component: DbtCloudSettingsView,
                     id: "integrationSettings.dbtCloudSettings",
@@ -116,7 +115,6 @@ export const CloudSettingsPage: React.FC = () => {
     [supportsCloudDbtIntegration, supportsDataResidency]
   );
 
-  return <SettingsPage pageConfig={pageConfig} />;
+  return <SettingsPageBase pageConfig={pageConfig} />;
 };
-
 export default CloudSettingsPage;

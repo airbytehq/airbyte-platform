@@ -39,6 +39,7 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -122,13 +123,15 @@ public class TemporalClientTest {
     when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
     streamResetPersistence = mock(StreamResetPersistence.class);
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
-    connectionManagerUtils = spy(new ConnectionManagerUtils());
+    final var metricClient = mock(MetricClient.class);
+    final var workflowClientWrapped = new WorkflowClientWrapped(workflowClient, metricClient);
+    final var workflowServiceStubsWrapped = new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient);
+    connectionManagerUtils = spy(new ConnectionManagerUtils(workflowClientWrapped, metricClient));
     notificationClient = spy(new NotificationClient(workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
-        spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils,
-            notificationClient,
-            streamResetRecordsHelper));
+        spy(new TemporalClient(workspaceRoot, workflowClientWrapped, workflowServiceStubsWrapped,
+            streamResetPersistence, connectionManagerUtils, notificationClient, streamResetRecordsHelper, mock(MetricClient.class)));
   }
 
   @Nested
@@ -142,10 +145,11 @@ public class TemporalClientTest {
       mConnectionManagerUtils = mock(ConnectionManagerUtils.class);
       mNotificationClient = mock(NotificationClient.class);
 
+      final var metricClient = mock(MetricClient.class);
       temporalClient = spy(
-          new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils,
-              mNotificationClient,
-              streamResetRecordsHelper));
+          new TemporalClient(workspaceRoot, new WorkflowClientWrapped(workflowClient, metricClient),
+              new WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient), streamResetPersistence,
+              mConnectionManagerUtils, mNotificationClient, streamResetRecordsHelper, metricClient));
     }
 
     @Test
@@ -162,9 +166,8 @@ public class TemporalClientTest {
           .when(temporalClient).filterOutRunningWorkspaceId(workflowIds);
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
       temporalClient.restartClosedWorkflowByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
-      verify(mConnectionManagerUtils).safeTerminateWorkflow(eq(workflowClient), eq(connectionId),
-          anyString());
-      verify(mConnectionManagerUtils).startConnectionManagerNoSignal(eq(workflowClient), eq(connectionId));
+      verify(mConnectionManagerUtils).safeTerminateWorkflow(eq(connectionId), anyString());
+      verify(mConnectionManagerUtils).startConnectionManagerNoSignal(eq(connectionId));
     }
 
   }
@@ -310,7 +313,7 @@ public class TemporalClientTest {
     void testForceCancelConnection() {
       temporalClient.forceDeleteWorkflow(CONNECTION_ID);
 
-      verify(connectionManagerUtils).deleteWorkflowIfItExist(workflowClient, CONNECTION_ID);
+      verify(connectionManagerUtils).deleteWorkflowIfItExist(CONNECTION_ID);
     }
 
   }

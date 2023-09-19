@@ -13,9 +13,9 @@ import io.micronaut.core.io.ResourceLoader;
 import io.micronaut.core.io.file.DefaultFileSystemResourceLoader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AirbytePropertySourceLoader implements PropertySourceLoader {
 
-  static final String AIRBYTE_YML_PATH = "/app/airbyte.yml";
+  static final String AIRBYTE_YML_PATH = "/app/configs/airbyte.yml";
   static final String AIRBYTE_KEY = "airbyte";
 
   final YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();
@@ -50,8 +50,10 @@ public class AirbytePropertySourceLoader implements PropertySourceLoader {
       final var yaml = read(resourceName, stream);
 
       // Prefix all configuration from that file with airbyte.
-      final var prefixedProps = yaml.entrySet().stream().collect(Collectors.toMap(entry -> AIRBYTE_KEY + "." + entry.getKey(), Map.Entry::getValue));
-      log.info("Loading properties as: {}", prefixedProps);
+      final var prefixedProps = new HashMap<String, Object>();
+      for (var entry : yaml.entrySet()) {
+        prefixedProps.put(AIRBYTE_KEY + "." + entry.getKey(), entry.getValue());
+      }
       return Optional.of(PropertySource.of(prefixedProps));
     } catch (final IOException e) {
       throw new ConfigurationException("Could not load airbyte.yml configuration file.", e);

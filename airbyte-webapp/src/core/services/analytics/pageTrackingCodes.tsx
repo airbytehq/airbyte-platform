@@ -27,6 +27,8 @@ export enum PageTrackingCodes {
   SETTINGS_ACCESS_MANAGEMENT = "Settings.AccessManagement",
   SETTINGS_METRICS = "Settings.Metrics",
   SETTINGS_DATA_RESIDENCY = "Settings.DataResidency",
+  SETTINGS_WORKSPACE_ACCESS_MANAGEMENT = "Settings.WorkspaceAccessManagement",
+  SETTINGS_ORGANIZATION_ACCESS_MANAGEMENT = "Settings.OrganizationAccessManagement",
   CREDITS = "Credits",
   WORKSPACES = "Workspaces",
   PREFERENCES = "Preferences",

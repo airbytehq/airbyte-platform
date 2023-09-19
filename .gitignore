@@ -63,9 +63,6 @@ crash.log
 resources/examples/airflow/logs/*
 !resources/examples/airflow/logs/.gitkeep
 
-# Cloud Demo
-!airbyte-webapp/src/packages/cloud/data
-
 # Ignore docs folder, since we're using it to temporarily copy files into on CI
 /docs
 
@@ -87,4 +84,4 @@ dd-java-agent.jar
 
 # Ignore airbyte.yml since this file contains user-provided information that is sensitive and should not be committed
 # See airbyte.sample.yml for an example of the expected file structure.
-airbyte.yml
+/configs/airbyte.yml

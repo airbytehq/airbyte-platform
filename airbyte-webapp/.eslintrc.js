@@ -107,6 +107,12 @@ module.exports = {
       {
         paths: [
           {
+            name: "react-use",
+            importNames: ["useLocalStorage"],
+            message:
+              'Please use our wrapped version of this hook with `import { useLocalStorage } from "core/utils/useLocalStorage";` instead.',
+          },
+          {
             name: "lodash",
             message: 'Please use `import [function] from "lodash/[function]";` instead.',
           },

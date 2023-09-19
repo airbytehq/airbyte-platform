@@ -31,6 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * DEPRECATED. USE {@link io.airbyte.api.client2.AirbyteApiClient2}.
+ * <p>
  * This class is meant to consolidate all our API endpoints into a fluent-ish client. Currently, all
  * open API generators create a separate class per API "root-route". For example, if our API has two
  * routes "/v1/First/get" and "/v1/Second/get", OpenAPI generates (essentially) the following files:
@@ -41,7 +43,10 @@ import org.slf4j.LoggerFactory;
  * ApiClient()).get(), which can get cumbersome if we're interacting with many pieces of the API.
  * <p>
  * This is currently manually maintained. We could look into autogenerating it if needed.
+ *
+ * @deprecated Replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
  */
+@Deprecated
 public class AirbyteApiClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteApiClient.class);
@@ -176,16 +181,27 @@ public class AirbyteApiClient {
   }
 
   /**
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
    * <p>
    * Exceptions will be swallowed.
+   *
+   * @param call method to execute
+   * @param desc short readable explanation of why this method is executed
+   * @param <T> type of return type
+   * @return value returned by method
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
+  @Deprecated
   public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
     return retryWithJitter(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
   }
 
   /**
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
    * with regular intervals/exponential backoff.
@@ -200,7 +216,9 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
+  @Deprecated
   @VisibleForTesting
   // This is okay since we are logging the stack trace, which PMD is not detecting.
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -219,14 +237,26 @@ public class AirbyteApiClient {
   }
 
   /**
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * <p>
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
+   *
+   * @param call method to execute
+   * @param desc description of what is happening
+   * @param <T> type of return type
+   * @return value returned by method
+   * @throws Exception exception while jittering
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
+  @Deprecated
   public static <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
     return retryWithJitterThrows(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
   }
 
   /**
+   * DEPRECATED: Use {@link io.airbyte.api.client2.AirbyteApiClient2} instead.
+   * <p>
    * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
    * generally available retries libraries - the last retry is able to wait an interval inconsistent
    * with regular intervals/exponential backoff.
@@ -239,8 +269,10 @@ public class AirbyteApiClient {
    * @param desc short readable explanation of why this method is executed
    * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
    * @param finalIntervalSecs retry interval before the last retry.
+   * @deprecated replaced by {@link io.airbyte.api.client2.AirbyteApiClient2}
    */
   @VisibleForTesting
+  @Deprecated
   // This is okay since we are logging the stack trace, which PMD is not detecting.
   @SuppressWarnings("PMD.PreserveStackTrace")
   public static <T> T retryWithJitterThrows(final Callable<T> call,

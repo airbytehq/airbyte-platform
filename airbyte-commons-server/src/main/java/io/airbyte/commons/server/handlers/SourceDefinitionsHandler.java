@@ -36,11 +36,12 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
@@ -70,6 +71,7 @@ public class SourceDefinitionsHandler {
   private final RemoteDefinitionsProvider remoteDefinitionsProvider;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final SourceHandler sourceHandler;
+  private final SupportStateUpdater supportStateUpdater;
   private final FeatureFlagClient featureFlagClient;
 
   @Inject
@@ -78,12 +80,14 @@ public class SourceDefinitionsHandler {
                                   final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                                   final RemoteDefinitionsProvider remoteDefinitionsProvider,
                                   final SourceHandler sourceHandler,
+                                  final SupportStateUpdater supportStateUpdater,
                                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.remoteDefinitionsProvider = remoteDefinitionsProvider;
     this.sourceHandler = sourceHandler;
+    this.supportStateUpdater = supportStateUpdater;
     this.featureFlagClient = featureFlagClient;
   }
 
@@ -100,8 +104,10 @@ public class SourceDefinitionsHandler {
           .documentationUrl(new URI(sourceVersion.getDocumentationUrl()))
           .icon(loadIcon(standardSourceDefinition.getIcon()))
           .protocolVersion(sourceVersion.getProtocolVersion())
+          .supportLevel(ApiPojoConverters.toApiSupportLevel(sourceVersion.getSupportLevel()))
           .releaseStage(ApiPojoConverters.toApiReleaseStage(sourceVersion.getReleaseStage()))
           .releaseDate(ApiPojoConverters.toLocalDate(sourceVersion.getReleaseDate()))
+          .custom(standardSourceDefinition.getCustom())
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
           .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
 
@@ -245,10 +251,10 @@ public class SourceDefinitionsHandler {
 
     // legacy call; todo: remove once we drop workspace_id column
     if (customSourceDefinitionCreate.getWorkspaceId() != null) {
-      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(sourceDefinition, actorDefinitionVersion,
           customSourceDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE);
     } else {
-      configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+      configRepository.writeCustomConnectorMetadata(sourceDefinition, actorDefinitionVersion,
           customSourceDefinitionCreate.getScopeId(), ScopeType.fromValue(customSourceDefinitionCreate.getScopeType().toString()));
     }
 
@@ -279,10 +285,11 @@ public class SourceDefinitionsHandler {
         currentVersion, ActorType.SOURCE, sourceDefinitionUpdate.getDockerImageTag(), currentSourceDefinition.getCustom());
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE);
-    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, newVersion, breakingChangesForDef);
+    configRepository.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef);
 
-    if (featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))) {
-      configRepository.writeActorDefinitionBreakingChanges(breakingChangesForDef);
+    if (featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))) {
+      final StandardSourceDefinition updatedSourceDefinition = configRepository.getStandardSourceDefinition(newSource.getSourceDefinitionId());
+      supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition);
     }
     return buildSourceDefinitionRead(newSource, newVersion);
   }

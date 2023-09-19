@@ -16,6 +16,7 @@ export const Toast: React.FC<ToastProps> = ({ timeout, ...props }) => {
         className={classNames(props.className, styles.toastContainer, {
           [styles["toastContainer--timeout"]]: timeout,
         })}
+        textClassName={styles.toastText}
       />
     </div>
   );

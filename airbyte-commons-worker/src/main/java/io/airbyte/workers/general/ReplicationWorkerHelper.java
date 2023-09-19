@@ -21,7 +21,12 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.featureflag.UseNewStateMessageProcessing;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -71,16 +76,17 @@ class ReplicationWorkerHelper {
   private final FieldSelector fieldSelector;
   private final AirbyteMapper mapper;
   private final MessageTracker messageTracker;
+  private final MetricClient metricClient;
   private final SyncPersistence syncPersistence;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
   private final VoidCallable onReplicationRunning;
-  private final boolean useNewStateMessageProcessing;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
   private ReplicationFeatureFlags replicationFeatureFlags = null; // NOPMD - keeping this as a placeholder
   private WorkerDestinationConfig destinationConfig = null;
+  private MetricAttribute[] metricAttrs = new MetricAttribute[0];
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
   // performant enough.
@@ -96,8 +102,7 @@ class ReplicationWorkerHelper {
                                  final SyncPersistence syncPersistence,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                  final ThreadedTimeTracker timeTracker,
-                                 final VoidCallable onReplicationRunning,
-                                 final boolean useNewStateMessageProcessing) {
+                                 final VoidCallable onReplicationRunning) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.fieldSelector = fieldSelector;
     this.mapper = mapper;
@@ -106,8 +111,8 @@ class ReplicationWorkerHelper {
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
     this.timeTracker = timeTracker;
     this.onReplicationRunning = onReplicationRunning;
-    this.useNewStateMessageProcessing = useNewStateMessageProcessing;
     this.recordsRead = 0L;
+    this.metricClient = MetricClientFactory.getMetricClient();
   }
 
   public void markCancelled() {
@@ -118,10 +123,13 @@ class ReplicationWorkerHelper {
     hasFailed.set(true);
   }
 
-  public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags) {
+  public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags, final Path jobRoot) {
     this.replicationContext = replicationContext;
     this.replicationFeatureFlags = replicationFeatureFlags;
     this.timeTracker.trackReplicationStartTime();
+    this.metricAttrs = toConnectionAttrs(replicationContext);
+    ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), replicationContext.attempt().longValue(),
+        replicationContext.jobId().toString(), jobRoot);
   }
 
   public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {
@@ -223,14 +231,14 @@ class ReplicationWorkerHelper {
           FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
     }
 
+    if (sourceRawMessage.getType() == Type.STATE) {
+      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, metricAttrs);
+    }
+
     return sourceRawMessage;
   }
 
-  /**
-   * If you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first.
-   */
-  Optional<AirbyteMessage> processMessageFromSourceNew(final AirbyteMessage sourceRawMessage) {
+  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage sourceRawMessage) {
     final AirbyteMessage processedMessage = internalProcessMessageFromSource(sourceRawMessage);
     // internally we always want to deal with the state message we got from the
     // source, so we only modify the state message after processing it, right before we send it to the
@@ -239,52 +247,9 @@ class ReplicationWorkerHelper {
 
   }
 
-  /**
-   * If you are making changes in this method please read the documentation in
-   * {@link #processMessageFromSource} first.
-   */
-  private Optional<AirbyteMessage> processMessageFromSourceOld(final AirbyteMessage airbyteMessage) {
-    fieldSelector.filterSelectedFields(airbyteMessage);
-    fieldSelector.validateSchema(airbyteMessage);
-
-    final AirbyteMessage message = mapper.mapMessage(airbyteMessage);
-
-    messageTracker.acceptFromSource(message);
-
-    if (shouldPublishMessage(airbyteMessage)) {
-      replicationAirbyteMessageEventPublishingHelper
-          .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
-    }
-
-    recordsRead += 1;
-
-    if (recordsRead % 5000 == 0) {
-      LOGGER.info("Records read: {} ({})", recordsRead,
-          FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
-    }
-
-    return Optional.of(message);
-  }
-
-  /**
-   * The behavior of this method depends on the value of {@link #useNewStateMessageProcessing}, which
-   * is decided by the {@link UseNewStateMessageProcessing} feature flag. The feature flag is being
-   * used to test a new version of this method which is meant to fix the issue described here
-   * https://github.com/airbytehq/airbyte/issues/29478. {@link #processMessageFromSourceNew} is the
-   * new version of the method that is meant to fix the issue. {@link #processMessageFromSourceOld} is
-   * the original version of the method where the issue is present.
-   */
-  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {
-    if (useNewStateMessageProcessing) {
-      return processMessageFromSourceNew(airbyteMessage);
-    } else {
-      return processMessageFromSourceOld(airbyteMessage);
-    }
-  }
-
   @VisibleForTesting
   void internalProcessMessageFromDestination(final AirbyteMessage destinationRawMessage) {
-    LOGGER.info("State in ReplicationWorkerHelper from destination: {}", destinationRawMessage);
+    LOGGER.debug("State in ReplicationWorkerHelper from destination: {}", destinationRawMessage);
     final StreamDescriptor previousStream = currentDestinationStream;
     currentDestinationStream = airbyteMessageDataExtractor.extractStreamDescriptor(destinationRawMessage, previousStream);
     if (currentDestinationStream != null) {
@@ -301,6 +266,8 @@ class ReplicationWorkerHelper {
     messageTracker.acceptFromDestination(destinationRawMessage);
     if (destinationRawMessage.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), destinationRawMessage.getState());
+
+      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, metricAttrs);
     }
 
     if (shouldPublishMessage(destinationRawMessage)) {
@@ -310,13 +277,8 @@ class ReplicationWorkerHelper {
     }
   }
 
-  /**
-   * The value of {@link #useNewStateMessageProcessing} is decided by the
-   * {@link UseNewStateMessageProcessing} feature flag. The feature flag is being used to test a fix
-   * the issue described here https://github.com/airbytehq/airbyte/issues/29478.
-   */
   public void processMessageFromDestination(final AirbyteMessage destinationRawMessage) {
-    final AirbyteMessage message = useNewStateMessageProcessing ? mapper.revertMap(destinationRawMessage) : destinationRawMessage;
+    final AirbyteMessage message = mapper.revertMap(destinationRawMessage);
     internalProcessMessageFromDestination(message);
   }
 
@@ -444,6 +406,25 @@ class ReplicationWorkerHelper {
     } else {
       return FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt);
     }
+  }
+
+  private MetricAttribute[] toConnectionAttrs(final ReplicationContext ctx) {
+    if (ctx == null) {
+      return new MetricAttribute[0];
+    }
+
+    final var attrs = new ArrayList<MetricAttribute>();
+    if (ctx.connectionId() != null) {
+      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId().toString()));
+    }
+    if (ctx.jobId() != null) {
+      attrs.add(new MetricAttribute(MetricTags.JOB_ID, ctx.jobId().toString()));
+    }
+    if (ctx.attempt() != null) {
+      attrs.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt().toString()));
+    }
+
+    return attrs.toArray(new MetricAttribute[0]);
   }
 
 }

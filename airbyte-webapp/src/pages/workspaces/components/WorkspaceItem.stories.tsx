@@ -9,13 +9,7 @@ export default {
 
 const Template: StoryFn<typeof WorkspaceItem> = (args) => (
   <div style={{ maxWidth: 680 }}>
-    <WorkspaceItem
-      workspaceId={args.workspaceId}
-      workspaceName={args.workspaceName}
-      testId="select-this-workspace"
-      permissions={args.permissions}
-      orgName={args.orgName}
-    />
+    <WorkspaceItem workspaceId={args.workspaceId} workspaceName={args.workspaceName} testId="select-this-workspace" />
   </div>
 );
 
@@ -23,6 +17,4 @@ export const Primary = Template.bind({});
 Primary.args = {
   workspaceId: "1234",
   workspaceName: "My Cool Workspace",
-  orgName: "Awesome Org",
-  permissions: "Admin",
 };

@@ -31,8 +31,7 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
         new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning,
-        false);
+        onReplicationRunning);
   }
 
   // DefaultReplicationWorkerTests.

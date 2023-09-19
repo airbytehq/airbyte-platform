@@ -6,7 +6,7 @@ import { Option } from "components/ui/ListBox";
 import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
-import { DestinationId, ReleaseStage, SourceId } from "core/request/AirbyteClient";
+import { DestinationId, ReleaseStage, SourceId, SupportLevel } from "core/request/AirbyteClient";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
@@ -22,6 +22,8 @@ export interface AvailableSource {
   icon: string;
   name: string;
   releaseStage: ReleaseStage;
+  supportLevel: SupportLevel;
+  custom: boolean;
   connectedDestinations: string[];
 }
 
@@ -30,6 +32,8 @@ export interface AvailableDestination {
   icon: string;
   name: string;
   releaseStage: ReleaseStage;
+  supportLevel: SupportLevel;
+  custom: boolean;
   connectedSources: string[];
 }
 
@@ -44,6 +48,7 @@ interface CreditsUsageContext {
   setSelectedDestination: Dispatch<SetStateAction<string | null>>;
   selectedTimeWindow: ConsumptionTimeWindow;
   setSelectedTimeWindow: Dispatch<SetStateAction<ConsumptionTimeWindow>>;
+  hasFreeUsage: boolean;
 }
 
 export const creditsUsageContext = createContext<CreditsUsageContext | null>(null);
@@ -51,13 +56,14 @@ export const creditsUsageContext = createContext<CreditsUsageContext | null>(nul
 export const useCreditsContext = (): CreditsUsageContext => {
   const creditsUsageHelpers = useContext(creditsUsageContext);
   if (!creditsUsageHelpers) {
-    throw new Error("useConnectorForm should be used within ConnectorFormContextProvider");
+    throw new Error("useCreditsContext should be used within CreditsUsageContextProvider");
   }
   return creditsUsageHelpers;
 };
 
 export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const [selectedTimeWindow, setSelectedTimeWindow] = useState<ConsumptionTimeWindow>(ConsumptionTimeWindow.lastMonth);
+  const [hasFreeUsage, setHasFreeUsage] = useState<boolean>(false);
 
   const { workspaceId } = useCurrentWorkspace();
   const data = useGetCloudWorkspaceUsage(workspaceId, selectedTimeWindow);
@@ -66,6 +72,10 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
 
   const rawConsumptionData = useMemo(() => {
     return consumptionPerConnectionPerTimeframe.map((consumption) => {
+      if (consumption.freeUsage > 0) {
+        setHasFreeUsage(true);
+      }
+
       return {
         ...consumption,
         startTime: dayjs(consumption.startTime).format("YYYY-MM-DD"),
@@ -133,6 +143,7 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
         setSelectedDestination,
         selectedTimeWindow,
         setSelectedTimeWindow,
+        hasFreeUsage,
       }}
     >
       {children}

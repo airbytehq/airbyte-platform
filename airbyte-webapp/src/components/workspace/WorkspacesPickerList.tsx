@@ -10,14 +10,20 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useListWorkspacesAsync } from "core/api";
+import { CloudWorkspaceRead, CloudWorkspaceReadList } from "core/api/types/CloudApi";
+import { WorkspaceRead, WorkspaceReadList } from "core/request/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./WorkspacesPickerList.module.scss";
 
-export const WorkspacesPickerList: React.FC<{ closePicker: () => void }> = ({ closePicker }) => {
+interface WorkspacePickerListProps {
+  loading: boolean;
+  workspaces?: CloudWorkspaceReadList | WorkspaceReadList;
+  closePicker: () => void;
+}
+
+export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ loading, closePicker, workspaces }) => {
   const [workspaceFilter, setWorkspaceFilter] = useState("");
-  const { data: workspaceList, isLoading } = useListWorkspacesAsync();
   const location = useLocation();
 
   useUpdateEffect(() => {
@@ -25,12 +31,14 @@ export const WorkspacesPickerList: React.FC<{ closePicker: () => void }> = ({ cl
   }, [closePicker, location.pathname, location.search]);
 
   const filteredWorkspaces = useMemo(() => {
+    const filterableWorkspaces = workspaces?.workspaces as Array<WorkspaceRead | CloudWorkspaceRead>;
+
     return (
-      workspaceList?.workspaces.filter((workspace) => {
-        return workspace.name.toLowerCase().includes(workspaceFilter.toLowerCase());
+      filterableWorkspaces.filter((workspace) => {
+        return workspace.name?.toLowerCase().includes(workspaceFilter.toLowerCase());
       }) ?? []
     );
-  }, [workspaceFilter, workspaceList?.workspaces]);
+  }, [workspaceFilter, workspaces]);
 
   // track known row heights to tell react-window to update when they are known
   const [rowHeights, setRowHeights] = useState<Map<number, number>>(new Map());
@@ -89,38 +97,15 @@ export const WorkspacesPickerList: React.FC<{ closePicker: () => void }> = ({ cl
       }, [index, resetListRow]);
 
       const workspace = filteredWorkspaces[index];
-      // const roleId = workspace.permissions ? `role.${permissions.toLowerCase()}` : ""; for when we have this on the workspace object
 
       return (
-        <li key={workspace.slug} style={style}>
+        <li key={workspace.workspaceId} style={style}>
           <Link ref={itemRef} variant="primary" to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}>
             <Box py="md" px="md" className={styles.workspacesPickerList__item}>
               <FlexContainer direction="column" justifyContent="center" gap="sm">
                 <Text align="left" color="blue" bold size="md">
                   {workspace.name}
                 </Text>
-                {/* irrelevant until we get roles and orgs */}
-                {false && (
-                  <FlexContainer alignItems="baseline" justifyContent="flex-start">
-                    {/* when we get organizations on the workspace object */}
-                    {false && (
-                      <Text size="sm" color="grey">
-                        {/* {orgName} */}
-                      </Text>
-                    )}
-                    {/* for when we get permissions on the user/workspace */}
-                    {false && (
-                      <Box py="xs" px="md" mb="sm" className={styles.workspacesPickerList__orgPill}>
-                        <Text size="sm" color="green600">
-                          {/* <FormattedMessage
-                                    id="user.roleLabel"
-                                    values={{ role: <FormattedMessage id={roleId} /> }}
-                                  /> */}
-                        </Text>
-                      </Box>
-                    )}
-                  </FlexContainer>
-                )}
               </FlexContainer>
             </Box>
           </Link>
@@ -130,7 +115,7 @@ export const WorkspacesPickerList: React.FC<{ closePicker: () => void }> = ({ cl
     return ListRow;
   }, [filteredWorkspaces]);
 
-  return isLoading ? (
+  return loading ? (
     <Box p="lg">
       <LoadingSpinner />
     </Box>

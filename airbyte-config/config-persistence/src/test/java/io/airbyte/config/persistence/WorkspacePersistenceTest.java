@@ -18,13 +18,19 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.SupportLevel;
+import io.airbyte.config.User;
+import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -49,11 +55,15 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   private ConfigRepository configRepository;
   private WorkspacePersistence workspacePersistence;
+  private PermissionPersistence permissionPersistence;
+  private UserPersistence userPersistence;
 
   @BeforeEach
   void setup() throws Exception {
     configRepository = spy(new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
     workspacePersistence = new WorkspacePersistence(database);
+    permissionPersistence = new PermissionPersistence(database);
+    userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
     truncateAllTables();
@@ -125,6 +135,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     return new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withDockerImageTag("0.0.1")
         .withReleaseStage(releaseStage);
   }
@@ -203,10 +214,10 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     final StandardWorkspace workspace = createBaseStandardWorkspace();
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(
+    configRepository.writeConnectorMetadata(
         createSourceDefinition(),
         createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
-    configRepository.writeDestinationDefinitionAndDefaultVersion(
+    configRepository.writeConnectorMetadata(
         createDestinationDefinition(),
         createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
 
@@ -227,7 +238,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
     configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
-    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.empty());
     assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(false));
 
@@ -247,7 +258,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
     configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
-    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 1, 0), Optional.empty());
 
     assertEquals(1, workspaces.size());
@@ -266,11 +277,122 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
     configRepository.writeStandardWorkspaceNoSecrets(otherWorkspace);
 
-    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationId(
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByOrganizationIdPaginated(
         new ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0), Optional.of("keyword"));
 
     assertEquals(1, workspaces.size());
     assertEquals(workspace, workspaces.get(0));
+  }
+
+  @Test
+  void testGetDefaultWorkspaceForOrganization() throws JsonValidationException, IOException {
+    final StandardWorkspace expectedWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspaceInOrganization1");
+
+    configRepository.writeStandardWorkspaceNoSecrets(expectedWorkspace);
+
+    final StandardWorkspace tombstonedWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("tombstonedWorkspace")
+        .withTombstone(true);
+
+    configRepository.writeStandardWorkspaceNoSecrets(tombstonedWorkspace);
+
+    final StandardWorkspace laterWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("laterWorkspace");
+
+    configRepository.writeStandardWorkspaceNoSecrets(laterWorkspace);
+
+    final StandardWorkspace actualWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(MockData.ORGANIZATION_ID_1);
+
+    assertEquals(expectedWorkspace, actualWorkspace);
+  }
+
+  @Test
+  void testListWorkspacesByUserIdWithKeywordWithPagination() throws Exception {
+    final UUID workspaceId = UUID.randomUUID();
+    // create a user
+    final UUID userId = UUID.randomUUID();
+    userPersistence.writeUser(new User()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE));
+    // create a workspace in org_1, name contains search "keyword"
+    final StandardWorkspace orgWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_with_keyword_1");
+    configRepository.writeStandardWorkspaceNoSecrets(orgWorkspace);
+    // create a workspace in org_2, name contains search "Keyword"
+    final StandardWorkspace userWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId).withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_with_Keyword_2");
+    configRepository.writeStandardWorkspaceNoSecrets(userWorkspace);
+    // create a workspace permission
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.WORKSPACE_READER));
+    // create an org permission
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByUserIdPaginated(
+        new ResourcesByUserQueryPaginated(userId, false, 10, 0), Optional.of("keyWord"));
+
+    assertEquals(2, workspaces.size());
+  }
+
+  @Test
+  void testListWorkspacesByUserIdWithoutKeywordWithoutPagination() throws Exception {
+    final UUID workspaceId = UUID.randomUUID();
+    // create a user
+    final UUID userId = UUID.randomUUID();
+    userPersistence.writeUser(new User()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE));
+    // create a workspace in org_1
+    final StandardWorkspace orgWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace1");
+    configRepository.writeStandardWorkspaceNoSecrets(orgWorkspace);
+    // create a workspace in org_2
+    final StandardWorkspace userWorkspace = createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId).withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace2");
+    configRepository.writeStandardWorkspaceNoSecrets(userWorkspace);
+    // create a workspace permission
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.WORKSPACE_READER));
+    // create an org permission
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
+    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByUserId(
+        userId, false, Optional.empty());
+
+    assertEquals(2, workspaces.size());
   }
 
 }

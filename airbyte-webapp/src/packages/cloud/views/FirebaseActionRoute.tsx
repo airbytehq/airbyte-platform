@@ -5,9 +5,9 @@ import { useAsync } from "react-use";
 import { match, P } from "ts-pattern";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { AuthVerifyEmail, useAuthService } from "core/services/auth";
 import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import AuthLayout from "./auth";
 import { LoginSignupNavigation } from "./auth/components/LoginSignupNavigation";
@@ -22,9 +22,12 @@ enum FirebaseActionMode {
   SIGN_IN = "signIn",
 }
 
-const VerifyEmailAction: React.FC = () => {
+interface VerifyEmailActionProps {
+  verifyEmail: AuthVerifyEmail;
+}
+
+const VerifyEmailAction: React.FC<VerifyEmailActionProps> = ({ verifyEmail }) => {
   const query = useQuery<{ oobCode?: string }>();
-  const { verifyEmail } = useAuthService();
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
@@ -35,6 +38,7 @@ const VerifyEmailAction: React.FC = () => {
       navigate("/");
       return;
     }
+
     // Send verification code to authentication service
     await verifyEmail(query.oobCode);
     // Show a notification that the mail got verified successfully
@@ -52,16 +56,24 @@ const VerifyEmailAction: React.FC = () => {
 
 export const FirebaseActionRoute: React.FC = () => {
   const { mode } = useQuery<{ mode: FirebaseActionMode }>();
-  const { user } = useAuthService();
+  const { user, verifyEmail, signUpWithEmailLink, confirmPasswordReset } = useAuthService();
 
   return (
     <AuthLayout>
-      {match([mode, user])
+      {match([mode, user, verifyEmail, signUpWithEmailLink, confirmPasswordReset])
         // The verify email route is the only that should work whether the user is logged in or not
-        .with([FirebaseActionMode.VERIFY_EMAIL, P.any], () => <VerifyEmailAction />)
+        .with([FirebaseActionMode.VERIFY_EMAIL, P.any, P.not(P.nullish), P.any, P.any], ([, , verifyEmail]) => (
+          <VerifyEmailAction verifyEmail={verifyEmail} />
+        ))
         // All other routes will require the user to be logged out
-        .with([FirebaseActionMode.SIGN_IN, P.nullish], () => <AcceptEmailInvite />)
-        .with([FirebaseActionMode.RESET_PASSWORD, P.nullish], () => <ResetPasswordConfirmPage />)
+        .with(
+          [FirebaseActionMode.SIGN_IN, P.nullish, P.any, P.not(P.nullish), P.any],
+          ([, , , signUpWithEmailLink]) => <AcceptEmailInvite signUpWithEmailLink={signUpWithEmailLink} />
+        )
+        .with(
+          [FirebaseActionMode.RESET_PASSWORD, P.nullish, P.any, P.any, P.not(P.nullish)],
+          ([, , , , confirmPasswordReset]) => <ResetPasswordConfirmPage confirmPasswordReset={confirmPasswordReset} />
+        )
         .otherwise(() => (
           <Navigate to="/" replace />
         ))}

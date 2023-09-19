@@ -8,7 +8,6 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
-import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
@@ -70,7 +69,6 @@ public class ActivityBeanFactory {
                                                   final WorkflowConfigActivity workflowConfigActivity,
                                                   final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
-                                                  final SubmitCheckConnectionActivity submitCheckConnectionActivity,
                                                   final CheckRunProgressActivity checkRunProgressActivity,
                                                   final RetryStatePersistenceActivity retryStatePersistenceActivity,
                                                   final AppendToAttemptLogActivity appendToAttemptLogActivity) {
@@ -84,7 +82,6 @@ public class ActivityBeanFactory {
         workflowConfigActivity,
         routeToTaskQueueActivity,
         featureFlagFetchActivity,
-        submitCheckConnectionActivity,
         checkRunProgressActivity,
         retryStatePersistenceActivity,
         appendToAttemptLogActivity);
@@ -140,7 +137,7 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("discoveryActivityOptions")
   public ActivityOptions discoveryActivityOptions(@Property(name = "airbyte.activity.discovery-timeout",
-                                                            defaultValue = "5") final Integer discoveryTimeoutMinutes) {
+                                                            defaultValue = "30") final Integer discoveryTimeoutMinutes) {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
         .setRetryOptions(TemporalUtils.NO_RETRY)

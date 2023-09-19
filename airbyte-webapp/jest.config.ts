@@ -1,6 +1,6 @@
 import type { Config } from "jest";
 
-const isInCI = process.env.CI;
+const isInCI = process.env.DAGGER;
 
 const jestConfig: Config = {
   verbose: true,

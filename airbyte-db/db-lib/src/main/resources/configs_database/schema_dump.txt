@@ -20,7 +20,7 @@ create table "public"."actor" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "default_version_id" uuid,
+  "default_version_id" uuid not null,
   constraint "actor_pkey"
     primary key ("id")
 );
@@ -66,7 +66,7 @@ create table "public"."actor_definition_breaking_change" (
   "version" varchar(256) not null,
   "migration_documentation_url" varchar(256) not null,
   "upgrade_deadline" date not null,
-  "message" varchar(256) not null,
+  "message" text not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "actor_definition_breaking_change_pkey"
@@ -100,6 +100,7 @@ create table "public"."actor_definition_version" (
   "suggested_streams" jsonb,
   "release_stage" "public"."release_stage",
   "support_state" "public"."support_state" not null default cast('supported' as support_state),
+  "support_level" "public"."support_level" not null,
   constraint "actor_definition_version_pkey"
     primary key ("id")
 );
@@ -226,6 +227,16 @@ create table "public"."organization" (
   constraint "organization_pkey"
     primary key ("id")
 );
+create table "public"."organization_email_domain" (
+  "id" uuid not null,
+  "organization_id" uuid not null,
+  "email_domain" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "organization_email_domain_pkey"
+    primary key ("id"),
+  constraint "organization_email_domain_email_domain_key"
+    unique ("email_domain")
+);
 create table "public"."permission" (
   "id" uuid not null,
   "user_id" uuid not null,
@@ -245,6 +256,19 @@ create table "public"."schema_management" (
   "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
   constraint "schema_management_pkey"
     primary key ("id")
+);
+create table "public"."sso_config" (
+  "id" uuid not null,
+  "organization_id" uuid not null,
+  "keycloak_realm" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "sso_config_pkey"
+    primary key ("id"),
+  constraint "sso_config_keycloak_realm_key"
+    unique ("keycloak_realm"),
+  constraint "sso_config_organization_id_key"
+    unique ("organization_id")
 );
 create table "public"."state" (
   "id" uuid not null,
@@ -285,6 +309,22 @@ create table "public"."user" (
   "auth_provider" "public"."auth_provider" not null,
   constraint "user_pkey"
     primary key ("id")
+);
+create table "public"."user_invitation" (
+  "id" uuid not null,
+  "invite_code" varchar(256) not null,
+  "inviter_user_id" uuid not null,
+  "invited_email" varchar(256) not null,
+  "workspace_id" uuid,
+  "organization_id" uuid,
+  "permission_type" "public"."permission_type" not null,
+  "status" "public"."invitation_status" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "user_invitation_pkey"
+    primary key ("id"),
+  constraint "user_invitation_invite_code_key"
+    unique ("invite_code")
 );
 create table "public"."workspace" (
   "id" uuid not null,
@@ -393,6 +433,10 @@ alter table "public"."operation"
   add constraint "operation_workspace_id_fkey"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."organization_email_domain"
+  add constraint "organization_email_domain_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
 alter table "public"."permission"
   add constraint "permission_organization_id_fkey"
     foreign key ("organization_id")
@@ -409,6 +453,10 @@ alter table "public"."schema_management"
   add constraint "schema_management_connection_id_fkey"
     foreign key ("connection_id")
     references "public"."connection" ("id");
+alter table "public"."sso_config"
+  add constraint "sso_config_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
 alter table "public"."state"
   add constraint "state_connection_id_fkey"
     foreign key ("connection_id")
@@ -416,6 +464,18 @@ alter table "public"."state"
 alter table "public"."user"
   add constraint "user_default_workspace_id_fkey"
     foreign key ("default_workspace_id")
+    references "public"."workspace" ("id");
+alter table "public"."user_invitation"
+  add constraint "user_invitation_inviter_user_id_fkey"
+    foreign key ("inviter_user_id")
+    references "public"."user" ("id");
+alter table "public"."user_invitation"
+  add constraint "user_invitation_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
+alter table "public"."user_invitation"
+  add constraint "user_invitation_workspace_id_fkey"
+    foreign key ("workspace_id")
     references "public"."workspace" ("id");
 alter table "public"."workspace"
   add constraint "workspace_organization_id_fkey"
@@ -439,10 +499,18 @@ create index "connection_source_id_idx" on "public"."connection"("source_id" asc
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
+create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "permission_organization_id_idx" on "public"."permission"("organization_id" asc);
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
+create index "sso_config_keycloak_realm_idx" on "public"."sso_config"("keycloak_realm" asc);
+create index "sso_config_organization_id_idx" on "public"."sso_config"("organization_id" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
 create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_provider" asc, "auth_user_id" asc);
 create index "user_email_idx" on "public"."user"("email" asc);
+create index "user_invitation_invite_code_idx" on "public"."user_invitation"("invite_code" asc);
+create index "user_invitation_invited_email_idx" on "public"."user_invitation"("invited_email" asc);
+create index "user_invitation_organization_id_idx" on "public"."user_invitation"("organization_id" asc);
+create index "user_invitation_workspace_id_idx" on "public"."user_invitation"("workspace_id" asc);

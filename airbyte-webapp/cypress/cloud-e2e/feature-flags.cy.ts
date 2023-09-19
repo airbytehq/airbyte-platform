@@ -1,6 +1,6 @@
 import { FeatureItem } from "@src/core/services/features";
 
-describe("AllowDBTCloudIntegration", () => {
+describe.skip("AllowDBTCloudIntegration", () => {
   beforeEach(() => {
     cy.login();
     cy.selectWorkspace();

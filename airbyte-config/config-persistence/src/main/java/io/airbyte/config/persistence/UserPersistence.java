@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.impl.DSL;
@@ -29,9 +30,16 @@ import org.jooq.impl.DSL;
  * Perform all SQL queries and handle persisting User to the Config Database.
  *
  */
+@Slf4j
 public class UserPersistence {
 
   public static final String PRIMARY_KEY = "id";
+
+  /**
+   * Each installation of Airbyte comes with a default user. The ID of this user is hardcoded to the 0
+   * UUID so that it can be consistently retrieved.
+   */
+  public static final UUID DEFAULT_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   private final ExceptionWrappingDatabase database;
 
@@ -175,6 +183,13 @@ public class UserPersistence {
     }
 
     return Optional.of(createUserFromRecord(result.get(0)));
+  }
+
+  /**
+   * Get the default user if it exists by looking up the hardcoded default user id.
+   */
+  public Optional<User> getDefaultUser() throws IOException {
+    return getUser(DEFAULT_USER_ID);
   }
 
 }

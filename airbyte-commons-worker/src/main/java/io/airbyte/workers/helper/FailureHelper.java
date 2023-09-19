@@ -5,6 +5,8 @@
 package io.airbyte.workers.helper;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.temporal.exception.SizeLimitException;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -386,9 +388,13 @@ public class FailureHelper {
    * @return failure reason
    */
   public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+    final String externalMessage =
+        exceptionChainContains(t, SizeLimitException.class)
+            ? "Size limit exceeded, please check your configuration, this is often related to a high number of streams."
+            : "Something went wrong within the airbyte platform";
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
-        .withExternalMessage("Something went wrong within the airbyte platform");
+        .withExternalMessage(externalMessage);
   }
 
   private static Metadata jobAndAttemptMetadata(final Long jobId, final Integer attemptNumber) {
@@ -420,6 +426,18 @@ public class FailureHelper {
     final Comparator<FailureReason> compareByTimestamp = Comparator.comparing(FailureReason::getTimestamp);
     final Comparator<FailureReason> compareByTraceAndTimestamp = compareByIsTrace.thenComparing(compareByTimestamp);
     return failures.stream().sorted(compareByTraceAndTimestamp).toList();
+  }
+
+  @VisibleForTesting
+  static boolean exceptionChainContains(final Throwable t, Class<?> type) {
+    Throwable tp = t;
+    while (tp != null) {
+      if (type.isInstance(tp)) {
+        return true;
+      }
+      tp = tp.getCause();
+    }
+    return false;
   }
 
 }

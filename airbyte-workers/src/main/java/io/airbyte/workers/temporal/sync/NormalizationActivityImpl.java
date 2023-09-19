@@ -16,7 +16,6 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
-import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -55,6 +54,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
@@ -120,56 +120,60 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
-    return temporalUtils.withBackgroundHeartbeat(() -> {
-      final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
-      final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
+    return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
+        () -> {
+          final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
+          final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
 
-      // Check the version of normalization
-      // We require at least version 0.3.0 to support data types v1. Using an older version would lead to
-      // all columns being typed as JSONB. If normalization is using an older version, fallback to using
-      // v0 data types.
-      if (!normalizationSupportsV1DataTypes(destinationLauncherConfig)) {
-        log.info("Using protocol v0");
-        CatalogMigrationV1Helper.downgradeSchemaIfNeeded(fullInput.getCatalog());
-      } else {
+          // Check the version of normalization
+          // We require at least version 0.3.0 to support data types v1. Using an older version would lead to
+          // all columns being typed as JSONB. If normalization is using an older version, fallback to using
+          // v0 data types.
+          if (!normalizationSupportsV1DataTypes(destinationLauncherConfig)) {
+            log.info("Using protocol v0");
+            CatalogMigrationV1Helper.downgradeSchemaIfNeeded(fullInput.getCatalog());
+          } else {
 
-        // This should only be useful for syncs that started before the release that contained v1 migration.
-        // However, we lack the effective way to detect those syncs so this code should remain until we
-        // phase v0 out.
-        // Performance impact should be low considering the nature of the check compared to the time to run
-        // normalization.
-        log.info("Using protocol v1");
-        CatalogMigrationV1Helper.upgradeSchemaIfNeeded(fullInput.getCatalog());
-      }
+            // This should only be useful for syncs that started before the release that contained v1 migration.
+            // However, we lack the effective way to detect those syncs so this code should remain until we
+            // phase v0 out.
+            // Performance impact should be low considering the nature of the check compared to the time to run
+            // normalization.
+            log.info("Using protocol v1");
+            CatalogMigrationV1Helper.upgradeSchemaIfNeeded(fullInput.getCatalog());
+          }
 
-      final Supplier<NormalizationInput> inputSupplier = () -> {
-        airbyteConfigValidator.ensureAsRuntime(ConfigSchema.NORMALIZATION_INPUT, Jsons.jsonNode(fullInput));
-        return fullInput;
-      };
+          final Supplier<NormalizationInput> inputSupplier = () -> {
+            airbyteConfigValidator.ensureAsRuntime(ConfigSchema.NORMALIZATION_INPUT, Jsons.jsonNode(fullInput));
+            return fullInput;
+          };
 
-      final CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> workerFactory;
+          final CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> workerFactory;
 
-      log.info("Using normalization: " + destinationLauncherConfig.getNormalizationDockerImage());
-      if (containerOrchestratorConfig.isPresent()) {
-        final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
-        workerFactory = getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-            () -> context, input.getConnectionId(), input.getWorkspaceId());
-      } else {
-        workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig);
-      }
+          log.info("Using normalization: " + destinationLauncherConfig.getNormalizationDockerImage());
+          if (containerOrchestratorConfig.isPresent()) {
+            final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
+            workerFactory = getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
+                input.getConnectionId(), input.getWorkspaceId());
+          } else {
+            workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig);
+          }
+          final var worker = workerFactory.get();
+          cancellationCallback.set(worker::cancel);
 
-      final TemporalAttemptExecution<NormalizationInput, NormalizationSummary> temporalAttemptExecution = new TemporalAttemptExecution<>(
-          workspaceRoot, workerEnvironment, logConfigs,
-          jobRunConfig,
-          workerFactory,
-          inputSupplier,
-          new CancellationHandler.TemporalCancellationHandler(context),
-          airbyteApiClient,
-          airbyteVersion,
-          () -> context);
+          final TemporalAttemptExecution<NormalizationInput, NormalizationSummary> temporalAttemptExecution = new TemporalAttemptExecution<>(
+              workspaceRoot, workerEnvironment, logConfigs,
+              jobRunConfig,
+              worker,
+              inputSupplier.get(),
+              airbyteApiClient,
+              airbyteVersion,
+              () -> context);
 
-      return temporalAttemptExecution.get();
-    },
+          return temporalAttemptExecution.get();
+        },
         () -> context);
   }
 
@@ -259,7 +263,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                                                                                                          final WorkerConfigs workerConfigs,
                                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                                          final JobRunConfig jobRunConfig,
-                                                                                                                         final Supplier<ActivityExecutionContext> activityContext,
                                                                                                                          final UUID connectionId,
                                                                                                                          final UUID workspaceId) {
     return () -> new NormalizationLauncherWorker(
@@ -269,9 +272,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         jobRunConfig,
         workerConfigs,
         containerOrchestratorConfig.get(),
-        activityContext,
         serverPort,
-        temporalUtils,
         featureFlagClient);
   }
 

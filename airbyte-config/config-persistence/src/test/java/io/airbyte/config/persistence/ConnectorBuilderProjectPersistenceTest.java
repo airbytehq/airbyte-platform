@@ -19,6 +19,7 @@ import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
 import java.io.IOException;
@@ -160,7 +161,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
+    configRepository.writeCustomConnectorMetadata(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
         .withPublic(false),
@@ -179,7 +180,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
+    configRepository.writeCustomConnectorMetadata(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
         .withPublic(true),
@@ -321,9 +322,10 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withDockerRepository("repo-" + id)
         .withDockerImageTag("0.0.1")
+        .withSupportLevel(SupportLevel.COMMUNITY)
         .withSpec(new ConnectorSpecification().withProtocolVersion("0.1.0"));
 
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
     configRepository.insertActiveDeclarativeManifest(new DeclarativeManifest()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersion(MANIFEST_VERSION)

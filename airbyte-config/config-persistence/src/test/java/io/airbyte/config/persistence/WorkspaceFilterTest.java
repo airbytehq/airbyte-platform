@@ -6,6 +6,7 @@ package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
+import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -29,6 +31,8 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
 
   private static final UUID SRC_DEF_ID = UUID.randomUUID();
   private static final UUID DST_DEF_ID = UUID.randomUUID();
+  private static final UUID SRC_DEF_VER_ID = UUID.randomUUID();
+  private static final UUID DST_DEF_VER_ID = UUID.randomUUID();
   private static final UUID ACTOR_ID_0 = UUID.randomUUID();
   private static final UUID ACTOR_ID_1 = UUID.randomUUID();
   private static final UUID ACTOR_ID_2 = UUID.randomUUID();
@@ -53,21 +57,31 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .values(DST_DEF_ID, "dstDef", ActorType.destination)
         .values(UUID.randomUUID(), "dstDef", ActorType.destination)
         .execute());
+    // create actor_definition_version
+    database.transaction(ctx -> ctx.insertInto(ACTOR_DEFINITION_VERSION, ACTOR_DEFINITION_VERSION.ID, ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID,
+        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION_VERSION.SPEC,
+        ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL)
+        .values(SRC_DEF_VER_ID, SRC_DEF_ID, "airbyte/source", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community)
+        .execute());
 
     // create workspace
-    database.transaction(ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE)
-        .values(WORKSPACE_ID_0, "ws-0", "ws-0", true)
-        .values(WORKSPACE_ID_1, "ws-1", "ws-1", true)
-        .values(WORKSPACE_ID_2, "ws-2", "ws-2", true)
-        .values(WORKSPACE_ID_3, "ws-3", "ws-3", true)
-        .execute());
+    database.transaction(
+        ctx -> ctx.insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false)
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true) // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true) // note that workspace 3 is tombstoned!
+            .execute());
     // create actors
     database.transaction(
-        ctx -> ctx.insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.NAME, ACTOR.CONFIGURATION, ACTOR.ACTOR_TYPE)
-            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
-            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
+        ctx -> ctx
+            .insertInto(ACTOR, ACTOR.WORKSPACE_ID, ACTOR.ID, ACTOR.ACTOR_DEFINITION_ID, ACTOR.DEFAULT_VERSION_ID, ACTOR.NAME, ACTOR.CONFIGURATION,
+                ACTOR.ACTOR_TYPE)
+            .values(WORKSPACE_ID_0, ACTOR_ID_0, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-0", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_1, ACTOR_ID_1, SRC_DEF_ID, SRC_DEF_VER_ID, "ACTOR-1", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_2, ACTOR_ID_2, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-2", JSONB.valueOf("{}"), ActorType.source)
+            .values(WORKSPACE_ID_3, ACTOR_ID_3, DST_DEF_ID, DST_DEF_VER_ID, "ACTOR-3", JSONB.valueOf("{}"), ActorType.source)
             .execute());
     // create connections
     database.transaction(
@@ -101,8 +115,8 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  @DisplayName("Should return a list of workspace IDs with most recently running jobs")
-  void testListWorkspacesByMostRecentlyRunningJobs() throws IOException {
+  @DisplayName("Should return a list of active workspace IDs with most recently running jobs")
+  void testListActiveWorkspacesByMostRecentlyRunningJobs() throws IOException {
     final int timeWindowInHours = 48;
     /*
      * Following function is to filter workspace (IDs) with most recently running jobs within a given
@@ -110,17 +124,16 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
      * time window. Step 2: Trace back via CONNECTION table and ACTOR table. Step 3: Return workspace
      * IDs from ACTOR table.
      */
-    final List<UUID> actualResult = configRepository.listWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
+    final List<UUID> actualResult = configRepository.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
     /*
      * With the test data provided above, expected outputs for each step: Step 1: `jobs` (IDs) OL, 1L,
      * 2L, 3L, 4L, 5L and 6L. Step 2: `connections` (IDs) CONN_ID_0, CONN_ID_1, CONN_ID_2, CONN_ID_3,
      * and CONN_ID_4 `actors` (IDs) ACTOR_ID_0, ACTOR_ID_1, and ACTOR_ID_2. Step 3: `workspaces` (IDs)
-     * WORKSPACE_ID_0, WORKSPACE_ID_1 and WORKSPACE_ID_2.
+     * WORKSPACE_ID_0, WORKSPACE_ID_1. Note that WORKSPACE_ID_2 is excluded because it is tombstoned.
      */
     final List<UUID> expectedResult = new ArrayList<>();
     expectedResult.add(WORKSPACE_ID_0);
     expectedResult.add(WORKSPACE_ID_1);
-    expectedResult.add(WORKSPACE_ID_2);
     assertTrue(expectedResult.size() == actualResult.size() && expectedResult.containsAll(actualResult) && actualResult.containsAll(expectedResult));
   }
 

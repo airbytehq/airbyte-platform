@@ -20,6 +20,7 @@ from .tasks import (
     build_oss_backend_task,
     build_oss_frontend_task,
     build_storybook_oss_frontend_task,
+    check_oss_backend_task,
     test_oss_backend_task,
     test_oss_frontend_task,
 )
@@ -63,8 +64,6 @@ class BackendTestCommand(ClickCommandMetadata):
                                         type = ParameterType.BOOL,
                                         help = "Enables gradle scanning", 
                                         default = False)]
-    #options: List[ClickOption] = [ClickOption(name = "--event",type=ParameterType.STRING,help="GHA Event to simulate locally"),]
-
 
 class FrontendBuildCommand(ClickCommandMetadata):
     command_name: str = "build"
@@ -83,7 +82,7 @@ class TestCommand(ClickCommandMetadata):
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Build")
-async def build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
+async def oss_build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name)
     results: List[List[State]] = await gather(backend_build, frontend_build, args=[(), ()], kwargs=[{'scan': scan, 'client': client},{'client': client}])
     return results
@@ -115,10 +114,11 @@ async def frontend_build(settings: OssSettings, ctx: PipelineContext, client: Op
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Test")
-async def test(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
+async def oss_test(settings: OssSettings, ctx: PipelineContext, build_results: Optional[List[Container]] = None, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
-    build_results = await build(scan=scan, client=test_client)
+    build_results = await oss_build(scan=scan, client=test_client) if build_results is None else build_results
     test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
+    await check_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
     # TODO: add cypress E2E tests here
     return [test_results] 
 
@@ -130,15 +130,17 @@ async def backend_test(settings: OssSettings, ctx: PipelineContext, client: Opti
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     build_results = await backend_build(scan=scan, client=test_client)
     test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0], settings=settings, ctx=quote(ctx), scan=scan)
+    await check_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0], settings=settings, ctx=quote(ctx), scan=scan)
+
     return test_results
 
 @oss_group.command(CICommand())
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS CI")
-async def ci(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
+async def oss_ci(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     ci_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
-    ci_results = await test(scan=scan, client=ci_client)
+    ci_results = await oss_test(scan=scan, client=ci_client)
     return ci_results
 
 

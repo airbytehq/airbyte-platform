@@ -37,3 +37,16 @@ export const enum ConnectionRoutePaths {
   ConnectionNew = "new-connection",
   Configure = "configure",
 }
+
+export enum SettingsRoutePaths {
+  Account = "account",
+  Destination = "destination",
+  Source = "source",
+  Configuration = "configuration",
+  Notifications = "notifications",
+  Metrics = "metrics",
+  DataResidency = "data-residency",
+  Workspace = "workspace",
+  Organization = "organization",
+  AccessManagement = "access-management",
+}

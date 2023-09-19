@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.jooq.impl.DSL.select;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 
@@ -83,13 +84,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
           .withVersionId(sourceDefinition.getDefaultVersionId());
-      configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
     }
     for (final StandardDestinationDefinition destinationDefinition : MockData.standardDestinationDefinitions()) {
       final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
           .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
           .withVersionId(destinationDefinition.getDefaultVersionId());
-      configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+      configRepository.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion);
     }
     for (final SourceConnection source : MockData.sourceConnections()) {
       configRepository.writeSourceConnectionNoSecrets(source);
@@ -156,7 +157,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -169,12 +170,12 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    configRepository.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final AirbyteCatalog secondCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("size", JsonSchemaType.NUMBER), Field.of("label", JsonSchemaType.STRING),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    configRepository.writeCanonicalActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
+    configRepository.writeActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
 
     final String expectedCatalog =
         "{"
@@ -203,6 +204,60 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void testWriteCanonicalHashActorCatalog() throws IOException, JsonValidationException, SQLException {
+    final String canonicalConfigHash = "8ad32981";
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withSourceType(SourceType.DATABASE)
+        .withName("sourceDefinition");
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withVersionId(sourceDefinition.getDefaultVersionId());
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
+
+    final SourceConnection source = new SourceConnection()
+        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceId(UUID.randomUUID())
+        .withName("SomeConnector")
+        .withWorkspaceId(workspace.getWorkspaceId())
+        .withConfiguration(Jsons.deserialize("{}"));
+    configRepository.writeSourceConnectionNoSecrets(source);
+
+    final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
+        Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
+        Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
+    configRepository.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+
+    String expectedCatalog =
+        "{"
+            + "\"streams\":["
+            + "{"
+            + "\"default_cursor_field\":[],"
+            + "\"json_schema\":{"
+            + "\"properties\":{"
+            + "\"color\":{\"type\":\"string\"},"
+            + "\"label\":{\"type\":\"string\"},"
+            + "\"price\":{\"type\":\"number\"},"
+            + "\"size\":{\"type\":\"number\"}"
+            + "},"
+            + "\"type\":\"object\""
+            + "},"
+            + "\"name\":\"product\","
+            + "\"source_defined_primary_key\":[],"
+            + "\"supported_sync_modes\":[\"full_refresh\"]"
+            + "}"
+            + "]"
+            + "}";
+
+    final Optional<ActorCatalog> catalogResult = configRepository.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    assertTrue(catalogResult.isPresent());
+    assertEquals(catalogResult.get().getCatalogHash(), canonicalConfigHash);
+    assertEquals(expectedCatalog, Jsons.canonicalJsonSerialize(catalogResult.get().getCatalog()));
+  }
+
+  @Test
   void testSimpleInsertActorCatalog() throws IOException, JsonValidationException, SQLException {
     final String otherConfigHash = "OtherConfigHash";
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
@@ -214,7 +269,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withVersionId(sourceDefinition.getDefaultVersionId());
-    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+    configRepository.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion);
 
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -807,6 +862,14 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
             .execute();
       }
     });
+  }
+
+  @Test
+  void testGetEarlySyncJobs() throws IOException {
+    // This test just verifies that the query can be run against configAPI DB.
+    // The query has been tested locally against prod DB to verify the outputs.
+    final Set<Long> earlySyncJobs = configRepository.listEarlySyncJobs(7, 30);
+    assertNotNull(earlySyncJobs);
   }
 
 }

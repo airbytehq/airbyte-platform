@@ -23,12 +23,14 @@ micronaut:
           allowed-origins-regex:
             - ^.*$
     netty:
+      aggregator:
+        max-content-length: 52428800 # 50MB
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
-  edition: ${AIRBYTE_EDITION:community}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   shutdown:
     delay_ms: 20000
   cloud:

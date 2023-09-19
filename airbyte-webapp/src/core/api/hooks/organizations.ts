@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { SCOPE_USER } from "services/Scope";
+import { SCOPE_ORGANIZATION, SCOPE_USER } from "services/Scope";
 
-import { getOrganization, updateOrganization } from "../generated/AirbyteClient";
+import { getOrganization, listUsersInOrganization, updateOrganization } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -10,6 +10,9 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
   detail: (organizationId: string) => [...organizationKeys.all, "details", organizationId] as const,
+  allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
+  listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
+  workspaces: (organizationIds: string[]) => [...organizationKeys.all, "workspaces", organizationIds] as const,
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -31,4 +34,11 @@ export const useUpdateOrganization = () => {
       },
     }
   );
+};
+
+export const useListUsersInOrganization = (organizationId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = organizationKeys.listUsers(organizationId);
+
+  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions));
 };

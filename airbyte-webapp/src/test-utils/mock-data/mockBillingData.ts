@@ -22,6 +22,10 @@ export const mockWorkspaceUsageConnection: ConsumptionRead["connection"] = {
   connectionScheduleUnits: undefined,
   destinationReleaseStage: "alpha",
   sourceReleaseStage: "alpha",
+  sourceSupportLevel: "community",
+  destinationSupportLevel: "community",
+  sourceCustom: false,
+  destinationCustom: false,
 };
 
 export const secondMockWorkspaceConnection: ConsumptionRead["connection"] = {

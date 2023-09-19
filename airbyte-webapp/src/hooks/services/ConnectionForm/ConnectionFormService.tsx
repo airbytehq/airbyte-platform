@@ -10,7 +10,9 @@ import {
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
 
+import { ConnectionValues, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
 import {
+  ActorDefinitionVersionRead,
   ConnectionScheduleType,
   DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
@@ -18,15 +20,16 @@ import {
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
-} from "core/request/AirbyteClient";
+} from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
+import { ConnectionHookFormContext } from "./ConnectionHookFormService";
+import { useExperiment } from "../Experiment";
 import { useUniqueFormId } from "../FormChangeTracker";
-import { ValuesProps } from "../useConnectionHook";
 import { SchemaError } from "../useSourceHook";
 
 export type ConnectionFormMode = "create" | "edit" | "readonly";
@@ -47,7 +50,7 @@ export const tidyConnectionFormValues = (
   workspaceId: string,
   validationSchema: ConnectionValidationSchema,
   operations?: OperationRead[]
-): ValuesProps => {
+): ConnectionValues => {
   // TODO (https://github.com/airbytehq/airbyte/issues/17279): We should try to fix the types so we don't need the casting.
   const formValues: ConnectionFormValues = validationSchema.cast(values, {
     context: { isRequest: true },
@@ -67,7 +70,9 @@ interface ConnectionFormHook {
   mode: ConnectionFormMode;
   sourceDefinition: SourceDefinitionRead;
   sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
+  sourceDefinitionVersion: ActorDefinitionVersionRead;
   destDefinition: DestinationDefinitionRead;
+  destDefinitionVersion: ActorDefinitionVersionRead;
   destDefinitionSpecification: DestinationDefinitionSpecificationRead;
   initialValues: FormikConnectionFormValues;
   schemaError?: SchemaError;
@@ -87,19 +92,27 @@ const useConnectionForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionFormHook => {
   const {
-    source: { sourceDefinitionId },
-    destination: { destinationDefinitionId },
+    source: { sourceId, sourceDefinitionId },
+    destination: { destinationId, destinationDefinitionId },
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
+  const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
+
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
+  const destDefinitionVersion = useDestinationDefinitionVersion(destinationId);
   const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
     destinationDefinitionId,
     connection.destinationId
   );
 
-  const initialValues = useInitialValues(connection, destDefinition, destDefinitionSpecification, mode !== "create");
+  const initialValues = useInitialValues(
+    connection,
+    destDefinitionVersion,
+    destDefinitionSpecification,
+    mode !== "create"
+  );
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
   const formId = useUniqueFormId();
@@ -129,8 +142,10 @@ const useConnectionForm = ({
     connection,
     mode,
     sourceDefinition,
+    sourceDefinitionVersion,
     sourceDefinitionSpecification,
     destDefinition,
+    destDefinitionVersion,
     destDefinitionSpecification,
     initialValues,
     schemaError,
@@ -152,7 +167,14 @@ export const ConnectionFormServiceProvider: React.FC<React.PropsWithChildren<Con
 };
 
 export const useConnectionFormService = () => {
-  const context = useContext(ConnectionFormContext);
+  /**
+   *TODO: remove conditional context after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const contextType = doUseCreateConnectionHookForm ? ConnectionHookFormContext : ConnectionFormContext;
+
+  const context = useContext(contextType as React.Context<ConnectionFormHook | null>);
   if (context === null) {
     throw new Error("useConnectionFormService must be used within a ConnectionFormProvider");
   }

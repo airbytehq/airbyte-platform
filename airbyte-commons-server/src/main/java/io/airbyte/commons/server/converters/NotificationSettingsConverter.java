@@ -37,6 +37,12 @@ public class NotificationSettingsConverter {
     if (notification.getSendOnConnectionUpdateActionRequired() != null) {
       configNotificationSettings.setSendOnConnectionUpdateActionRequired(toConfig(notification.getSendOnConnectionUpdateActionRequired()));
     }
+    if (notification.getSendOnBreakingChangeWarning() != null) {
+      configNotificationSettings.setSendOnBreakingChangeWarning(toConfig(notification.getSendOnBreakingChangeWarning()));
+    }
+    if (notification.getSendOnBreakingChangeSyncsDisabled() != null) {
+      configNotificationSettings.setSendOnBreakingChangeSyncsDisabled(toConfig(notification.getSendOnBreakingChangeSyncsDisabled()));
+    }
 
     return configNotificationSettings;
   }
@@ -89,6 +95,12 @@ public class NotificationSettingsConverter {
     }
     if (notificationSettings.getSendOnConnectionUpdateActionRequired() != null) {
       apiNotificationSetings.setSendOnConnectionUpdateActionRequired(toApi(notificationSettings.getSendOnConnectionUpdateActionRequired()));
+    }
+    if (notificationSettings.getSendOnBreakingChangeWarning() != null) {
+      apiNotificationSetings.setSendOnBreakingChangeWarning(toApi(notificationSettings.getSendOnBreakingChangeWarning()));
+    }
+    if (notificationSettings.getSendOnBreakingChangeSyncsDisabled() != null) {
+      apiNotificationSetings.setSendOnBreakingChangeSyncsDisabled(toApi(notificationSettings.getSendOnBreakingChangeSyncsDisabled()));
     }
     return apiNotificationSetings;
   }

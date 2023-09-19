@@ -2,6 +2,7 @@ import { Placement } from "@floating-ui/react-dom";
 import { Listbox } from "@headlessui/react";
 import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
+import isEqual from "lodash/isEqual";
 import React from "react";
 import { useIntl } from "react-intl";
 
@@ -23,7 +24,10 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
     <>
       {selectedOption ? (
         <Text as="span" size="lg" className={classNames({ [styles.disabledText]: isDisabled })}>
-          {selectedOption.label}
+          <FlexContainer as="span" alignItems="center">
+            {selectedOption.icon && <FlexItem className={styles.icon}>{selectedOption.icon}</FlexItem>}
+            {selectedOption.label}
+          </FlexContainer>
         </Text>
       ) : (
         <Text as="span" size="lg" color="grey">
@@ -45,6 +49,7 @@ export interface Option<T> {
 
 export interface ListBoxProps<T> {
   className?: string;
+  optionsMenuClassName?: string;
   optionClassName?: string;
   selectedOptionClassName?: string;
   options: Array<Option<T>>;
@@ -79,6 +84,7 @@ export const ListBox = <T,>({
   onSelect,
   buttonClassName,
   controlButton: ControlButton = DefaultControlButton,
+  optionsMenuClassName,
   optionClassName,
   selectedOptionClassName,
   "data-testid": testId,
@@ -88,7 +94,7 @@ export const ListBox = <T,>({
   adaptiveWidth = true,
   footerOption,
 }: ListBoxProps<T>) => {
-  const selectedOption = options.find((option) => option.value === selectedValue);
+  const selectedOption = options.find((option) => isEqual(option.value, selectedValue));
 
   const onOnSelect = (value: T) => {
     onSelect(value);
@@ -96,7 +102,7 @@ export const ListBox = <T,>({
 
   return (
     <div className={className} data-testid={testId}>
-      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled}>
+      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
         <Float
           adaptiveWidth={adaptiveWidth}
           placement={placement}
@@ -111,7 +117,7 @@ export const ListBox = <T,>({
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
-          <Listbox.Options className={styles.optionsMenu}>
+          <Listbox.Options className={classNames(styles.optionsMenu, optionsMenuClassName)}>
             {options.length > 0 && (
               <>
                 {options.map(({ label, value, icon, disabled }, index) => (

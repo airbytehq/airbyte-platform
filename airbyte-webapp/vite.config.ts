@@ -25,7 +25,7 @@ export default defineConfig(() => {
       react(),
       buildInfo(),
       compileFormatJsMessages(),
-      viteTsconfigPaths(),
+      viteTsconfigPaths({ ignoreConfigErrors: true }),
       viteYaml(),
       svgrPlugin({
         svgrOptions: {

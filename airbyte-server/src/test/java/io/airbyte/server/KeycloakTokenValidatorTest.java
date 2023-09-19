@@ -11,6 +11,10 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.server.support.AuthenticationHeaderResolver;
+import io.airbyte.config.Permission.PermissionType;
+import io.airbyte.config.User.AuthProvider;
+import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.server.pro.KeycloakTokenValidator;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
@@ -21,6 +25,9 @@ import io.micronaut.security.authentication.Authentication;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,9 +42,14 @@ class KeycloakTokenValidatorTest {
   private static final String URI_PATH = "/some/path";
   private static final Collection<String> DEFAULT_ROLES = AuthRole.buildAuthRolesSet(AuthRole.ADMIN);
 
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
+
   private KeycloakTokenValidator keycloakTokenValidator;
   private HttpClient httpClient;
   private AirbyteKeycloakConfiguration keycloakConfiguration;
+  private AuthenticationHeaderResolver headerResolver;
+  private PermissionPersistence permissionPersistence;
 
   @BeforeEach
   void setUp() {
@@ -45,8 +57,10 @@ class KeycloakTokenValidatorTest {
 
     keycloakConfiguration = mock(AirbyteKeycloakConfiguration.class);
     when(keycloakConfiguration.getKeycloakUserInfoEndpoint()).thenReturn(LOCALHOST + URI_PATH);
+    headerResolver = mock(AuthenticationHeaderResolver.class);
+    permissionPersistence = mock(PermissionPersistence.class);
 
-    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration);
+    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, headerResolver, permissionPersistence);
   }
 
   @AfterEach
@@ -55,7 +69,7 @@ class KeycloakTokenValidatorTest {
   }
 
   @Test
-  void testValidateToken() throws URISyntaxException {
+  void testValidateToken() throws Exception {
     final URI uri = new URI(LOCALHOST + URI_PATH);
     final String accessToken = """
                                eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIwM095c3pkWmNrZFd6Mk84d0ZFRkZVblJPLVJrN1lGLWZzRm1kWG1Q
@@ -95,8 +109,19 @@ class KeycloakTokenValidatorTest {
 
     final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(accessTokenWithoutNewline, httpRequest);
 
+    when(headerResolver.resolveWorkspace(any())).thenReturn(List.of(WORKSPACE_ID));
+    when(headerResolver.resolveOrganization(any())).thenReturn(List.of(ORGANIZATION_ID));
+    when(permissionPersistence.findPermissionTypeForUserAndWorkspace(WORKSPACE_ID, expectedUserId, AuthProvider.KEYCLOAK))
+        .thenReturn(PermissionType.WORKSPACE_ADMIN);
+    when(permissionPersistence.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, expectedUserId, AuthProvider.KEYCLOAK))
+        .thenReturn(PermissionType.ORGANIZATION_READER);
+
+    // TODO: enable this once we are ready to enable getRoles function in KeycloakTokenValidator.
+    // Set<String> expectedResult = Set.of("ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+    Set<String> expectedResult = Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+
     StepVerifier.create(responsePublisher)
-        .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, DEFAULT_ROLES))
+        .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, expectedResult))
         .verifyComplete();
   }
 

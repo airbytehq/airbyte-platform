@@ -11,6 +11,8 @@ micronaut:
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+      aggregator:
+        max-content-length: 52428800 # 50MB
   endpoints:
     v1/manifest_template:
       enable: true

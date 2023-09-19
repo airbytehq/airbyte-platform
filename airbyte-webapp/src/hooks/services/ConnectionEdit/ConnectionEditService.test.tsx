@@ -6,12 +6,21 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import {
+  mockSourceDefinition,
+  mockSourceDefinitionSpecification,
+  mockSourceDefinitionVersion,
+} from "test-utils/mock-data/mockSource";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
-import { WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import {
+  WebBackendConnectionRead,
+  WebBackendConnectionRequestBody,
+  WebBackendConnectionUpdate,
+} from "core/api/types/AirbyteClient";
 
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
@@ -34,6 +43,20 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useGetConnection: () => mockConnection,
+  useGetConnectionQuery:
+    () =>
+    async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>
+      withRefreshedCatalog ? utils.getMockConnectionWithRefreshedCatalog() : mockConnection,
+  useUpdateConnection: () => ({
+    mutateAsync: jest.fn(async (connection: WebBackendConnectionUpdate) => {
+      const { sourceCatalogId, ...connectionUpdate } = connection;
+      return { ...mockConnection, ...connectionUpdate, catalogId: sourceCatalogId ?? mockConnection.catalogId };
+    }),
+    isLoading: false,
+  }),
+  useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 const utils = {
@@ -43,21 +66,6 @@ const utils = {
     catalogId: `${mockConnection.catalogId}1`,
   }),
 };
-
-jest.mock("../useConnectionHook", () => ({
-  useGetConnection: () => mockConnection,
-  useWebConnectionService: () => ({
-    getConnection: (_connectionId: string, withRefreshedCatalog?: boolean) =>
-      withRefreshedCatalog ? utils.getMockConnectionWithRefreshedCatalog() : mockConnection,
-  }),
-  useUpdateConnection: () => ({
-    mutateAsync: jest.fn(async (connection: WebBackendConnectionUpdate) => {
-      const { sourceCatalogId, ...connectionUpdate } = connection;
-      return { ...mockConnection, ...connectionUpdate, catalogId: sourceCatalogId ?? mockConnection.catalogId };
-    }),
-    isLoading: false,
-  }),
-}));
 
 describe("ConnectionEditService", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (

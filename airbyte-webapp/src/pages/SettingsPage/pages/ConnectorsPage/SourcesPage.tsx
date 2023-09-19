@@ -1,10 +1,11 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { useListBuilderProjects } from "core/api";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
+import { useNotificationService } from "hooks/services/Notification";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
 
@@ -13,16 +14,25 @@ import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView
 const SourcesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_SOURCE);
 
-  const [feedbackList, setFeedbackList] = useState<Record<string, string>>({});
-  const feedbackListRef = useRef(feedbackList);
-  feedbackListRef.current = feedbackList;
-
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
   const sourceDefinitions = useAvailableSourceDefinitions();
 
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
+
+  const { registerNotification } = useNotificationService();
+
+  const idToSourceDefinition = useMemo(
+    () =>
+      sourceDefinitions.reduce((map, sourceDefinition) => {
+        map.set(sourceDefinition.sourceDefinitionId, sourceDefinition);
+        return map;
+      }, new Map<string, SourceDefinitionRead>()),
+    [sourceDefinitions]
+  );
+  const definitionMap = useRef(idToSourceDefinition);
+  definitionMap.current = idToSourceDefinition;
 
   const onUpdateVersion = useCallback(
     async ({ id, version }: { id: string; version: string }) => {
@@ -32,34 +42,39 @@ const SourcesPage: React.FC = () => {
           sourceDefinitionId: id,
           dockerImageTag: version,
         });
-        setFeedbackList({ ...feedbackListRef.current, [id]: "success" });
-      } catch (e) {
-        const messageId = e.status === 422 ? "form.imageCannotFound" : "form.someError";
-        setFeedbackList({
-          ...feedbackListRef.current,
-          [id]: formatMessage({ id: messageId }),
+        registerNotification({
+          id: `source.update.success.${id}.${version}`,
+          text: (
+            <FormattedMessage
+              id="admin.upgradeConnector.success"
+              values={{ name: definitionMap.current.get(id)?.name, version }}
+            />
+          ),
+          type: "success",
+        });
+      } catch (error) {
+        registerNotification({
+          id: `source.update.error.${id}.${version}`,
+          text:
+            formatMessage(
+              { id: "admin.upgradeConnector.error" },
+              { name: definitionMap.current.get(id)?.name, version }
+            ) + (error.message ? `: ${error.message}` : ""),
+          type: "error",
         });
       } finally {
         setUpdatingDefinitionId(undefined);
       }
     },
-    [formatMessage, updateSourceDefinition]
+    [formatMessage, registerNotification, updateSourceDefinition]
   );
 
-  const usedSourcesDefinitions: SourceDefinitionRead[] = useMemo(() => {
-    const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
-    sources.forEach((source) => {
-      const sourceDefinition = sourceDefinitions.find(
-        (sourceDefinition) => sourceDefinition.sourceDefinitionId === source.sourceDefinitionId
-      );
-
-      if (sourceDefinition) {
-        sourceDefinitionMap.set(source.sourceDefinitionId, sourceDefinition);
-      }
-    });
-
-    return Array.from(sourceDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [sources, sourceDefinitions]);
+  const usedSourceDefinitions: SourceDefinitionRead[] = useMemo(() => {
+    const usedSourceDefinitionIds = new Set<string>(sources.map((source) => source.sourceDefinitionId));
+    return sourceDefinitions
+      .filter((sourceDefinition) => usedSourceDefinitionIds.has(sourceDefinition.sourceDefinitionId))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [sourceDefinitions, sources]);
 
   const ConnectorsViewComponent = WithBuilderProjects;
 
@@ -67,9 +82,8 @@ const SourcesPage: React.FC = () => {
     <ConnectorsViewComponent
       type="sources"
       updatingDefinitionId={updatingDefinitionId}
-      usedConnectorsDefinitions={usedSourcesDefinitions}
+      usedConnectorsDefinitions={usedSourceDefinitions}
       connectorsDefinitions={sourceDefinitions}
-      feedbackList={feedbackList}
       onUpdateVersion={onUpdateVersion}
     />
   );

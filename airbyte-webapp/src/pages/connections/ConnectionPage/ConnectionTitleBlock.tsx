@@ -2,16 +2,16 @@ import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { EnabledControl } from "components/connection/ConnectionInfoCard/EnabledControl";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
+import { EnabledControl } from "components/connection/EnabledControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
+import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
+import { ConnectionStatus, ReleaseStage, SupportLevel } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -23,11 +23,21 @@ interface ConnectorBlockProps {
   name: string;
   icon?: string;
   id: string;
-  stage?: ReleaseStage;
+  supportLevel?: SupportLevel;
+  custom?: boolean;
+  releaseStage?: ReleaseStage;
   type: "source" | "destination";
 }
 
-const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, type }) => {
+const ConnectorBlock: React.FC<ConnectorBlockProps> = ({
+  name,
+  icon,
+  id,
+  supportLevel,
+  custom,
+  type,
+  releaseStage,
+}) => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}`;
   const connectorTypePath = type === "source" ? RoutePaths.Source : RoutePaths.Destination;
@@ -39,7 +49,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, 
         <Text color="grey" size="lg">
           {name}
         </Text>
-        <ReleaseStageBadge stage={stage} />
+        <SupportLevelBadge supportLevel={supportLevel} custom={custom} releaseStage={releaseStage} />
       </FlexContainer>
     </Link>
   );
@@ -48,7 +58,8 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, 
 export const ConnectionTitleBlock = () => {
   const { connection } = useConnectionEditService();
   const { name, source, destination, schemaChange, status } = connection;
-  const { sourceDefinition, destDefinition } = useConnectionFormService();
+  const { sourceDefinition, sourceDefinitionVersion, destDefinition, destDefinitionVersion } =
+    useConnectionFormService();
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
 
   return (
@@ -65,7 +76,9 @@ export const ConnectionTitleBlock = () => {
             name={source.name}
             icon={source.icon}
             id={source.sourceId}
-            stage={sourceDefinition.releaseStage}
+            supportLevel={sourceDefinitionVersion.supportLevel}
+            custom={sourceDefinition.custom}
+            releaseStage={sourceDefinition.releaseStage}
             type="source"
           />
           <Icon type="arrowRight" />
@@ -73,7 +86,9 @@ export const ConnectionTitleBlock = () => {
             name={destination.name}
             icon={destination.icon}
             id={destination.destinationId}
-            stage={destDefinition.releaseStage}
+            supportLevel={destDefinitionVersion.supportLevel}
+            custom={destDefinition.custom}
+            releaseStage={destDefinition.releaseStage}
             type="destination"
           />
         </FlexContainer>

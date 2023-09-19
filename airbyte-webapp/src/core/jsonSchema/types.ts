@@ -8,6 +8,7 @@ interface AirbyteJSONSchemaProps {
   group?: string;
   always_show?: boolean;
   pattern_descriptor?: string;
+  display_type?: "dropdown" | "radio";
 }
 
 /**

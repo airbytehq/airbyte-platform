@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 
+import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
-import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { SourceService } from "core/domain/connector/SourceService";
 import { useGetOutOfDateConnectorsCount } from "services/connector/ConnectorDefinitions";
@@ -20,14 +21,40 @@ import {
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
+import { useAppMonitoringService } from "./AppMonitoringService";
+import { useNotificationService } from "./Notification";
 import { CheckConnectionRead } from "../../core/request/AirbyteClient";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
+  const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
   const { updateAllSourceVersions } = useUpdateSourceDefinitions();
   const { updateAllDestinationVersions } = useUpdateDestinationDefinitions();
-  return useMutation(["updateAllConnectors", workspaceId], async () =>
-    connectorType === "sources" ? updateAllSourceVersions() : updateAllDestinationVersions()
+  const { registerNotification } = useNotificationService();
+  const { trackError } = useAppMonitoringService();
+
+  return useMutation(
+    ["updateAllConnectors", workspaceId],
+    async () => (connectorType === "sources" ? updateAllSourceVersions() : updateAllDestinationVersions()),
+    {
+      onSuccess: () => {
+        registerNotification({
+          id: `workspace.connectorUpdateSuccess.${connectorType}.${workspaceId}`,
+          text: <FormattedMessage id="admin.upgradeAll.success" values={{ type: connectorType }} />,
+          type: "success",
+        });
+      },
+      onError: (error: Error) => {
+        trackError(error);
+        registerNotification({
+          id: `workspace.connectorUpdateError.${connectorType}.${workspaceId}`,
+          text:
+            formatMessage({ id: "admin.upgradeAll.error" }, { type: connectorType }) +
+            (error.message ? `: ${error.message}` : ""),
+          type: "error",
+        });
+      },
+    }
   );
 };
 
@@ -36,19 +63,23 @@ export const useUpdateSourceDefinitions = () => {
   const { sourceDefinitions: latestSourceDefinitions } = useLatestSourceDefinitionList();
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
 
-  const newSourceDefinitions = useMemo(
+  const sourceDefinitionsWithUpdates = useMemo(
     () =>
-      latestSourceDefinitions.filter(
-        (latestDefinition) =>
-          sourceDefinitions.find((definition) => definition.sourceDefinitionId === latestDefinition.sourceDefinitionId)
-            ?.dockerImageTag !== latestDefinition.dockerImageTag
-      ),
+      latestSourceDefinitions.filter((latestDefinition) => {
+        const matchingExistingDefinition = sourceDefinitions.find(
+          (definition) => definition.sourceDefinitionId === latestDefinition.sourceDefinitionId
+        );
+        return (
+          matchingExistingDefinition !== undefined &&
+          matchingExistingDefinition.dockerImageTag !== latestDefinition.dockerImageTag
+        );
+      }),
     [sourceDefinitions, latestSourceDefinitions]
   );
 
   const updateAllSourceVersions = async () => {
     await Promise.all(
-      newSourceDefinitions?.map((item) =>
+      sourceDefinitionsWithUpdates?.map((item) =>
         updateSourceDefinition({
           sourceDefinitionId: item.sourceDefinitionId,
           dockerImageTag: item.dockerImageTag,
@@ -65,20 +96,23 @@ export const useUpdateDestinationDefinitions = () => {
   const { destinationDefinitions: latestDestinationDefinitions } = useLatestDestinationDefinitionList();
   const { mutateAsync: updateDestinationDefinition } = useUpdateDestinationDefinition();
 
-  const newDestinationDefinitions = useMemo(
+  const newDestinationDefinitionsWithUpdates = useMemo(
     () =>
-      latestDestinationDefinitions.filter(
-        (latestDefinition) =>
-          destinationDefinitions.find(
-            (definition) => definition.destinationDefinitionId === latestDefinition.destinationDefinitionId
-          )?.dockerImageTag !== latestDefinition.dockerImageTag
-      ),
+      latestDestinationDefinitions.filter((latestDefinition) => {
+        const matchingExistingDefinition = destinationDefinitions.find(
+          (definition) => definition.destinationDefinitionId === latestDefinition.destinationDefinitionId
+        );
+        return (
+          matchingExistingDefinition !== undefined &&
+          matchingExistingDefinition.dockerImageTag !== latestDefinition.dockerImageTag
+        );
+      }),
     [destinationDefinitions, latestDestinationDefinitions]
   );
 
   const updateAllDestinationVersions = async () => {
     await Promise.all(
-      newDestinationDefinitions?.map((item) =>
+      newDestinationDefinitionsWithUpdates?.map((item) =>
         updateDestinationDefinition({
           destinationDefinitionId: item.destinationDefinitionId,
           dockerImageTag: item.dockerImageTag,

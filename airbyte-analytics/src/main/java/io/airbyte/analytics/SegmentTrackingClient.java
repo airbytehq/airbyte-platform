@@ -57,6 +57,7 @@ public class SegmentTrackingClient implements TrackingClient {
   private static final String AIRBYTE_TRACKED_AT = "tracked_at";
   protected static final String UNKNOWN = "unknown";
   protected static final String AIRBYTE_DEPLOYMENT_ID = "deployment_id";
+  protected static final String AIRBYTE_DEPLOYMENT_MODE = "deployment_mode";
 
   // Analytics is threadsafe.
   private final Analytics analytics;
@@ -138,6 +139,7 @@ public class SegmentTrackingClient implements TrackingClient {
     mapCopy.put(AIRBYTE_VERSION_KEY, trackingIdentity.getAirbyteVersion().serialize());
     mapCopy.put(CUSTOMER_ID_KEY, trackingIdentity.getCustomerId());
     mapCopy.put(AIRBYTE_DEPLOYMENT_ID, deployment.getDeploymentId());
+    mapCopy.put(AIRBYTE_DEPLOYMENT_MODE, deployment.getDeploymentMode());
     mapCopy.put(AIRBYTE_TRACKED_AT, Instant.now().toString());
     if (!metadata.isEmpty()) {
       trackingIdentity.getEmail().ifPresent(email -> mapCopy.put("email", email));

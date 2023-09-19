@@ -13,6 +13,11 @@ import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
@@ -79,6 +84,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
   private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
 
+  private static final int executorShutdownGracePeriodInSeconds = 10;
+
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
                                   final AirbyteSource source,
@@ -92,12 +99,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final VoidCallable onReplicationRunning,
-                                  final boolean useNewStateMessageProcessing) {
+                                  final VoidCallable onReplicationRunning) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, useNewStateMessageProcessing);
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
@@ -140,10 +146,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
               syncInput.getDestinationId(), Long.parseLong(jobId),
               attempt, syncInput.getWorkspaceId());
-      ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
-      replicationWorkerHelper.initialize(replicationContext, flags);
+      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
       replicate(jobRoot, syncInput);
 
@@ -219,6 +224,18 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.error("Sync worker failed.", e);
     } finally {
       executors.shutdownNow();
+
+      try {
+        // Best effort to mark as complete when the Worker is actually done.
+        if (!executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS)) {
+          final MetricClient metricClient = MetricClientFactory.getMetricClient();
+          metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR, 1,
+              new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
+        }
+      } catch (final InterruptedException e) {
+        // Preserve the interrupt status
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
@@ -344,13 +361,17 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   @Override
   public void cancel() {
+    boolean wasInterrupted = false;
+
     // Resources are closed in the opposite order they are declared.
     LOGGER.info("Cancelling replication worker...");
+    executors.shutdownNow();
     try {
-      executors.awaitTermination(10, TimeUnit.SECONDS);
+      executors.awaitTermination(executorShutdownGracePeriodInSeconds, TimeUnit.SECONDS);
     } catch (final InterruptedException e) {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Unable to cancel due to interruption.", e);
+      wasInterrupted = true;
     }
     cancelled.set(true);
     replicationWorkerHelper.markCancelled();
@@ -372,6 +393,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
 
     replicationWorkerHelper.endOfReplication();
+
+    if (wasInterrupted) {
+      // Preserve the interrupt flag if we were interrupted
+      Thread.currentThread().interrupt();
+    }
   }
 
 }

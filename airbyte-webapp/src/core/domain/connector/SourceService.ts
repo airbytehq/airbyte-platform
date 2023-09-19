@@ -1,3 +1,4 @@
+import { ConnectionConfiguration } from "area/connector/types";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { CommonRequestError } from "core/request/CommonRequestError";
 import { LogsRequestError } from "core/request/LogsRequestError";
@@ -18,7 +19,6 @@ import {
   SourceUpdate,
   updateSource,
 } from "../../request/AirbyteClient";
-import { ConnectionConfiguration } from "../connection";
 
 export class SourceService extends AirbyteRequestService {
   public async check_connection(

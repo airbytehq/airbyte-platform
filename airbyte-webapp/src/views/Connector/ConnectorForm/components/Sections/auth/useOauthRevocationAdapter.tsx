@@ -15,6 +15,7 @@ interface Credentials {
 }
 
 function useFormOauthRevocationAdapter(
+  sourceId: string,
   connector: ConnectorDefinitionSpecification,
   connectorDefinition?: ConnectorDefinition
 ): {
@@ -44,7 +45,7 @@ function useFormOauthRevocationAdapter(
     });
   };
 
-  const { run, loading } = useRunOauthRevocation({ connector, onDone });
+  const { run, loading } = useRunOauthRevocation({ sourceId, connector, onDone });
 
   return {
     loading,

@@ -64,7 +64,7 @@ class NamespacingMapperTest {
   @Test
   void testSourceNamespace() {
     final NamespacingMapper mapper =
-        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName, false);
+        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
@@ -90,7 +90,7 @@ class NamespacingMapperTest {
   @Test
   void testEmptySourceNamespace() {
     final NamespacingMapper mapper =
-        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName, false);
+        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     assertEquals(originalCatalog, CATALOG);
@@ -117,7 +117,7 @@ class NamespacingMapperTest {
   @Test
   void testDestinationNamespace() {
     final NamespacingMapper mapper =
-        new NamespacingMapper(NamespaceDefinitionType.DESTINATION, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName, false);
+        new NamespacingMapper(NamespaceDefinitionType.DESTINATION, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
@@ -143,8 +143,7 @@ class NamespacingMapperTest {
         NamespaceDefinitionType.CUSTOMFORMAT,
         "${SOURCE_NAMESPACE}_suffix",
         OUTPUT_PREFIX,
-        destinationToSourceNamespaceAndStreamName,
-        false);
+        destinationToSourceNamespaceAndStreamName);
 
     final String expectedNamespace = INPUT_NAMESPACE + "_suffix";
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
@@ -172,8 +171,7 @@ class NamespacingMapperTest {
         NamespaceDefinitionType.CUSTOMFORMAT,
         NAMESPACE_FORMAT,
         OUTPUT_PREFIX,
-        destinationToSourceNamespaceAndStreamName,
-        false);
+        destinationToSourceNamespaceAndStreamName);
 
     final String expectedNamespace = NAMESPACE_FORMAT;
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
@@ -201,8 +199,7 @@ class NamespacingMapperTest {
         NamespaceDefinitionType.CUSTOMFORMAT,
         "${SOURCE_NAMESPACE}",
         OUTPUT_PREFIX,
-        destinationToSourceNamespaceAndStreamName,
-        false);
+        destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     assertEquals(originalCatalog, CATALOG);
@@ -232,8 +229,7 @@ class NamespacingMapperTest {
         NamespaceDefinitionType.CUSTOMFORMAT,
         NAMESPACE_FORMAT,
         OUTPUT_PREFIX,
-        destinationToSourceNamespaceAndStreamName,
-        true);
+        destinationToSourceNamespaceAndStreamName);
 
     final AirbyteMessage originalMessage = Jsons.clone(stateMessage);
     final AirbyteMessage expectedMessage = Jsons.clone(stateMessage);
@@ -253,7 +249,7 @@ class NamespacingMapperTest {
   @Test
   void testEmptyPrefix() {
     final NamespacingMapper mapper =
-        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, null, destinationToSourceNamespaceAndStreamName, false);
+        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, null, destinationToSourceNamespaceAndStreamName);
 
     final ConfiguredAirbyteCatalog originalCatalog = Jsons.clone(CATALOG);
     final ConfiguredAirbyteCatalog expectedCatalog = CatalogHelpers.createConfiguredAirbyteCatalog(
@@ -280,7 +276,7 @@ class NamespacingMapperTest {
   @Test
   void testRevertMapStateMessage() {
     final NamespacingMapper mapper =
-        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName, true);
+        new NamespacingMapper(NamespaceDefinitionType.SOURCE, null, OUTPUT_PREFIX, destinationToSourceNamespaceAndStreamName);
 
     final AirbyteMessage originalMessage = Jsons.clone(stateMessage);
     originalMessage.getState().getStream().getStreamDescriptor().withNamespace(DESTINATION_NAMESPACE);
@@ -296,7 +292,6 @@ class NamespacingMapperTest {
     expectedMessage.getState().getStream().getStreamDescriptor().withName(STREAM_NAME);
 
     assertEquals(expectedMessage, actualMessage);
-
   }
 
 }

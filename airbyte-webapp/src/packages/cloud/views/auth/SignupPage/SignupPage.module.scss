@@ -2,7 +2,7 @@
 @use "scss/variables";
 
 .container {
-  max-width: 409px;
+  max-width: variables.$width-login-form;
 }
 
 .checkIcon {

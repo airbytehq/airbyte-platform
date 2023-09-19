@@ -1,15 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { useSuspenseQuery } from "core/api";
-import { ConnectionConfiguration } from "core/domain/connection";
+import { ConnectionConfiguration } from "area/connector/types";
+import { useRemoveConnectionsFromList, useSuspenseQuery } from "core/api";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
 
-import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { useConfig } from "../../config";

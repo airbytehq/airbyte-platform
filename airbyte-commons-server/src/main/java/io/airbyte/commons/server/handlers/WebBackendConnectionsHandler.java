@@ -358,14 +358,14 @@ public class WebBackendConnectionsHandler {
     final AirbyteCatalog configuredCatalog = connection.getSyncCatalog();
     /*
      * This catalog represents the full catalog that was used to create the configured catalog. It will
-     * have all streams that were present at the time. It will have no configuration set.
+     * have all streams that were present at the time. It will have default configuration options set.
      */
     final Optional<AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
         .getConnectionAirbyteCatalog(webBackendConnectionRequestBody.getConnectionId());
 
     /*
-     * This catalog represents the full catalog that exists now for the source. It will have no
-     * configuration set.
+     * This catalog represents the full catalog that exists now for the source. It will have default
+     * configuration options set.
      */
     final Optional<SourceDiscoverSchemaRead> refreshedCatalog;
     if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {

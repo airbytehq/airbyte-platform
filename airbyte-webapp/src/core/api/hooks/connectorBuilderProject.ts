@@ -1,6 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { sourceDefinitionKeys } from "services/connector/SourceDefinitionService";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
@@ -289,6 +290,7 @@ export const usePublishBuilderProject = () => {
       onSuccess(data, context) {
         queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
         updateProjectQueryCache(queryClient, context.projectId, data.sourceDefinitionId, FIRST_VERSION);
+        queryClient.invalidateQueries(sourceDefinitionKeys.lists());
       },
     }
   );
@@ -333,6 +335,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
         if (context.useAsActiveVersion) {
           updateProjectQueryCache(queryClient, context.projectId, context.sourceDefinitionId, context.version);
         }
+        queryClient.invalidateQueries(sourceDefinitionKeys.lists());
       },
     }
   );

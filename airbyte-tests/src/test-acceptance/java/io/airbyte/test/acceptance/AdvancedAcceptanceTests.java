@@ -46,13 +46,10 @@ import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -121,21 +118,14 @@ class AdvancedAcceptanceTests {
     testHarness.stopDbAndContainers();
   }
 
-  @BeforeEach
-  void setup() throws URISyntaxException, IOException, SQLException {
-    testHarness.setup();
-  }
-
-  @AfterEach
-  void tearDown() {
-    testHarness.cleanup();
-  }
-
   @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
-  @Test
+  @RetryingTest(3)
   void testManualSync() throws Exception {
+    testHarness.setup();
+
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
     final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
+
     final SourceDiscoverSchemaRead discoverResult = testHarness.discoverSourceSchemaWithId(sourceId);
     final AirbyteCatalog catalog = discoverResult.getCatalog();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
@@ -153,8 +143,9 @@ class AdvancedAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat(), false, false);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, conn.getConnectionId(), connectionSyncRead, StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC);
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+
+    testHarness.cleanup();
   }
 
   @RetryingTest(3)

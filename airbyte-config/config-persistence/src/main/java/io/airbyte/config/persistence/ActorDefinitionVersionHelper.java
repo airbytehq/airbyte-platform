@@ -33,6 +33,15 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class ActorDefinitionVersionHelper {
 
+  /**
+   * A wrapper class for returning the actor definition version and whether an override was applied.
+   *
+   * @param actorDefinitionVersion - actor definition version to use
+   * @param isOverrideApplied - true if the version is the result of an override being applied,
+   *        otherwise false
+   */
+  public record ActorDefinitionVersionWithOverrideStatus(ActorDefinitionVersion actorDefinitionVersion, boolean isOverrideApplied) {}
+
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionHelper.class);
 
   private final ConfigRepository configRepository;
@@ -90,6 +99,30 @@ public class ActorDefinitionVersionHelper {
   }
 
   /**
+   * Get the actor definition version to use for a source, and whether an override was applied.
+   *
+   * @param sourceDefinition source definition
+   * @param workspaceId workspace id
+   * @param actorId source id
+   * @return actor definition version with override status
+   */
+  public ActorDefinitionVersionWithOverrideStatus getSourceVersionWithOverrideStatus(final StandardSourceDefinition sourceDefinition,
+                                                                                     final UUID workspaceId,
+                                                                                     @Nullable final UUID actorId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
+
+    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
+        ActorType.SOURCE,
+        sourceDefinition.getSourceDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
+
+    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+  }
+
+  /**
    * Get the actor definition version to use for a source.
    *
    * @param sourceDefinition source definition
@@ -101,16 +134,7 @@ public class ActorDefinitionVersionHelper {
                                                  final UUID workspaceId,
                                                  @Nullable final UUID actorId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId, actorId);
-
-    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
-        ActorType.SOURCE,
-        sourceDefinition.getSourceDefinitionId(),
-        workspaceId,
-        actorId,
-        defaultVersion);
-
-    return versionOverride.orElse(defaultVersion);
+    return getSourceVersionWithOverrideStatus(sourceDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
   /**
@@ -126,6 +150,30 @@ public class ActorDefinitionVersionHelper {
   }
 
   /**
+   * Get the actor definition version to use for a destination, and whether an override was applied.
+   *
+   * @param destinationDefinition destination definition
+   * @param workspaceId workspace id
+   * @param actorId destination id
+   * @return actor definition version with override status
+   */
+  public ActorDefinitionVersionWithOverrideStatus getDestinationVersionWithOverrideStatus(final StandardDestinationDefinition destinationDefinition,
+                                                                                          final UUID workspaceId,
+                                                                                          @Nullable final UUID actorId)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
+
+    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
+        ActorType.DESTINATION,
+        destinationDefinition.getDestinationDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
+
+    return new ActorDefinitionVersionWithOverrideStatus(versionOverride.orElse(defaultVersion), versionOverride.isPresent());
+  }
+
+  /**
    * Get the actor definition version to use for a destination.
    *
    * @param destinationDefinition destination definition
@@ -137,16 +185,7 @@ public class ActorDefinitionVersionHelper {
                                                       final UUID workspaceId,
                                                       @Nullable final UUID actorId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId, actorId);
-
-    final Optional<ActorDefinitionVersion> versionOverride = overrideProvider.getOverride(
-        ActorType.DESTINATION,
-        destinationDefinition.getDestinationDefinitionId(),
-        workspaceId,
-        actorId,
-        defaultVersion);
-
-    return versionOverride.orElse(defaultVersion);
+    return getDestinationVersionWithOverrideStatus(destinationDefinition, workspaceId, actorId).actorDefinitionVersion();
   }
 
   /**

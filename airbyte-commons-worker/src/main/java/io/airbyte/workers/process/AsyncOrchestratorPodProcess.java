@@ -60,6 +60,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   public static final String NO_OP = "NO_OP";
   // TODO Ths frequency should be configured and injected rather hard coded here.
   public static final long JOB_STATUS_POLLING_FREQUENCY_IN_MILLIS = 5000;
+  private static final String JAVA_OOM_EXCEPTION_STRING = "java.lang.OutOfMemoryError";
 
   private final KubePodInfo kubePodInfo;
   private final DocumentStoreClient documentStoreClient;
@@ -177,6 +178,12 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       } else {
         // otherwise, the actual pod is terminal when the doc store says it shouldn't be.
         log.info("The current non terminal state is {}", secondDocStoreStatus);
+
+        if (isOOM(pod)) {
+          log.warn("Terminating due to OutOfMemoryError");
+          return 137;
+        }
+
         log.warn("State Store missing status, however orchestrator pod {} in terminal. Assume failure.", getInfo().name());
         return 3;
       }
@@ -188,6 +195,25 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       case INITIALIZING -> throw new IllegalThreadStateException("Pod is initializing.");
       default -> throw new IllegalThreadStateException("Pod is running.");
     }
+  }
+
+  private boolean isOOM(final Pod pod) {
+    if (pod == null) {
+      return false;
+    }
+    try {
+      return kubernetesClient.pods()
+          .inNamespace(pod.getMetadata().getNamespace())
+          .withName(pod.getFullResourceName())
+          .tailingLines(5)
+          .getLog()
+          .contains(JAVA_OOM_EXCEPTION_STRING);
+    } catch (final Exception e) {
+      // We are trying to detect if the pod OOMed, if we fail to check the logs, we don't want to add more
+      // exception noise since this is an extra inspection attempt for more precise error logging.
+      log.info("Failed to retrieve pod logs for additional debugging information.", e);
+    }
+    return false;
   }
 
   @Override

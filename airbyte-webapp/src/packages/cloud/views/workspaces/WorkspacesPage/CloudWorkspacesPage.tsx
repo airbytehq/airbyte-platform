@@ -1,18 +1,21 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
+import { useCreateCloudWorkspace, useListCloudWorkspaces } from "core/api/cloud";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import WorkspacesList from "pages/workspaces/components/WorkspacesList";
 
 import styles from "./CloudWorkspacesPage.module.scss";
-import { CloudWorkspacesList } from "./components/CloudWorkspacesList";
-import { ReactComponent as AirbyteLogo } from "./components/workspaceHeaderLogo.svg";
 
 export const CloudWorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
+  const { workspaces } = useListCloudWorkspaces();
+  const { mutateAsync: createWorkspace } = useCreateCloudWorkspace();
 
   return (
     <div className={styles.container}>
@@ -24,7 +27,7 @@ export const CloudWorkspacesPage: React.FC = () => {
         <FormattedMessage id="workspaces.subtitle" />
       </Text>
       <Box pb="2xl">
-        <CloudWorkspacesList />
+        <WorkspacesList workspaces={workspaces} createWorkspace={createWorkspace} />
       </Box>
     </div>
   );

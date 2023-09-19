@@ -3,6 +3,7 @@ import { useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
+import { LinkToAttemptButton } from "components/JobItem/components/LinkToAttemptButton";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
@@ -19,16 +20,17 @@ import { VirtualLogs } from "./VirtualLogs";
 
 interface JobLogsModalContentProps {
   jobId: number;
+  initialAttemptIndex?: number;
 }
 
-export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId }) => {
+export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId, initialAttemptIndex }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
-  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState(job.attempts.length - 1);
+  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState(initialAttemptIndex ?? job.attempts.length - 1);
   const jobAttempt = useAttemptForJob(jobId, selectedAttemptIndex);
   const logLines = useCleanLogs(jobAttempt);
   const firstMatchIndex = 0;
@@ -146,9 +148,10 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId 
             />
           </div>
           <AttemptDetails attempt={jobAttempt.attempt} jobId={String(jobId)} showEndedAt showFailureMessage={false} />
-          <div className={styles.downloadLogs}>
+          <FlexContainer className={styles.downloadLogs}>
+            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptIndex + 1} />
             <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptIndex + 1}`} />
-          </div>
+          </FlexContainer>
         </FlexContainer>
       </Box>
       <Box px="md">

@@ -3,8 +3,7 @@ import { useEffectOnce } from "react-use";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { config } from "config";
-
-import { useAuthService } from "../../auth/AuthService";
+import { useAuthService } from "core/services/auth";
 
 import "./zendesk.module.scss";
 

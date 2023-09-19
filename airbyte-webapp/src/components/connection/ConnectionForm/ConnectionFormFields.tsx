@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Field } from "formik";
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useUnmount, useEffectOnce } from "react-use";
+import { useEffectOnce } from "react-use";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
@@ -13,7 +13,6 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFormPreview";
 import styles from "./ConnectionFormFields.module.scss";
@@ -34,13 +33,8 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
 
   const { mode, formId } = useConnectionFormService();
-  const { clearFormChange } = useFormChangeTrackerService();
 
   const refreshSchema = useRefreshSourceSchemaWithConfirmationOnDirty(dirty);
-
-  useUnmount(() => {
-    clearFormChange(formId);
-  });
 
   // If the source doesn't select any streams by default, the initial untouched state
   // won't validate that at least one is selected. In this case, a user could submit the form

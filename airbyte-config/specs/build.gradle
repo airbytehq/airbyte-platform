@@ -20,6 +20,7 @@ dependencies {
     implementation project(':airbyte-config:config-models')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-json-validation')
+    implementation libs.okhttp
 
     testRuntimeOnly libs.junit.jupiter.engine
     testImplementation libs.bundles.junit

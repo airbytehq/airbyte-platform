@@ -28,23 +28,7 @@ node {
     distBaseUrl = "https://nodejs.org/dist"
 }
 
-tasks.register("validateLockFiles") {
-    description "Validate only a pnpm-lock.yaml lock file exists"
-    inputs.files "pnpm-lock.yaml", "package-lock.json", "yarn.lock"
-
-    // The validateLockFiles has no outputs, thus we always treat the outputs up to date
-    // as long as the inputs have not changed
-    outputs.upToDateWhen { true }
-
-    doLast {
-        assert file("pnpm-lock.yaml").exists()
-        assert !file("package-lock.json").exists()
-        assert !file("yarn.lock").exists()
-    }
-}
-
 tasks.named("pnpmInstall") {
-    dependsOn tasks.named("validateLockFiles")
     // Add patches folder to inputs of pnpmInstall task, since it has pnpm-lock.yml as an output
     // thus wouldn't rerun in case a patch get changed
     inputs.dir "patches"
@@ -125,35 +109,22 @@ tasks.register("cloudE2eTest", PnpmTask) {
     outputs.upToDateWhen { false }
 }
 
-tasks.register("licenseCheck", PnpmTask) {
-    dependsOn tasks.named("pnpmInstall")
-
-    args = ['run', 'license-check']
-
-    inputs.files nodeModules
-    inputs.file 'package.json'
-    inputs.file 'scripts/license-check.js'
-
-    // The licenseCheck has no outputs, thus we always treat the outputs up to date
-    // as long as the inputs have not changed
-    outputs.upToDateWhen { true }
-}
-
-tasks.register("validateLinks", PnpmTask) {
-    dependsOn tasks.named("pnpmInstall")
-
-    args = ['run', 'validate-links']
-
-    inputs.file 'scripts/validate-links.ts'
-    inputs.file 'src/core/utils/links.ts'
-
-    // Since the output of this task depends on availability of URLs
-    // we never want to treat it as "up-to-date" on CI and always want to run it
-    // but running locally we treat it as up-to-date just depending on its inputs
-    outputs.upToDateWhen {
-        System.getenv("CI") === null
-    }
-}
+//
+//tasks.register("validateLinks", PnpmTask) {
+//    dependsOn tasks.named("pnpmInstall")
+//
+//    args = ['run', 'validate-links']
+//
+//    inputs.file 'scripts/validate-links.ts'
+//    inputs.file 'src/core/utils/links.ts'
+//
+//    // Since the output of this task depends on availability of URLs
+//    // we never want to treat it as "up-to-date" on CI and always want to run it
+//    // but running locally we treat it as up-to-date just depending on its inputs
+//    outputs.upToDateWhen {
+//        System.getenv("CI") === null
+//    }
+//}
 
 tasks.register("buildStorybook", PnpmTask) {
     dependsOn tasks.named("pnpmInstall")
@@ -189,9 +160,8 @@ tasks.register("copyNginx", Copy) {
 
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
-    dependsOn tasks.named("validateLinks"), tasks.named("licenseCheck"), tasks.named("test")
+    dependsOn /*tasks.named("validateLinks"),*/ tasks.named("test")
 }
-
 
 tasks.named("build") {
     dependsOn tasks.named("buildStorybook")

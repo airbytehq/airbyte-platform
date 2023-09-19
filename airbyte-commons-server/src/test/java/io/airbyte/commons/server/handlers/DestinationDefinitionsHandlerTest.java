@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +34,7 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ReleaseStage;
+import io.airbyte.api.model.generated.SupportLevel;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
@@ -52,12 +54,13 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
-import io.airbyte.featureflag.IngestBreakingChanges;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSupportStateUpdater;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -94,6 +97,7 @@ class DestinationDefinitionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private RemoteDefinitionsProvider remoteDefinitionsProvider;
   private DestinationHandler destinationHandler;
+  private SupportStateUpdater supportStateUpdater;
   private UUID workspaceId;
   private UUID organizationId;
   private FeatureFlagClient featureFlagClient;
@@ -110,6 +114,7 @@ class DestinationDefinitionsHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     remoteDefinitionsProvider = mock(RemoteDefinitionsProvider.class);
     destinationHandler = mock(DestinationHandler.class);
+    supportStateUpdater = mock(SupportStateUpdater.class);
     workspaceId = UUID.randomUUID();
     organizationId = UUID.randomUUID();
     featureFlagClient = mock(TestClient.class);
@@ -119,9 +124,8 @@ class DestinationDefinitionsHandlerTest {
         actorDefinitionHandlerHelper,
         remoteDefinitionsProvider,
         destinationHandler,
+        supportStateUpdater,
         featureFlagClient);
-
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -145,6 +149,7 @@ class DestinationDefinitionsHandlerTest {
         .withDocumentationUrl("https://hulu.com")
         .withSpec(spec)
         .withProtocolVersion("0.2.2")
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
 
@@ -165,6 +170,7 @@ class DestinationDefinitionsHandlerTest {
     return generateVersionFromDestinationDefinition(destinationDefinition)
         .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
         .withReleaseDate(null)
+        .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
         .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withAllowedHosts(null);
   }
@@ -196,6 +202,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -213,6 +220,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -251,6 +259,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -268,6 +277,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -336,6 +346,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -353,6 +364,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersionWithNormalization.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinitionWithNormalization.getIcon()))
         .protocolVersion(destinationDefinitionVersionWithNormalization.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersionWithNormalization.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersionWithNormalization.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersionWithNormalization.getReleaseDate()))
         .supportsDbt(destinationDefinitionVersionWithNormalization.getSupportsDbt())
@@ -396,6 +408,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -466,6 +479,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -505,6 +519,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -569,6 +584,8 @@ class DestinationDefinitionsHandlerTest {
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
         .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
@@ -583,7 +600,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -632,6 +649,8 @@ class DestinationDefinitionsHandlerTest {
         .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
         .icon(DestinationDefinitionsHandler.loadIcon(newDestinationDefinition.getIcon()))
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
+        .custom(true)
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.CUSTOM)
         .supportsDbt(false)
         .normalizationConfig(new io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig().supported(false))
@@ -647,7 +666,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreateForWorkspace.getWorkspaceId());
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
+    verify(configRepository).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
             .withDefaultVersionId(null),
@@ -672,7 +691,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         null);
-    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
+    verify(configRepository).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
         destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
@@ -708,7 +727,7 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId());
-    verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any(), any());
+    verify(configRepository, never()).writeCustomConnectorMetadata(any(StandardDestinationDefinition.class), any(), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -716,24 +735,26 @@ class DestinationDefinitionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
-  void testUpdateDestination(final boolean ingestBreakingChangesFF) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(featureFlagClient.boolVariation(IngestBreakingChanges.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(ingestBreakingChangesFF);
+  void testUpdateDestination(final boolean runSupportStateUpdaterFlagValue) throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(featureFlagClient.boolVariation(RunSupportStateUpdater.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(runSupportStateUpdaterFlagValue);
 
-    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
-    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
-        .thenReturn(destinationDefinitionVersion);
-    final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
-        .getDestinationDefinition(
-            new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
-    final String currentTag = currentDestination.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttag";
-    assertNotEquals(newDockerImageTag, currentTag);
-
     final StandardDestinationDefinition updatedDestination =
         Jsons.clone(destinationDefinition).withDefaultVersionId(null);
     final ActorDefinitionVersion updatedDestinationDefVersion =
         generateVersionFromDestinationDefinition(updatedDestination)
-            .withDockerImageTag(newDockerImageTag);
+            .withDockerImageTag(newDockerImageTag)
+            .withVersionId(UUID.randomUUID());
+
+    final StandardDestinationDefinition persistedUpdatedDestination =
+        Jsons.clone(updatedDestination).withDefaultVersionId(updatedDestinationDefVersion.getVersionId());
+
+    when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(destinationDefinition) // Call at the beginning of the method
+        .thenReturn(persistedUpdatedDestination); // Call after we've persisted
+
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(destinationDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom())).thenReturn(updatedDestinationDefVersion);
@@ -750,12 +771,13 @@ class DestinationDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
-    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(updatedDestination, updatedDestinationDefVersion, breakingChanges);
-    if (ingestBreakingChangesFF) {
-      verify(configRepository).writeActorDefinitionBreakingChanges(breakingChanges);
+    verify(configRepository).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
+    if (runSupportStateUpdaterFlagValue) {
+      verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
+    } else {
+      verifyNoInteractions(supportStateUpdater);
     }
-
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper);
+    verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater);
   }
 
   @Test
@@ -783,7 +805,7 @@ class DestinationDefinitionsHandlerTest {
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
         destinationDefinition.getCustom());
-    verify(configRepository, never()).writeDestinationDefinitionAndDefaultVersion(any(), any());
+    verify(configRepository, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -825,6 +847,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -862,6 +885,7 @@ class DestinationDefinitionsHandlerTest {
         .documentationUrl(new URI(destinationDefinitionVersion.getDocumentationUrl()))
         .icon(DestinationDefinitionsHandler.loadIcon(destinationDefinition.getIcon()))
         .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .supportLevel(SupportLevel.fromValue(destinationDefinitionVersion.getSupportLevel().value()))
         .releaseStage(ReleaseStage.fromValue(destinationDefinitionVersion.getReleaseStage().value()))
         .releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
         .supportsDbt(false)
@@ -919,6 +943,7 @@ class DestinationDefinitionsHandlerTest {
               Jsons.jsonNode(ImmutableMap.of("key", "val"))))
           .withTombstone(false)
           .withProtocolVersion("0.2.2")
+          .withSupportLevel(io.airbyte.config.SupportLevel.COMMUNITY)
           .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
           .withReleaseDate(TODAY_DATE_STRING)
           .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));

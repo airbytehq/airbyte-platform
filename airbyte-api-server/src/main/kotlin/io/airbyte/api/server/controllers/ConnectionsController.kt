@@ -13,6 +13,7 @@ import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.server.apiTracking.TrackingHelper
 import io.airbyte.api.server.constants.CONNECTIONS_PATH
 import io.airbyte.api.server.constants.CONNECTIONS_WITH_ID_PATH
 import io.airbyte.api.server.constants.DELETE
@@ -20,7 +21,6 @@ import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.helpers.AirbyteCatalogHelper
-import io.airbyte.api.server.helpers.TrackingHelper
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.services.ConnectionService
 import io.airbyte.api.server.services.DestinationService

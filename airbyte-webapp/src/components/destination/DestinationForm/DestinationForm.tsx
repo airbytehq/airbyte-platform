@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
@@ -6,8 +6,9 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { ConnectionConfiguration } from "core/domain/connection";
-import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { ConnectionConfiguration } from "area/connector/types";
+import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
+import { Connector } from "core/domain/connector";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { FormError } from "core/utils/errorStatusMessage";
 import { useGetDestinationDefinitionSpecificationAsync } from "services/connector/DestinationDefinitionSpecificationService";
@@ -55,6 +56,11 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
     isLoading,
   } = useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId);
 
+  const selectedDestinationDefinition = useMemo(
+    () => destinationDefinitions.find((s) => Connector.id(s) === selectedDestinationDefinitionId),
+    [destinationDefinitions, selectedDestinationDefinitionId]
+  );
+
   const onDropDownSelect = (destinationDefinitionId: string) => {
     setDestinationDefinitionId(destinationDefinitionId);
   };
@@ -91,6 +97,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       selectedConnectorDefinitionId={destinationDefinitionId}
       onSubmit={onSubmitForm}
       jobInfo={LogsRequestError.extractJobInfo(error)}
+      supportLevel={selectedDestinationDefinition?.supportLevel}
     />
   );
 };

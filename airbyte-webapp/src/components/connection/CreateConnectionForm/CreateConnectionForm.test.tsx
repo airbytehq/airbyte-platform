@@ -8,8 +8,13 @@ import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
+  mockDestinationDefinitionVersion,
 } from "test-utils/mock-data/mockDestination";
-import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
+import {
+  mockSourceDefinition,
+  mockSourceDefinitionSpecification,
+  mockSourceDefinitionVersion,
+} from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
@@ -41,6 +46,9 @@ jest.mock("area/workspace/utils", () => ({
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
   useInvalidateWorkspaceStateQuery: () => () => null,
+  useCreateConnection: () => async () => null,
+  useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
+  useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
 }));
 
 jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({

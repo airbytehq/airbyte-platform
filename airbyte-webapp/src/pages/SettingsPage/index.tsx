@@ -1,3 +1,4 @@
-import SettingsPage from "./SettingsPage";
+import { SettingsPage } from "./SettingsPage";
 
+export { SettingsPageBase } from "./SettingsPageBase";
 export default SettingsPage;

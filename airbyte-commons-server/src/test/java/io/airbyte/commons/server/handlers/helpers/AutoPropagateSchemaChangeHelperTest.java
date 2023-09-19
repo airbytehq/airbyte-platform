@@ -49,6 +49,8 @@ class AutoPropagateSchemaChangeHelperTest {
                                            }
                                            """;
 
+  private static final List<DestinationSyncMode> SUPPORTED_DESTINATION_SYNC_MODES = List.of(
+      DestinationSyncMode.OVERWRITE, DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP);
   private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
@@ -106,8 +108,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
@@ -126,8 +129,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -151,8 +155,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -182,8 +187,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -213,8 +219,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -237,8 +244,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -258,8 +266,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
@@ -277,8 +286,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -297,8 +307,9 @@ class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
     final AirbyteCatalog result =
-        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS, featureFlagClient,
-            UUID.randomUUID());
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+            SUPPORTED_DESTINATION_SYNC_MODES, featureFlagClient,
+            UUID.randomUUID()).catalog();
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);

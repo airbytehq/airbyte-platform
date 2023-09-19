@@ -8,6 +8,7 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { config } from "config";
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
 import { AnalyticsProvider } from "core/services/analytics";
+import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
@@ -19,7 +20,6 @@ import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
-import { KeycloakAuthService } from "services/KeycloakAuthService";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
@@ -33,7 +33,7 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
-    <KeycloakAuthService>
+    <OSSAuthService>
       <NotificationService>
         <ConfirmationModalService>
           <ModalServiceProvider>
@@ -45,7 +45,7 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
           </ModalServiceProvider>
         </ConfirmationModalService>
       </NotificationService>
-    </KeycloakAuthService>
+    </OSSAuthService>
   </FeatureService>
 );
 

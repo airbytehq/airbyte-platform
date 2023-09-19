@@ -64,6 +64,8 @@ fun registerTestSuite(name: String, type: String, dirName: String, deps: JvmComp
                         events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED)
                     }
                     shouldRunAfter(suites.named("test"))
+                    // Ensure they re-run since these are integration tests.
+                    outputs.upToDateWhen { false }
                 }
             }
         }

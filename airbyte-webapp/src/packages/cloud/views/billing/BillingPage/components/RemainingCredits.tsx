@@ -13,19 +13,20 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { useStripeCheckout } from "core/api/cloud";
+import { useIsFCPEnabled, useStripeCheckout } from "core/api/cloud";
 import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceRead } from "core/api/types/CloudApi";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";
 import styles from "./RemainingCredits.module.scss";
 import { useBillingPageBanners } from "../useBillingPageBanners";
+import { useDeprecatedBillingPageBanners } from "../useDeprecatedBillingPageBanners";
 
 const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
 
@@ -38,6 +39,7 @@ function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspaceRead): boolean {
 }
 
 export const RemainingCredits: React.FC = () => {
+  const { sendEmailVerification } = useAuthService();
   const retryIntervalId = useRef<number>();
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
@@ -46,7 +48,12 @@ export const RemainingCredits: React.FC = () => {
   const { isLoading, mutateAsync: createCheckout } = useStripeCheckout();
   const analytics = useAnalyticsService();
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
-  const { bannerVariant } = useBillingPageBanners();
+  const billingPageBannerHook = useBillingPageBanners;
+  const deprecatedBillingPageBannerHook = useDeprecatedBillingPageBanners;
+
+  const isFCPEnabled = useIsFCPEnabled();
+  const { bannerVariant } = isFCPEnabled ? deprecatedBillingPageBannerHook() : billingPageBannerHook();
+
   const { emailVerified } = useAuthService();
 
   useEffectOnce(() => {
@@ -145,7 +152,9 @@ export const RemainingCredits: React.FC = () => {
           </FlexContainer>
         </FlexContainer>
         <FlexContainer direction="column">
-          {!emailVerified && <EmailVerificationHint variant={bannerVariant} />}
+          {!emailVerified && sendEmailVerification && (
+            <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
+          )}
           <LowCreditBalanceHint variant={bannerVariant} />
         </FlexContainer>
       </Box>

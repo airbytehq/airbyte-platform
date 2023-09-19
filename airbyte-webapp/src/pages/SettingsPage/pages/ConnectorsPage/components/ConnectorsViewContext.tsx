@@ -4,7 +4,6 @@ interface Context {
   setUpdatingAll: (isUpdating: boolean) => void;
   updatingAll: boolean;
   updatingDefinitionId?: string;
-  feedbackList: Record<string, string>;
 }
 
 export const useUpdatingState = (): Context => {

@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useConfig } from "config";
-import useWorkspace from "hooks/services/useWorkspace";
+import { useSetupInstanceConfiguration } from "core/api";
 
 import { SecurityCheck } from "./SecurityCheck";
 
@@ -20,6 +20,7 @@ export interface SetupFormValues {
   email: string;
   anonymousDataCollection: boolean;
   securityCheck: SecurityCheckStatus;
+  organizationName: string;
 }
 
 const SubmissionButton: React.FC = () => {
@@ -38,15 +39,16 @@ const setupFormValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
   anonymousDataCollection: yup.bool().required(),
   securityCheck: yup.mixed<SecurityCheckStatus>().oneOf(["succeeded", "ignored", "check_failed"]).required(),
+  organizationName: yup.string().required("form.empty.error"),
 });
 
 export const SetupForm: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { setInitialSetupConfig } = useWorkspace();
+  const { mutateAsync: setUpInstance } = useSetupInstanceConfiguration();
   const config = useConfig();
 
   const onSubmit = async (values: SetupFormValues) => {
-    await setInitialSetupConfig(values);
+    await setUpInstance({ ...values, initialSetupComplete: true, displaySetupWizard: false });
   };
 
   return (
@@ -66,6 +68,13 @@ export const SetupForm: React.FC = () => {
           type="text"
           label={formatMessage({ id: "form.yourEmail" })}
           placeholder={formatMessage({ id: "form.email.placeholder" })}
+        />
+        <FormControl<SetupFormValues>
+          name="organizationName"
+          fieldType="input"
+          type="text"
+          label={formatMessage({ id: "form.organizationName" })}
+          placeholder={formatMessage({ id: "form.organizationName.placeholder" })}
         />
         {config.segment.enabled && (
           <FormControl<SetupFormValues>

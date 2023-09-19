@@ -137,7 +137,7 @@ paths:
     post:
       tags:
         - workspace
-      summary: List all workspaces registered in the current Airbyte deployment, paginated.
+      summary: List all workspaces registered in the current Airbyte deployment. This function also supports searching by keyword and pagination.
       operationId: listAllWorkspacesPaginated
       requestBody:
         content:
@@ -156,7 +156,7 @@ paths:
     post:
       tags:
         - workspace
-      summary: List all workspaces registered in the current Airbyte deployment, paginated
+      summary: List workspaces by given workspace IDs registered in the current Airbyte deployment. This function also supports pagination.
       operationId: listWorkspacesPaginated
       requestBody:
         content:
@@ -173,7 +173,7 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_by_organization_id:
     post:
-      summary: List workspaces under the given org id
+      summary: List workspaces under the given org id. This function also supports searching by keyword and pagination.
       tags:
         - workspace
       operationId: listWorkspacesInOrganization
@@ -191,7 +191,26 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-
+  /v1/workspaces/list_by_user_id:
+    post:
+      summary: List workspaces by a given user id. The function also supports searching by keyword and pagination.
+      tags:
+        - workspace
+      operationId: listWorkspacesByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListWorkspacesByUserRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved workspaces by given user id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/workspaces/get:
     post:
       tags:
@@ -3105,6 +3124,22 @@ paths:
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
+  /v1/users/list_instance_admin:
+    post:
+      summary: List all users with instance admin permissions. Only instance admin has permission to call this.
+      tags:
+        - user
+      operationId: listInstanceAdminUsers
+      responses:
+        "200":
+          description: List all instance admin users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithPermissionInfoReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
   # PERMISSIONS
   /v1/permissions/create:
     post:
@@ -3313,6 +3348,37 @@ paths:
               schema:
                 type: string
                 format: binary
+  /v1/attempt/create_new_attempt_number:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For worker to create a new attempt number.
+      operationId: createNewAttemptNumber
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                title: CreateNewAttemptNumberResponse
+                type: object
+                required:
+                  - attemptNumber
+                properties:
+                  attemptNumber:
+                    $ref: "#/components/schemas/AttemptNumber"
   /v1/attempt/set_workflow_in_attempt:
     post:
       tags:
@@ -3515,6 +3581,27 @@ paths:
                 $ref: "#/components/schemas/InstanceConfigurationResponse"
         "401":
           description: Fetching instance configuration failed.
+  /v1/instance_configuration/setup:
+    post:
+      summary: Setup an instance with user and organization information.
+      tags:
+        - instance_configuration
+      operationId: setupInstanceConfiguration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstanceConfigurationSetupRequestBody"
+      responses:
+        "200":
+          description: Successfully setup instance.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstanceConfigurationResponse"
+        "401":
+          description: Instance setup failed.
+
   /v1/jobs/retry_states/create_or_update:
     post:
       summary: Creates or updates a retry state for a job.
@@ -3709,6 +3796,10 @@ components:
           $ref: "#/components/schemas/NotificationItem"
         sendOnConnectionUpdateActionRequired:
           $ref: "#/components/schemas/NotificationItem"
+        sendOnBreakingChangeWarning:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnBreakingChangeSyncsDisabled:
+          $ref: "#/components/schemas/NotificationItem"
 
     Notification:
       type: object
@@ -3755,6 +3846,8 @@ components:
         - sync_disabled_warning
         - connection_update
         - connection_update_action_required
+        - breaking_change_warning
+        - breaking_change_syncs_disabled
     NotificationRead:
       type: object
       required:
@@ -3796,6 +3889,7 @@ components:
       type: object
       required:
         - workspaceIds
+        - pagination
       properties:
         workspaceIds:
           type: array
@@ -4180,6 +4274,12 @@ components:
         protocolVersion:
           description: The Airbyte Protocol version supported by the connector
           type: string
+        custom:
+          description: Whether the connector is custom or not
+          type: boolean
+          default: false
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         releaseStage:
           $ref: "#/components/schemas/ReleaseStage"
         releaseDate:
@@ -4657,6 +4757,12 @@ components:
         protocolVersion:
           description: The Airbyte Protocol version supported by the connector
           type: string
+        custom:
+          description: Whether the connector is custom or not
+          type: boolean
+          default: false
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         releaseStage:
           $ref: "#/components/schemas/ReleaseStage"
         releaseDate:
@@ -4902,15 +5008,23 @@ components:
       required:
         - dockerRepository
         - dockerImageTag
+        - supportsDbt
+        - normalizationConfig
         - supportState
-        - isActorDefaultVersion
+        - isOverrideApplied
       properties:
         dockerRepository:
           type: string
         dockerImageTag:
           type: string
-        isActorDefaultVersion:
+        supportsDbt:
           type: boolean
+        normalizationConfig:
+          $ref: "#/components/schemas/NormalizationDestinationDefinitionConfig"
+        isOverrideApplied:
+          type: boolean
+        supportLevel:
+          $ref: "#/components/schemas/SupportLevel"
         supportState:
           $ref: "#/components/schemas/SupportState"
         breakingChanges:
@@ -4960,6 +5074,12 @@ components:
         - beta
         - generally_available
         - custom
+    SupportLevel:
+      type: string
+      enum:
+        - community
+        - certified
+        - none
     # CONNECTION
     ConnectionId:
       type: string
@@ -6678,7 +6798,7 @@ components:
         actorType:
           $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
-      description: describes a normalization config for destination definition
+      description: describes a normalization config for destination definition version
       type: object
       required:
         - supported
@@ -7492,6 +7612,10 @@ components:
       required:
         - edition
         - webappUrl
+        - initialSetupComplete
+        - defaultUserId
+        - defaultOrganizationId
+        - defaultWorkspaceId
       properties:
         edition:
           type: string
@@ -7507,6 +7631,39 @@ components:
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
         webappUrl:
+          type: string
+        initialSetupComplete:
+          type: boolean
+        defaultUserId:
+          type: string
+          format: uuid
+        defaultOrganizationId:
+          type: string
+          format: uuid
+        defaultWorkspaceId:
+          type: string
+          format: uuid
+    InstanceConfigurationSetupRequestBody:
+      type: object
+      required:
+        - email
+        - anonymousDataCollection
+        - initialSetupComplete
+        - displaySetupWizard
+      properties:
+        email:
+          type: string
+        anonymousDataCollection:
+          type: boolean
+        initialSetupComplete:
+          type: boolean
+        displaySetupWizard:
+          type: boolean
+        userName:
+          description: Optional name of the user to create. Defaults to 'Default User' if not specified.
+          type: string
+        organizationName:
+          description: Optional name of the organization to create. Defaults to 'Default Organization' if not specified.
           type: string
     StreamStatusRead:
       type: object
@@ -7652,6 +7809,18 @@ components:
           $ref: "#/components/schemas/Pagination"
         keyword:
           type: string
+    ListWorkspacesByUserRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        keyword:
+          type: string
     OrganizationRead:
       type: object
       required:
@@ -7734,7 +7903,29 @@ components:
           $ref: "#/components/schemas/PermissionType"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
-
+    UserWithPermissionInfoReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserWithPermissionInfoRead"
+    UserWithPermissionInfoRead:
+      type: object
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
     InvalidInputProperty:
       type: object
       required:

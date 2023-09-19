@@ -84,6 +84,12 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     } catch (e: HttpClientResponseException) {
       log.error("Config api response error for job sync: ", e)
       e.response as HttpResponse<JobInfoRead>
+    } catch (e: ReadTimeoutException) {
+      log.error("Config api response error for job sync: ", e)
+      throw UnexpectedProblem(
+        HttpStatus.REQUEST_TIMEOUT,
+        "Request timed out. Please check the latest job status to determine whether the sync started.",
+      )
     }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -168,9 +174,9 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(JobListRequestBody.OrderByFieldEnum.fromValue(orderByField.name))
+      .orderByField(JobListRequestBody.OrderByFieldEnum.valueOf(orderByField.name))
       .orderByMethod(
-        JobListRequestBody.OrderByMethodEnum.fromValue(orderByMethod.name),
+        JobListRequestBody.OrderByMethodEnum.valueOf(orderByMethod.name),
       )
 
     val response = try {
@@ -215,8 +221,8 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
       .createdAtEnd(jobsFilter.createdAtEnd)
       .updatedAtStart(jobsFilter.updatedAtStart)
       .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(OrderByFieldEnum.fromValue(orderByField.name))
-      .orderByMethod(OrderByMethodEnum.fromValue(orderByMethod.name))
+      .orderByField(OrderByFieldEnum.valueOf(orderByField.name))
+      .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
 
     val response = try {
       configApiClient.getJobListForWorkspaces(requestBody, userInfo)
