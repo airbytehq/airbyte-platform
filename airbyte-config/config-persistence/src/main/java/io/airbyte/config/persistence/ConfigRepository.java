@@ -3810,7 +3810,7 @@ public class ConfigRepository {
           + ")"
           // Left join Jobs on Connection and the above MinJobIds, and only keep successful
           // sync jobs that have an associated Connection ID
-          + " SELECT j.id, j.created_at, c.id, c.created_at AS connection_created_at, min_job_id"
+          + " SELECT j.id AS job_id, j.created_at, c.id AS conn_id, c.created_at AS connection_created_at, min_job_id"
           + " FROM jobs j"
           + " LEFT JOIN connection c ON c.id = UUID(j.scope)"
           + " LEFT JOIN FirstSuccessfulJobIdByConnection min_j_ids ON j.id = min_j_ids.min_job_id"
@@ -3835,7 +3835,7 @@ public class ConfigRepository {
     // the rest of the fields are not used, we aim to keep the set small
     final Set<Long> earlySyncJobs = new HashSet<>();
     for (final Record record : result) {
-      earlySyncJobs.add((Long) record.get("id"));
+      earlySyncJobs.add((Long) record.get("job_id"));
     }
     return earlySyncJobs;
   }
