@@ -124,6 +124,7 @@ resource "aws_lb_listener_rule" "allow-read-api" {
         "/api/v1/*/get",
         "/api/v1/*/get_by_slug",
         "/api/v1/health",
+        "/api/v1/instance_configuration",
       ]
     }
   }

@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
+import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GlobalState;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
@@ -29,16 +30,21 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
+import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +54,7 @@ class AttemptHandlerTest {
 
   JobConverter jobConverter;
   JobPersistence jobPersistence;
+  Path path;
   AttemptHandler handler;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -60,7 +67,8 @@ class AttemptHandlerTest {
   public void init() {
     jobPersistence = Mockito.mock(JobPersistence.class);
     jobConverter = Mockito.mock(JobConverter.class);
-    handler = new AttemptHandler(jobPersistence, jobConverter);
+    path = Mockito.mock(Path.class);
+    handler = new AttemptHandler(jobPersistence, jobConverter, Mockito.mock(JobCreationAndStatusUpdateHelper.class), path);
   }
 
   @Test
@@ -146,6 +154,29 @@ class AttemptHandlerTest {
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
     assertEquals(JOB_ID, jobIdCapture.getValue());
     assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.getValue());
+  }
+
+  @Test
+  void createAttemptNumber() throws IOException {
+    final int attemptNumber = 1;
+    final Job mJob = Mockito.mock(Job.class);
+    Mockito.when(mJob.getAttemptsCount())
+        .thenReturn(ATTEMPT_NUMBER);
+
+    Mockito.when(jobPersistence.getJob(JOB_ID))
+        .thenReturn(mJob);
+
+    Mockito.when(path.resolve(Mockito.anyString()))
+        .thenReturn(path);
+
+    final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+    final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+    Mockito.when(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
+        .thenReturn(attemptNumber);
+
+    final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
+    Assertions.assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
   }
 
   @Test
