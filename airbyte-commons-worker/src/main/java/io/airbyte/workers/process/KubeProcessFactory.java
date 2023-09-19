@@ -6,7 +6,6 @@ package io.airbyte.workers.process;
 
 import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -127,9 +126,7 @@ public class KubeProcessFactory implements ProcessFactory {
 
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
 
-      final String shortImageName = imageName != null ? DockerImageNameHelper.extractShortImageName(imageName) : null;
-
-      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, shortImageName, customLabels, workerConfigs.getWorkerKubeLabels());
+      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, imageName, customLabels, workerConfigs.getWorkerKubeLabels());
 
       // If using isolated pool, check workerConfigs has isolated pool set. If not set, fall back to use
       // regular node pool.
@@ -183,7 +180,7 @@ public class KubeProcessFactory implements ProcessFactory {
                                               final int attemptId,
                                               final UUID connectionId,
                                               final UUID workspaceId,
-                                              final String imageName,
+                                              final String fullImagePath,
                                               final Map<String, String> customLabels,
                                               final Map<String, String> envLabels) {
     final Map<String, String> allLabels = new HashMap<>();
@@ -192,13 +189,17 @@ public class KubeProcessFactory implements ProcessFactory {
     }
     allLabels.putAll(customLabels);
 
+    final String shortImageName = ProcessFactory.getShortImageName(fullImagePath);
+    final String imageVersion = ProcessFactory.getImageVersion(fullImagePath);
+
     final var generalKubeLabels = Map.of(
         Metadata.JOB_LABEL_KEY, jobId,
         Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptId),
         Metadata.CONNECTION_ID_LABEL_KEY, String.valueOf(connectionId),
         Metadata.WORKSPACE_LABEL_KEY, String.valueOf(workspaceId),
         Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE,
-        Metadata.IMAGE_NAME, imageName);
+        Metadata.IMAGE_NAME, shortImageName,
+        Metadata.IMAGE_VERSION, imageVersion);
 
     allLabels.putAll(generalKubeLabels);
 

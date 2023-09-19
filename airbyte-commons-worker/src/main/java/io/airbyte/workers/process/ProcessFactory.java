@@ -101,4 +101,32 @@ public interface ProcessFactory {
     return processName.substring(m.start());
   }
 
+  /**
+   * Extract the shortname of the image from the full path.
+   */
+  static String getShortImageName(final String fullImagePath) {
+    if (fullImagePath == null || fullImagePath.length() < 1) {
+      return null;
+    }
+    return DockerImageNameHelper.extractShortImageName(fullImagePath);
+  }
+
+  /**
+   * Docker image names are by convention separated by slashes. The last portion is the image's name.
+   * This is followed by a colon and a version number. e.g. airbyte/scheduler:v1 or
+   * gcr.io/my-project/image-name:v2.
+   *
+   * Get the image version by returning the substring following a colon.
+   */
+  static String getImageVersion(final String fullImagePath) {
+    if (fullImagePath == null || fullImagePath.length() < 1) {
+      return null;
+    }
+    int colonIndex = fullImagePath.indexOf(":");
+    if (colonIndex != -1 && fullImagePath.length() > colonIndex + 1) {
+      return fullImagePath.substring(colonIndex + 1);
+    }
+    return null;
+  }
+
 }

@@ -58,4 +58,48 @@ class ProcessFactoryTest {
     Assertions.assertEquals("sync-7339ba3b-cb53-4210-9591-c70d4a372330-10-", withoutRandSuffix);
   }
 
+  @Test
+  void testGetShortImageName() {
+    final String imagePath = "airbyte/scheduler:v1";
+    Assertions.assertEquals(ProcessFactory.getShortImageName(imagePath), "scheduler");
+  }
+
+  @Test
+  void testGetShortImageNameEmpty() {
+    final String imagePath = "";
+    Assertions.assertEquals(ProcessFactory.getShortImageName(imagePath), null);
+  }
+
+  @Test
+  void testGetShortImageNameNull() {
+    final String imagePath = null;
+    Assertions.assertEquals(ProcessFactory.getShortImageName(imagePath), null);
+  }
+
+  @Test
+  void testGetImageVersion() {
+    String imagePath = "airbyte/scheduler:dev";
+    Assertions.assertEquals(ProcessFactory.getImageVersion(imagePath), "dev");
+    imagePath = "airbyte/source-pokeapi:0.1.5";
+    Assertions.assertEquals(ProcessFactory.getImageVersion(imagePath), "0.1.5");
+  }
+
+  @Test
+  void testGetImageVersionEmpty() {
+    final String imagePath = "";
+    Assertions.assertEquals(ProcessFactory.getImageVersion(imagePath), null);
+  }
+
+  @Test
+  void testGetImageVersionNull() {
+    final String imagePath = null;
+    Assertions.assertEquals(ProcessFactory.getImageVersion(imagePath), null);
+  }
+
+  @Test
+  void testGetImageVersionNoVersion() {
+    final String imagePath = "airbyte/scheduler:";
+    Assertions.assertEquals(ProcessFactory.getImageVersion(imagePath), null);
+  }
+
 }
