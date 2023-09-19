@@ -2,11 +2,20 @@ import { useRbac } from "./rbac";
 import { RbacQuery, RbacQueryWithoutResourceId, RbacResource } from "./rbacPermissionsQuery";
 
 const intentToRbacQuery = {
-  ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "READER" },
-  UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
+  // instance
 
-  UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
+  // organization
+  ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "READER" },
+  UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
+  UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
+  ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
+
+  // workspace
+  DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
   ListWorkspaceMembers: { resourceType: "WORKSPACE", role: "READER" },
+  UpdateWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
+  UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
+  ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
 } as const;
 
 export type Intent = keyof typeof intentToRbacQuery;

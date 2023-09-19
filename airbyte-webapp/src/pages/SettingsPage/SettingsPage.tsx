@@ -25,6 +25,8 @@ export const SettingsPage: React.FC = () => {
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
   const canListWorkspaceUsers = useIntent("ListWorkspaceMembers", { workspaceId });
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId });
+  const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
+  const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
   const pageConfig: PageConfig = useMemo<PageConfig>(
     () => ({
@@ -39,57 +41,61 @@ export const SettingsPage: React.FC = () => {
             },
           ],
         },
-        {
-          category: <FormattedMessage id="settings.workspaceSettings" />,
-          routes: [
-            ...(newWorkspacesUI
-              ? [
+        ...(canViewWorkspaceSettings
+          ? [
+              {
+                category: <FormattedMessage id="settings.workspaceSettings" />,
+                routes: [
+                  ...(newWorkspacesUI
+                    ? [
+                        {
+                          path: `${SettingsRoutePaths.Workspace}`,
+                          name: <FormattedMessage id="settings.generalSettings" />,
+                          component: GeneralWorkspaceSettingsPage,
+                        },
+                      ]
+                    : []),
                   {
-                    path: `${SettingsRoutePaths.Workspace}`,
-                    name: <FormattedMessage id="settings.generalSettings" />,
-                    component: GeneralWorkspaceSettingsPage,
+                    path: `${SettingsRoutePaths.Source}`,
+                    name: <FormattedMessage id="tables.sources" />,
+                    indicatorCount: countNewSourceVersion,
+                    component: SourcesPage,
                   },
-                ]
-              : []),
-            {
-              path: `${SettingsRoutePaths.Source}`,
-              name: <FormattedMessage id="tables.sources" />,
-              indicatorCount: countNewSourceVersion,
-              component: SourcesPage,
-            },
-            {
-              path: `${SettingsRoutePaths.Destination}`,
-              name: <FormattedMessage id="tables.destinations" />,
-              indicatorCount: countNewDestinationVersion,
-              component: DestinationsPage,
-            },
-            {
-              path: `${SettingsRoutePaths.Configuration}`,
-              name: <FormattedMessage id="admin.configuration" />,
-              component: ConfigurationsPage,
-            },
-            {
-              path: `${SettingsRoutePaths.Notifications}`,
-              name: <FormattedMessage id="settings.notifications" />,
-              component: NotificationPage,
-            },
-            {
-              path: `${SettingsRoutePaths.Metrics}`,
-              name: <FormattedMessage id="settings.metrics" />,
-              component: MetricsPage,
-            },
-            ...(newWorkspacesUI && isAccessManagementEnabled && canListWorkspaceUsers
-              ? [
                   {
-                    path: `${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`,
-                    name: <FormattedMessage id="settings.accessManagement" />,
-                    component: WorkspaceAccessManagementPage,
+                    path: `${SettingsRoutePaths.Destination}`,
+                    name: <FormattedMessage id="tables.destinations" />,
+                    indicatorCount: countNewDestinationVersion,
+                    component: DestinationsPage,
                   },
-                ]
-              : []),
-          ],
-        },
-        ...(newWorkspacesUI && organizationId && canListOrganizationUsers
+                  {
+                    path: `${SettingsRoutePaths.Configuration}`,
+                    name: <FormattedMessage id="admin.configuration" />,
+                    component: ConfigurationsPage,
+                  },
+                  {
+                    path: `${SettingsRoutePaths.Notifications}`,
+                    name: <FormattedMessage id="settings.notifications" />,
+                    component: NotificationPage,
+                  },
+                  {
+                    path: `${SettingsRoutePaths.Metrics}`,
+                    name: <FormattedMessage id="settings.metrics" />,
+                    component: MetricsPage,
+                  },
+                  ...(newWorkspacesUI && isAccessManagementEnabled && canListWorkspaceUsers
+                    ? [
+                        {
+                          path: `${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`,
+                          name: <FormattedMessage id="settings.accessManagement" />,
+                          component: WorkspaceAccessManagementPage,
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ]
+          : []),
+        ...(newWorkspacesUI && organizationId && canListOrganizationUsers && canViewOrganizationSettings
           ? [
               {
                 category: <FormattedMessage id="settings.organizationSettings" />,
@@ -117,6 +123,8 @@ export const SettingsPage: React.FC = () => {
     [
       canListOrganizationUsers,
       canListWorkspaceUsers,
+      canViewOrganizationSettings,
+      canViewWorkspaceSettings,
       countNewDestinationVersion,
       countNewSourceVersion,
       isAccessManagementEnabled,
