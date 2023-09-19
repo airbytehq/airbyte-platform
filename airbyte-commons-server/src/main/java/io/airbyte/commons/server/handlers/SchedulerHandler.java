@@ -29,7 +29,6 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.DestinationUpdate;
-import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -43,7 +42,6 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.features.FeatureFlags;
@@ -51,6 +49,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -616,7 +615,7 @@ public class SchedulerHandler {
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
-      final boolean containsBreakingChange = containsBreakingChange(diff);
+      final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
 
       if (containsBreakingChange) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
@@ -652,7 +651,7 @@ public class SchedulerHandler {
 
   private boolean shouldAutoPropagate(final CatalogDiff diff, final UUID workspaceId, final ConnectionRead connectionRead) {
     final boolean hasDiff = !diff.getTransforms().isEmpty();
-    final boolean nonBreakingChange = !containsBreakingChange(diff);
+    final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
@@ -773,22 +772,6 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(manualOperationResult.getJobId().get());
 
     return jobConverter.getJobInfoRead(job);
-  }
-
-  @VisibleForTesting
-  boolean containsBreakingChange(final CatalogDiff diff) {
-    for (final StreamTransform streamTransform : diff.getTransforms()) {
-      if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
-        continue;
-      }
-
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
 }

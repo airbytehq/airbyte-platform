@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
@@ -151,6 +152,22 @@ public class AutoPropagateSchemaChangeHelper {
         airbyteStreamAndConfiguration -> new StreamDescriptor().name(airbyteStreamAndConfiguration.getStream().getName())
             .namespace(airbyteStreamAndConfiguration.getStream().getNamespace()),
         airbyteStreamAndConfiguration -> airbyteStreamAndConfiguration));
+  }
+
+  @VisibleForTesting
+  public static boolean containsBreakingChange(final CatalogDiff diff) {
+    for (final StreamTransform streamTransform : diff.getTransforms()) {
+      if (streamTransform.getTransformType() != StreamTransform.TransformTypeEnum.UPDATE_STREAM) {
+        continue;
+      }
+
+      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
+      if (anyBreakingFieldTransforms) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
 }
