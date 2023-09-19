@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.StreamSyncStats;
@@ -57,7 +58,12 @@ public class AttemptHandler {
   }
 
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final long jobId) throws IOException {
-    final Job job = jobPersistence.getJob(jobId);
+    final Job job;
+    try {
+      job = jobPersistence.getJob(jobId);
+    } catch (final RuntimeException e) {
+      throw new UnprocessableContentException(String.format("Could not find jobId: %s", jobId), e);
+    }
 
     final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
     final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);

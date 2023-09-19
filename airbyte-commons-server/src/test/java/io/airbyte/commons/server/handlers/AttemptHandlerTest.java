@@ -30,6 +30,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.SyncStats;
@@ -177,6 +178,19 @@ class AttemptHandlerTest {
 
     final CreateNewAttemptNumberResponse output = handler.createNewAttemptNumber(JOB_ID);
     Assertions.assertThat(output.getAttemptNumber()).isEqualTo(attemptNumber);
+  }
+
+  @Test
+  void createAttemptNumberWithUnownJobId() throws IOException {
+    final Job mJob = Mockito.mock(Job.class);
+    Mockito.when(mJob.getAttemptsCount())
+        .thenReturn(ATTEMPT_NUMBER);
+
+    Mockito.when(jobPersistence.getJob(JOB_ID))
+        .thenThrow(new RuntimeException("unknown jobId " + JOB_ID));
+
+    Assertions.assertThatThrownBy(() -> handler.createNewAttemptNumber(JOB_ID))
+        .isInstanceOf(UnprocessableContentException.class);
   }
 
   @Test
