@@ -828,7 +828,7 @@
   "connector.releaseStage.generally_available.description": "<b>Generally Available (GA) connectors</b> have been deemed ready for use in a production environment and is officially supported by Airbyte. Their documentation is considered sufficient to support widespread adoption.",
   "connector.supportLevel.certified.description": "<b>Certified</b> connectors are actively maintained and supported by the Airbyte team and maintain a high quality bar. They are production ready.",
   "connector.supportLevel.community.description": "<b>Community</b> connectors are maintained by the Airbyte community until they become Certified. Airbyte does not offer support SLAs around them, and encourages caution when using them in production.",
-  "connector.supportLevel.custom.description": "<b>Custom connectors</b> are added to the workspace manually by the user.",
+  "connector.supportLevel.custom.description": "<b>Custom</b> connectors are added to the workspace manually by the user.",
   "connector.connectorsInDevelopment.docLink": "See our <lnk>documentation</lnk> for more details.",
   "connector.setupGuide": "Setup Guide",
   "connector.setupGuide.notFound": "No Setup Guide found for this connector.",

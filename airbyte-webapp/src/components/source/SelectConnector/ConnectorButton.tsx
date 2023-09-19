@@ -27,6 +27,7 @@ export const ConnectorButton = <T extends ConnectorDefinition>({ definition, onC
           supportLevel={definition.supportLevel}
           custom={definition.custom}
           releaseStage={definition.releaseStage}
+          tooltip={false}
         />
       </span>
     </button>

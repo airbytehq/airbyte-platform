@@ -33,7 +33,7 @@ interface SelectConnectorProps {
 }
 
 const SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
-export const DEFAULT_SELECTED_SUPPORT_LEVELS: SupportLevel[] = ["certified", "none"];
+export const DEFAULT_SELECTED_SUPPORT_LEVELS: SupportLevel[] = ["certified", "community", "none"];
 
 const RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "alpha", "custom"];
 export const DEFAULT_SELECTED_RELEASE_STAGES: ReleaseStage[] = ["generally_available", "beta", "custom"];
