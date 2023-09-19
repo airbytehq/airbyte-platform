@@ -173,7 +173,6 @@ public class AutoPropagateSchemaChangeHelper {
         return true;
       }
     }
-
     return false;
   }
 
