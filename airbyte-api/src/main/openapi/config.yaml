@@ -2718,6 +2718,41 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/job_success_with_attempt_number:
+    post:
+      tags:
+        - jobs
+        - attempt
+        - internal
+      summary: For worker to mark an attempt as successful.
+      operationId: jobSuccessWithAttemptNumber
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+                - connectionId
+                - standardSyncOutput
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                standardSyncOutput:
+                  type: object
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
   /v1/jobs/list:
     post:
       tags:

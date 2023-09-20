@@ -12,6 +12,7 @@ import io.airbyte.api.generated.JobsApi;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -21,10 +22,12 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
+import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.JobInputHandler;
+import io.airbyte.commons.server.handlers.JobsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
@@ -33,6 +36,8 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
 
 @SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/jobs")
@@ -42,14 +47,17 @@ public class JobsApiController implements JobsApi {
 
   private final JobHistoryHandler jobHistoryHandler;
   private final SchedulerHandler schedulerHandler;
+  private final JobsHandler jobsHandler;
   private final JobInputHandler jobInputHandler;
 
   public JobsApiController(final JobHistoryHandler jobHistoryHandler,
                            final SchedulerHandler schedulerHandler,
-                           final JobInputHandler jobInputHandler) {
+                           final JobInputHandler jobInputHandler,
+                           final JobsHandler jobsHandler) {
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
     this.jobInputHandler = jobInputHandler;
+    this.jobsHandler = jobsHandler;
   }
 
   @Post("/cancel")
@@ -138,6 +146,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
+  }
+
+  @POST
+  @Path("/job_success_with_attempt_number")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public InternalOperationResult jobSuccessWithAttemptNumber(final JobSuccessWithAttemptNumberRequest jobSuccessWithAttemptNumberRequest) {
+    return ApiHelper.execute(() -> jobsHandler.jobSuccessWithAttemptNumber(jobSuccessWithAttemptNumberRequest));
   }
 
   @Post("/list")

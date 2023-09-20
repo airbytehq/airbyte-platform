@@ -11,9 +11,11 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
+import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.config.WorkerMode;
@@ -120,25 +122,15 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final long jobId = input.getJobId();
-      final int attemptNumber = input.getAttemptNumber();
-
-      if (input.getStandardSyncOutput() != null) {
-        final JobOutput jobOutput = new JobOutput().withSync(input.getStandardSyncOutput());
-        jobPersistence.writeOutput(jobId, attemptNumber, jobOutput);
-      } else {
-        log.warn("The job {} doesn't have any output for the attempt {}", jobId, attemptNumber);
-      }
-      jobPersistence.succeedAttempt(jobId, attemptNumber);
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_SUCCEEDED_BY_RELEASE_STAGE, job);
-
-      jobNotifier.successJob(job);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job);
-      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
-    } catch (final IOException e) {
-      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
-          JobStatus.SUCCEEDED, e);
+      final var request = new JobSuccessWithAttemptNumberRequest()
+          .jobId(input.getJobId())
+          .attemptNumber(input.getAttemptNumber())
+          .connectionId(input.getConnectionId())
+          .standardSyncOutput(input.getStandardSyncOutput());
+      jobsApi.jobSuccessWithAttemptNumber(request);
+    } catch (final ApiException e) {
+      ApmTraceUtils.addExceptionToTrace(e);
+      log.error("jobSuccessWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }

@@ -21,6 +21,7 @@ import io.airbyte.api.client.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
@@ -238,29 +239,28 @@ class JobCreationAndStatusUpdateActivityTest {
   class Update {
 
     @Test
-    void setJobSuccess() throws IOException {
-      jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
-          new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput));
-
-      verify(mJobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-      verify(mJobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
-      verify(mJobNotifier).successJob(Mockito.any());
-      verify(mJobtracker).trackSync(Mockito.any(), eq(JobState.SUCCEEDED));
+    void setJobSuccess() throws ApiException {
+      var request =
+          new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
+      jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request);
+      verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest()
+          .attemptNumber(request.getAttemptNumber())
+          .jobId(request.getJobId())
+          .connectionId(request.getConnectionId())
+          .standardSyncOutput(request.getStandardSyncOutput()));
     }
 
     @Test
-    void setJobSuccessWrapException() throws IOException {
-      final IOException exception = new IOException(TEST_EXCEPTION_MESSAGE);
+    void setJobSuccessWrapException() throws ApiException {
+      final ApiException exception = new ApiException(TEST_EXCEPTION_MESSAGE);
       Mockito.doThrow(exception)
-          .when(mJobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
+          .when(jobsApi).jobSuccessWithAttemptNumber(any());
 
       Assertions
           .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
               new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, null)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
-
-      verify(mJobtracker, times(1)).trackSyncForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER, JobState.SUCCEEDED, exception);
+          .hasCauseInstanceOf(ApiException.class);
     }
 
     @Test
