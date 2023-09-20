@@ -14,11 +14,11 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { DestinationPaths } from "pages/routePaths";
 import { RoutePaths } from "pages/routePaths";
+import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 export const CreateDestinationPage: React.FC = () => {
@@ -30,7 +30,7 @@ export const CreateDestinationPage: React.FC = () => {
 
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
-  const destinationDefinitions = useAvailableDestinationDefinitions();
+  const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
 
   const onSubmitDestinationForm = async (values: {

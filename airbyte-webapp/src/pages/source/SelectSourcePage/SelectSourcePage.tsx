@@ -8,11 +8,11 @@ import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
 import { useSuggestedSources } from "area/connector/utils";
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
+import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 export const SelectSourcePage: React.FC = () => {
   const navigate = useNavigate();
-  const sourceDefinitions = useAvailableSourceDefinitions();
+  const { sourceDefinitions } = useSourceDefinitionList();
   const suggestedSourceDefinitionIds = useSuggestedSources();
 
   return (
