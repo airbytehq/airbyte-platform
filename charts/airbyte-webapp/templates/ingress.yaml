@@ -54,7 +54,7 @@ spec:
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ $fullName }}-svc
+              serviceName: {{ $.Release.Name }}-airbyte-webapp-svc
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}
