@@ -42,6 +42,7 @@ import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,7 @@ class AttemptHandlerTest {
   JobPersistence jobPersistence;
   Path path;
   AttemptHandler handler;
+  JobCreationAndStatusUpdateHelper helper;
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final long JOB_ID = 10002L;
@@ -69,7 +71,8 @@ class AttemptHandlerTest {
     jobPersistence = Mockito.mock(JobPersistence.class);
     jobConverter = Mockito.mock(JobConverter.class);
     path = Mockito.mock(Path.class);
-    handler = new AttemptHandler(jobPersistence, jobConverter, Mockito.mock(JobCreationAndStatusUpdateHelper.class), path);
+    helper = Mockito.mock(JobCreationAndStatusUpdateHelper.class);
+    handler = new AttemptHandler(jobPersistence, jobConverter, helper, path);
   }
 
   @Test
@@ -261,6 +264,60 @@ class AttemptHandlerTest {
     assertEquals(stats.getEstimatedRecords(), result.getEstimatedRecords());
     assertEquals(stats.getEstimatedBytes(), result.getEstimatedBytes());
     assertNull(result.getStateMessagesEmitted()); // punting on this for now
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsFalseIfNoPreviousJob() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.empty());
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(true);
+
+    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertFalse(result.getValue());
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsTrueIfPreviousJobSucceeded() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.of(Mockito.mock(Job.class)));
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(true);
+
+    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertTrue(result.getValue());
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsFalseIfPreviousJobNotInSucceededState() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.of(Mockito.mock(Job.class)));
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(false);
+
+    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertFalse(result.getValue());
   }
 
 }

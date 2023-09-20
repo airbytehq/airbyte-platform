@@ -111,6 +111,8 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
+object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

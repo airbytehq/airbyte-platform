@@ -3518,6 +3518,26 @@ paths:
                 $ref: "#/components/schemas/AttemptInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/attempt/did_previous_job_succeed:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Returns whether the job preceding the specified job succeeded
+      operationId: didPreviousJobSucceed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionJobRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BooleanRead"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -8030,6 +8050,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvalidInputProperty"
+    ConnectionJobRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+    BooleanRead:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: boolean
 
   responses:
     NotFoundResponse:

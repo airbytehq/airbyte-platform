@@ -10,6 +10,8 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 import io.airbyte.api.generated.AttemptApi;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
+import io.airbyte.api.model.generated.BooleanRead;
+import io.airbyte.api.model.generated.ConnectionJobRequestBody;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
@@ -56,9 +58,9 @@ public class AttemptApiController implements AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
   @SecuredWorkspace
-  public CreateNewAttemptNumberResponse createNewAttemptNumber(CreateNewAttemptNumberRequest createNewAttemptNumberRequest) {
+  public CreateNewAttemptNumberResponse createNewAttemptNumber(final CreateNewAttemptNumberRequest requestBody) {
     return ApiHelper
-        .execute(() -> attemptHandler.createNewAttemptNumber(createNewAttemptNumberRequest.getJobId()));
+        .execute(() -> attemptHandler.createNewAttemptNumber(requestBody.getJobId()));
   }
 
   @Override
@@ -96,6 +98,17 @@ public class AttemptApiController implements AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult saveSyncConfig(@Body final SaveAttemptSyncConfigRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveSyncConfig(requestBody));
+  }
+
+  @Override
+  @Post(uri = "/did_previous_job_succeed",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({ADMIN})
+  public BooleanRead didPreviousJobSucceed(final ConnectionJobRequestBody requestBody) {
+    return ApiHelper.execute(() -> attemptHandler.didPreviousJobSucceed(
+        requestBody.getConnectionId(),
+        requestBody.getJobId()));
   }
 
 }
