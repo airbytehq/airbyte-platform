@@ -34,4 +34,5 @@ dependencies {
 
     testImplementation libs.junit.pioneer
     testImplementation libs.mockito.inline
+    testImplementation libs.mockwebserver
 }
