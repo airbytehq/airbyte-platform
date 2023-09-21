@@ -452,7 +452,7 @@ public class SchedulerHandler {
                   .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
               .getSupportedDestinationSyncModes();
 
-      if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
+      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead, featureFlagClient)) {
         applySchemaChange(updateObject.getConnectionId(),
             sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
@@ -647,17 +647,6 @@ public class SchedulerHandler {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
     }
-  }
-
-  private boolean shouldAutoPropagate(final CatalogDiff diff, final UUID workspaceId, final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
-    final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
-    final boolean autoPropagationIsEnabledForConnection =
-        connectionRead.getNonBreakingChangesPreference() != null
-            && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
-                || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
   }
 
   private void applySchemaChange(final UUID connectionId,

@@ -1965,6 +1965,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/apply_schema_changes:
+    post:
+      tags:
+        - connection
+      summary: Auto propagate the change on a catalog to a catalog saved in the DB for the given connection.
+      operationId: applySchemaChangeForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionAutoPropagateSchemaChange"
+        required: true
+      responses:
+        "204":
+          description: The schema was properly auto propagated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionAutoPropagateResult"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/state/get:
     post:
       tags:
@@ -5617,6 +5640,32 @@ components:
         - source
         - destination
         - customformat
+    ConnectionAutoPropagateSchemaChange:
+      description: Input of the schema propagation, with the catalog to be propagated and the connection to propagate to
+      type: object
+      required:
+        - catalog
+        - catalogId
+        - connectionId
+        - workspaceId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/AirbyteCatalog"
+        catalogId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+    ConnectionAutoPropagateResult:
+      description: The result of schema propagation for a given connection, with the diff that was applied via auto-propagation.
+      type: object
+      properties:
+        propagatedDiff:
+          $ref: "#/components/schemas/CatalogDiff"
     # Operations
     OperationId:
       type: string
