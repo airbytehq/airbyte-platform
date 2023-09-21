@@ -5,22 +5,15 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.featureflag.CheckReplicationProgress;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.workers.helpers.ProgressChecker;
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity.Input;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -32,21 +25,15 @@ class CheckRunProgressActivityTest {
   @Mock
   private ProgressChecker mProgressChecker;
 
-  @Mock
-  private FeatureFlagClient mFeatureFlagClient;
-
   @BeforeEach
   public void setup() {
     mProgressChecker = Mockito.mock(ProgressChecker.class);
-    mFeatureFlagClient = Mockito.mock(TestClient.class);
-
-    Mockito.when(mFeatureFlagClient.boolVariation(eq(CheckReplicationProgress.INSTANCE), any())).thenReturn(true);
   }
 
   @ParameterizedTest
   @MethodSource("jobAttemptMatrix")
   void delegatesToProgressChecker(final long jobId, final int attemptNo, final boolean madeProgress) {
-    final CheckRunProgressActivity activity = new CheckRunProgressActivityImpl(mProgressChecker, mFeatureFlagClient);
+    final CheckRunProgressActivity activity = new CheckRunProgressActivityImpl(mProgressChecker);
     when(mProgressChecker.check(jobId, attemptNo)).thenReturn(madeProgress);
 
     final CheckRunProgressActivity.Input input = new Input(jobId, attemptNo, UUID.randomUUID());
@@ -64,21 +51,6 @@ class CheckRunProgressActivityTest {
         Arguments.of(8L, 32, true),
         Arguments.of(8L, 32, false),
         Arguments.of(999L, 99, false));
-  }
-
-  @Test
-  void shortCircuitsIfFFDisabled() {
-    final CheckRunProgressActivity activity = new CheckRunProgressActivityImpl(mProgressChecker, mFeatureFlagClient);
-    Mockito.when(mFeatureFlagClient.boolVariation(eq(CheckReplicationProgress.INSTANCE), any())).thenReturn(false);
-    final var jobId = 14115L;
-    final var attemptNo = 0;
-
-    final CheckRunProgressActivity.Input input = new Input(jobId, attemptNo, UUID.randomUUID());
-    final var result = activity.checkProgress(input);
-
-    verify(mProgressChecker, times(0)).check(jobId, attemptNo);
-
-    assertFalse(result.madeProgress());
   }
 
 }

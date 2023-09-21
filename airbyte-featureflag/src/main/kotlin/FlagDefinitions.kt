@@ -77,11 +77,7 @@ object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-wor
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
-object CheckReplicationProgress : Temporary<Boolean>(key = "check-replication-progress", default = false)
-
 object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
-
-object UseNewRetries : Temporary<Boolean>(key = "use-new-retries", default = false)
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
