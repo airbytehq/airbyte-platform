@@ -7,11 +7,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { FormError } from "core/utils/errorStatusMessage";
-import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 

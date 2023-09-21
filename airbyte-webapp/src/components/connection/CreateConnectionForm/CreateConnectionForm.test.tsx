@@ -27,14 +27,6 @@ jest.mock("services/connector/SourceDefinitionService", () => ({
   useSourceDefinition: () => mockSourceDefinition,
 }));
 
-jest.mock("services/connector/SourceDefinitionSpecificationService", () => ({
-  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionSpecificationService", () => ({
-  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
-}));
-
 jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
@@ -49,6 +41,8 @@ jest.mock("core/api", () => ({
   useCreateConnection: () => async () => null,
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
+  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
 jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({

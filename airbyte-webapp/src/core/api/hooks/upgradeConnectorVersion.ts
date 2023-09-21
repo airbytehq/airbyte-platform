@@ -1,15 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { upgradeDestinationVersion, upgradeSourceVersion } from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { destinationsKeys } from "hooks/services/useDestinationHook";
 import { sourcesKeys } from "hooks/services/useSourceHook";
-import { destinationDefinitionSpecificationKeys } from "services/connector/DestinationDefinitionSpecificationService";
-import { sourceDefinitionSpecificationKeys } from "services/connector/SourceDefinitionSpecificationService";
 
 import { definitionKeys } from "./actorDefinitionVersions";
+import {
+  sourceDefinitionSpecificationKeys,
+  destinationDefinitionSpecificationKeys,
+} from "./connectorDefinitionSpecification";
+import { upgradeDestinationVersion, upgradeSourceVersion } from "../generated/AirbyteClient";
+import { useRequestOptions } from "../useRequestOptions";
 
 export const useUpgradeConnectorVersion = (
   type: "source" | "destination",

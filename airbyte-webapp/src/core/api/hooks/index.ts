@@ -2,6 +2,7 @@ export * from "./actorDefinitionVersions";
 export * from "./connections";
 export * from "./connectorBuilderApi";
 export * from "./connectorBuilderProject";
+export * from "./connectorDefinitionSpecification";
 export * from "./connectorOAuth";
 export * from "./geographies";
 export * from "./health";
