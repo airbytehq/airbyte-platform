@@ -6,6 +6,7 @@ package io.airbyte.workers.process;
 
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.list.Lists;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
@@ -210,6 +211,7 @@ public class KubePodProcess implements KubePod {
                                    final List<VolumeMount> mainVolumeMounts,
                                    final ResourceRequirements resourceRequirements,
                                    final Map<Integer, Integer> internalToExternalPorts,
+                                   final String socatCommands,
                                    final Map<String, String> envMap,
                                    final String... args)
       throws IOException {
@@ -226,7 +228,8 @@ public class KubePodProcess implements KubePod {
         .replace("ENTRYPOINT_OVERRIDE_VALUE", entrypointOverrideValue) // use replace and not replaceAll to preserve escaping and quoting
         .replaceAll("ARGS", argsStr)
         .replaceAll("STDERR_PIPE_FILE", STDERR_PIPE_FILE)
-        .replaceAll("STDOUT_PIPE_FILE", STDOUT_PIPE_FILE);
+        .replaceAll("STDOUT_PIPE_FILE", STDOUT_PIPE_FILE)
+        .replaceAll("SOCAT_COMMANDS", socatCommands);
 
     final List<ContainerPort> containerPorts = createContainerPortList(internalToExternalPorts);
 
@@ -412,6 +415,7 @@ public class KubePodProcess implements KubePod {
                         final String socatImage,
                         final String busyboxImage,
                         final String curlImage,
+                        final boolean runSocatInMainContainer,
                         final Map<String, String> envMap,
                         final Map<Integer, Integer> internalToExternalPorts,
                         final String... args)
@@ -474,23 +478,6 @@ public class KubePodProcess implements KubePod {
           .withMountPath(TMP_DIR)
           .build();
 
-      // Note that we pass the resource requirements of the main container for the init.
-      // The pod's effective resource requirements is going to be the sum of all final running pods. We
-      // could pass that for the init, but it's
-      // probably not worth the extra logic to sum everything. Passing what should be the largest
-      // requirements should do.
-      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
-      final Container main = getMain(
-          image,
-          imagePullPolicy,
-          usesStdin,
-          entrypointOverride,
-          List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
-          podResourceRequirements.main(),
-          internalToExternalPorts,
-          envMap,
-          args);
-
       // Printing socat notice logs with socat -d -d
       // To print info logs as well use socat -d -d -d
       // more info: https://linux.die.net/man/1/socat
@@ -521,6 +508,41 @@ public class KubePodProcess implements KubePod {
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
+      final List<Container> socatContainers;
+      final String socatCommands;
+
+      if (runSocatInMainContainer) {
+        socatContainers = List.of();
+
+        final var socatStdinCmd = usesStdin ? String.format("socat -d -d TCP-L:9001 STDOUT > %s &", STDIN_PIPE_FILE) : "";
+        final var socatStdoutCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort);
+        final var socatStderrCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort);
+
+        socatCommands = String.join(System.lineSeparator(), socatStdinCmd, socatStdoutCmd, socatStderrCmd);
+
+      } else {
+        socatContainers = usesStdin ? List.of(remoteStdin, relayStdout, relayStderr) : List.of(relayStdout, relayStderr);
+        socatCommands = "";
+      }
+
+      // Note that we pass the resource requirements of the main container for the init.
+      // The pod's effective resource requirements is going to be the sum of all final running pods. We
+      // could pass that for the init, but it's
+      // probably not worth the extra logic to sum everything. Passing what should be the largest
+      // requirements should do.
+      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
+      final Container main = getMain(
+          image,
+          imagePullPolicy,
+          usesStdin,
+          entrypointOverride,
+          List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
+          podResourceRequirements.main(),
+          internalToExternalPorts,
+          socatCommands,
+          envMap,
+          args);
+
       // communicates via a file if it isn't able to reach the heartbeating server and succeeds if the
       // main container completes
       final String heartbeatCommand = MoreResources.readResource("entrypoints/sync/check.sh")
@@ -538,8 +560,7 @@ public class KubePodProcess implements KubePod {
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
-      final List<Container> containers = usesStdin ? List.of(main, remoteStdin, relayStdout, relayStderr, callHeartbeatServer)
-          : List.of(main, relayStdout, relayStderr, callHeartbeatServer);
+      final List<Container> containers = Lists.concat(List.of(main, callHeartbeatServer), socatContainers);
 
       final PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
           .withApiVersion("v1")

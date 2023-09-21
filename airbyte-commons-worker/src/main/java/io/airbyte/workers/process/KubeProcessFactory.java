@@ -6,6 +6,7 @@ package io.airbyte.workers.process;
 
 import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -14,12 +15,18 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ImageName;
+import io.airbyte.featureflag.ImageVersion;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSocatInConnectorContainer;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.exception.WorkerException;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -139,6 +146,8 @@ public class KubeProcessFactory implements ProcessFactory {
           // If we do not have one, use empty uuid.
           new Connection(connectionId != null ? connectionId : UUID_EMPTY));
 
+      final boolean runSocatInMainContainer = shouldRunSocatInMainContainer(imageName, connectionId, workspaceId);
+
       return new KubePodProcess(
           processRunnerHost,
           fabricClient,
@@ -164,6 +173,7 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobSocatImage(),
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
+          runSocatInMainContainer,
           MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables),
           internalToExternalPorts,
           args).toProcess();
@@ -204,6 +214,30 @@ public class KubeProcessFactory implements ProcessFactory {
     allLabels.putAll(generalKubeLabels);
 
     return allLabels;
+  }
+
+  private boolean shouldRunSocatInMainContainer(String imageName, UUID connectionId, UUID workspaceId) {
+    final String imageNameWithoutVersion;
+    final String imageVersion;
+    if (imageName == null) {
+      imageNameWithoutVersion = "";
+      imageVersion = "";
+    } else {
+      imageNameWithoutVersion = DockerImageNameHelper.extractImageNameWithoutVersion(imageName);
+      imageVersion = DockerImageNameHelper.extractImageVersionString(imageName);
+    }
+
+    final var imageNameContext = imageNameWithoutVersion != null ? imageNameWithoutVersion : "";
+    final var imageVersionContext = imageVersion != null ? imageVersion : "";
+    final var connectionContext = connectionId != null ? connectionId : UUID_EMPTY;
+    final var workspaceContext = workspaceId != null ? workspaceId : UUID_EMPTY;
+
+    return featureFlagClient.boolVariation(RunSocatInConnectorContainer.INSTANCE,
+        new Multi(List.of(
+            new ImageName(imageNameContext),
+            new ImageVersion(imageVersionContext),
+            new Connection(connectionContext),
+            new Workspace(workspaceContext))));
   }
 
 }

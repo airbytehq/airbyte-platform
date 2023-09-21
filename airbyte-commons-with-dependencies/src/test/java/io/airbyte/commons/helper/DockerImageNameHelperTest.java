@@ -27,6 +27,13 @@ class DockerImageNameHelperTest {
   }
 
   @ParameterizedTest
+  @CsvSource({"hello:1,hello", "hello/world:2,hello/world", "foo/bar/fizz/buzz:3,foo/bar/fizz/buzz", "hello,hello", "hello:1.1-foo,hello"})
+  void testExtractImageNameWithoutVersion(final String fullName, final String expected) {
+    final var actual = DockerImageNameHelper.extractImageNameWithoutVersion(fullName);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @ParameterizedTest
   @CsvSource({"hello:1,1", "hello/world:2,2", "foo/bar/fizz/buzz:3,3", "hello,", "hello:1.1-foo,1.1-foo"})
   void testExtractImageVersionString(final String fullName, final String expected) {
     final var actual = DockerImageNameHelper.extractImageVersionString(fullName);
