@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -140,6 +141,43 @@ class VersionedAirbyteStreamFactoryTest {
       assertThrows(RuntimeException.class, () -> messageStream.toList());
     }
 
+    private VersionedAirbyteStreamFactory getFactory() {
+      return VersionedAirbyteStreamFactory
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L);
+    }
+
+    private static final String VALID_MESSAGE_TEMPLATE =
+        """
+        {"type":"RECORD","record":{"namespace":"public","stream":"documents","data":{"value":"%s"},"emitted_at":1695224525688}}
+        """;
+
+    @Test
+    void testToAirbyteMessageValid() {
+      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, "hello");
+      Assertions.assertThat(getFactory().toAirbyteMessage(messageLine)).hasSize(1);
+    }
+
+    @Test
+    void testToAirbyteMessageRandomLog() {
+      Assertions.assertThat(getFactory().toAirbyteMessage("I should not be send on the same channel than the airbyte messages")).isEmpty();
+    }
+
+    @Test
+    void testToAirbyteMessageMixedUpRecord() {
+      final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
+      assertThrows(IllegalStateException.class, () -> getFactory().toAirbyteMessage(messageLine));
+    }
+
+    @Test
+    void testToAirbyteMessageVeryLongMessage() {
+      final StringBuilder longStringBuilder = new StringBuilder(5_000_000);
+      for (int i = 0; i < 25_000_000; i++) {
+        longStringBuilder.append("a");
+      }
+      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
+      assertThrows(IllegalStateException.class, () -> getFactory().toAirbyteMessage(messageLine));
+    }
+
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
       final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
@@ -195,7 +233,7 @@ class VersionedAirbyteStreamFactoryTest {
           getBuffereredReader("version-detection/logs-with-version.jsonl");
       final Stream<AirbyteMessage> stream = streamFactory.create(bufferedReader);
 
-      long messageCount = stream.toList().size();
+      final long messageCount = stream.toList().size();
       assertEquals(1, messageCount);
     }
 
