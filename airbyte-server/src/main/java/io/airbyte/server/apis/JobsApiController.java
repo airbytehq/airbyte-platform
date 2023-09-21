@@ -78,6 +78,18 @@ public class JobsApiController implements JobsApi {
     return ApiHelper.execute(() -> schedulerHandler.createJob(jobCreate));
   }
 
+  @Post("/fail_non_terminal")
+  @SecuredWorkspace
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public void failNonTerminalJobs(final ConnectionIdRequestBody connectionIdRequestBody) {
+    ApiHelper.execute(() -> {
+      jobsHandler.failNonTerminalJobs(connectionIdRequestBody.getConnectionId());
+      return null; // to satisfy the lambda interface bounds
+    });
+  }
+
   @Post("/get_normalization_status")
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)

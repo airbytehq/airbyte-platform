@@ -13,7 +13,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.JobStatus;
-import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
@@ -147,34 +146,33 @@ public class JobCreationAndStatusUpdateHelper {
     return job.getStatus().equals(io.airbyte.persistence.job.models.JobStatus.SUCCEEDED);
   }
 
-  public void failNonTerminalJobs(final UUID connectionId) {
-    try {
-      final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(connectionId, Job.REPLICATION_TYPES,
-          io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
-      for (final Job job : jobs) {
-        final long jobId = job.getId();
+  public void failNonTerminalJobs(final UUID connectionId) throws IOException {
+    final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(
+        connectionId,
+        Job.REPLICATION_TYPES,
+        io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
 
-        // fail all non-terminal attempts
-        for (final Attempt attempt : job.getAttempts()) {
-          if (Attempt.isAttemptInTerminalState(attempt)) {
-            continue;
-          }
+    for (final Job job : jobs) {
+      final long jobId = job.getId();
 
-          final int attemptNumber = attempt.getAttemptNumber();
-          log.info("Failing non-terminal attempt {} for non-terminal job {}", attemptNumber, jobId);
-          jobPersistence.failAttempt(jobId, attemptNumber);
-          jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber));
+      // fail all non-terminal attempts
+      for (final Attempt attempt : job.getAttempts()) {
+        if (Attempt.isAttemptInTerminalState(attempt)) {
+          continue;
         }
 
-        log.info("Failing non-terminal job {}", jobId);
-        jobPersistence.failJob(jobId);
-
-        final Job failedJob = jobPersistence.getJob(jobId);
-        jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob);
-        trackCompletion(failedJob, JobStatus.FAILED);
+        final int attemptNumber = attempt.getAttemptNumber();
+        log.info("Failing non-terminal attempt {} for non-terminal job {}", attemptNumber, jobId);
+        jobPersistence.failAttempt(jobId, attemptNumber);
+        jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber));
       }
-    } catch (final IOException e) {
-      throw new RetryableException(e);
+
+      log.info("Failing non-terminal job {}", jobId);
+      jobPersistence.failJob(jobId);
+
+      final Job failedJob = jobPersistence.getJob(jobId);
+      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob);
+      trackCompletion(failedJob, JobStatus.FAILED);
     }
   }
 

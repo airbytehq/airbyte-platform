@@ -3022,6 +3022,22 @@ paths:
                 $ref: "#/components/schemas/SyncJobInputRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/fail_non_terminal:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Fails all non-terminal jobs for a connection
+      operationId: failNonTerminalJobs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
 
   # USERS
   /v1/users/create:

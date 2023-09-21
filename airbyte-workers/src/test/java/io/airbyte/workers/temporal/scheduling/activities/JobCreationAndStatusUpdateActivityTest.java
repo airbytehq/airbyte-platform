@@ -6,6 +6,7 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,7 +49,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
@@ -60,7 +60,6 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -395,38 +394,18 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void ensureCleanJobState() throws IOException {
-      final JobConfig jobConfig = new JobConfig()
-          .withConfigType(SYNC)
-          .withSync(new JobSyncConfig()
-              .withSourceDefinitionVersionId(UUID.randomUUID())
-              .withDestinationDefinitionVersionId(UUID.randomUUID()));
-      final Attempt failedAttempt = new Attempt(0, 1, Path.of(""), null, null, AttemptStatus.FAILED, null, null, 2L, 3L, 3L);
-      final int runningAttemptNumber = 1;
-      final Attempt runningAttempt = new Attempt(runningAttemptNumber, 1, Path.of(""), null, null, AttemptStatus.RUNNING, null, null, 4L, 5L, null);
-      final Job runningJob = new Job(1, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(failedAttempt, runningAttempt),
-          JobStatus.RUNNING, 2L, 2L, 3L);
+    void ensureCleanJobStateHappyPath() {
+      assertDoesNotThrow(
+          () -> jobCreationAndStatusUpdateActivity.ensureCleanJobState(new EnsureCleanJobStateInput(CONNECTION_ID)));
+    }
 
-      final Job pendingJob = new Job(2, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 4L, 4L, 5L);
+    @Test
+    void ensureCleanJobStateThrowsRetryableOnApiFailure() throws ApiException {
+      Mockito.doThrow(new ApiException("bang")).when(jobsApi).failNonTerminalJobs(any());
 
-      Mockito.when(mJobPersistence.listJobsForConnectionWithStatuses(CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES))
-          .thenReturn(List.of(runningJob, pendingJob));
-      Mockito.when(mJobPersistence.getJob(runningJob.getId())).thenReturn(runningJob);
-      Mockito.when(mJobPersistence.getJob(pendingJob.getId())).thenReturn(pendingJob);
-
-      jobCreationAndStatusUpdateActivity.ensureCleanJobState(new EnsureCleanJobStateInput(CONNECTION_ID));
-
-      verify(mJobPersistence).failJob(runningJob.getId());
-      verify(mJobPersistence).failJob(pendingJob.getId());
-      verify(mJobPersistence).failAttempt(runningJob.getId(), runningAttemptNumber);
-      verify(mJobPersistence).writeAttemptFailureSummary(eq(runningJob.getId()), eq(runningAttemptNumber), any());
-      verify(mJobPersistence).getJob(runningJob.getId());
-      verify(mJobPersistence).getJob(pendingJob.getId());
-      verify(mJobNotifier).failJob(any(), eq(runningJob));
-      verify(mJobNotifier).failJob(any(), eq(pendingJob));
-      verify(mJobtracker).trackSync(runningJob, JobState.FAILED);
-      verify(mJobtracker).trackSync(pendingJob, JobState.FAILED);
-      Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobtracker);
+      assertThrows(
+          RetryableException.class,
+          () -> jobCreationAndStatusUpdateActivity.ensureCleanJobState(new EnsureCleanJobStateInput(CONNECTION_ID)));
     }
 
   }

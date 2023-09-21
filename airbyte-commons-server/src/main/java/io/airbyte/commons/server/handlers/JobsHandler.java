@@ -18,6 +18,7 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +66,10 @@ public class JobsHandler {
           JobStatus.SUCCEEDED, e);
       throw new RetryableException(e);
     }
+  }
+
+  public void failNonTerminalJobs(final UUID connectionId) throws IOException {
+    jobCreationAndStatusUpdateHelper.failNonTerminalJobs(connectionId);
   }
 
 }

@@ -12,6 +12,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
@@ -253,7 +254,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Override
   public void ensureCleanJobState(final EnsureCleanJobStateInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
-    jobCreationAndStatusUpdateHelper.failNonTerminalJobs(input.getConnectionId());
+    try {
+      jobsApi.failNonTerminalJobs(new ConnectionIdRequestBody().connectionId(input.getConnectionId()));
+    } catch (final ApiException e) {
+      throw new RetryableException(e);
+    }
   }
 
   public boolean isLastJobOrAttemptFailureOld(final JobCheckFailureInput input) {
