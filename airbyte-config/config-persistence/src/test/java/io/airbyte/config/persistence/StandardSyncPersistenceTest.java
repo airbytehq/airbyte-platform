@@ -33,6 +33,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
@@ -308,6 +309,66 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertThat(actualSyncs.get(0)).isEqualTo(expectedSync);
   }
 
+  @Test
+  void testListWorkspaceActiveSyncIds() throws JsonValidationException, IOException {
+    createBaseObjects();
+
+    final StandardSync sync1 = createStandardSync(source1, destination1);
+    standardSyncPersistence.writeStandardSync(sync1);
+
+    final StandardSync sync1Disabled = createStandardSync(source1, destination1);
+    standardSyncPersistence.writeStandardSync(sync1Disabled.withStatus(Status.INACTIVE));
+
+    final StandardSync sync1Deprecated = createStandardSync(source1, destination1);
+    standardSyncPersistence.writeStandardSync(sync1Deprecated.withStatus(Status.DEPRECATED));
+
+    final StandardSync sync2 = createStandardSync(source2, destination2);
+    standardSyncPersistence.writeStandardSync(sync2);
+
+    final StandardSyncQuery syncQueryBySource = new StandardSyncQuery(workspaceId, List.of(source1.getSourceId()), null, false);
+    final List<UUID> activeSyncsForSource1 = configRepository.listWorkspaceActiveSyncIds(syncQueryBySource);
+    assertEquals(activeSyncsForSource1.size(), 1);
+    assertEquals(activeSyncsForSource1.get(0), sync1.getConnectionId());
+
+    final StandardSyncQuery syncQueryByDestination = new StandardSyncQuery(workspaceId, null, List.of(destination1.getDestinationId()), false);
+    final List<UUID> activeSyncsForDestination1 = configRepository.listWorkspaceActiveSyncIds(syncQueryByDestination);
+    assertEquals(activeSyncsForDestination1.size(), 1);
+    assertEquals(activeSyncsForDestination1.get(0), sync1.getConnectionId());
+  }
+
+  @Test
+  void testDisableConnectionsById() throws IOException, JsonValidationException, ConfigNotFoundException {
+    createBaseObjects();
+
+    final StandardSync sync1 = createStandardSync(source1, destination1);
+    standardSyncPersistence.writeStandardSync(sync1);
+
+    final StandardSync sync2 = createStandardSync(source2, destination2);
+    standardSyncPersistence.writeStandardSync(sync2);
+
+    final StandardSync sync3 = createStandardSync(source2, destination2);
+    standardSyncPersistence.writeStandardSync(sync3.withStatus(Status.INACTIVE));
+
+    final StandardSync sync4 = createStandardSync(source2, destination2);
+    standardSyncPersistence.writeStandardSync(sync4.withStatus(Status.DEPRECATED));
+
+    assertEquals(Status.ACTIVE, sync1.getStatus());
+    assertEquals(Status.ACTIVE, sync2.getStatus());
+    assertEquals(Status.INACTIVE, sync3.getStatus());
+    assertEquals(Status.DEPRECATED, sync4.getStatus());
+
+    configRepository.disableConnectionsById(List.of(sync1.getConnectionId(), sync2.getConnectionId(), sync3.getConnectionId()));
+
+    final StandardSync updatedSync1 = standardSyncPersistence.getStandardSync(sync1.getConnectionId());
+    final StandardSync updatedSync2 = standardSyncPersistence.getStandardSync(sync2.getConnectionId());
+    final StandardSync updatedSync3 = standardSyncPersistence.getStandardSync(sync3.getConnectionId());
+
+    assertEquals(Status.INACTIVE, updatedSync1.getStatus());
+    assertEquals(Status.INACTIVE, updatedSync2.getStatus());
+    assertEquals(Status.INACTIVE, updatedSync3.getStatus());
+    assertEquals(Status.DEPRECATED, sync4.getStatus());
+  }
+
   private void createBaseObjects() throws IOException, JsonValidationException {
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
@@ -435,7 +496,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     return sync;
   }
 
-  private SchemaManagementRecord getSchemaManagementByConnectionId(final UUID connectionId) throws IOException, SQLException {
+  private SchemaManagementRecord getSchemaManagementByConnectionId(final UUID connectionId) throws SQLException {
     return database.query(ctx -> ctx.select(SCHEMA_MANAGEMENT.asterisk())
         .from(SCHEMA_MANAGEMENT)
         .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
