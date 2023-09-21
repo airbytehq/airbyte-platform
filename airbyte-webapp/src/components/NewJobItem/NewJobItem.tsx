@@ -60,12 +60,12 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   useEffectOnce(() => {
     if (attemptLink.jobId === String(jobWithAttempts.job.id)) {
       wrapperRef.current?.scrollIntoView();
-      openJobLogsModal(attemptLink.attemptId ? Number(attemptLink.attemptId) - 1 : undefined);
+      openJobLogsModal(attemptLink.attemptId);
     }
   });
 
   const openJobLogsModal = useCallback(
-    (initialAttemptIndex?: number) => {
+    (initialAttemptId?: number) => {
       openModal({
         size: "full",
         title: formatMessage({ id: "jobHistory.logs.title" }, { connectionName: connection.name }),
@@ -77,7 +77,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
               </div>
             }
           >
-            <JobLogsModalContent jobId={jobWithAttempts.job.id} initialAttemptIndex={initialAttemptIndex} />
+            <JobLogsModalContent jobId={jobWithAttempts.job.id} initialAttemptId={initialAttemptId} />
           </Suspense>
         ),
       });
