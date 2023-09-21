@@ -300,12 +300,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
 
     try {
-      // Treat anything other than an explicit success as a failure.
-      return attemptApi.didPreviousJobSucceed(
+      final var didSucceed = attemptApi.didPreviousJobSucceed(
           new ConnectionJobRequestBody()
               .connectionId(input.getConnectionId())
               .jobId(input.getJobId()))
           .getValue();
+      // Treat anything other than an explicit success as a failure.
+      return !didSucceed;
     } catch (final ApiException e) {
       throw new RetryableException(e);
     }

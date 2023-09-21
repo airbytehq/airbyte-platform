@@ -7,7 +7,6 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -174,8 +173,9 @@ class JobCreationAndStatusUpdateActivityTest {
       assertTrue(result);
     }
 
-    @Test
-    void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt() throws ApiException {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(final boolean didSucceed) throws ApiException {
       Mockito.when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
           .thenReturn(true);
 
@@ -185,15 +185,11 @@ class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID);
 
       Mockito.when(attemptApi.didPreviousJobSucceed(any()))
-          .thenReturn(new BooleanRead().value(true));
-      final boolean result1 = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
+          .thenReturn(new BooleanRead().value(didSucceed));
 
-      assertTrue(result1);
+      final boolean result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
 
-      Mockito.when(attemptApi.didPreviousJobSucceed(any()))
-          .thenReturn(new BooleanRead().value(false));
-      final boolean result2 = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
-      assertFalse(result2);
+      assertEquals(!didSucceed, result);
     }
 
     @Test
