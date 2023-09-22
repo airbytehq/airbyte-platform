@@ -5,9 +5,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
+import { useGetOutOfDateConnectorsCount } from "core/api";
+import { CheckConnectionRead } from "core/api/types/AirbyteClient";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { SourceService } from "core/domain/connector/SourceService";
-import { useGetOutOfDateConnectorsCount } from "services/connector/ConnectorDefinitions";
 import {
   useDestinationDefinitionList,
   useLatestDestinationDefinitionList,
@@ -23,7 +24,6 @@ import { useInitService } from "services/useInitService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
-import { CheckConnectionRead } from "../../core/request/AirbyteClient";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
   const { formatMessage } = useIntl();

@@ -4,6 +4,7 @@ export * from "./connectorBuilderApi";
 export * from "./connectorBuilderProject";
 export * from "./connectorDefinitionSpecification";
 export * from "./connectorOAuth";
+export * from "./connectorUpdates";
 export * from "./geographies";
 export * from "./health";
 export * from "./instanceConfiguration";

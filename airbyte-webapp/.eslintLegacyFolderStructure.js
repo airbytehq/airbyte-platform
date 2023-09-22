@@ -2,9 +2,7 @@
 module.exports = [
   // src/services
   "src/services/connector/SourceDefinitionService.ts",
-  "src/services/connector/ConnectorDefinitions.ts",
   "src/services/connector/DestinationDefinitionService.ts",
-  "src/services/connector/ConnectorService.ts",
   "src/services/connectorBuilder/ConnectorBuilderTestInputService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderStateService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderLocalStorageService.tsx",
