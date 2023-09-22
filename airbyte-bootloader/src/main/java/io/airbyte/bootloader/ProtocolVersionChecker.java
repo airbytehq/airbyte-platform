@@ -14,7 +14,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
-import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.MetadataPersistence;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProtocolVersionChecker {
 
-  private final JobPersistence jobPersistence;
+  private final MetadataPersistence metadataPersistence;
   private final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange;
   private final ConfigRepository configRepository;
   private final DefinitionsProvider definitionsProvider;
@@ -44,16 +44,16 @@ public class ProtocolVersionChecker {
    * Constructs a new protocol version checker that verifies all connectors are within the provided
    * target protocol version range.
    *
-   * @param jobPersistence A {@link JobPersistence} instance.
+   * @param metadataPersistence A {@link MetadataPersistence} instance.
    * @param airbyteProtocolTargetVersionRange The target Airbyte protocol version range.
    * @param configRepository A {@link ConfigRepository} instance.
    * @param definitionsProvider The {@link DefinitionsProvider} used for seeding.
    */
-  public ProtocolVersionChecker(final JobPersistence jobPersistence,
+  public ProtocolVersionChecker(final MetadataPersistence metadataPersistence,
                                 final AirbyteProtocolVersionRange airbyteProtocolTargetVersionRange,
                                 final ConfigRepository configRepository,
                                 @Named("seedDefinitionsProvider") final DefinitionsProvider definitionsProvider) {
-    this.jobPersistence = jobPersistence;
+    this.metadataPersistence = metadataPersistence;
     this.airbyteProtocolTargetVersionRange = airbyteProtocolTargetVersionRange;
     this.configRepository = configRepository;
     this.definitionsProvider = definitionsProvider;
@@ -72,7 +72,7 @@ public class ProtocolVersionChecker {
    */
   public Optional<AirbyteProtocolVersionRange> validate(final boolean supportAutoUpgrade) throws IOException {
     final Optional<AirbyteVersion> currentAirbyteVersion = getCurrentAirbyteVersion();
-    final Optional<AirbyteProtocolVersionRange> currentRange = jobPersistence.getCurrentProtocolVersionRange();
+    final Optional<AirbyteProtocolVersionRange> currentRange = metadataPersistence.getCurrentProtocolVersionRange();
     final AirbyteProtocolVersionRange targetRange = getTargetProtocolVersionRange();
 
     // Checking if there is a pre-existing version of airbyte.
@@ -131,7 +131,7 @@ public class ProtocolVersionChecker {
   }
 
   protected Optional<AirbyteVersion> getCurrentAirbyteVersion() throws IOException {
-    return jobPersistence.getVersion().map(AirbyteVersion::new);
+    return metadataPersistence.getVersion().map(AirbyteVersion::new);
   }
 
   protected AirbyteProtocolVersionRange getTargetProtocolVersionRange() {

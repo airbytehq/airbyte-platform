@@ -18,6 +18,7 @@ import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseMigrator;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.MetadataPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
@@ -50,6 +51,7 @@ public class Bootloader {
   private final DatabaseInitializer jobsDatabaseInitializer;
   private final DatabaseMigrator jobsDatabaseMigrator;
   private final JobPersistence jobPersistence;
+  private final MetadataPersistence metadataPersistence;
   private final PostLoadExecutor postLoadExecution;
   private final ProtocolVersionChecker protocolVersionChecker;
   private final boolean runMigrationOnStartup;
@@ -64,6 +66,7 @@ public class Bootloader {
                     @Named("jobsDatabaseInitializer") final DatabaseInitializer jobsDatabaseInitializer,
                     @Named("jobsDatabaseMigrator") final DatabaseMigrator jobsDatabaseMigrator,
                     final JobPersistence jobPersistence,
+                    final MetadataPersistence metadataPersistence,
                     final ProtocolVersionChecker protocolVersionChecker,
                     @Value("${airbyte.bootloader.run-migration-on-startup}") final boolean runMigrationOnStartup,
                     final PostLoadExecutor postLoadExecution) {
@@ -76,6 +79,7 @@ public class Bootloader {
     this.jobsDatabaseInitializer = jobsDatabaseInitializer;
     this.jobsDatabaseMigrator = jobsDatabaseMigrator;
     this.jobPersistence = jobPersistence;
+    this.metadataPersistence = metadataPersistence;
     this.protocolVersionChecker = protocolVersionChecker;
     this.runMigrationOnStartup = runMigrationOnStartup;
     this.postLoadExecution = postLoadExecution;
@@ -100,7 +104,7 @@ public class Bootloader {
     initializeDatabases();
 
     log.info("Checking migration compatibility...");
-    assertNonBreakingMigration(jobPersistence, currentAirbyteVersion);
+    assertNonBreakingMigration(metadataPersistence, currentAirbyteVersion);
 
     log.info("Checking protocol version constraints...");
     assertNonBreakingProtocolVersionConstraints(protocolVersionChecker, jobPersistence, autoUpgradeConnectors);
@@ -112,11 +116,11 @@ public class Bootloader {
     createWorkspaceIfNoneExists(configRepository);
 
     log.info("Creating deployment (if none exists)...");
-    createDeploymentIfNoneExists(jobPersistence);
+    createDeploymentIfNoneExists(metadataPersistence);
 
     final String airbyteVersion = currentAirbyteVersion.serialize();
     log.info("Setting Airbyte version to '{}'...", airbyteVersion);
-    jobPersistence.setVersion(airbyteVersion);
+    metadataPersistence.setVersion(airbyteVersion);
     log.info("Set version to '{}'", airbyteVersion);
 
     if (postLoadExecution != null) {
@@ -127,12 +131,12 @@ public class Bootloader {
     log.info("Finished bootstrapping Airbyte environment.");
   }
 
-  private void assertNonBreakingMigration(final JobPersistence jobPersistence, final AirbyteVersion airbyteVersion)
+  private void assertNonBreakingMigration(final MetadataPersistence metadataPersistence, final AirbyteVersion airbyteVersion)
       throws IOException {
     // version in the database when the server main method is called. may be empty if this is the first
     // time the server is started.
     log.info("Checking for illegal upgrade...");
-    final Optional<AirbyteVersion> initialAirbyteDatabaseVersion = jobPersistence.getVersion().map(AirbyteVersion::new);
+    final Optional<AirbyteVersion> initialAirbyteDatabaseVersion = metadataPersistence.getVersion().map(AirbyteVersion::new);
     final Optional<AirbyteVersion> requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion);
     if (requiredVersionUpgrade.isPresent()) {
       final String attentionBanner = MoreResources.readResource("banner/attention-banner.txt");
@@ -163,13 +167,13 @@ public class Bootloader {
     trackProtocolVersion(jobPersistence, newProtocolRange.get());
   }
 
-  private void createDeploymentIfNoneExists(final JobPersistence jobPersistence) throws IOException {
-    final Optional<UUID> deploymentOptional = jobPersistence.getDeployment();
+  private void createDeploymentIfNoneExists(final MetadataPersistence metadataPersistence) throws IOException {
+    final Optional<UUID> deploymentOptional = metadataPersistence.getDeployment();
     if (deploymentOptional.isPresent()) {
       log.info("Running deployment: {}", deploymentOptional.get());
     } else {
       final UUID deploymentId = UUID.randomUUID();
-      jobPersistence.setDeployment(deploymentId);
+      metadataPersistence.setDeployment(deploymentId);
       log.info("Created deployment: {}", deploymentId);
     }
   }

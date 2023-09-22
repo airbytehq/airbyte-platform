@@ -35,6 +35,7 @@ import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
+import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -132,7 +133,8 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val metadataPersistence = new DefaultMetadataPersistence(configDatabase);
+    val protocolVersionChecker = new ProtocolVersionChecker(metadataPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val supportStateUpdater = new SupportStateUpdater(configRepository);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
@@ -144,7 +146,7 @@ class BootloaderTest {
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, metadataPersistence, protocolVersionChecker,
             runMigrationOnStartup, postLoadExecutor);
     bootloader.load();
 
@@ -154,11 +156,11 @@ class BootloaderTest {
     val configsMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
     assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
 
-    assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get());
+    assertEquals(VERSION_0330_ALPHA, metadataPersistence.getVersion().get());
     assertEquals(new Version(PROTOCOL_VERSION_123), jobsPersistence.getAirbyteProtocolVersionMin().get());
     assertEquals(new Version(PROTOCOL_VERSION_124), jobsPersistence.getAirbyteProtocolVersionMax().get());
 
-    assertNotEquals(Optional.empty(), jobsPersistence.getDeployment());
+    assertNotEquals(Optional.empty(), metadataPersistence.getDeployment());
   }
 
   @SuppressWarnings("VariableDeclarationUsageDistance")
@@ -188,8 +190,9 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val metadataPersistence = new DefaultMetadataPersistence(configDatabase);
     val supportStateUpdater = new SupportStateUpdater(configRepository);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val protocolVersionChecker = new ProtocolVersionChecker(metadataPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val applyDefinitionsHelper =
         new ApplyDefinitionsHelper(definitionsProvider, jobsPersistence, configRepository, featureFlagClient, supportStateUpdater);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
@@ -200,7 +203,7 @@ class BootloaderTest {
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, metadataPersistence, protocolVersionChecker,
             runMigrationOnStartup, postLoadExecutor);
 
     // starting from no previous version is always legal.
@@ -277,7 +280,8 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
-    val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
+    val metadataPersistence = new DefaultMetadataPersistence(configDatabase);
+    val protocolVersionChecker = new ProtocolVersionChecker(metadataPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val postLoadExecutor = new PostLoadExecutor() {
 
       @Override
@@ -288,7 +292,7 @@ class BootloaderTest {
     };
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, metadataPersistence, protocolVersionChecker,
             runMigrationOnStartup, postLoadExecutor);
     bootloader.load();
     assertTrue(testTriggered.get());

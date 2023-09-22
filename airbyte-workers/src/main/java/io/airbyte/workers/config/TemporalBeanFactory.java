@@ -14,7 +14,7 @@ import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.MetadataPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
@@ -35,7 +35,7 @@ public class TemporalBeanFactory {
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public TrackingClient trackingClient(final TrackingStrategy trackingStrategy,
                                        final DeploymentMode deploymentMode,
-                                       final JobPersistence jobPersistence,
+                                       final MetadataPersistence metadataPersistence,
                                        final WorkerEnvironment workerEnvironment,
                                        @Value("${airbyte.role}") final String airbyteRole,
                                        final AirbyteVersion airbyteVersion,
@@ -44,7 +44,7 @@ public class TemporalBeanFactory {
 
     TrackingClientSingleton.initialize(
         trackingStrategy,
-        new Deployment(deploymentMode, jobPersistence.getDeployment().orElseThrow(),
+        new Deployment(deploymentMode, metadataPersistence.getDeployment().orElseThrow(),
             workerEnvironment),
         airbyteRole,
         airbyteVersion,

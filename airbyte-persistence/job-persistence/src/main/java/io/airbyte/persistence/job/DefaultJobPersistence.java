@@ -22,7 +22,6 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
@@ -52,7 +51,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1197,30 +1195,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public Optional<String> getVersion() throws IOException {
-    return getMetadata(AirbyteVersion.AIRBYTE_VERSION_KEY_NAME).findFirst();
-  }
-
-  @Override
-  public void setVersion(final String airbyteVersion) throws IOException {
-    // This is not using setMetadata due to the extra (<timestamp>s_init_db, airbyteVersion) that is
-    // added to the metadata table
-    jobDatabase.query(ctx -> ctx.execute(String.format(
-        "INSERT INTO %s(%s, %s) VALUES('%s', '%s'), ('%s_init_db', '%s') ON CONFLICT (%s) DO UPDATE SET %s = '%s'",
-        AIRBYTE_METADATA_TABLE,
-        METADATA_KEY_COL,
-        METADATA_VAL_COL,
-        AirbyteVersion.AIRBYTE_VERSION_KEY_NAME,
-        airbyteVersion,
-        ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-        airbyteVersion,
-        METADATA_KEY_COL,
-        METADATA_VAL_COL,
-        airbyteVersion)));
-
-  }
-
-  @Override
   public Optional<Version> getAirbyteProtocolVersionMax() throws IOException {
     return getMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MAX_KEY_NAME).findFirst().map(Version::new);
   }
@@ -1277,41 +1251,6 @@ public class DefaultJobPersistence implements JobPersistence {
         .doUpdate()
         .set(DSL.field(METADATA_VAL_COL), value)
         .execute());
-  }
-
-  @Override
-  public Optional<UUID> getDeployment() throws IOException {
-    final Result<Record> result = jobDatabase.query(ctx -> ctx.select()
-        .from(AIRBYTE_METADATA_TABLE)
-        .where(DSL.field(METADATA_KEY_COL).eq(DEPLOYMENT_ID_KEY))
-        .fetch());
-    return result.stream().findFirst().map(r -> UUID.fromString(r.getValue(METADATA_VAL_COL, String.class)));
-  }
-
-  @Override
-  public void setDeployment(final UUID deployment) throws IOException {
-    // if an existing deployment id already exists, on conflict, return it so we can log it.
-    final UUID committedDeploymentId = jobDatabase.query(ctx -> ctx.fetch(String.format(
-        "INSERT INTO %s(%s, %s) VALUES('%s', '%s') ON CONFLICT (%s) DO NOTHING RETURNING (SELECT %s FROM %s WHERE %s='%s') as existing_deployment_id",
-        AIRBYTE_METADATA_TABLE,
-        METADATA_KEY_COL,
-        METADATA_VAL_COL,
-        DEPLOYMENT_ID_KEY,
-        deployment,
-        METADATA_KEY_COL,
-        METADATA_VAL_COL,
-        AIRBYTE_METADATA_TABLE,
-        METADATA_KEY_COL,
-        DEPLOYMENT_ID_KEY)))
-        .stream()
-        .filter(record -> record.get("existing_deployment_id", String.class) != null)
-        .map(record -> UUID.fromString(record.get("existing_deployment_id", String.class)))
-        .findFirst()
-        .orElse(deployment); // if no record was returned that means that the new deployment id was used.
-
-    if (!deployment.equals(committedDeploymentId)) {
-      LOGGER.warn("Attempted to set a deployment id {}, but deployment id {} already set. Retained original value.", deployment, deployment);
-    }
   }
 
   /**
