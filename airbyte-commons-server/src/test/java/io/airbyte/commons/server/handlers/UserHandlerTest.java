@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserStatus;
+import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
@@ -65,7 +66,6 @@ class UserHandlerTest {
 
   private static final Organization ORGANIZATION = new Organization().withOrganizationId(UUID.randomUUID()).withName(USER_NAME).withEmail(USER_EMAIL);
   private static final UUID PERMISSION1_ID = UUID.randomUUID();
-  private static final UUID PERMISSION2_ID = UUID.randomUUID();
 
   private final User user = new User()
       .withUserId(USER_ID)
@@ -136,30 +136,6 @@ class UserHandlerTest {
   }
 
   @Test
-  void testMergeUserPermissionsInOrg() throws Exception {
-    final UUID organizationId = UUID.randomUUID();
-    final UUID USER_ID = UUID.randomUUID();
-
-    when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(
-        new UserPermission()
-            .withUser(new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
-            .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.ORGANIZATION_ADMIN)),
-        new UserPermission()
-            .withUser(new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
-            .withPermission(new Permission().withPermissionId(PERMISSION2_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
-
-    var expectedListResult =
-        new OrganizationUserReadList()
-            .users(List.of(new OrganizationUserRead().name(USER_NAME).userId(USER_ID).email(USER_EMAIL).organizationId(organizationId)
-                .permissionId(PERMISSION2_ID)
-                .permissionType(
-                    io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
-
-    var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
-    assertEquals(expectedListResult, result);
-  }
-
-  @Test
   void testListUsersInWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID workspaceId = UUID.randomUUID();
     final UUID USER_ID = UUID.randomUUID();
@@ -180,32 +156,18 @@ class UserHandlerTest {
   }
 
   @Test
-  void testListUsersWithMultiplePermissionInWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID USER_ID = UUID.randomUUID();
+  void testListInstanceAdminUser() throws Exception {
+    when(permissionPersistence.listInstanceAdminUsers()).thenReturn(List.of(new UserPermission().withUser(
+        new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
+        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
-    when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(
-        new UserPermission()
-            .withUser(new User().withUserId(USER_ID).withEmail(USER_EMAIL).withName(USER_NAME).withDefaultWorkspaceId(workspaceId))
-            .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN)),
-        new UserPermission()
-            .withUser(new User().withUserId(USER_ID).withEmail(USER_EMAIL).withName(USER_NAME).withDefaultWorkspaceId(workspaceId))
-            .withPermission(new Permission().withPermissionId(PERMISSION2_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
+    var result = userHandler.listInstanceAdminUsers();
 
-    var expectedListResult =
-        new WorkspaceUserReadList().users(List.of(
-            new WorkspaceUserRead()
-                .name(USER_NAME)
-                .isDefaultWorkspace(true)
-                .userId(USER_ID)
-                .email(USER_EMAIL)
-                .workspaceId(workspaceId)
-                .permissionId(PERMISSION2_ID)
-                .permissionType(
-                    io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
+    var expectedResult = new UserWithPermissionInfoReadList().users(List.of(
+        new io.airbyte.api.model.generated.UserWithPermissionInfoRead().name(USER_NAME).userId(USER_ID).email(USER_EMAIL)
+            .permissionId(PERMISSION1_ID)));
+    assertEquals(expectedResult, result);
 
-    var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
-    assertEquals(expectedListResult, result);
   }
 
   @Nested

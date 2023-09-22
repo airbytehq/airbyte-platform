@@ -22,11 +22,9 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.server.handlers.helpers.PermissionMerger;
 import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
-import io.airbyte.config.Permission;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
@@ -38,8 +36,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -274,7 +270,13 @@ public class UserHandler {
 
   public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
-    return buildUserWithPermissionInfoReadList(userPermissions);
+    return new UserWithPermissionInfoReadList().users(userPermissions.stream()
+        .map(userPermission -> new UserWithPermissionInfoRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
+            .permissionId(userPermission.getPermission().getPermissionId()))
+        .collect(Collectors.toList()));
   }
 
   public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
@@ -324,53 +326,35 @@ public class UserHandler {
     return createdUser;
   }
 
-  private Map<User, Permission> collectUserPermissionToMap(final List<UserPermission> userPermissions) {
-    return userPermissions.stream()
-        .collect(Collectors.toMap(
-            UserPermission::getUser,
-            (UserPermission userPermission) -> userPermission.getPermission(),
-            (permission1, permission2) -> PermissionMerger.pickHigherPermission(permission1, permission2)));
-  }
-
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
 
     return new WorkspaceUserReadList().users(
-        collectUserPermissionToMap(userPermissions)
-            .entrySet().stream()
-            .map((Entry<User, Permission> entry) -> new WorkspaceUserRead()
-                .userId(entry.getKey().getUserId())
-                .email(entry.getKey().getEmail())
-                .name(entry.getKey().getName())
-                .isDefaultWorkspace(workspaceId.equals(entry.getKey().getDefaultWorkspaceId()))
+        userPermissions
+            .stream()
+            .map(userPermission -> new WorkspaceUserRead()
+                .userId(userPermission.getUser().getUserId())
+                .email(userPermission.getUser().getEmail())
+                .name(userPermission.getUser().getName())
+                .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
                 .workspaceId(workspaceId)
-                .permissionId(entry.getValue().getPermissionId())
+                .permissionId(userPermission.getPermission().getPermissionId())
                 .permissionType(
-                    Enums.toEnum(entry.getValue().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
-            .collect(Collectors.toList()));
-  }
-
-  private UserWithPermissionInfoReadList buildUserWithPermissionInfoReadList(final List<UserPermission> userPermissions) {
-    return new UserWithPermissionInfoReadList().users(
-        collectUserPermissionToMap(userPermissions)
-            .entrySet().stream()
-            .map((Entry<User, Permission> entry) -> new UserWithPermissionInfoRead()
-                .userId(entry.getKey().getUserId())
-                .email(entry.getKey().getEmail())
-                .name(entry.getKey().getName())
-                .permissionId(entry.getValue().getPermissionId()))
+                    Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
+                        .get()))
             .collect(Collectors.toList()));
   }
 
   private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
-    return new OrganizationUserReadList().users(collectUserPermissionToMap(userPermissions)
-        .entrySet().stream()
-        .map((Entry<User, Permission> entry) -> new OrganizationUserRead()
-            .userId(entry.getKey().getUserId())
-            .email(entry.getKey().getEmail())
-            .name(entry.getKey().getName())
+    return new OrganizationUserReadList().users(userPermissions
+        .stream()
+        .map(userPermission -> new OrganizationUserRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
             .organizationId(organizationId)
-            .permissionId(entry.getValue().getPermissionId())
-            .permissionType(Enums.toEnum(entry.getValue().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
+            .permissionId(userPermission.getPermission().getPermissionId())
+            .permissionType(
+                Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
         .collect(Collectors.toList()));
   }
 
