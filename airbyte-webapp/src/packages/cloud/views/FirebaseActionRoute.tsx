@@ -77,7 +77,7 @@ export const FirebaseActionRoute: React.FC = () => {
         .otherwise(() => (
           <Navigate to="/" replace />
         ))}
-      <LoginSignupNavigation to="login" />
+      <LoginSignupNavigation type="login" />
     </AuthLayout>
   );
 };

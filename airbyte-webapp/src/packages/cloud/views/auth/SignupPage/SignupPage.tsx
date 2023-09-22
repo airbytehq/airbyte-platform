@@ -3,7 +3,7 @@ import { faCheckCircle, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect } from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
@@ -13,7 +13,6 @@ import { Heading } from "components/ui/Heading";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { trackPageview } from "core/utils/fathom";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";
@@ -41,12 +40,15 @@ const SignupPage: React.FC<SignupPageProps> = () => {
     trackPageview();
   }, []);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const navigate = useNavigate();
-
-  const switchSignupMethod = () => {
-    navigate(searchParams.get("method") ? CloudRoutes.Signup : `${CloudRoutes.Signup}?method=email`);
+  const setSignupMethod = (method?: "email") => {
+    if (method) {
+      searchParams.set("method", method);
+    } else {
+      searchParams.delete("method");
+    }
+    setSearchParams(searchParams);
   };
 
   return (
@@ -70,14 +72,24 @@ const SignupPage: React.FC<SignupPageProps> = () => {
       {searchParams.get("method") === "email" ? (
         <>
           {signUp && <SignupForm signUp={signUp} />}
-          <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faGoogle} />}>
+          <Button
+            onClick={() => setSignupMethod()}
+            variant="clear"
+            size="sm"
+            icon={<FontAwesomeIcon icon={faGoogle} />}
+          >
             <FormattedMessage id="signup.method.oauth" />
           </Button>
         </>
       ) : (
         <>
           {loginWithOAuth && <OAuthLogin loginWithOAuth={loginWithOAuth} />}
-          <Button onClick={switchSignupMethod} variant="clear" size="sm" icon={<FontAwesomeIcon icon={faEnvelope} />}>
+          <Button
+            onClick={() => setSignupMethod("email")}
+            variant="clear"
+            size="sm"
+            icon={<FontAwesomeIcon icon={faEnvelope} />}
+          >
             <FormattedMessage id="signup.method.email" />
           </Button>
         </>
@@ -85,7 +97,7 @@ const SignupPage: React.FC<SignupPageProps> = () => {
 
       <Disclaimer />
 
-      <LoginSignupNavigation to="login" />
+      <LoginSignupNavigation type="login" />
     </FlexContainer>
   );
 };

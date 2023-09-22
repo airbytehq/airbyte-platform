@@ -1,5 +1,5 @@
 import React, { PropsWithChildren, Suspense, useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -131,7 +131,16 @@ export const Routing: React.FC = () => {
   const { login, requirePasswordReset } = useAuthService();
   const { user, inited, providers, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
-  const { pathname } = useLocation();
+  const { pathname: originalPathname, search, hash } = useLocation();
+
+  const loginRedirectSearchParam = `${createSearchParams({
+    loginRedirect: `${originalPathname}${search}${hash}`,
+  })}`;
+
+  const loginRedirectTo =
+    loggedOut && (originalPathname === "/" || originalPathname.includes("/settings/account"))
+      ? { pathname: CloudRoutes.Login }
+      : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
 
   useBuildUpdateCheck();
 
@@ -159,7 +168,6 @@ export const Routing: React.FC = () => {
   if (!inited) {
     return <LoadingPage />;
   }
-
   return (
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
@@ -191,16 +199,7 @@ export const Routing: React.FC = () => {
                           />
                         )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
-                        <Route
-                          path="*"
-                          element={
-                            <Navigate
-                              to={`${CloudRoutes.Login}${
-                                loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                              }`}
-                            />
-                          }
-                        />
+                        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>
                     </Suspense>
                   </AuthLayout>
