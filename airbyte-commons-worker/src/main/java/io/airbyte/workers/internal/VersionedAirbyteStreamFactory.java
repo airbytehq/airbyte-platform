@@ -364,7 +364,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     try (final var mdcScope = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
-        throw new IllegalStateException("Record is too big");
+        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
       } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
         logger.debug(line);
