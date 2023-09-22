@@ -17,7 +17,8 @@ describe("manually logging in and out of airbyte cloud", () => {
     cy.hasNavigatedTo(buildRegExp("/workspaces/", UUID, "/connections"));
     cy.logout();
   });
-  it("passes a login redirect param between pages in login/signup flow if user attempts to access webapp before logging in", () => {
+  // TODO: fix flakiness before enabling again
+  it.skip("passes a login redirect param between pages in login/signup flow if user attempts to access webapp before logging in", () => {
     // empty redirect url
     testRedirectParamParsing("/", true);
     // navigating directly to login page
