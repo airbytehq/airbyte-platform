@@ -33,6 +33,7 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
@@ -102,8 +103,20 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    StandardSyncOutput syncOutput =
-        replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
+    // In the default version, we pass the entire sync input into the replication activity. In the new
+    // version, we pass
+    // a single ReplicationActivityInput object. This will let us diverge, and generally make it easier
+    // to maintain.
+    final var version = Workflow.getVersion("SEPARATE_REPLICATION_INPUT", Workflow.DEFAULT_VERSION, 1);
+    StandardSyncOutput syncOutput;
+    if (version == Workflow.DEFAULT_VERSION) {
+      syncOutput =
+          replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
+    } else {
+      syncOutput =
+          replicationActivity
+              .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue));
+    }
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -172,6 +185,31 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncOutput.getOutputCatalog(),
         syncInput.getWorkspaceId(),
         syncInput.getConnectionId());
+  }
+
+  private ReplicationActivityInput generateReplicationActivityInput(StandardSyncInput syncInput,
+                                                                    final JobRunConfig jobRunConfig,
+                                                                    final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                    final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                    final String taskQueue) {
+    return new ReplicationActivityInput(
+        syncInput,
+        syncInput.getSourceId(),
+        syncInput.getDestinationId(),
+        syncInput.getSourceConfiguration(),
+        syncInput.getDestinationConfiguration(),
+        jobRunConfig,
+        sourceLauncherConfig,
+        destinationLauncherConfig,
+        syncInput.getSyncResourceRequirements(),
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getNormalizeInDestinationContainer(),
+        taskQueue,
+        syncInput.getIsReset(),
+        syncInput.getNamespaceDefinition(),
+        syncInput.getNamespaceFormat(),
+        syncInput.getPrefix());
   }
 
 }

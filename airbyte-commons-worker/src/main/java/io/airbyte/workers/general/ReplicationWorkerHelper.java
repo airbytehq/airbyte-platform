@@ -15,7 +15,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
@@ -27,6 +26,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -132,8 +132,8 @@ class ReplicationWorkerHelper {
         replicationContext.jobId().toString(), jobRoot);
   }
 
-  public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {
-    destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
+  public void startDestination(final AirbyteDestination destination, final ReplicationInput replicationInput, final Path jobRoot) {
+    destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(replicationInput);
     destinationConfig.setCatalog(mapper.mapCatalog(destinationConfig.getCatalog()));
     timeTracker.trackDestinationWriteStartTime();
 
@@ -144,8 +144,8 @@ class ReplicationWorkerHelper {
     }
   }
 
-  public void startSource(final AirbyteSource source, final StandardSyncInput syncInput, final Path jobRoot) {
-    final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
+  public void startSource(final AirbyteSource source, final ReplicationInput replicationInput, final Path jobRoot) {
+    final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(replicationInput);
     try {
       fieldSelector.populateFields(sourceConfig.getCatalog());
       timeTracker.trackSourceReadStartTime();

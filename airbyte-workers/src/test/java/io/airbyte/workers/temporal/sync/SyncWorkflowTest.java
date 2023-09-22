@@ -37,6 +37,7 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
@@ -245,6 +246,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -270,6 +272,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doThrow(new IllegalArgumentException("induced exception")).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
 
@@ -287,6 +290,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationFailOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -312,6 +316,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doThrow(new IllegalArgumentException("induced exception")).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -337,6 +342,10 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doAnswer(ignored -> {
+      cancelWorkflow();
+      return replicationSuccessOutput;
+    }).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
 
@@ -354,6 +363,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doAnswer(ignored -> {
       cancelWorkflow();
@@ -399,6 +409,7 @@ class SyncWorkflowTest {
   @Test
   void testWebhookOperation() {
     when(replicationActivity.replicate(any(), any(), any(), any(), any())).thenReturn(new StandardSyncOutput());
+    when(replicationActivity.replicateV2(any())).thenReturn(new StandardSyncOutput());
     final StandardSyncOperation webhookOperation = new StandardSyncOperation()
         .withOperationId(UUID.randomUUID())
         .withOperatorType(OperatorType.WEBHOOK)
@@ -456,11 +467,24 @@ class SyncWorkflowTest {
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity, final StandardSyncInput syncInput) {
-    verify(replicationActivity).replicate(
+    verify(replicationActivity).replicateV2(new ReplicationActivityInput(
+        syncInput,
+        syncInput.getSourceId(),
+        syncInput.getDestinationId(),
+        syncInput.getSourceConfiguration(),
+        syncInput.getDestinationConfiguration(),
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
+        syncInput.getSyncResourceRequirements(),
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getNormalizeInDestinationContainer(),
+        SYNC_QUEUE,
+        syncInput.getIsReset(),
+        syncInput.getNamespaceDefinition(),
+        syncInput.getNamespaceFormat(),
+        syncInput.getPrefix()));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

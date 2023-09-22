@@ -20,7 +20,7 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncInput;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.normalization.NormalizationRunner;
@@ -57,7 +57,7 @@ class DefaultNormalizationWorkerTest {
     jobRoot = Files.createDirectories(Files.createTempDirectory("test").resolve(WORKSPACE_ROOT));
     normalizationRoot = jobRoot.resolve("normalize");
 
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
+    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
     normalizationInput = new NormalizationInput()
         .withDestinationConfiguration(syncPair.getValue().getDestinationConfiguration())
         .withCatalog(syncPair.getValue().getCatalog())

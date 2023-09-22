@@ -104,38 +104,7 @@ class BaseConfigDatabaseTest {
    * @throws SQLException - failure in truncate query.
    */
   static void truncateAllTables() throws SQLException {
-    database.query(ctx -> ctx
-        .execute(
-            """
-            TRUNCATE TABLE
-              active_declarative_manifest,
-              actor,
-              actor_catalog,
-              actor_catalog_fetch_event,
-              actor_definition,
-              actor_definition_breaking_change,
-              actor_definition_version,
-              actor_definition_workspace_grant,
-              actor_definition_config_injection,
-              actor_oauth_parameter,
-              connection,
-              connection_operation,
-              connector_builder_project,
-              declarative_manifest,
-              notification_configuration,
-              operation,
-              organization,
-              permission,
-              schema_management,
-              state,
-              stream_reset,
-              \"user\",
-              user_invitation,
-              sso_config,
-              organization_email_domain,
-              workspace,
-              workspace_service_account
-            """));
+    Databases.truncateConfigDatabase(database);
   }
 
   private static void createDbContainer() {

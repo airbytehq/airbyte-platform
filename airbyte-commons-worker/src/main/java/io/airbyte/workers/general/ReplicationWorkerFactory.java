@@ -13,7 +13,6 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -33,6 +32,7 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
@@ -110,7 +110,7 @@ public class ReplicationWorkerFactory {
   /**
    * Create a ReplicationWorker.
    */
-  public ReplicationWorker create(final StandardSyncInput syncInput,
+  public ReplicationWorker create(final ReplicationInput replicationInput,
                                   final JobRunConfig jobRunConfig,
                                   final IntegrationLauncherConfig sourceLauncherConfig,
                                   final IntegrationLauncherConfig destinationLauncherConfig,
@@ -118,39 +118,39 @@ public class ReplicationWorkerFactory {
       throws ApiException {
     final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
         () -> sourceApi.getSource(
-            new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+            new SourceIdRequestBody().sourceId(replicationInput.getSourceId())).getSourceDefinitionId(),
         "get the source definition for feature flag checks");
     final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceDefinitionId, sourceDefinitionApi);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = createHeartbeatTimeoutChaperone(heartbeatMonitor,
-        featureFlagClient, syncInput, metricClient);
-    final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(syncInput);
+        featureFlagClient, replicationInput, metricClient);
+    final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
     // Enable concurrent stream reads for testing purposes
-    maybeEnableConcurrentStreamReads(sourceLauncherConfig, syncInput);
+    maybeEnableConcurrentStreamReads(sourceLauncherConfig, replicationInput);
 
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
-    final var airbyteSource = syncInput.getIsReset()
+    final var airbyteSource = replicationInput.getIsReset()
         ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
         : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
-            syncInput.getSyncResourceRequirements(), syncInput.getCatalog(), heartbeatMonitor);
+            replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        syncInput.getSyncResourceRequirements(), syncInput.getCatalog());
+        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog());
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
     final FieldSelector fieldSelector =
-        createFieldSelector(recordSchemaValidator, metricReporter, featureFlagClient, syncInput.getWorkspaceId(), sourceDefinitionId);
+        createFieldSelector(recordSchemaValidator, metricReporter, featureFlagClient, replicationInput.getWorkspaceId(), sourceDefinitionId);
 
     log.info("Setting up replication worker...");
-    final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
+    final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
     final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
-        featureFlagClient, jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
+        featureFlagClient, jobRunConfig, replicationInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
         onReplicationRunning, metricClient);
   }
 
@@ -160,10 +160,10 @@ public class ReplicationWorkerFactory {
    * environment variables passed to the source.
    *
    * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
-   * @param syncInput The input for the current sync.
+   * @param replicationInput The input for the current sync.
    */
-  private void maybeEnableConcurrentStreamReads(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
-    final Boolean isEnabled = shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput);
+  private void maybeEnableConcurrentStreamReads(final IntegrationLauncherConfig sourceLauncherConfig, final ReplicationInput replicationInput) {
+    final Boolean isEnabled = shouldEnableConcurrentSourceRead(sourceLauncherConfig, replicationInput.getConnectionId());
     final Map<String, String> concurrentReadEnvVars = Map.of("CONCURRENT_SOURCE_STREAM_READ", isEnabled.toString());
     log.info("Concurrent stream read enabled? {}", isEnabled);
     if (CollectionUtils.isNotEmpty(sourceLauncherConfig.getAdditionalEnvironmentVariables())) {
@@ -178,12 +178,12 @@ public class ReplicationWorkerFactory {
    * feature, connection ID associated with the current sync and the associated source Docker image.
    *
    * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
-   * @param syncInput The input for the current sync.
+   * @param connectionId The id of the connection being synced.
    * @return {@code true} if concurrent source reads should be enabled or {@code false} otherwise.
    */
-  private Boolean shouldEnableConcurrentSourceRead(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
+  private Boolean shouldEnableConcurrentSourceRead(final IntegrationLauncherConfig sourceLauncherConfig, final UUID connectionId) {
     if (sourceLauncherConfig.getDockerImage().startsWith("airbyte/source-mysql")) {
-      return featureFlagClient.boolVariation(ConcurrentSourceStreamRead.INSTANCE, new Connection(syncInput.getConnectionId()));
+      return featureFlagClient.boolVariation(ConcurrentSourceStreamRead.INSTANCE, new Connection(connectionId));
     } else {
       return false;
     }
@@ -210,13 +210,13 @@ public class ReplicationWorkerFactory {
    */
   private static HeartbeatTimeoutChaperone createHeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
                                                                            final FeatureFlagClient featureFlagClient,
-                                                                           final StandardSyncInput syncInput,
+                                                                           final ReplicationInput replicationInput,
                                                                            final MetricClient metricClient) {
     return new HeartbeatTimeoutChaperone(heartbeatMonitor,
         HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
         featureFlagClient,
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
+        replicationInput.getWorkspaceId(),
+        replicationInput.getConnectionId(),
         metricClient);
   }
 
@@ -231,8 +231,8 @@ public class ReplicationWorkerFactory {
   /**
    * Create RecordSchemaValidator.
    */
-  private static RecordSchemaValidator createRecordSchemaValidator(final StandardSyncInput syncInput) {
-    return new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+  private static RecordSchemaValidator createRecordSchemaValidator(final ReplicationInput replicationInput) {
+    return new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(replicationInput.getCatalog()));
   }
 
   private static FieldSelector createFieldSelector(final RecordSchemaValidator recordSchemaValidator,
@@ -259,12 +259,12 @@ public class ReplicationWorkerFactory {
                                                            final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
                                                            final FeatureFlagClient featureFlagClient,
                                                            final JobRunConfig jobRunConfig,
-                                                           final StandardSyncInput syncInput,
+                                                           final ReplicationInput replicationInput,
                                                            final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                            final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper,
                                                            final VoidCallable onReplicationRunning,
                                                            final MetricClient metricClient) {
-    final Context flagContext = getFeatureFlagContext(syncInput);
+    final Context flagContext = getFeatureFlagContext(replicationInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
         workerImpl,
@@ -272,9 +272,9 @@ public class ReplicationWorkerFactory {
         Math.toIntExact(jobRunConfig.getAttemptId()),
         source,
         new NamespacingMapper(
-            syncInput.getNamespaceDefinition(),
-            syncInput.getNamespaceFormat(),
-            syncInput.getPrefix()),
+            replicationInput.getNamespaceDefinition(),
+            replicationInput.getNamespaceFormat(),
+            replicationInput.getPrefix()),
         destination,
         messageTracker,
         syncPersistence,
@@ -288,24 +288,24 @@ public class ReplicationWorkerFactory {
         metricClient);
   }
 
-  private static Context getFeatureFlagContext(final StandardSyncInput syncInput) {
+  private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
     final List<Context> contexts = new ArrayList<>();
-    if (syncInput.getWorkspaceId() != null) {
-      contexts.add(new Workspace(syncInput.getWorkspaceId()));
+    if (replicationInput.getWorkspaceId() != null) {
+      contexts.add(new Workspace(replicationInput.getWorkspaceId()));
     }
-    if (syncInput.getConnectionId() != null) {
-      contexts.add(new Connection(syncInput.getConnectionId()));
+    if (replicationInput.getConnectionId() != null) {
+      contexts.add(new Connection(replicationInput.getConnectionId()));
     }
-    if (syncInput.getSourceId() != null) {
-      contexts.add(new Source(syncInput.getSourceId()));
+    if (replicationInput.getSourceId() != null) {
+      contexts.add(new Source(replicationInput.getSourceId()));
     }
-    if (syncInput.getDestinationId() != null) {
-      contexts.add(new Destination(syncInput.getDestinationId()));
+    if (replicationInput.getDestinationId() != null) {
+      contexts.add(new Destination(replicationInput.getDestinationId()));
     }
-    if (syncInput.getSyncResourceRequirements() != null
-        && syncInput.getSyncResourceRequirements().getConfigKey() != null
-        && syncInput.getSyncResourceRequirements().getConfigKey().getSubType() != null) {
-      contexts.add(new SourceType(syncInput.getSyncResourceRequirements().getConfigKey().getSubType()));
+    if (replicationInput.getSyncResourceRequirements() != null
+        && replicationInput.getSyncResourceRequirements().getConfigKey() != null
+        && replicationInput.getSyncResourceRequirements().getConfigKey().getSubType() != null) {
+      contexts.add(new SourceType(replicationInput.getSyncResourceRequirements().getConfigKey().getSubType()));
     }
     return new Multi(contexts);
   }
@@ -343,10 +343,10 @@ public class ReplicationWorkerFactory {
    * Create SyncPersistence.
    */
   private static SyncPersistence createSyncPersistence(final SyncPersistenceFactory syncPersistenceFactory,
-                                                       final StandardSyncInput syncInput,
+                                                       final ReplicationInput replicationInput,
                                                        final IntegrationLauncherConfig sourceLauncherConfig) {
-    return syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
-        sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog());
+    return syncPersistenceFactory.get(replicationInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+        sourceLauncherConfig.getAttemptId().intValue(), replicationInput.getCatalog());
   }
 
 }

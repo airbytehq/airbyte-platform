@@ -58,7 +58,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     doThrow(new RuntimeException("Failure in readFromSource")).when(source).attemptRead();
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
-    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+    final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
   }
 
@@ -69,7 +69,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     doThrow(new RuntimeException("Failure in processMessage")).when(messageTracker).acceptFromSource(any());
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
-    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+    final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
   }
 
@@ -80,7 +80,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     doThrow(new RuntimeException("Failure in writeToDest")).when(destination).accept(any());
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
-    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+    final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
   }
 
@@ -91,7 +91,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     doThrow(new RuntimeException("Failure in readFromDest")).when(destination).attemptRead();
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
-    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+    final ReplicationOutput output = worker.run(replicationInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
   }
 

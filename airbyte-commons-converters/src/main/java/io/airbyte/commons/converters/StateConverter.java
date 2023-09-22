@@ -7,6 +7,7 @@ package io.airbyte.commons.converters;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.GlobalState;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamState;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.StateType;
@@ -39,6 +40,37 @@ public class StateConverter {
         .state(stateWrapper != null ? stateWrapper.getLegacyState() : null)
         .globalState(globalStateToApi(stateWrapper).orElse(null))
         .streamState(streamStateToApi(stateWrapper).orElse(null));
+  }
+
+  /**
+   * Convert the client model to the API model.
+   *
+   * @param clientState the client representation
+   * @return the API representation
+   */
+  public static ConnectionState fromClientToApi(final io.airbyte.api.client.model.generated.ConnectionState clientState) {
+    return new ConnectionState()
+        .connectionId(clientState.getConnectionId())
+        .stateType(Enums.convertTo(clientState.getStateType(), ConnectionStateType.class))
+        .state(clientState.getState())
+        .globalState(clientState.getGlobalState() == null ? null : globalStateFromClientToApi(clientState.getGlobalState()))
+        .streamState(clientState.getStreamState() == null ? null
+            : clientState.getStreamState().stream().map(StateConverter::streamStateFromClientToApi).toList());
+
+  }
+
+  private static GlobalState globalStateFromClientToApi(io.airbyte.api.client.model.generated.GlobalState clientGlobalState) {
+    return new GlobalState()
+        .sharedState(clientGlobalState.getSharedState())
+        .streamStates(clientGlobalState.getStreamStates().stream().map(StateConverter::streamStateFromClientToApi).toList());
+  }
+
+  private static StreamState streamStateFromClientToApi(io.airbyte.api.client.model.generated.StreamState clientStreamState) {
+    return new StreamState()
+        .streamDescriptor(new StreamDescriptor()
+            .name(clientStreamState.getStreamDescriptor().getName())
+            .namespace(clientStreamState.getStreamDescriptor().getNamespace()))
+        .streamState(clientStreamState.getStreamState());
   }
 
   /**

@@ -6,9 +6,9 @@ package io.airbyte.workers.orchestrator;
 
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.temporal.activity.ActivityExecutionContext;
 import java.util.function.Supplier;
@@ -21,11 +21,11 @@ import java.util.function.Supplier;
  */
 public interface OrchestratorHandleFactory {
 
-  CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                  final IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                  final JobRunConfig jobRunConfig,
-                                                                                  final StandardSyncInput syncInput,
-                                                                                  // This shouldn't be here but it is required for the Kube path.
-                                                                                  final Supplier<ActivityExecutionContext> activityContext);
+  CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                                 final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                                 final JobRunConfig jobRunConfig,
+                                                                                 final ReplicationInput replicationInput,
+                                                                                 // This shouldn't be here but it is required for the Kube path.
+                                                                                 final Supplier<ActivityExecutionContext> activityContext);
 
 }

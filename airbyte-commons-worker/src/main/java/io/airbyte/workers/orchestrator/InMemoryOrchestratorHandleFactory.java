@@ -6,9 +6,9 @@ package io.airbyte.workers.orchestrator;
 
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.micronaut.context.annotation.Requires;
@@ -34,16 +34,18 @@ public class InMemoryOrchestratorHandleFactory implements OrchestratorHandleFact
   }
 
   @Override
-  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                         IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                         JobRunConfig jobRunConfig,
-                                                                                         StandardSyncInput syncInput,
-                                                                                         final Supplier<ActivityExecutionContext> activityContext) {
-    return () -> replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, /*
-                                                                                                                            * this is used to track
-                                                                                                                            * async state, but we
-                                                                                                                            * don't do that in-memory
-                                                                                                                            */() -> {});
+  public CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> create(IntegrationLauncherConfig sourceLauncherConfig,
+                                                                                        IntegrationLauncherConfig destinationLauncherConfig,
+                                                                                        JobRunConfig jobRunConfig,
+                                                                                        ReplicationInput replicationInput,
+                                                                                        final Supplier<ActivityExecutionContext> activityContext) {
+    return () -> replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, /*
+                                                                                                                                   * this is used to
+                                                                                                                                   * track async
+                                                                                                                                   * state, but we
+                                                                                                                                   * don't do that
+                                                                                                                                   * in-memory
+                                                                                                                                   */() -> {});
   }
 
 }

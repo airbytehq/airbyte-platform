@@ -109,6 +109,12 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
 
+/**
+ * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
+ * the sync input.
+ */
+object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-sync-inputs", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
