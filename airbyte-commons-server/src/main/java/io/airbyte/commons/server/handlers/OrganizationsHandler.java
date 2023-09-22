@@ -4,21 +4,27 @@
 
 package io.airbyte.commons.server.handlers;
 
+import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody;
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
+import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import org.jooq.tools.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +58,7 @@ public class OrganizationsHandler {
     final String email = organizationCreateRequestBody.getEmail();
     Organization organization = new Organization().withOrganizationId(uuidGenerator.get()).withName(organizationName).withEmail(email);
     organizationPersistence.createOrganization(organization);
+    // TODO: We should also create an OrgAdmin permission here.
     return buildOrganizationRead(organization);
   }
 
@@ -80,7 +87,31 @@ public class OrganizationsHandler {
     return buildOrganizationRead(organization.get());
   }
 
-  private OrganizationRead buildOrganizationRead(final Organization organization) {
+  public OrganizationReadList listOrganizationsByUser(final ListOrganizationsByUserRequestBody request) throws IOException {
+
+    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
+    List<OrganizationRead> organizationReadList;
+    if (request.getPagination() != null) {
+      organizationReadList = organizationPersistence
+          .listOrganizationsByUserIdPaginated(
+              new ResourcesByUserQueryPaginated(request.getUserId(),
+                  false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
+              keyword)
+          .stream()
+          .map(OrganizationsHandler::buildOrganizationRead)
+          .collect(Collectors.toList());
+    } else {
+      organizationReadList = organizationPersistence
+          .listOrganizationsByUserId(request.getUserId(), keyword)
+          .stream()
+          .map(OrganizationsHandler::buildOrganizationRead)
+          .collect(Collectors.toList());
+    }
+    return new OrganizationReadList().organizations(organizationReadList);
+
+  }
+
+  private static OrganizationRead buildOrganizationRead(final Organization organization) {
     return new OrganizationRead()
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
