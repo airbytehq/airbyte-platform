@@ -5,17 +5,24 @@
 package io.airbyte.notification;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,41 +39,44 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomerioNotificationClient extends NotificationClient {
 
+  private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+
   private static final Logger LOGGER = LoggerFactory.getLogger(CustomerioNotificationClient.class);
 
   private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "7";
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
+  private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
+  private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
   private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
   private static final String SYNC_FAILURE_MESSAGE_ID = "19";
   private static final String SYNC_FAILURE_TEMPLATE_PATH = "customerio/sync_failure_template.json";
 
-  private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "https://api.customer.io/v1/send/email";
+  private static final String CUSTOMERIO_BASE_URL = "https://api.customer.io/";
+  private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "v1/send/email";
+  private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/campaigns/%s/triggers";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
   private static final String CUSTOMERIO_TYPE = "customerio";
 
-  private final HttpClient httpClient;
+  private final String baseUrl;
+  private final OkHttpClient okHttpClient;
   private final String apiToken;
-  private final String emailApiEndpoint;
 
   public CustomerioNotificationClient() {
     final EnvConfigs configs = new EnvConfigs();
     this.apiToken = configs.getCustomerIoKey();
-    this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
-    this.httpClient = HttpClient.newBuilder()
-        .version(HttpClient.Version.HTTP_2)
-        .build();
+    this.okHttpClient = new OkHttpClient();
+    this.baseUrl = CUSTOMERIO_BASE_URL;
   }
 
   @VisibleForTesting
   public CustomerioNotificationClient(final String apiToken,
-                                      final String emailApiEndpoint,
-                                      final HttpClient httpClient) {
+                                      final String baseUrl) {
     this.apiToken = apiToken;
-    this.emailApiEndpoint = emailApiEndpoint;
-    this.httpClient = httpClient;
+    this.baseUrl = baseUrl;
+    this.okHttpClient = new OkHttpClient();
   }
 
   @Override
@@ -78,7 +88,7 @@ public class CustomerioNotificationClient extends NotificationClient {
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
-      throws IOException, InterruptedException {
+      throws IOException {
     final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
         receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
     return notifyByEmail(requestBody);
@@ -93,7 +103,7 @@ public class CustomerioNotificationClient extends NotificationClient {
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
-      throws IOException, InterruptedException {
+      throws IOException {
     final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
         receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
     return notifyByEmail(requestBody);
@@ -109,7 +119,7 @@ public class CustomerioNotificationClient extends NotificationClient {
                                           final String jobDescription,
                                           final UUID workspaceId,
                                           final UUID connectionId)
-      throws IOException, InterruptedException {
+      throws IOException {
     final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_TRANSACTION_MESSAGE_ID, receiverEmail,
         receiverEmail, sourceConnector, destinationConnector, jobDescription, workspaceId.toString(), connectionId.toString());
     return notifyByEmail(requestBody);
@@ -122,19 +132,48 @@ public class CustomerioNotificationClient extends NotificationClient {
                                                 final String jobDescription,
                                                 final UUID workspaceId,
                                                 final UUID connectionId)
-      throws IOException, InterruptedException {
+      throws IOException {
     final String requestBody = renderTemplate(AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID, receiverEmail,
         receiverEmail, sourceConnector, destinationConnector, jobDescription, workspaceId.toString(), connectionId.toString());
     return notifyByEmail(requestBody);
   }
 
   @Override
-  public boolean notifySuccess(final String message) throws IOException, InterruptedException {
+  public boolean notifyBreakingChangeWarning(final List<String> receiverEmails,
+                                             final String connectorName,
+                                             final ActorType actorType,
+                                             final ActorDefinitionBreakingChange breakingChange)
+      throws IOException {
+    return notifyByEmailBroadcast(BREAKING_CHANGE_WARNING_BROADCAST_ID, receiverEmails, Map.of(
+        "connector_name", connectorName,
+        "connector_type", actorType.value(),
+        "connector_version_new", breakingChange.getVersion().serialize(),
+        "connector_version_upgrade_deadline", breakingChange.getUpgradeDeadline(),
+        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+  }
+
+  @Override
+  public boolean notifyBreakingChangeSyncsDisabled(final List<String> receiverEmails,
+                                                   final String connectorName,
+                                                   final ActorType actorType,
+                                                   final ActorDefinitionBreakingChange breakingChange)
+      throws IOException {
+    return notifyByEmailBroadcast(BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID, receiverEmails, Map.of(
+        "connector_name", connectorName,
+        "connector_type", actorType.value(),
+        "connector_version_new", breakingChange.getVersion().serialize(),
+        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
+  }
+
+  @Override
+  public boolean notifySuccess(final String message) {
     throw new NotImplementedException();
   }
 
   @Override
-  public boolean notifyFailure(final String message) throws IOException, InterruptedException {
+  public boolean notifyFailure(final String message) {
     throw new NotImplementedException();
   }
 
@@ -151,34 +190,55 @@ public class CustomerioNotificationClient extends NotificationClient {
     return CUSTOMERIO_TYPE;
   }
 
-  private boolean notifyByEmail(final String requestBody) throws IOException, InterruptedException {
+  private boolean notifyByEmail(final String requestPayload) throws IOException {
+    return sendNotifyRequest(CUSTOMERIO_EMAIL_API_ENDPOINT, requestPayload);
+  }
+
+  @VisibleForTesting
+  boolean notifyByEmailBroadcast(final String broadcastId, final List<String> emails, final Map<String, String> data) throws IOException {
+    if (emails.isEmpty()) {
+      LOGGER.info("No emails to notify. Skipping email notification.");
+      return false;
+    }
+
+    final String broadcastTriggerUrl = String.format(CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE, broadcastId);
+
+    final String payload = Jsons.serialize(Map.of(
+        "emails", emails,
+        "data", data,
+        "email_add_duplicates", true,
+        "email_ignore_missing", true,
+        "id_ignore_missing", true));
+
+    return sendNotifyRequest(broadcastTriggerUrl, payload);
+  }
+
+  @VisibleForTesting
+  boolean sendNotifyRequest(final String urlEndpoint, final String payload) throws IOException {
     if (StringUtils.isEmpty(apiToken)) {
       LOGGER.info("Customer.io API token is empty. Skipping email notification.");
       return false;
     }
-    final HttpRequest request = HttpRequest.newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-        .uri(URI.create(emailApiEndpoint))
-        .header("Content-Type", "application/json")
-        .header("Authorization", "Bearer " + apiToken)
+
+    final String url = baseUrl + urlEndpoint;
+    final RequestBody requestBody = RequestBody.create(payload, JSON);
+
+    final okhttp3.Request request = new Request.Builder()
+        .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+        .addHeader(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", apiToken))
+        .url(url)
+        .post(requestBody)
         .build();
 
-    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-    if (isSuccessfulHttpResponse(response.statusCode())) {
-      LOGGER.info("Successful notification ({}): {}", response.statusCode(), response.body());
-      return true;
-    } else {
-      final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.statusCode(), response.body());
-      throw new IOException(errorMessage);
+    try (final Response response = okHttpClient.newCall(request).execute()) {
+      if (response.isSuccessful()) {
+        LOGGER.info("Successful notification ({}): {}", response.code(), response.body());
+        return true;
+      } else {
+        final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.code(), response.body());
+        throw new IOException(errorMessage);
+      }
     }
-  }
-
-  /**
-   * Use an integer division to check successful HTTP status codes (i.e., those from 200-299), not
-   * just 200. https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
-   */
-  private static boolean isSuccessfulHttpResponse(final int httpStatusCode) {
-    return httpStatusCode / 100 == 2;
   }
 
   @Override

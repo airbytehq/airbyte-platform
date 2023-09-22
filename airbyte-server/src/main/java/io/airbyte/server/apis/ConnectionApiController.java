@@ -10,6 +10,8 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -184,6 +186,15 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/apply_schema_change")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionAutoPropagateResult applySchemaChangeForConnection(final ConnectionAutoPropagateSchemaChange request) {
+    return ApiHelper.execute(() -> connectionsHandler.applySchemaChange(request));
   }
 
 }

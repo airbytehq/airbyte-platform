@@ -5,10 +5,15 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
 import { UpdateWorkspaceNameForm } from "area/workspace/components/UpdateWorkspaceNameForm";
+import { useCurrentWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac/intent";
 
 import { DeleteWorkspace } from "./components/DeleteWorkspace";
 
 export const GeneralWorkspaceSettingsPage = () => {
+  const { workspaceId } = useCurrentWorkspace();
+  const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
+
   return (
     <FlexContainer direction="column">
       <Card title={<FormattedMessage id="settings.generalSettings" />}>
@@ -16,7 +21,7 @@ export const GeneralWorkspaceSettingsPage = () => {
           <UpdateWorkspaceNameForm />
         </Box>
       </Card>
-      <DeleteWorkspace />
+      {canDeleteWorkspace && <DeleteWorkspace />}
     </FlexContainer>
   );
 };

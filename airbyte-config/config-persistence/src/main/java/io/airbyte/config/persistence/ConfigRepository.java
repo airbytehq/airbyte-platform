@@ -337,7 +337,7 @@ public class ConfigRepository {
    * List organizations (paginated).
    *
    * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
-   * @return A List of organizations objectjs
+   * @return A List of organizations objects
    * @throws IOException you never know when you IO
    */
   public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
@@ -357,7 +357,7 @@ public class ConfigRepository {
    * Get workspace.
    *
    * @param workspaceId workspace id
-   * @param includeTombstone include tombestoned workspace
+   * @param includeTombstone include tombstoned workspace
    * @return workspace
    * @throws JsonValidationException - throws if returned sources are invalid
    * @throws IOException - you never know when you IO
@@ -374,7 +374,7 @@ public class ConfigRepository {
    * Get workspace from slug.
    *
    * @param slug to use to find the workspace
-   * @param includeTombstone include tombestoned workspace
+   * @param includeTombstone include tombstoned workspace
    * @return workspace, if present.
    * @throws IOException - you never know when you IO
    */
@@ -398,7 +398,7 @@ public class ConfigRepository {
    * Get workspace from slug.
    *
    * @param slug to use to find the workspace
-   * @param includeTombstone include tombestoned workspace
+   * @param includeTombstone include tombstoned workspace
    * @return workspace
    * @throws IOException - you never know when you IO
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
@@ -452,7 +452,7 @@ public class ConfigRepository {
    * List workspaces (paginated).
    *
    * @param resourcesQueryPaginated - contains all the information we need to paginate
-   * @return A List of StandardWorkspace objectjs
+   * @return A List of StandardWorkspace objects
    * @throws IOException you never know when you IO
    */
   public List<StandardWorkspace> listStandardWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
@@ -735,7 +735,7 @@ public class ConfigRepository {
    * List source to which we can give a grant.
    *
    * @param workspaceId workspace id
-   * @param includeTombstones include tombestoned definitions
+   * @param includeTombstones include tombstoned definitions
    * @return list of pairs from source definition and whether it can be granted
    * @throws IOException - you never know when you IO
    */
@@ -904,7 +904,7 @@ public class ConfigRepository {
    * List destinations to which we can give a grant.
    *
    * @param workspaceId workspace id
-   * @param includeTombstones include tombestoned definitions
+   * @param includeTombstones include tombstoned definitions
    * @return list of pairs from destination definition and whether it can be granted
    * @throws IOException - you never know when you IO
    */
@@ -1100,7 +1100,7 @@ public class ConfigRepository {
    * @param destinationDefinition destination definition
    * @param defaultVersion default actor definition version
    * @param scopeId workspace or organization id
-   * @param scopeType enum of workpsace or organization
+   * @param scopeType enum of workspace or organization
    * @throws IOException - you never know when you IO
    */
   public void writeCustomConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
@@ -1801,6 +1801,29 @@ public class ConfigRepository {
   }
 
   /**
+   * List connection IDs for active syncs based on the given query.
+   *
+   * @param standardSyncQuery query
+   * @return list of connection IDs
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  public List<UUID> listWorkspaceActiveSyncIds(final StandardSyncQuery standardSyncQuery) throws IOException {
+    return database.query(ctx -> ctx
+        .select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(ACTOR.WORKSPACE_ID.eq(standardSyncQuery.workspaceId)
+            .and(standardSyncQuery.destinationId == null || standardSyncQuery.destinationId.isEmpty() ? noCondition()
+                : CONNECTION.DESTINATION_ID.in(standardSyncQuery.destinationId))
+            .and(standardSyncQuery.sourceId == null || standardSyncQuery.sourceId.isEmpty() ? noCondition()
+                : CONNECTION.SOURCE_ID.in(standardSyncQuery.sourceId))
+            // includeDeleted is not relevant here because it refers to connection status deprecated,
+            // and we are only retrieving active syncs anyway
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
+        .groupBy(CONNECTION.ID)).fetchInto(UUID.class);
+  }
+
+  /**
    * List connections. Paginated.
    */
   public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(
@@ -1923,9 +1946,26 @@ public class ConfigRepository {
     return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
-  private List<NotificationConfigurationRecord> getNotificationConfigurationByConnectionIds(final List<UUID> connnectionIds) throws IOException {
+  /**
+   * Disable a list of connections by setting their status to inactive.
+   *
+   * @param connectionIds list of connection ids to disable
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  public void disableConnectionsById(final List<UUID> connectionIds) throws IOException {
+    database.transaction(ctx -> {
+      ctx.update(CONNECTION)
+          .set(CONNECTION.UPDATED_AT, OffsetDateTime.now())
+          .set(CONNECTION.STATUS, StatusType.inactive)
+          .where(CONNECTION.ID.in(connectionIds))
+          .execute();
+      return null;
+    });
+  }
+
+  private List<NotificationConfigurationRecord> getNotificationConfigurationByConnectionIds(final List<UUID> connectionIds) throws IOException {
     return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION)
-        .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.in(connnectionIds))
+        .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.in(connectionIds))
         .fetch());
   }
 
@@ -3810,7 +3850,7 @@ public class ConfigRepository {
           + ")"
           // Left join Jobs on Connection and the above MinJobIds, and only keep successful
           // sync jobs that have an associated Connection ID
-          + " SELECT j.id, j.created_at, c.id, c.created_at AS connection_created_at, min_job_id"
+          + " SELECT j.id AS job_id, j.created_at, c.id AS conn_id, c.created_at AS connection_created_at, min_job_id"
           + " FROM jobs j"
           + " LEFT JOIN connection c ON c.id = UUID(j.scope)"
           + " LEFT JOIN FirstSuccessfulJobIdByConnection min_j_ids ON j.id = min_j_ids.min_job_id"
@@ -3835,7 +3875,7 @@ public class ConfigRepository {
     // the rest of the fields are not used, we aim to keep the set small
     final Set<Long> earlySyncJobs = new HashSet<>();
     for (final Record record : result) {
-      earlySyncJobs.add((Long) record.get("id"));
+      earlySyncJobs.add((Long) record.get("job_id"));
     }
     return earlySyncJobs;
   }

@@ -4,10 +4,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useListBuilderProjects } from "core/api";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useNotificationService } from "hooks/services/Notification";
 import { useSourceList } from "hooks/services/useSourceHook";
-import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
+import { useSourceDefinitionList, useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
 
@@ -16,7 +15,7 @@ const SourcesPage: React.FC = () => {
 
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
-  const sourceDefinitions = useAvailableSourceDefinitions();
+  const { sourceDefinitions } = useSourceDefinitionList();
 
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();

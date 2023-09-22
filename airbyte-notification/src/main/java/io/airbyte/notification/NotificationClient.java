@@ -5,8 +5,11 @@
 package io.airbyte.notification;
 
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.config.ActorDefinitionBreakingChange;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -50,6 +53,18 @@ public abstract class NotificationClient {
                                                          String jobDescription,
                                                          UUID workspaceId,
                                                          UUID connectionId)
+      throws IOException, InterruptedException;
+
+  public abstract boolean notifyBreakingChangeWarning(List<String> receiverEmails,
+                                                      String connectorName,
+                                                      ActorType actorType,
+                                                      ActorDefinitionBreakingChange breakingChange)
+      throws IOException, InterruptedException;
+
+  public abstract boolean notifyBreakingChangeSyncsDisabled(List<String> receiverEmails,
+                                                            String connectorName,
+                                                            final ActorType actorType,
+                                                            final ActorDefinitionBreakingChange breakingChange)
       throws IOException, InterruptedException;
 
   public abstract boolean notifySuccess(String message) throws IOException, InterruptedException;

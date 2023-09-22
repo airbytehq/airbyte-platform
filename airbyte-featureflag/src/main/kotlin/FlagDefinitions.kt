@@ -77,11 +77,7 @@ object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-wor
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
-object CheckReplicationProgress : Temporary<Boolean>(key = "check-replication-progress", default = false)
-
 object UseParallelStreamStatsTracker : Temporary<Boolean>(key = "platform.use-parallel-stream-stats-tracker", default = false)
-
-object UseNewRetries : Temporary<Boolean>(key = "use-new-retries", default = false)
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
@@ -111,6 +107,8 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
+object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -137,3 +135,5 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 }
+
+object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)

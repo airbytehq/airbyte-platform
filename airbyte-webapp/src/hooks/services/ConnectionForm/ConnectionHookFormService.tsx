@@ -2,7 +2,11 @@
 // temporary disable eslint rule for this file during form migration
 import React, { createContext, useContext } from "react";
 
-import { useDestinationDefinitionVersion } from "core/api";
+import {
+  useDestinationDefinitionVersion,
+  useGetSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification,
+} from "core/api";
 import {
   ActorDefinitionVersionRead,
   DestinationDefinitionRead,
@@ -12,9 +16,7 @@ import {
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
 import {
   HookFormConnectionFormValues,

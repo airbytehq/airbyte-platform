@@ -20,18 +20,20 @@ import { VirtualLogs } from "./VirtualLogs";
 
 interface JobLogsModalContentProps {
   jobId: number;
-  initialAttemptIndex?: number;
+  initialAttemptId?: number;
 }
 
-export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId, initialAttemptIndex }) => {
+export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId, initialAttemptId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);
   const [highlightedMatchIndex, setHighlightedMatchIndex] = useState<number | undefined>(undefined);
   const [matchingLines, setMatchingLines] = useState<number[]>([]);
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
-  const [selectedAttemptIndex, setSelectedAttemptIndex] = useState(initialAttemptIndex ?? job.attempts.length - 1);
-  const jobAttempt = useAttemptForJob(jobId, selectedAttemptIndex);
+  const [selectedAttemptId, setSelectedAttemptId] = useState(
+    initialAttemptId ?? job.attempts[job.attempts.length - 1].attempt.id
+  );
+  const jobAttempt = useAttemptForJob(jobId, selectedAttemptId);
   const logLines = useCleanLogs(jobAttempt);
   const firstMatchIndex = 0;
   const lastMatchIndex = matchingLines.length - 1;
@@ -43,18 +45,18 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
   const { formatMessage } = useIntl();
 
   const attemptListboxOptions = useMemo(() => {
-    return job.attempts.map((_, index) => ({
+    return job.attempts.map((attempt, index) => ({
       label: formatMessage(
         { id: "jobHistory.logs.attemptLabel" },
         { attemptNumber: index + 1, totalAttempts: job.attempts.length }
       ),
-      value: index,
-      icon: <AttemptStatusIcon attempt={job.attempts[index]} />,
+      value: attempt.attempt.id,
+      icon: <AttemptStatusIcon attempt={attempt} />,
     }));
   }, [job, formatMessage]);
 
-  const onSelectAttempt = (selectedIndex: number) => {
-    setSelectedAttemptIndex(selectedIndex);
+  const onSelectAttempt = (selectedAttemptId: number) => {
+    setSelectedAttemptId(selectedAttemptId);
     setHighlightedMatchIndex(undefined);
     setMatchingLines([]);
     setInputValue("");
@@ -141,7 +143,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           <div className={styles.attemptDropdown}>
             <ListBox
               className={styles.attemptDropdown__listbox}
-              selectedValue={selectedAttemptIndex}
+              selectedValue={selectedAttemptId}
               options={attemptListboxOptions}
               onSelect={onSelectAttempt}
               isDisabled={job.attempts.length === 1}
@@ -149,8 +151,8 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           </div>
           <AttemptDetails attempt={jobAttempt.attempt} jobId={String(jobId)} showEndedAt showFailureMessage={false} />
           <FlexContainer className={styles.downloadLogs}>
-            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptIndex + 1} />
-            <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptIndex + 1}`} />
+            <LinkToAttemptButton jobId={jobId} attemptId={selectedAttemptId} />
+            <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptId + 1}`} />
           </FlexContainer>
         </FlexContainer>
       </Box>
@@ -171,7 +173,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
       </Box>
       <JobLogsModalFailureMessage failureSummary={jobAttempt.attempt.failureSummary} />
       <VirtualLogs
-        selectedAttempt={selectedAttemptIndex}
+        selectedAttempt={selectedAttemptId}
         logLines={logLines}
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}

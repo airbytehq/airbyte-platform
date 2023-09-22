@@ -13,12 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
@@ -28,6 +25,8 @@ import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -42,14 +41,19 @@ import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
+import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FieldAdd;
+import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -59,6 +63,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.BasicSchedule;
@@ -84,7 +89,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -93,7 +100,11 @@ import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.Field;
+import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -112,6 +123,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -143,6 +155,7 @@ class ConnectionsHandlerTest {
   private ConnectionHelper connectionHelper;
   private TestClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private JobNotifier jobNotifier;
   private Job job;
 
@@ -263,6 +276,7 @@ class ConnectionsHandlerTest {
     eventRunner = mock(EventRunner.class);
     connectionHelper = mock(ConnectionHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     jobNotifier = mock(JobNotifier.class);
     featureFlagClient = mock(TestClient.class);
     job = mock(Job.class);
@@ -287,6 +301,7 @@ class ConnectionsHandlerTest {
           connectionHelper,
           featureFlagClient,
           actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW);
@@ -1371,6 +1386,7 @@ class ConnectionsHandlerTest {
           connectionHelper,
           featureFlagClient,
           actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW);
@@ -1793,6 +1809,131 @@ class ConnectionsHandlerTest {
           .syncMode(syncMode)
           .destinationSyncMode(destinationSyncMode);
 
+    }
+
+  }
+
+  /**
+   * Tests for the applySchemaChanges endpoint. Note that most of the core auto-propagation logic is
+   * tested directly on AutoPropagateSchemaChangeHelper.getUpdatedSchema().
+   */
+  @Nested
+  class ApplySchemaChanges {
+
+    private static final String SOURCE_PROTOCOL_VERSION = "0.4.5";
+    private static final String SHOES = "shoes";
+    private static final String SKU = "sku";
+    private static final String A_DIFFERENT_STREAM = "a-different-stream";
+    private static final ActorDefinitionVersion SOURCE_VERSION = new ActorDefinitionVersion()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+
+    private static final UUID SOURCE_CATALOG_ID = UUID.randomUUID();
+    private static final UUID CONNECTION_ID = UUID.randomUUID();
+    private static final UUID SOURCE_ID = UUID.randomUUID();
+    private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+    private static final UUID WORKSPACE_ID = UUID.randomUUID();
+    private static final UUID DESTINATION_ID = UUID.randomUUID();
+    private static final io.airbyte.protocol.models.AirbyteCatalog airbyteCatalog =
+        CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
+    private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
+        CatalogHelpers.createConfiguredAirbyteCatalog(SHOES, null, Field.of(SKU, JsonSchemaType.STRING));
+    private static StandardSync standardSync;
+    private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
+    private static final String A_DIFFERENT_COLUMN = "a-different-column";
+
+    @BeforeEach
+    void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+      airbyteCatalog.getStreams().get(0).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH));
+      standardSync = new StandardSync()
+          .withConnectionId(CONNECTION_ID)
+          .withSourceId(SOURCE_ID)
+          .withDestinationId(DESTINATION_ID)
+          .withCatalog(configuredAirbyteCatalog)
+          .withManual(true)
+          .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
+      when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(
+          new StandardDestinationDefinition().withDestinationDefinitionId(DESTINATION_DEFINITION_ID));
+      when(connectorDefinitionSpecificationHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId()
+          .workspaceId(WORKSPACE_ID).destinationDefinitionId(DESTINATION_DEFINITION_ID)))
+              .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
+      when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
+      when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
+      when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+      connectionsHandler = new ConnectionsHandler(
+          jobPersistence,
+          configRepository,
+          uuidGenerator,
+          workspaceHelper,
+          trackingClient,
+          eventRunner,
+          connectionHelper,
+          featureFlagClient,
+          actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
+          jobNotifier,
+          MAX_DAYS_OF_ONLY_FAILED_JOBS,
+          MAX_FAILURE_JOBS_IN_A_ROW);
+    }
+
+    @Test
+    void testAutoPropagateSchemaChange() throws IOException, ConfigNotFoundException, JsonValidationException {
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
+          CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+      catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+          .config(new AirbyteStreamConfiguration().selected(true)));
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      final ConnectionAutoPropagateResult actualResult = connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM)));
+      assertEquals(expectedDiff, actualResult.getPropagatedDiff());
+      final ConfiguredAirbyteCatalog expectedCatalog = Jsons.clone(configuredAirbyteCatalog);
+      expectedCatalog.getStreams()
+          .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
+              .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
+              .withDefaultCursorField(null)).withCursorField(null));
+      ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
+      final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();
+      assertEquals(Jsons.clone(standardSync).withCatalog(expectedCatalog), actualStandardSync);
+    }
+
+    @Test
+    void testAutoPropagateColumnsOnly() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(
+          CatalogHelpers.createAirbyteCatalog(SHOES,
+              Field.of(SKU, JsonSchemaType.STRING),
+              newField),
+          SOURCE_VERSION);
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      final ConnectionAutoPropagateResult actualResult = connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .addUpdateStreamItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
+      assertEquals(expectedDiff, actualResult.getPropagatedDiff());
     }
 
   }

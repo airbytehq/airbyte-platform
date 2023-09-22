@@ -15,12 +15,18 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ImageName;
+import io.airbyte.featureflag.ImageVersion;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RunSocatInConnectorContainer;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.exception.WorkerException;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -127,9 +133,7 @@ public class KubeProcessFactory implements ProcessFactory {
 
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
 
-      final String shortImageName = imageName != null ? DockerImageNameHelper.extractShortImageName(imageName) : null;
-
-      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, shortImageName, customLabels, workerConfigs.getWorkerKubeLabels());
+      final var allLabels = getLabels(jobId, attempt, connectionId, workspaceId, imageName, customLabels, workerConfigs.getWorkerKubeLabels());
 
       // If using isolated pool, check workerConfigs has isolated pool set. If not set, fall back to use
       // regular node pool.
@@ -141,6 +145,8 @@ public class KubeProcessFactory implements ProcessFactory {
           // Pod may not have a connectionId, yet feature flag client requires a context.
           // If we do not have one, use empty uuid.
           new Connection(connectionId != null ? connectionId : UUID_EMPTY));
+
+      final boolean runSocatInMainContainer = shouldRunSocatInMainContainer(imageName, connectionId, workspaceId);
 
       return new KubePodProcess(
           processRunnerHost,
@@ -167,6 +173,7 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobSocatImage(),
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
+          runSocatInMainContainer,
           MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables),
           internalToExternalPorts,
           args).toProcess();
@@ -183,7 +190,7 @@ public class KubeProcessFactory implements ProcessFactory {
                                               final int attemptId,
                                               final UUID connectionId,
                                               final UUID workspaceId,
-                                              final String imageName,
+                                              final String fullImagePath,
                                               final Map<String, String> customLabels,
                                               final Map<String, String> envLabels) {
     final Map<String, String> allLabels = new HashMap<>();
@@ -192,17 +199,45 @@ public class KubeProcessFactory implements ProcessFactory {
     }
     allLabels.putAll(customLabels);
 
+    final String shortImageName = ProcessFactory.getShortImageName(fullImagePath);
+    final String imageVersion = ProcessFactory.getImageVersion(fullImagePath);
+
     final var generalKubeLabels = Map.of(
         Metadata.JOB_LABEL_KEY, jobId,
         Metadata.ATTEMPT_LABEL_KEY, String.valueOf(attemptId),
         Metadata.CONNECTION_ID_LABEL_KEY, String.valueOf(connectionId),
         Metadata.WORKSPACE_LABEL_KEY, String.valueOf(workspaceId),
         Metadata.WORKER_POD_LABEL_KEY, Metadata.WORKER_POD_LABEL_VALUE,
-        Metadata.IMAGE_NAME, imageName);
+        Metadata.IMAGE_NAME, shortImageName,
+        Metadata.IMAGE_VERSION, imageVersion);
 
     allLabels.putAll(generalKubeLabels);
 
     return allLabels;
+  }
+
+  private boolean shouldRunSocatInMainContainer(String imageName, UUID connectionId, UUID workspaceId) {
+    final String imageNameWithoutVersion;
+    final String imageVersion;
+    if (imageName == null) {
+      imageNameWithoutVersion = "";
+      imageVersion = "";
+    } else {
+      imageNameWithoutVersion = DockerImageNameHelper.extractImageNameWithoutVersion(imageName);
+      imageVersion = DockerImageNameHelper.extractImageVersionString(imageName);
+    }
+
+    final var imageNameContext = imageNameWithoutVersion != null ? imageNameWithoutVersion : "";
+    final var imageVersionContext = imageVersion != null ? imageVersion : "";
+    final var connectionContext = connectionId != null ? connectionId : UUID_EMPTY;
+    final var workspaceContext = workspaceId != null ? workspaceId : UUID_EMPTY;
+
+    return featureFlagClient.boolVariation(RunSocatInConnectorContainer.INSTANCE,
+        new Multi(List.of(
+            new ImageName(imageNameContext),
+            new ImageVersion(imageVersionContext),
+            new Connection(connectionContext),
+            new Workspace(workspaceContext))));
   }
 
 }

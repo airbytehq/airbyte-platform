@@ -70,6 +70,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private static final int BUFFER_READ_AHEAD_LIMIT = 32000;
   private static final int MESSAGES_LOOK_AHEAD_FOR_DETECTION = 10;
   private static final String TYPE_FIELD_NAME = "type";
+  private static final int MAXIMUM_CHARACTERS_ALLOWED = 5_000_000;
 
   // BASIC PROCESSING FIELDS
   protected final Logger logger;
@@ -104,20 +105,20 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
-  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(Logger logger,
-                                                                                       MdcScope.Builder mdcBuilder,
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final Logger logger,
+                                                                                       final MdcScope.Builder mdcBuilder,
                                                                                        final Optional<Class<? extends RuntimeException>> clazz,
-                                                                                       long maxMemory) {
-    AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
+                                                                                       final long maxMemory) {
+    final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
         List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
     provider.initialize();
 
-    AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
+    final AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
     airbyteMessageMigrator.initialize();
-    ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
+    final ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
     configuredAirbyteCatalogMigrator.initialize();
-    AirbyteProtocolVersionedMigratorFactory fac =
+    final AirbyteProtocolVersionedMigratorFactory fac =
         new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
 
     return new VersionedAirbyteStreamFactory<>(provider, fac, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, Optional.empty(), logger,
@@ -182,7 +183,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     return addLineReadLogic(bufferedReader);
   }
 
-  private void detectAndInitialiseMigrators(BufferedReader bufferedReader) {
+  private void detectAndInitialiseMigrators(final BufferedReader bufferedReader) {
     if (shouldDetectVersion) {
       final Optional<Version> versionMaybe;
       try {
@@ -361,7 +362,19 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     //
     // When Connector Ops rectifies this, we can remove this.
     try (final var mdcScope = containerLogMdcBuilder.build()) {
-      logger.info(line);
+      if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
+        throw new IllegalStateException("Record is too big");
+      } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
+        logger.debug(line);
+        throw new IllegalStateException("Malformated log record line");
+      } else {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
+        logger.info(line);
+      }
+    } catch (final Exception e) {
+      throw e;
     }
     return m.stream();
   }

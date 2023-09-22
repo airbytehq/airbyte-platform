@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
@@ -15,6 +16,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.featureflag.AutoPropagateNewStreams;
+import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
 import java.util.ArrayList;
@@ -42,7 +44,7 @@ public class AutoPropagateSchemaChangeHelper {
    * Return value for `getUpdatedSchema` method. Returns the updated catalog and a description of the
    * changes
    */
-  public record UpdateSchemaResult(AirbyteCatalog catalog, List<String> changeDescription) {}
+  public record UpdateSchemaResult(AirbyteCatalog catalog, CatalogDiff appliedDiff, List<String> changeDescription) {}
 
   /**
    * Generate a summary of the changes that will be applied to the destination if the schema is
@@ -51,7 +53,7 @@ public class AutoPropagateSchemaChangeHelper {
    * @param transform the transformation to be applied to the destination
    * @return a list of strings describing the changes that will be applied to the destination.
    */
-  private static String staticFormatDiff(StreamTransform transform) {
+  private static String staticFormatDiff(final StreamTransform transform) {
     switch (transform.getTransformType()) {
       case ADD_STREAM -> {
         return String.format("Added new stream %s", transform.getStreamDescriptor().getName());
@@ -64,8 +66,8 @@ public class AutoPropagateSchemaChangeHelper {
         if (transform.getUpdateStream() == null) {
           return returnValue;
         }
-        for (FieldTransform fieldTransform : transform.getUpdateStream()) {
-          String fieldName = String.join(".", fieldTransform.getFieldName());
+        for (final FieldTransform fieldTransform : transform.getUpdateStream()) {
+          final String fieldName = String.join(".", fieldTransform.getFieldName());
           switch (fieldTransform.getTransformType()) {
             case ADD_FIELD -> returnValue += String.format("Added field: %s,", fieldName);
             case REMOVE_FIELD -> returnValue += String.format("Removed field: %s,", fieldName);
@@ -103,7 +105,8 @@ public class AutoPropagateSchemaChangeHelper {
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
     final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
 
-    List<String> changes = new ArrayList<>();
+    final List<String> changes = new ArrayList<>();
+    final CatalogDiff appliedDiff = new CatalogDiff();
 
     transformations.forEach(transformation -> {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
@@ -113,6 +116,7 @@ public class AutoPropagateSchemaChangeHelper {
             oldCatalogPerStream.get(streamDescriptor)
                 .stream(newCatalogPerStream.get(streamDescriptor).getStream());
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         case ADD_STREAM -> {
@@ -131,19 +135,21 @@ public class AutoPropagateSchemaChangeHelper {
             // supported sync modes.
             oldCatalogPerStream.put(streamDescriptor, streamAndConfigurationToAdd);
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         case REMOVE_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             oldCatalogPerStream.remove(streamDescriptor);
             changes.add(staticFormatDiff(transformation));
+            appliedDiff.addTransformsItem(transformation);
           }
         }
         default -> throw new NotSupportedException("Not supported transformation.");
       }
     });
 
-    return new UpdateSchemaResult(new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values())), changes);
+    return new UpdateSchemaResult(new AirbyteCatalog().streams(List.copyOf(oldCatalogPerStream.values())), appliedDiff, changes);
   }
 
   @VisibleForTesting
@@ -154,7 +160,37 @@ public class AutoPropagateSchemaChangeHelper {
         airbyteStreamAndConfiguration -> airbyteStreamAndConfiguration));
   }
 
-  @VisibleForTesting
+  /**
+   * Tests whether auto-propagation should be applied based on the connection/workspace configs and
+   * the diff.
+   *
+   * @param diff the diff to be applied
+   * @param workspaceId workspace of the connection
+   * @param connectionRead the connection info
+   * @param featureFlagClient client to check flags
+   * @return whether the diff should be propagated
+   */
+  public static boolean shouldAutoPropagate(final CatalogDiff diff,
+                                            final UUID workspaceId,
+                                            final ConnectionRead connectionRead,
+                                            final FeatureFlagClient featureFlagClient) {
+    final boolean hasDiff = !diff.getTransforms().isEmpty();
+    final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
+    final boolean autoPropagationIsEnabledForConnection =
+        connectionRead.getNonBreakingChangesPreference() != null
+            && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
+                || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
+    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
+  }
+
+  /**
+   * Tests whether the provided catalog diff contains a breaking change.
+   *
+   * @param diff A {@link CatalogDiff}.
+   * @return {@code true} if any breaking field transforms are included in the diff, {@code false}
+   *         otherwise.
+   */
   public static boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
       if (streamTransform.getTransformType() != StreamTransform.TransformTypeEnum.UPDATE_STREAM) {
@@ -166,7 +202,6 @@ public class AutoPropagateSchemaChangeHelper {
         return true;
       }
     }
-
     return false;
   }
 

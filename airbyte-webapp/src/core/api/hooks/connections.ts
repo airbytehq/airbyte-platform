@@ -7,12 +7,11 @@ import { SyncSchema } from "core/domain/catalog";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { SCOPE_WORKSPACE } from "services/Scope";
 
-import { useInvalidateWorkspaceStateQuery } from "./workspaces";
+import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
 import { useAppMonitoringService } from "../../../hooks/services/AppMonitoringService";
 import { useNotificationService } from "../../../hooks/services/Notification";
-import { useCurrentWorkspace } from "../../../hooks/services/useWorkspace";
-import { SCOPE_WORKSPACE } from "../../../services/Scope";
 import {
   createOrUpdateStateSafe,
   deleteConnection,

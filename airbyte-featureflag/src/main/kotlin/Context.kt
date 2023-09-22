@@ -185,3 +185,11 @@ data class DestinationDefinition(override val key: String) : Context {
 data class SourceType(override val key: String) : Context {
   override val kind = "source-type"
 }
+
+data class ImageName(override val key: String) : Context {
+  override val kind = "image-name"
+}
+
+data class ImageVersion(override val key: String) : Context {
+  override val kind = "image-version"
+}

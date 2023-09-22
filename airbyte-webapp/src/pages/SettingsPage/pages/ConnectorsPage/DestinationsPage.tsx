@@ -3,9 +3,11 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useNotificationService } from "hooks/services/Notification";
-import { useUpdateDestinationDefinition } from "services/connector/DestinationDefinitionService";
+import {
+  useDestinationDefinitionList,
+  useUpdateDestinationDefinition,
+} from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";
 import { useDestinationList } from "../../../../hooks/services/useDestinationHook";
@@ -14,7 +16,7 @@ const DestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_DESTINATION);
 
   const { formatMessage } = useIntl();
-  const destinationDefinitions = useAvailableDestinationDefinitions();
+  const { destinationDefinitions } = useDestinationDefinitionList();
   const { destinations } = useDestinationList();
 
   const { mutateAsync: updateDestinationDefinition } = useUpdateDestinationDefinition();

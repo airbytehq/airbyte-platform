@@ -328,6 +328,15 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "number of workflow the self healing cron healed"),
   NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
       "notifications_sent",
+      "number of notifications sent"),
+  NON_AIRBYTE_MESSAGE_LOG_LINE(MetricEmittingApps.WORKER,
+      "non_airbyte_message_log_line",
+      "number of notifications sent"),
+  LINE_SKIPPED_WITH_RECORD(MetricEmittingApps.WORKER,
+      "line_skipped_with_record",
+      "number of notifications sent"),
+  LINE_SKIPPED_TOO_LONG(MetricEmittingApps.WORKER,
+      "line_skipped_too_long",
       "number of notifications sent");
 
   private final MetricEmittingApp application;

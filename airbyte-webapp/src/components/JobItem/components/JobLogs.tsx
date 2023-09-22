@@ -66,7 +66,7 @@ export const JobLogs: React.FC<JobLogsProps> = ({ job }) => {
     if (!isSynchronousJobRead && job.attempts) {
       const { attemptId, jobId } = parseAttemptLink(hash);
       if (!isNaN(Number(jobId)) && Number(jobId) === job.job.id && attemptId) {
-        return clamp(parseInt(attemptId), 0, job.attempts.length - 1);
+        return clamp(attemptId, 0, job.attempts.length - 1);
       }
 
       return job.attempts.length ? job.attempts.length - 1 : 0;

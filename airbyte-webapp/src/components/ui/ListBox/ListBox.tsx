@@ -8,9 +8,9 @@ import { useIntl } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { ReactComponent as CaretDownIcon } from "./CaretDownIcon.svg";
 import styles from "./ListBox.module.scss";
 import { FlexContainer, FlexItem } from "../Flex";
+import { Icon } from "../Icon";
 
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
@@ -35,7 +35,7 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
         </Text>
       )}
 
-      <CaretDownIcon className={styles.caret} />
+      <Icon type="caretDown" color="action" />
     </>
   );
 };

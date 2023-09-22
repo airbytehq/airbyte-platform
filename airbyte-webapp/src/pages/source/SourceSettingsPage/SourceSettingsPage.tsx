@@ -4,14 +4,13 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useSourceDefinitionVersion } from "core/api";
+import { useConnectionList, useSourceDefinitionVersion, useGetSourceDefinitionSpecification } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 

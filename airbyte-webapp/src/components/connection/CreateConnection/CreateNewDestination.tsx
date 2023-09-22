@@ -10,10 +10,10 @@ import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 
 import { useSuggestedDestinations } from "area/connector/utils";
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
+import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 
 import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";
 
@@ -25,7 +25,7 @@ export const CreateNewDestination: React.FC = () => {
 
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
-  const destinationDefinitions = useAvailableDestinationDefinitions();
+  const { destinationDefinitions } = useDestinationDefinitionList();
   const { trackAction } = useAppMonitoringService();
   const { mutateAsync: createDestination } = useCreateDestination();
 

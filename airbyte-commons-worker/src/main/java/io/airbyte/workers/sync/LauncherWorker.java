@@ -13,7 +13,6 @@ import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
 import com.google.common.base.Stopwatch;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
-import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
@@ -172,14 +171,12 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
       final String schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler.INSTANCE, new Connection(connectionId));
 
-      final String shortImageName =
-          mainContainerInfo.image() != null ? DockerImageNameHelper.extractShortImageName(mainContainerInfo.image()) : null;
       final var allLabels = KubeProcessFactory.getLabels(
           jobRunConfig.getJobId(),
           Math.toIntExact(jobRunConfig.getAttemptId()),
           connectionId,
           workspaceId,
-          shortImageName,
+          mainContainerInfo.image(),
           generateMetadataLabels(),
           Collections.emptyMap());
 

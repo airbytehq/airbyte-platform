@@ -1,6 +1,7 @@
 export type IconType =
   | "article"
   | "calendar"
+  | "caretDown"
   | "certified"
   | "check"
   | "chevronDown"
