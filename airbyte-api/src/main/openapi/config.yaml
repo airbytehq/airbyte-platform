@@ -3111,6 +3111,30 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/users/get_or_create_by_auth_id:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by auth id. If not existed, will create a user.
+      operationId: getOrCreateUserByAuthId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAuthIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/users/update:
     post:
       tags:

@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.AuthProvider;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
@@ -22,12 +23,15 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.handlers.helpers.PermissionMerger;
+import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.validation.json.JsonValidationException;
@@ -57,15 +61,28 @@ public class UserHandler {
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
+  private final OrganizationPersistence organizationPersistence;
+  private final OrganizationsHandler organizationsHandler;
+
+  private final Optional<JwtUserResolver> jwtUserResolver;
 
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
                      final PermissionPersistence permissionPersistence,
-                     final Supplier<UUID> uuidGenerator) {
+                     final OrganizationPersistence organizationPersistence,
+                     final PermissionHandler permissionHandler,
+                     final OrganizationsHandler organizationsHandler,
+                     final Supplier<UUID> uuidGenerator,
+                     final Optional<JwtUserResolver> jwtUserResolver) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
+    this.organizationPersistence = organizationPersistence;
+    this.organizationsHandler = organizationsHandler;
     this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
+    this.jwtUserResolver = jwtUserResolver;
   }
 
   /**
@@ -77,7 +94,7 @@ public class UserHandler {
    * @throws IOException if unable to create the new user.
    * @throws JsonValidationException if unable to create the new user.
    */
-  public UserRead createUser(final UserCreate userCreate) throws ConfigNotFoundException, IOException, JsonValidationException {
+  public UserRead createUser(final UserCreate userCreate) throws IOException, ConfigNotFoundException, JsonValidationException {
 
     final UUID userId = uuidGenerator.get();
     final User user = new User()
@@ -258,6 +275,53 @@ public class UserHandler {
   public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
     return buildUserWithPermissionInfoReadList(userPermissions);
+  }
+
+  public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final User.AuthProvider authProvider =
+        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+    if (user.isPresent()) {
+      return buildUserRead(user.get());
+    }
+
+    if (jwtUserResolver.isEmpty()) {
+      throw new ConfigNotFoundException(ConfigSchema.USER, userAuthIdRequestBody.getAuthUserId());
+    }
+    final User incomingUser = jwtUserResolver.get().resolveUser();
+
+    // Verify JWT token and request value are the same. Otherwise, throw errors.
+    if (!incomingUser.getAuthProvider().value().equals(userAuthIdRequestBody.getAuthProvider().toString())) {
+      throw new IllegalArgumentException("JWT token issuer doesn't match the auth provider from the request body.");
+    }
+
+    if (!incomingUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
+      throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
+    }
+
+    LOGGER.debug("Creating User: " + incomingUser);
+    final UserRead createdUser = createUser(new UserCreate()
+        .name(incomingUser.getName())
+        .authUserId(userAuthIdRequestBody.getAuthUserId())
+        .authProvider(userAuthIdRequestBody.getAuthProvider())
+        .email(incomingUser.getEmail()));
+
+    // If incoming SSO Config matches with existing org, find that org and add user to it;
+    final String ssoRealm = jwtUserResolver.get().resolveSsoRealm();
+    if (ssoRealm != null) {
+      final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
+      if (attachedOrganization.isPresent()) {
+        permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+            .workspaceId(null)
+            .organizationId(attachedOrganization.get().getOrganizationId())
+            .userId(createdUser.getUserId())
+            .permissionType(PermissionType.ORGANIZATION_ADMIN));
+        return createdUser;
+      }
+    }
+    // Otherwise, this indicates user is not associated with org (non-sso user signs up).
+    return createdUser;
   }
 
   private Map<User, Permission> collectUserPermissionToMap(final List<UserPermission> userPermissions) {

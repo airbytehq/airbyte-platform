@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
@@ -104,6 +105,26 @@ public class OrganizationPersistence {
    */
   public Optional<Organization> getDefaultOrganization() throws IOException {
     return getOrganization(DEFAULT_ORGANIZATION_ID);
+  }
+
+  /**
+   * Get the matching organization that has the given sso config realm. If not exists, returns empty
+   * optional obejct.
+   */
+
+  public Optional<Organization> getOrganizationBySsoConfigRealm(final String ssoConfigRealm) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .join(SSO_CONFIG)
+        .on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .where(SSO_CONFIG.KEYCLOAK_REALM.eq(ssoConfigRealm)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
   }
 
   private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {

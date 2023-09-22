@@ -61,7 +61,7 @@ public class PermissionHandler {
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
   public PermissionRead createPermission(final PermissionCreate permissionCreate)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
 
     final Optional<PermissionRead> existingPermission = getExistingPermission(permissionCreate);
     if (existingPermission.isPresent()) {
@@ -78,7 +78,14 @@ public class PermissionHandler {
         .withOrganizationId(permissionCreate.getOrganizationId());
 
     permissionPersistence.writePermission(permission);
-    return buildPermissionRead(permissionId);
+    PermissionRead result;
+    try {
+      result = buildPermissionRead(permissionId);
+    } catch (ConfigNotFoundException ex) {
+      LOGGER.error("Config not found for permissionId: {} in CreatePermission.", permissionId);
+      throw new IOException(ex);
+    }
+    return result;
   }
 
   private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
