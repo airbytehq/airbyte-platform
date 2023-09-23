@@ -356,6 +356,16 @@ public interface JobPersistence {
   /// ARCHIVE
 
   /**
+   * Returns the AirbyteVersion.
+   */
+  Optional<String> getVersion() throws IOException;
+
+  /**
+   * Set the airbyte version.
+   */
+  void setVersion(String airbyteVersion) throws IOException;
+
+  /**
    * Get the max supported Airbyte Protocol Version.
    */
   Optional<Version> getAirbyteProtocolVersionMax() throws IOException;
@@ -379,6 +389,18 @@ public interface JobPersistence {
    * Get the current Airbyte Protocol Version range if defined.
    */
   Optional<AirbyteProtocolVersionRange> getCurrentProtocolVersionRange() throws IOException;
+
+  /**
+   * Returns a deployment UUID.
+   */
+  Optional<UUID> getDeployment() throws IOException;
+  // a deployment references a setup of airbyte. it is created the first time the docker compose or
+  // K8s is ready.
+
+  /**
+   * Set deployment id. If one is already set, the new value is ignored.
+   */
+  void setDeployment(UUID uuid) throws IOException;
 
   /**
    * Purges job history while ensuring that the latest saved-state information is maintained.
