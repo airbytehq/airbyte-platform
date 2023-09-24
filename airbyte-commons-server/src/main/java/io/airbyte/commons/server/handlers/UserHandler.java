@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
+import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
@@ -59,9 +60,9 @@ public class UserHandler {
   private final PermissionPersistence permissionPersistence;
   private final PermissionHandler permissionHandler;
   private final OrganizationPersistence organizationPersistence;
-  private final OrganizationsHandler organizationsHandler;
 
   private final Optional<JwtUserResolver> jwtUserResolver;
+  private final Optional<InitialUserConfiguration> initialUserConfiguration;
 
   @VisibleForTesting
   public UserHandler(
@@ -69,16 +70,16 @@ public class UserHandler {
                      final PermissionPersistence permissionPersistence,
                      final OrganizationPersistence organizationPersistence,
                      final PermissionHandler permissionHandler,
-                     final OrganizationsHandler organizationsHandler,
                      final Supplier<UUID> uuidGenerator,
-                     final Optional<JwtUserResolver> jwtUserResolver) {
+                     final Optional<JwtUserResolver> jwtUserResolver,
+                     final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
-    this.organizationsHandler = organizationsHandler;
     this.permissionPersistence = permissionPersistence;
     this.permissionHandler = permissionHandler;
     this.jwtUserResolver = jwtUserResolver;
+    this.initialUserConfiguration = initialUserConfiguration;
   }
 
   /**
@@ -309,6 +310,10 @@ public class UserHandler {
         .authProvider(userAuthIdRequestBody.getAuthProvider())
         .email(incomingUser.getEmail()));
 
+    // If new user's email matches the initial user config email, create instance_admin permission for
+    // them.
+    createInstanceAdminPermissionIfInitialUser(createdUser);
+
     // If incoming SSO Config matches with existing org, find that org and add user to it;
     final String ssoRealm = jwtUserResolver.get().resolveSsoRealm();
     if (ssoRealm != null) {
@@ -324,6 +329,35 @@ public class UserHandler {
     }
     // Otherwise, this indicates user is not associated with org (non-sso user signs up).
     return createdUser;
+  }
+
+  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {
+    if (initialUserConfiguration.isEmpty()) {
+      // do nothing if initial_user bean is not present.
+      return;
+    }
+
+    final String initialEmailFromConfig = initialUserConfiguration.get().getEmail();
+
+    if (initialEmailFromConfig == null || initialEmailFromConfig.isEmpty()) {
+      // do nothing if there is no initial_user email configured.
+      return;
+    }
+
+    // compare emails with case insensitivity because different email cases should be treated as the
+    // same user.
+    if (!initialEmailFromConfig.equalsIgnoreCase(createdUser.getEmail())) {
+      return;
+    }
+
+    LOGGER.info("creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
+        createdUser.getUserId());
+
+    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+        .workspaceId(null)
+        .organizationId(null)
+        .userId(createdUser.getUserId())
+        .permissionType(PermissionType.INSTANCE_ADMIN));
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
