@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.ConnectionJobRequestBody;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
+import io.airbyte.api.model.generated.FailAttemptRequest;
 import io.airbyte.api.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
@@ -109,6 +110,23 @@ public class AttemptApiController implements AttemptApi {
     return ApiHelper.execute(() -> attemptHandler.didPreviousJobSucceed(
         requestBody.getConnectionId(),
         requestBody.getJobId()));
+  }
+
+  @Override
+  @Post(uri = "/fail",
+        processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({ADMIN})
+  public void failAttempt(final FailAttemptRequest requestBody) {
+    ApiHelper.execute(() -> {
+      attemptHandler.failAttempt(
+          requestBody.getAttemptNumber(),
+          requestBody.getJobId(),
+          requestBody.getFailureSummary(),
+          requestBody.getStandardSyncOutput());
+      return null;
+    });
+
   }
 
 }

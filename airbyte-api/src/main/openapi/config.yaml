@@ -3537,6 +3537,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/fail:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Fails an attempt with a failure summary and if provided a sync output.
+      operationId: failAttempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                failureSummary:
+                  description: Attempt failure summary serialized as a raw object
+                  type: object
+                standardSyncOutput:
+                  description: Sync output serialized as a raw object
+                  type: object
+        required: true
+      responses:
+        "204":
+          description: Successfully failed attempt
   /v1/attempt/get_combined_stats:
     post:
       tags:

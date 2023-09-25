@@ -14,12 +14,17 @@ import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.JobOutput;
+import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
@@ -175,6 +180,40 @@ public class AttemptHandler {
         .orElse(false);
 
     return new BooleanRead().value(previousJobSucceeded);
+  }
+
+  public void failAttempt(final int attemptNumber, final long jobId, final Object rawFailureSummary, final Object rawSyncOutput)
+      throws IOException {
+    AttemptFailureSummary failureSummary = null;
+    if (rawFailureSummary != null) {
+      try {
+        failureSummary = Jsons.convertValue(rawFailureSummary, AttemptFailureSummary.class);
+      } catch (final Exception e) {
+        throw new BadRequestException("Unable to parse failureSummary.");
+      }
+    }
+    StandardSyncOutput output = null;
+    if (rawSyncOutput != null) {
+      try {
+        output = Jsons.convertValue(rawSyncOutput, StandardSyncOutput.class);
+      } catch (final Exception e) {
+        throw new BadRequestException("Unable to parse standardSyncOutput.");
+      }
+    }
+
+    jobCreationAndStatusUpdateHelper.traceFailures(failureSummary);
+
+    jobPersistence.failAttempt(jobId, attemptNumber);
+    jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
+
+    if (output != null) {
+      final JobOutput jobOutput = new JobOutput().withSync(output);
+      jobPersistence.writeOutput(jobId, attemptNumber, jobOutput);
+    }
+
+    final Job job = jobPersistence.getJob(jobId);
+    jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
   }
 
 }
