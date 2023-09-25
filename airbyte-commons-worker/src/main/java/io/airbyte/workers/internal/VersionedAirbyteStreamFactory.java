@@ -373,6 +373,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+        LOGGER.error("[LINE TOO BIG] line is too big with size: " + line.length());
         if (failTooLongRecords) {
           throw new IllegalStateException("Record is too long, the size is: " + line.length());
         }
