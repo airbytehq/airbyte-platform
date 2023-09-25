@@ -295,60 +295,6 @@ class AttemptHandlerTest {
   }
 
   @Test
-  void didPreviousJobSucceedReturnsFalseIfNoPreviousJob() throws Exception {
-    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
-        .thenReturn(List.of(
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class)));
-
-    when(helper.findPreviousJob(any(), anyLong()))
-        .thenReturn(Optional.empty());
-
-    when(helper.didJobSucceed(any()))
-        .thenReturn(true);
-
-    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
-    assertFalse(result.getValue());
-  }
-
-  @Test
-  void didPreviousJobSucceedReturnsTrueIfPreviousJobSucceeded() throws Exception {
-    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
-        .thenReturn(List.of(
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class)));
-
-    when(helper.findPreviousJob(any(), anyLong()))
-        .thenReturn(Optional.of(Mockito.mock(Job.class)));
-
-    when(helper.didJobSucceed(any()))
-        .thenReturn(true);
-
-    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
-    assertTrue(result.getValue());
-  }
-
-  @Test
-  void didPreviousJobSucceedReturnsFalseIfPreviousJobNotInSucceededState() throws Exception {
-    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
-        .thenReturn(List.of(
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class),
-            Mockito.mock(Job.class)));
-
-    when(helper.findPreviousJob(any(), anyLong()))
-        .thenReturn(Optional.of(Mockito.mock(Job.class)));
-
-    when(helper.didJobSucceed(any()))
-        .thenReturn(false);
-
-    final var result = handler.didPreviousJobSucceed(UUID.randomUUID(), 123);
-    assertFalse(result.getValue());
-  }
-
-  @Test
   void failAttemptSyncSummaryOutputPresent() throws IOException {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, standardSyncOutput);
 

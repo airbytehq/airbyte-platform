@@ -4,13 +4,19 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.JobOutput;
@@ -18,12 +24,12 @@ import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,9 +39,9 @@ import org.mockito.Mockito;
 public class JobsHandlerTest {
 
   private JobPersistence jobPersistence;
-  private JobTracker jobTracker;
   private JobNotifier jobNotifier;
   private JobsHandler jobsHandler;
+  private JobCreationAndStatusUpdateHelper helper;
 
   private static final long JOB_ID = 12;
   private static final int ATTEMPT_NUMBER = 1;
@@ -52,18 +58,15 @@ public class JobsHandlerTest {
   @BeforeEach
   void beforeEach() {
     jobPersistence = mock(JobPersistence.class);
-    jobTracker = mock(JobTracker.class);
     jobNotifier = mock(JobNotifier.class);
-    jobsHandler = new JobsHandler(jobPersistence,
-        new JobCreationAndStatusUpdateHelper(jobPersistence, mock(ConfigRepository.class),
-            jobNotifier,
-            jobTracker),
-        jobNotifier);
+    helper = mock(JobCreationAndStatusUpdateHelper.class);
+
+    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier);
   }
 
   @Test
   void testJobSuccessWithAttemptNumber() throws IOException {
-    var request = new JobSuccessWithAttemptNumberRequest()
+    final var request = new JobSuccessWithAttemptNumberRequest()
         .attemptNumber(ATTEMPT_NUMBER)
         .jobId(JOB_ID)
         .connectionId(UUID.randomUUID())
@@ -73,7 +76,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobNotifier).successJob(any());
-    verify(jobTracker).trackSync(any(), eq(JobState.SUCCEEDED));
+    verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
   }
 
   @Test
@@ -92,7 +95,61 @@ public class JobsHandlerTest {
         .isInstanceOf(RetryableException.class)
         .hasCauseInstanceOf(IOException.class);
 
-    verify(jobTracker, times(1)).trackSyncForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER, JobState.SUCCEEDED, exception);
+    verify(helper, times(1)).trackCompletionForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER, JobStatus.SUCCEEDED, exception);
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsFalseIfNoPreviousJob() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.empty());
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(true);
+
+    final var result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertFalse(result.getValue());
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsTrueIfPreviousJobSucceeded() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.of(Mockito.mock(Job.class)));
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(true);
+
+    final var result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertTrue(result.getValue());
+  }
+
+  @Test
+  void didPreviousJobSucceedReturnsFalseIfPreviousJobNotInSucceededState() throws Exception {
+    when(jobPersistence.listJobsIncludingId(any(), any(), anyLong(), anyInt()))
+        .thenReturn(List.of(
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class),
+            Mockito.mock(Job.class)));
+
+    when(helper.findPreviousJob(any(), anyLong()))
+        .thenReturn(Optional.of(Mockito.mock(Job.class)));
+
+    when(helper.didJobSucceed(any()))
+        .thenReturn(false);
+
+    final var result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123);
+    assertFalse(result.getValue());
   }
 
 }

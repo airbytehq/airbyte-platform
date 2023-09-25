@@ -3611,26 +3611,6 @@ paths:
                 $ref: "#/components/schemas/AttemptInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-  /v1/attempt/did_previous_job_succeed:
-    post:
-      tags:
-        - attempt
-        - internal
-      summary: Returns whether the job preceding the specified job succeeded
-      operationId: didPreviousJobSucceed
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectionJobRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BooleanRead"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -3784,6 +3764,26 @@ paths:
                 $ref: "#/components/schemas/RetryStateRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/did_previous_job_succeed:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Returns whether the job preceding the specified job succeeded
+      operationId: didPreviousJobSucceed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionJobRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BooleanRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info

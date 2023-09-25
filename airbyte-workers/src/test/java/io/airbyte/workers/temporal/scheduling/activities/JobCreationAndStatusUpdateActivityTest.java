@@ -180,7 +180,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(attemptApi.didPreviousJobSucceed(any()))
+      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
           .thenReturn(new BooleanRead().value(didSucceed));
 
       final boolean result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
@@ -198,7 +198,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(attemptApi.didPreviousJobSucceed(any()))
+      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
           .thenThrow(new ApiException("bang"));
 
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input));

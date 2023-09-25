@@ -4,11 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper.SYNC_CONFIG_SET;
-
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
-import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
@@ -35,9 +32,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,19 +162,6 @@ public class AttemptHandler {
       return new InternalOperationResult().succeeded(false);
     }
     return new InternalOperationResult().succeeded(true);
-  }
-
-  public BooleanRead didPreviousJobSucceed(final UUID connectionId, final long jobId) throws IOException {
-    // This DB call is a lift-n-shift from activity code to move database access out of the worker. It
-    // is knowingly brittle and awkward. By setting pageSize to 2 this should just fetch the latest and
-    // preceding job, but technically can fetch a much longer list.
-    final List<Job> jobs = jobPersistence.listJobsIncludingId(SYNC_CONFIG_SET, connectionId.toString(), jobId, 2);
-
-    final boolean previousJobSucceeded = jobCreationAndStatusUpdateHelper.findPreviousJob(jobs, jobId)
-        .map(jobCreationAndStatusUpdateHelper::didJobSucceed)
-        .orElse(false);
-
-    return new BooleanRead().value(previousJobSucceeded);
   }
 
   public void failAttempt(final int attemptNumber, final long jobId, final Object rawFailureSummary, final Object rawSyncOutput)

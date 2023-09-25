@@ -10,8 +10,10 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.JobsApi;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
+import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.model.generated.ConnectionJobRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
@@ -185,6 +187,16 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody requestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsForWorkspaces(requestBody));
+  }
+
+  @Override
+  @Post(uri = "/did_previous_job_succeed")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured({ADMIN})
+  public BooleanRead didPreviousJobSucceed(final ConnectionJobRequestBody requestBody) {
+    return ApiHelper.execute(() -> jobsHandler.didPreviousJobSucceed(
+        requestBody.getConnectionId(),
+        requestBody.getJobId()));
   }
 
 }

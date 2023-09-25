@@ -294,7 +294,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
 
     try {
-      final var didSucceed = attemptApi.didPreviousJobSucceed(
+      final var didSucceed = jobsApi.didPreviousJobSucceed(
           new ConnectionJobRequestBody()
               .connectionId(input.getConnectionId())
               .jobId(input.getJobId()))
