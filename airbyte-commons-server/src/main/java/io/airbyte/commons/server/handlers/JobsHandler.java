@@ -46,7 +46,7 @@ public class JobsHandler {
   }
 
   /**
-   * jobSuccessWithAttemptNumber.
+   * Report a job and a given attempt as successful.
    */
   public InternalOperationResult jobSuccessWithAttemptNumber(final JobSuccessWithAttemptNumberRequest input) {
     try {
@@ -75,10 +75,24 @@ public class JobsHandler {
     }
   }
 
+  /**
+   * Fail non terminal jobs.
+   */
   public void failNonTerminalJobs(final UUID connectionId) throws IOException {
     jobCreationAndStatusUpdateHelper.failNonTerminalJobs(connectionId);
   }
 
+  /**
+   * Report a job as started.
+   */
+  public InternalOperationResult reportJobStart(final Long jobId) throws IOException {
+    jobCreationAndStatusUpdateHelper.reportJobStart(jobId);
+    return new InternalOperationResult().succeeded(true);
+  }
+
+  /**
+   * Did previous job succeed.
+   */
   public BooleanRead didPreviousJobSucceed(final UUID connectionId, final long jobId) throws IOException {
     // This DB call is a lift-n-shift from activity code to move database access out of the worker. It
     // is knowingly brittle and awkward. By setting pageSize to 2 this should just fetch the latest and

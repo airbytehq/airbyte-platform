@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
@@ -27,6 +29,7 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
+import io.airbyte.persistence.job.tracker.JobTracker;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +46,7 @@ class JobsHandlerTest {
 
   private JobPersistence jobPersistence;
   private JobNotifier jobNotifier;
+  private JobTracker jobTracker;
   private JobsHandler jobsHandler;
   private JobCreationAndStatusUpdateHelper helper;
 
@@ -62,8 +66,9 @@ class JobsHandlerTest {
   void beforeEach() {
     jobPersistence = mock(JobPersistence.class);
     jobNotifier = mock(JobNotifier.class);
-    helper = mock(JobCreationAndStatusUpdateHelper.class);
+    jobTracker = mock(JobTracker.class);
 
+    helper = mock(JobCreationAndStatusUpdateHelper.class);
     jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier);
   }
 
@@ -153,6 +158,14 @@ class JobsHandlerTest {
 
     final var result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123);
     assertFalse(result.getValue());
+  }
+
+  @Test
+  void testReportJobStart() throws IOException {
+    final Long jobId = 5L;
+    final var result = jobsHandler.reportJobStart(jobId);
+    assertEquals(new InternalOperationResult().succeeded(true), result);
+    verify(helper).reportJobStart(jobId);
   }
 
 }

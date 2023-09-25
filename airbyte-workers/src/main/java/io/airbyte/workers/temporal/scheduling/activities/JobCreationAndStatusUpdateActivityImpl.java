@@ -19,6 +19,7 @@ import io.airbyte.api.client.model.generated.FailAttemptRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.config.WorkerMode;
@@ -41,7 +42,6 @@ import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
@@ -232,9 +232,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), null).addTagsToTrace();
 
     try {
-      final Job job = jobPersistence.getJob(input.getJobId());
-      jobTracker.trackSync(job, JobState.STARTED);
-    } catch (final IOException e) {
+      jobsApi.reportJobStart(new ReportJobStartRequest().connectionId(input.getConnectionId()).jobId(input.getJobId()));
+    } catch (final ApiException e) {
       throw new RetryableException(e);
     }
   }

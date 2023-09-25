@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.model.generated.ReportJobStartRequest;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
@@ -187,6 +188,14 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody requestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsForWorkspaces(requestBody));
+  }
+
+  @Post("/reportJobStart")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public InternalOperationResult reportJobStart(final ReportJobStartRequest reportJobStartRequest) {
+    return ApiHelper.execute(() -> jobsHandler.reportJobStart(reportJobStartRequest.getJobId()));
   }
 
   @Override

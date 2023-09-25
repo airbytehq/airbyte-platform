@@ -3038,6 +3038,34 @@ paths:
       responses:
         "204":
           description: Successful operation
+  /v1/jobs/reportJobStart:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: For worker to report when a job starts.
+      operationId: reportJobStart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - connectionId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
 
   # USERS
   /v1/users/create:

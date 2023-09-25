@@ -142,6 +142,16 @@ class JobCreationAndStatusUpdateHelperTest {
     verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker);
   }
 
+  @Test
+  void testReportJobStart() throws IOException {
+    final Long jobId = 5L;
+    final Job job = mock(Job.class);
+    when(mJobPersistence.getJob(jobId)).thenReturn(job);
+
+    helper.reportJobStart(jobId);
+    verify(mJobTracker).trackSync(job, JobState.STARTED);
+  }
+
   static class Fixtures {
 
     static final UUID CONNECTION_ID = UUID.randomUUID();
