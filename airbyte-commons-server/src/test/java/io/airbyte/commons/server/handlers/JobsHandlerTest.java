@@ -36,7 +36,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-public class JobsHandlerTest {
+/**
+ * JobsHandlerTest.
+ */
+class JobsHandlerTest {
 
   private JobPersistence jobPersistence;
   private JobNotifier jobNotifier;

@@ -13,9 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
@@ -339,36 +343,36 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW / 2, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
       }
 
       @SuppressWarnings("LineLength")
       @Test
       @DisplayName("Test that the connection is __not__ disabled and warning is sent after only failed jobs in last `MAX_DAYS_OF_STRAIGHT_FAILURE / 2` days")
       void testWarningNotificationsForAutoDisablingMaxDaysOfFailure() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
       }
 
       @Test
@@ -378,19 +382,19 @@ class ConnectionsHandlerTest {
         final long jobCreateOrUpdatedInSeconds =
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
-        Mockito.when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @Test
@@ -400,38 +404,38 @@ class ConnectionsHandlerTest {
         final long jobCreateOrUpdatedInSeconds =
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
-        Mockito.when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @SuppressWarnings("LineLength")
       @Test
       @DisplayName("Test that the connection is _not_ disabled and no warning is sent after only failed jobs and oldest job is less than `MAX_DAYS_OF_STRAIGHT_FAILURE / 2 `days old")
       void testOnlyFailuresButFirstJobYoungerThanMaxDaysWarning() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(CURRENT_INSTANT.getEpochSecond());
+        when(job.getCreatedAtInSecond()).thenReturn(CURRENT_INSTANT.getEpochSecond());
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       // test should disable / shouldn't disable cases
@@ -443,11 +447,11 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
-        Mockito.when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
+        when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertTrue(internalOperationResult.getSucceeded());
         verifyDisabled();
@@ -460,48 +464,48 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW - 1, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
 
       }
 
       @Test
       @DisplayName("Test that the connection is _not_ disabled after 0 jobs in last MAX_DAYS_OF_STRAIGHT_FAILURE days")
       void testNoRuns() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(Collections.emptyList());
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @Test
       @DisplayName("Test that the connection is disabled after only failed jobs in last MAX_DAYS_OF_STRAIGHT_FAILURE days")
       void testOnlyFailuresInMaxDays() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS));
-        Mockito.when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
+        when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertTrue(internalOperationResult.getSucceeded());
         verifyDisabled();
@@ -510,25 +514,25 @@ class ConnectionsHandlerTest {
       @Test
       @DisplayName("Test that the connection is _not_ disabled after only cancelled jobs")
       void testIgnoreOnlyCancelledRuns() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(CANCELLED_JOB));
+                .thenReturn(Collections.singletonList(CANCELLED_JOB));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
-        Mockito.verify(configRepository, times(1)).writeStandardSync(
+        verify(configRepository, times(1)).writeStandardSync(
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
-        Mockito.verify(configRepository, times(1)).writeStandardSync(standardSync);
-        Mockito.verify(jobNotifier, times(1)).autoDisableConnection(job);
-        Mockito.verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), ArgumentMatchers.eq(job));
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, times(1)).writeStandardSync(standardSync);
+        verify(jobNotifier, times(1)).autoDisableConnection(job);
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), ArgumentMatchers.eq(job));
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
     }
@@ -1771,21 +1775,21 @@ class ConnectionsHandlerTest {
     @Test
     void testConnectionStatus()
         throws JsonValidationException, ConfigNotFoundException, IOException {
-      UUID connectionId = UUID.randomUUID();
-      AttemptFailureSummary failureSummary = new AttemptFailureSummary();
+      final UUID connectionId = UUID.randomUUID();
+      final AttemptFailureSummary failureSummary = new AttemptFailureSummary();
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
-      Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
-      List<Job> jobs = List.of(
+      final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
+      final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
       when(jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(), 10))
           .thenReturn(jobs);
-      ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
-      List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
       assertEquals(1, status.size());
 
-      ConnectionStatusRead connectionStatus = status.get(0);
+      final ConnectionStatusRead connectionStatus = status.get(0);
       assertEquals(connectionId, connectionStatus.getConnectionId());
       assertEquals(Enums.convertTo(JobStatus.FAILED, io.airbyte.api.model.generated.JobStatus.class), connectionStatus.getLastSyncJobStatus());
       assertEquals(802L, connectionStatus.getLastSuccessfulSync());
@@ -1901,7 +1905,7 @@ class ConnectionsHandlerTest {
           .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
               .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
               .withDefaultCursorField(null)).withCursorField(null));
-      ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
       verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
       final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();
       assertEquals(Jsons.clone(standardSync).withCatalog(expectedCatalog), actualStandardSync);

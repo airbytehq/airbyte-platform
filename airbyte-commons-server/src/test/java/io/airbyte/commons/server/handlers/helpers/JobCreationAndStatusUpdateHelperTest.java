@@ -144,7 +144,7 @@ class JobCreationAndStatusUpdateHelperTest {
 
   static class Fixtures {
 
-    final static UUID CONNECTION_ID = UUID.randomUUID();
+    static final UUID CONNECTION_ID = UUID.randomUUID();
 
     static Job job(final long id, final long createdAt) {
       return new Job(id, null, null, null, null, null, null, createdAt, 0);

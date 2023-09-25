@@ -250,6 +250,9 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
+  /**
+   * isLastJobOrAttemptFailureOld.
+   */
   public boolean isLastJobOrAttemptFailureOld(final JobCheckFailureInput input) {
     final int limit = 2;
     boolean lastAttemptCheck = false;
