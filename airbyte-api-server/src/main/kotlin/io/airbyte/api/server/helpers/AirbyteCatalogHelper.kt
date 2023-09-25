@@ -48,7 +48,7 @@ object AirbyteCatalogHelper {
    * @return true if they exist, false if they don't
    */
   fun hasStreamConfigurations(streamConfigurations: StreamConfigurations?): Boolean {
-    return !streamConfigurations!!.streams.isNullOrEmpty()
+    return !streamConfigurations?.streams.isNullOrEmpty()
   }
 
   /**

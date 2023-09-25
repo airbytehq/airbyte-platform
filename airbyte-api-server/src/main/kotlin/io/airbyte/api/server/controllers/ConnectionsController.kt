@@ -338,7 +338,7 @@ open class ConnectionsController(
           connectionId,
           connectionPatchRequest,
           catalogId!!,
-          finalConfiguredCatalog!!,
+          finalConfiguredCatalog,
           destinationResponse.workspaceId,
           validUserInfo,
         )

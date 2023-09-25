@@ -61,7 +61,7 @@ interface ConnectionService {
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID,
-    configuredCatalog: AirbyteCatalog,
+    configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
     userInfo: String?,
   ): ConnectionResponse
@@ -178,7 +178,7 @@ class ConnectionServiceImpl(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID,
-    configuredCatalog: AirbyteCatalog,
+    configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
     userInfo: String?,
   ): ConnectionResponse {
@@ -228,7 +228,7 @@ class ConnectionServiceImpl(
     userInfo: String?,
   ): ConnectionsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
 
     val listConnectionsForWorkspacesRequestBody = ListConnectionsForWorkspacesRequestBody()
       .workspaceIds(workspaceIdsToQuery)

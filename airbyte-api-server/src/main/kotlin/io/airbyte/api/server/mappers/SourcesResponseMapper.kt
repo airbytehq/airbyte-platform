@@ -11,7 +11,6 @@ import io.airbyte.api.server.constants.INCLUDE_DELETED
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.WORKSPACE_IDS
 import java.util.UUID
-import java.util.function.Function
 
 /**
  * Maps config API SourceReadList to SourcesResponse.
@@ -40,13 +39,9 @@ object SourcesResponseMapper {
       .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
       .queryParam(INCLUDE_DELETED, includeDeleted)
     val sourcesResponse = SourcesResponse()
-    sourcesResponse.setNext(PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder))
-    sourcesResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))
-    sourcesResponse.setData(
-      sourceReadList.sources.stream()
-        .map(Function { obj: SourceRead? -> SourceReadMapper.from(obj!!) })
-        .toList(),
-    )
+    sourcesResponse.next = PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder)
+    sourcesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
+    sourcesResponse.data = sourceReadList.sources.map { obj: SourceRead? -> SourceReadMapper.from(obj!!) }
     return sourcesResponse
   }
 }

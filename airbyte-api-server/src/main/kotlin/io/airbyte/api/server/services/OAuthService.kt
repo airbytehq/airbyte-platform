@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.airbyte_api.model.generated.ActorTypeEnum
 import io.airbyte.api.client.model.generated.CompleteOAuthResponse
 import io.airbyte.api.client.model.generated.OAuthConsentRead
+import io.micronaut.http.HttpResponse
 import java.util.UUID
 import javax.validation.constraints.NotBlank
 
@@ -25,10 +26,10 @@ interface OAuthService {
     workspaceId: @NotBlank UUID,
     definitionId: @NotBlank UUID,
     redirectUrl: @NotBlank String,
-    queryParameters: @NotBlank MutableMap<String, String>,
+    queryParameters: @NotBlank Map<String, String>,
     oauthInputConfiguration: JsonNode,
     userInfo: String?,
-  ): CompleteOAuthResponse
+  ): HttpResponse<CompleteOAuthResponse>
 
   fun setWorkspaceOverrideOAuthParams(
     workspaceId: UUID,

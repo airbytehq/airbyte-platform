@@ -264,8 +264,9 @@ services:
     environment:
       - AIRBYTE_VERSION=${VERSION}
       - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
-      - INTERNAL_API_HOST=${INTERNAL_API_HOST}
+      - INTERNAL_API_HOST=${INTERNAL_API_URL} # Non-ideal, but the existing URL can't have https:// added because it's used for nginx conf
       - AIRBYTE_API_HOST=${AIRBYTE_API_HOST}
+      - LOG_LEVEL=${LOG_LEVEL}
     networks:
       - airbyte_internal
     depends_on:
