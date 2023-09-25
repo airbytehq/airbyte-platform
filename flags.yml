@@ -25,3 +25,5 @@ flags:
     serve: ""
   - name: platform.add-scheduling-jitter
     serve: false
+  - name: platform.use-new-schema-update-notification
+    serve: false

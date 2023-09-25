@@ -79,6 +79,7 @@ import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -637,8 +638,11 @@ public class SchedulerHandler {
       updateObject.status(connectionStatus);
 
       connectionsHandler.updateConnection(updateObject);
-
-      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
+      // on workspace where the new detailed schema change notification is enabled, notifications are sent
+      // right after the diff is computed, and we
+      // don't need to send them here.
+      boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
+      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody) && !newNotificationsEnabled) {
         final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
         final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
         eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), connectionRead.getName(), sourceName, url, containsBreakingChange);
