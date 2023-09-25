@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +56,7 @@ class OrganizationsHandlerTest {
     Organization newOrganization = new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME);
     when(uuidSupplier.get()).thenReturn(ORGANIZATION_ID_1);
     when(organizationPersistence.createOrganization(newOrganization)).thenReturn(newOrganization);
+    doNothing().when(permissionPersistence).writePermission(any());
 
     OrganizationRead result = organizationsHandler.createOrganization(
         new OrganizationCreateRequestBody().organizationName(ORGANIZATION_NAME).email(ORGANIZATION_EMAIL));

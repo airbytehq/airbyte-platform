@@ -5946,8 +5946,12 @@ components:
     OrganizationCreateRequestBody:
       type: object
       required:
+        - userId
         - organizationName
       properties:
+        userId:
+          type: string
+          format: uuid
         organizationName:
           type: string
         email:

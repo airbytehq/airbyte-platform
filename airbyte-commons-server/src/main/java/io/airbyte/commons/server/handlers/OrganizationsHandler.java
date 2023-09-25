@@ -12,6 +12,8 @@ import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.OrganizationPersistence;
@@ -53,12 +55,24 @@ public class OrganizationsHandler {
   }
 
   public OrganizationRead createOrganization(final OrganizationCreateRequestBody organizationCreateRequestBody)
-      throws IOException, ConfigNotFoundException {
+      throws IOException {
     final String organizationName = organizationCreateRequestBody.getOrganizationName();
     final String email = organizationCreateRequestBody.getEmail();
-    Organization organization = new Organization().withOrganizationId(uuidGenerator.get()).withName(organizationName).withEmail(email);
+    final UUID userId = organizationCreateRequestBody.getUserId();
+    final UUID orgId = uuidGenerator.get();
+    Organization organization = new Organization()
+        .withOrganizationId(orgId)
+        .withName(organizationName)
+        .withEmail(email)
+        .withUserId(userId);
     organizationPersistence.createOrganization(organization);
-    // TODO: We should also create an OrgAdmin permission here.
+    // Also create an OrgAdmin permission.
+    final Permission orgAdminPermission = new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withOrganizationId(orgId)
+        .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+    permissionPersistence.writePermission(orgAdminPermission);
     return buildOrganizationRead(organization);
   }
 
