@@ -1,6 +1,9 @@
 @use "scss/variables";
 
 .pillSelect {
-  width: 100%;
-  justify-content: space-between;
+  /**
+   * since we have just 4 sync modes and we know the width of each one,
+   * we can set the width of the longest sync mode value here to have all syncModeSelect with same width
+   */
+  min-width: 215px;
 }

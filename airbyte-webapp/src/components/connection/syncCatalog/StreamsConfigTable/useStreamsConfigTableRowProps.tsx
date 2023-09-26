@@ -3,7 +3,7 @@ import classNames from "classnames";
 import isEqual from "lodash/isEqual";
 import { useMemo } from "react";
 
-import { PillButtonVariant } from "components/ui/PillSelect/PillButton";
+import { PillButtonVariant } from "components/ui/PillListBox/PillButton";
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

@@ -409,71 +409,39 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                       >
                         <div
-                          class="<removed-for-snapshot-test>"
                           data-testid="sync-mode-select"
-                          role="combobox"
                         >
-                          <span
+                          <button
+                            aria-expanded="false"
+                            aria-haspopup="listbox"
                             class="<removed-for-snapshot-test>"
-                            id="react-select-2-live-region"
-                          />
-                          <span
-                            aria-atomic="false"
-                            aria-live="polite"
-                            aria-relevant="additions text"
-                            class="<removed-for-snapshot-test>"
-                          />
-                          <div>
-                            <span
+                            data-headlessui-state=""
+                            id="headlessui-listbox-button-:r0:"
+                            type="button"
+                          >
+                            <div
                               class="<removed-for-snapshot-test>"
+                              data-error="false"
+                              data-testid="pill-select-button"
                             >
-                              <button
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-error="false"
-                                data-testid="pill-select-button"
-                                type="button"
                               >
-                                <div
+                                <p
                                   class="<removed-for-snapshot-test>"
+                                  data-type="text"
                                 >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Full refresh
-                                  </p>
-                                </div>
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                />
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Append
-                                  </p>
-                                </div>
-                                <svg
-                                  aria-hidden="true"
-                                  class="<removed-for-snapshot-test>"
-                                  data-icon="caret-down"
-                                  data-prefix="fas"
-                                  focusable="false"
-                                  role="img"
-                                  viewBox="0 0 320 512"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
-                              </button>
-                            </span>
-                          </div>
+                                  Full refresh | Append
+                                </p>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              />
+                            </div>
+                          </button>
+                          <div
+                            style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                          />
                         </div>
                       </div>
                       <div
@@ -561,71 +529,39 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                       >
                         <div
-                          class="<removed-for-snapshot-test>"
                           data-testid="sync-mode-select"
-                          role="combobox"
                         >
-                          <span
+                          <button
+                            aria-expanded="false"
+                            aria-haspopup="listbox"
                             class="<removed-for-snapshot-test>"
-                            id="react-select-3-live-region"
-                          />
-                          <span
-                            aria-atomic="false"
-                            aria-live="polite"
-                            aria-relevant="additions text"
-                            class="<removed-for-snapshot-test>"
-                          />
-                          <div>
-                            <span
+                            data-headlessui-state=""
+                            id="headlessui-listbox-button-:r1:"
+                            type="button"
+                          >
+                            <div
                               class="<removed-for-snapshot-test>"
+                              data-error="false"
+                              data-testid="pill-select-button"
                             >
-                              <button
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-error="false"
-                                data-testid="pill-select-button"
-                                type="button"
                               >
-                                <div
+                                <p
                                   class="<removed-for-snapshot-test>"
+                                  data-type="text"
                                 >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Full refresh
-                                  </p>
-                                </div>
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                />
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Append
-                                  </p>
-                                </div>
-                                <svg
-                                  aria-hidden="true"
-                                  class="<removed-for-snapshot-test>"
-                                  data-icon="caret-down"
-                                  data-prefix="fas"
-                                  focusable="false"
-                                  role="img"
-                                  viewBox="0 0 320 512"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
-                              </button>
-                            </span>
-                          </div>
+                                  Full refresh | Append
+                                </p>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              />
+                            </div>
+                          </button>
+                          <div
+                            style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                          />
                         </div>
                       </div>
                       <div
@@ -712,71 +648,39 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                       >
                         <div
-                          class="<removed-for-snapshot-test>"
                           data-testid="sync-mode-select"
-                          role="combobox"
                         >
-                          <span
+                          <button
+                            aria-expanded="false"
+                            aria-haspopup="listbox"
                             class="<removed-for-snapshot-test>"
-                            id="react-select-4-live-region"
-                          />
-                          <span
-                            aria-atomic="false"
-                            aria-live="polite"
-                            aria-relevant="additions text"
-                            class="<removed-for-snapshot-test>"
-                          />
-                          <div>
-                            <span
+                            data-headlessui-state=""
+                            id="headlessui-listbox-button-:r2:"
+                            type="button"
+                          >
+                            <div
                               class="<removed-for-snapshot-test>"
+                              data-error="false"
+                              data-testid="pill-select-button"
                             >
-                              <button
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-error="false"
-                                data-testid="pill-select-button"
-                                type="button"
                               >
-                                <div
+                                <p
                                   class="<removed-for-snapshot-test>"
+                                  data-type="text"
                                 >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Full refresh
-                                  </p>
-                                </div>
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                />
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                >
-                                  <p
-                                    class="<removed-for-snapshot-test>"
-                                    data-type="text"
-                                  >
-                                    Append
-                                  </p>
-                                </div>
-                                <svg
-                                  aria-hidden="true"
-                                  class="<removed-for-snapshot-test>"
-                                  data-icon="caret-down"
-                                  data-prefix="fas"
-                                  focusable="false"
-                                  role="img"
-                                  viewBox="0 0 320 512"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
-                              </button>
-                            </span>
-                          </div>
+                                  Full refresh | Append
+                                </p>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              />
+                            </div>
+                          </button>
+                          <div
+                            style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                          />
                         </div>
                       </div>
                       <div

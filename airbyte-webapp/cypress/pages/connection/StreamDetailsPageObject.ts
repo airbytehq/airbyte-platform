@@ -137,7 +137,7 @@ export class StreamDetailsPageObject {
     // todo: this is targeting every sync mode select, not just the one within the panel
     cy.get(streamDetailsPanel).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
-      cy.get(`.react-select__option`)
+      cy.get('li[role="option"]')
         .contains(`${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`)
         .click();
     });
