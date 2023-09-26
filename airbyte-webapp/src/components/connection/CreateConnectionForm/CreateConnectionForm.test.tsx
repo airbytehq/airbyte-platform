@@ -45,12 +45,10 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
-jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({
+jest.mock("area/connector/utils", () => ({
   useGetSourceFromSearchParams: () => mockConnection.source,
-}));
-
-jest.mock("hooks/domain/connector/useGetDestinationFromParams", () => ({
   useGetDestinationFromSearchParams: () => mockConnection.destination,
+  ConnectorIds: jest.requireActual("area/connector/utils").ConnectorIds,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({

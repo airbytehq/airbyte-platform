@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import { StepsTypes } from "components/ConnectorBlocks";
@@ -21,12 +20,4 @@ export const useGetDestinationFromSearchParams = () => {
     throw new Error("Destination id is missing");
   }
   return useGetDestination(destinationId);
-};
-
-export const useGetDestinationTabFromParams = () => {
-  const params = useParams<{ "*": StepsTypes | "" | undefined; destinationId: string }>();
-
-  return useMemo<StepsTypes | undefined>(() => {
-    return params["*"] === "" ? StepsTypes.OVERVIEW : params["*"];
-  }, [params]);
 };
