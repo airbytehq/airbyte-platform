@@ -159,6 +159,10 @@ public class JobsHandler {
     return new BooleanRead().value(previousJobSucceeded);
   }
 
+  /**
+   * Records the cancellation of a job and its ongoing attempt. Kicks off notification and other
+   * post-processing.
+   */
   public void persistJobCancellation(final UUID connectionId, final long jobId, final int attemptNumber, final Object rawFailureSummary) {
     AttemptFailureSummary failureSummary = null;
     if (rawFailureSummary != null) {
