@@ -73,8 +73,6 @@ object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", 
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
-object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.resources", default = "")
-
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
