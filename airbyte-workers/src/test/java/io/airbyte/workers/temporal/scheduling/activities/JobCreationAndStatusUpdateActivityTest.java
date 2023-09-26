@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
@@ -22,6 +22,7 @@ import io.airbyte.api.client.model.generated.BooleanRead;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.client.model.generated.JobCreate;
+import io.airbyte.api.client.model.generated.JobFailureRequest;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
@@ -47,12 +48,9 @@ import io.airbyte.featureflag.UseNewIsLastJobOrAttemptFailure;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
-import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
-import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -62,7 +60,6 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,7 +139,7 @@ class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test job creation")
     void createJob() throws ApiException {
-      Mockito.when(jobsApi.createJob(new JobCreate().connectionId(CONNECTION_ID))).thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
+      when(jobsApi.createJob(new JobCreate().connectionId(CONNECTION_ID))).thenReturn(new JobInfoRead().job(new JobRead().id(JOB_ID)));
       final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
       assertEquals(JOB_ID, newJob.getJobId());
@@ -151,14 +148,14 @@ class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test job creation throws retryable exception")
     void createJobThrows() throws ApiException {
-      Mockito.when(jobsApi.createJob(Mockito.any())).thenThrow(new ApiException());
+      when(jobsApi.createJob(Mockito.any())).thenThrow(new ApiException());
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID)));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 5, 20, 30, 1439, 11})
     void isLastJobOrAttemptFailureReturnsTrueIfNotFirstAttemptForJob(final int attemptNumber) {
-      Mockito.when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
+      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
           .thenReturn(true);
 
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
@@ -173,7 +170,7 @@ class JobCreationAndStatusUpdateActivityTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(final boolean didSucceed) throws ApiException {
-      Mockito.when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
+      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
           .thenReturn(true);
 
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
@@ -181,7 +178,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
+      when(jobsApi.didPreviousJobSucceed(any()))
           .thenReturn(new BooleanRead().value(didSucceed));
 
       final boolean result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
@@ -191,7 +188,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() throws ApiException {
-      Mockito.when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
+      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
           .thenReturn(true);
 
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
@@ -199,7 +196,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
+      when(jobsApi.didPreviousJobSucceed(any()))
           .thenThrow(new ApiException("bang"));
 
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input));
@@ -208,7 +205,7 @@ class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test attempt creation")
     void createAttemptNumber() throws ApiException {
-      Mockito.when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
+      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
           .thenReturn(new CreateNewAttemptNumberResponse().attemptNumber(ATTEMPT_NUMBER_1));
 
       final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(JOB_ID));
@@ -218,7 +215,7 @@ class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test exception errors are properly wrapped")
     void createAttemptNumberThrowException() throws ApiException {
-      Mockito.when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
+      when(attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(JOB_ID)))
           .thenThrow(new ApiException());
 
       Assertions.assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
@@ -258,73 +255,20 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void setJobFailure() throws IOException {
-      final Attempt mAttempt = Mockito.mock(Attempt.class);
-      Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
-
-      final JobSyncConfig jobSyncConfig = new JobSyncConfig()
-          .withSourceDefinitionVersionId(UUID.randomUUID())
-          .withDestinationDefinitionVersionId(UUID.randomUUID());
-
-      final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
-      Mockito.when(mJobConfig.getConfigType()).thenReturn(SYNC);
-      Mockito.when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
-
-      final Job mJob = Mockito.mock(Job.class);
-      Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
-      Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
-      Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
-
-      Mockito.when(mJobPersistence.getJob(JOB_ID))
-          .thenReturn(mJob);
-
+    void setJobFailure() throws ApiException {
       jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON));
-
-      final SyncJobReportingContext expectedReportingContext = new SyncJobReportingContext(
-          JOB_ID,
-          jobSyncConfig.getSourceDefinitionVersionId(),
-          jobSyncConfig.getDestinationDefinitionVersionId());
-
-      verify(mJobPersistence).failJob(JOB_ID);
-      verify(mJobNotifier).failJob(eq(REASON), Mockito.any());
-      verify(mJobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext);
+      verify(jobsApi).jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(REASON));
     }
 
     @Test
-    void setJobFailureWrapException() throws IOException {
-      final Exception exception = new IOException(TEST_EXCEPTION_MESSAGE);
-      Mockito.doThrow(exception)
-          .when(mJobPersistence).failJob(JOB_ID);
+    void setJobFailureWithNullJobSyncConfig() throws ApiException {
+      when(jobsApi.jobFailure(any())).thenThrow(new ApiException());
 
       Assertions
-          .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, ATTEMPT_NUMBER_1, CONNECTION_ID, "")))
+          .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON)))
           .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
-
-      verify(mJobtracker, times(1)).trackSyncForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER_1, JobState.FAILED, exception);
-    }
-
-    @Test
-    void setJobFailureWithNullJobSyncConfig() throws IOException {
-      final Attempt mAttempt = Mockito.mock(Attempt.class);
-      Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
-
-      final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
-      Mockito.when(mJobConfig.getSync()).thenReturn(null);
-
-      final Job mJob = Mockito.mock(Job.class);
-      Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
-      Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
-      Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
-
-      Mockito.when(mJobPersistence.getJob(JOB_ID))
-          .thenReturn(mJob);
-
-      jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON));
-
-      verify(mJobPersistence).failJob(JOB_ID);
-      verify(mJobNotifier).failJob(eq(REASON), Mockito.any());
-      verify(mJobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any());
+          .hasCauseInstanceOf(ApiException.class);
+      verify(jobsApi).jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(REASON));
     }
 
     @Test
@@ -427,7 +371,7 @@ class JobCreationAndStatusUpdateActivityTest {
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(JOB_ID, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
 
-    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
@@ -446,7 +390,7 @@ class JobCreationAndStatusUpdateActivityTest {
             .withDestinationDefinitionVersionId(destinationDefVersionId));
     final Job job = new Job(JOB_ID, RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
 
-    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
         .thenReturn(List.of(
             new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
     final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);

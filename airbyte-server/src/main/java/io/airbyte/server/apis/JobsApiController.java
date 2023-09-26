@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.ConnectionJobRequestBody;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
+import io.airbyte.api.model.generated.JobFailureRequest;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
@@ -162,6 +163,14 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
+  }
+
+  @Post("/job_failure")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public InternalOperationResult jobFailure(final JobFailureRequest jobFailureRequest) {
+    return ApiHelper.execute(() -> jobsHandler.jobFailure(jobFailureRequest));
   }
 
   @POST

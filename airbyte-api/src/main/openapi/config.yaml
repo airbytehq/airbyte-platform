@@ -3066,6 +3066,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/job_failure:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Marks a job as failed
+      operationId: jobFailure
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+                - connectionId
+                - reason
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                reason:
+                  type: string
+                  description: Reason of the failure
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
 
   # USERS
   /v1/users/create:

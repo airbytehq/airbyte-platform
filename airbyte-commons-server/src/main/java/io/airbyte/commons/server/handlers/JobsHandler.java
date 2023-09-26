@@ -8,18 +8,24 @@ import static io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpd
 
 import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.InternalOperationResult;
+import io.airbyte.api.model.generated.JobFailureRequest;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
-import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
+import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
+import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
+import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -38,13 +44,58 @@ public class JobsHandler {
   private final JobPersistence jobPersistence;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobNotifier jobNotifier;
+  private final JobErrorReporter jobErrorReporter;
 
   public JobsHandler(final JobPersistence jobPersistence,
                      final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper,
-                     final JobNotifier jobNotifier) {
+                     final JobNotifier jobNotifier,
+                     final JobErrorReporter jobErrorReporter) {
     this.jobPersistence = jobPersistence;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
     this.jobNotifier = jobNotifier;
+    this.jobErrorReporter = jobErrorReporter;
+  }
+
+  /**
+   * Mark job as failure.
+   */
+  public InternalOperationResult jobFailure(final JobFailureRequest input) {
+    try {
+      final long jobId = input.getJobId();
+      jobPersistence.failJob(jobId);
+      final Job job = jobPersistence.getJob(jobId);
+
+      jobNotifier.failJob(input.getReason(), job);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job);
+
+      final UUID connectionId = UUID.fromString(job.getScope());
+      if (!connectionId.equals(input.getConnectionId())) {
+        log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.getConnectionId(), connectionId);
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT, 1);
+      }
+
+      final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
+      final UUID destinationDefinitionVersionId;
+      final UUID sourceDefinitionVersionId;
+      if (jobSyncConfig == null) {
+        final JobResetConnectionConfig resetConfig = job.getConfig().getResetConnection();
+        // In a reset, we run a fake source
+        sourceDefinitionVersionId = null;
+        destinationDefinitionVersionId = resetConfig != null ? resetConfig.getDestinationDefinitionVersionId() : null;
+      } else {
+        sourceDefinitionVersionId = jobSyncConfig.getSourceDefinitionVersionId();
+        destinationDefinitionVersionId = jobSyncConfig.getDestinationDefinitionVersionId();
+      }
+      final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDefinitionVersionId, destinationDefinitionVersionId);
+      job.getLastFailedAttempt().flatMap(Attempt::getFailureSummary)
+          .ifPresent(failureSummary -> jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext));
+      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
+      return new InternalOperationResult().succeeded(true);
+    } catch (final IOException e) {
+      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
+          JobStatus.FAILED, e);
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -73,7 +124,7 @@ public class JobsHandler {
     } catch (final IOException e) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
           JobStatus.SUCCEEDED, e);
-      throw new RetryableException(e);
+      throw new RuntimeException(e);
     }
   }
 
