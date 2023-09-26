@@ -107,8 +107,6 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
-object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
-
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
  * the sync input.

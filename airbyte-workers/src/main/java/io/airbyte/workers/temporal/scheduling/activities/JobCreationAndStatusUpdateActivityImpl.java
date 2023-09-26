@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -25,12 +24,8 @@ import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseNewIsLastJobOrAttemptFailure;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -41,11 +36,7 @@ import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.OptionalLong;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -63,7 +54,6 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
-  private final FeatureFlagClient ffClient;
 
   public JobCreationAndStatusUpdateActivityImpl(final JobPersistence jobPersistence,
                                                 final JobNotifier jobNotifier,
@@ -71,15 +61,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
                                                 final ConfigRepository configRepository,
                                                 final JobErrorReporter jobErrorReporter,
                                                 final JobsApi jobsApi,
-                                                final AttemptApi attemptApi,
-                                                final FeatureFlagClient ffClient) {
+                                                final AttemptApi attemptApi) {
     this.jobPersistence = jobPersistence;
     this.jobNotifier = jobNotifier;
     this.jobTracker = jobTracker;
     this.jobErrorReporter = jobErrorReporter;
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
-    this.ffClient = ffClient;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -214,45 +202,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
-  /**
-   * isLastJobOrAttemptFailureOld.
-   */
-  public boolean isLastJobOrAttemptFailureOld(final JobCheckFailureInput input) {
-    final int limit = 2;
-    boolean lastAttemptCheck = false;
-    boolean lastJobCheck = false;
-
-    final Set<ConfigType> configTypes = new HashSet<>();
-    configTypes.add(SYNC);
-
-    try {
-      final List<Job> jobList = jobPersistence.listJobsIncludingId(configTypes, input.getConnectionId().toString(), input.getJobId(), limit);
-      final Optional<Job> optionalActiveJob = jobList.stream().filter(job -> job.getId() == input.getJobId()).findFirst();
-      if (optionalActiveJob.isPresent()) {
-        lastAttemptCheck = jobCreationAndStatusUpdateHelper.checkActiveJobPreviousAttempt(optionalActiveJob.get(), input.getAttemptId());
-      }
-
-      final OptionalLong previousJobId =
-          jobCreationAndStatusUpdateHelper.getPreviousJobId(input.getJobId(), jobList.stream().map(Job::getId).toList());
-      if (previousJobId.isPresent()) {
-        final Optional<Job> optionalPreviousJob = jobList.stream().filter(job -> job.getId() == previousJobId.getAsLong()).findFirst();
-        if (optionalPreviousJob.isPresent()) {
-          lastJobCheck = optionalPreviousJob.get().getStatus().equals(io.airbyte.persistence.job.models.JobStatus.FAILED);
-        }
-      }
-
-      return lastJobCheck || lastAttemptCheck;
-    } catch (final IOException e) {
-      throw new RetryableException(e);
-    }
-  }
-
   @Override
   public boolean isLastJobOrAttemptFailure(final JobCheckFailureInput input) {
-    if (!ffClient.boolVariation(UseNewIsLastJobOrAttemptFailure.INSTANCE, new Connection(input.getConnectionId()))) {
-      return isLastJobOrAttemptFailureOld(input);
-    }
-
     // If there has been a previous attempt, that means it failed. We don't create subsequent attempts
     // on success.
     final var isNotFirstAttempt = input.getAttemptId() > 0;

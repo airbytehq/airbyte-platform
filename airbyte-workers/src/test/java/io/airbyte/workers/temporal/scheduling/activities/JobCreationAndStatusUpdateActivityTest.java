@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +42,6 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseNewIsLastJobOrAttemptFailure;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -126,11 +123,9 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @BeforeEach
   void beforeEach() {
-    mFeatureFlagClient = Mockito.mock(TestClient.class);
-
     jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
         mJobPersistence, mJobNotifier, mJobtracker, mConfigRepository, mJobErrorReporter, jobsApi,
-        attemptApi, mFeatureFlagClient);
+        attemptApi);
   }
 
   @Nested
@@ -155,9 +150,6 @@ class JobCreationAndStatusUpdateActivityTest {
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 5, 20, 30, 1439, 11})
     void isLastJobOrAttemptFailureReturnsTrueIfNotFirstAttemptForJob(final int attemptNumber) {
-      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
-          .thenReturn(true);
-
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
           JOB_ID,
           attemptNumber,
@@ -170,9 +162,6 @@ class JobCreationAndStatusUpdateActivityTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(final boolean didSucceed) throws ApiException {
-      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
-          .thenReturn(true);
-
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
           JOB_ID,
           0,
@@ -188,9 +177,6 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() throws ApiException {
-      when(mFeatureFlagClient.boolVariation(eq(UseNewIsLastJobOrAttemptFailure.INSTANCE), any()))
-          .thenReturn(true);
-
       final var input = new JobCreationAndStatusUpdateActivity.JobCheckFailureInput(
           JOB_ID,
           0,
