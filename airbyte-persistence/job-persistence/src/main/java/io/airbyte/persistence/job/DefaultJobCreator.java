@@ -156,6 +156,9 @@ public class DefaultJobCreator implements JobCreator {
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
   }
 
+  /**
+   * Updates a catalog for reset.
+   */
   public static void updateCatalogForReset(
                                            final List<StreamDescriptor> streamsToReset,
                                            final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {

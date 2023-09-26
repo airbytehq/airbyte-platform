@@ -284,10 +284,10 @@ class UserHandlerTest {
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider) throws IOException {
-        verify(userPersistence).writeUser(argThat(user -> user.getUserId().equals(NEW_USER_ID) &&
-            user.getEmail().equals(NEW_EMAIL) &&
-            user.getAuthUserId().equals(NEW_AUTH_USER_ID) &&
-            user.getAuthProvider().equals(expectedAuthProvider)));
+        verify(userPersistence).writeUser(argThat(user -> user.getUserId().equals(NEW_USER_ID)
+            && user.getEmail().equals(NEW_EMAIL)
+            && user.getAuthUserId().equals(NEW_AUTH_USER_ID)
+            && user.getAuthProvider().equals(expectedAuthProvider)));
       }
 
       private void verifyUserRead(final UserRead userRead, final io.airbyte.api.model.generated.AuthProvider expectedAuthProvider) {
