@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.model.generated.ReportJobStartRequest;
 import io.airbyte.api.model.generated.SyncInput;
 import io.airbyte.commons.auth.SecuredWorkspace;
@@ -206,6 +207,18 @@ public class JobsApiController implements JobsApi {
     return ApiHelper.execute(() -> jobsHandler.didPreviousJobSucceed(
         requestBody.getConnectionId(),
         requestBody.getJobId()));
+  }
+
+  @Override
+  @Post("/persist_cancellation")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public void persistJobCancellation(final PersistCancelJobRequestBody requestBody) {
+    ApiHelper.execute(() -> {
+      jobsHandler.persistJobCancellation(requestBody.getConnectionId(), requestBody.getJobId(), requestBody.getAttemptNumber(),
+          requestBody.getAttemptFailureSummary());
+      return null;
+    });
   }
 
 }

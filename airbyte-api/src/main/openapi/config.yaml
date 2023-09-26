@@ -3812,6 +3812,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BooleanRead"
+  /v1/jobs/persist_cancellation:
+    post:
+      summary: Persists the cancellation of a job and kicks off any post processing (e.g notifications).
+      tags:
+        - jobs
+        - internal
+      operationId: persistJobCancellation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersistCancelJobRequestBody"
+      responses:
+        "204":
+          description: Successfully persisted the job cancellation.
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -8248,6 +8263,23 @@ components:
         - connectionId
         - jobId
       properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+    PersistCancelJobRequestBody:
+      type: object
+      required:
+        - attemptFailureSummary
+        - attemptNumber
+        - connectionId
+        - jobId
+      properties:
+        attemptFailureSummary:
+          description: Attempt failure summary serialized as a raw object
+          type: object
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
         jobId:

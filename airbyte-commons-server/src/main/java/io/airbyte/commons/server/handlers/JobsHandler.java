@@ -11,8 +11,10 @@ import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.JobStatus;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -104,6 +106,34 @@ public class JobsHandler {
         .orElse(false);
 
     return new BooleanRead().value(previousJobSucceeded);
+  }
+
+  public void persistJobCancellation(final UUID connectionId, final long jobId, final int attemptNumber, final Object rawFailureSummary) {
+    AttemptFailureSummary failureSummary = null;
+    if (rawFailureSummary != null) {
+      try {
+        failureSummary = Jsons.convertValue(rawFailureSummary, AttemptFailureSummary.class);
+      } catch (final Exception e) {
+        throw new BadRequestException("Unable to parse failureSummary.", e);
+      }
+    }
+
+    try {
+      // fail attempt
+      jobPersistence.failAttempt(jobId, attemptNumber);
+      jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
+      // persist cancellation
+      jobPersistence.cancelJob(jobId);
+      // post process
+      final var job = jobPersistence.getJob(jobId);
+      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
+      jobNotifier.failJob("Job was cancelled", job);
+      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
+    } catch (final IOException e) {
+      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber,
+          JobStatus.FAILED, e);
+      throw new RuntimeException(e);
+    }
   }
 
 }

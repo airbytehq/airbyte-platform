@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -19,8 +20,12 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.commons.server.JobStatus;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.FailureReason;
+import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StandardSyncOutput;
@@ -30,12 +35,17 @@ import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 /**
@@ -59,6 +69,11 @@ class JobsHandlerTest {
           new NormalizationSummary());
 
   private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
+
+  private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
+      .withFailures(Collections.singletonList(
+          new FailureReason()
+              .withFailureOrigin(FailureOrigin.SOURCE)));
 
   @BeforeEach
   void beforeEach() {
@@ -155,6 +170,46 @@ class JobsHandlerTest {
 
     final var result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123);
     assertFalse(result.getValue());
+  }
+
+  @Test
+  void persistJobCancellationSuccess() throws Exception {
+    final var mockJob = Mockito.mock(Job.class);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(mockJob);
+
+    jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, failureSummary);
+
+    verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
+    verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
+    verify(jobPersistence).cancelJob(JOB_ID);
+    verify(jobNotifier).failJob("Job was cancelled", mockJob);
+    verify(helper).trackCompletion(any(), eq(JobStatus.FAILED));
+  }
+
+  @Test
+  void persistJobCancellationIOException() throws Exception {
+    final var exception = new IOException("bang.");
+    when(jobPersistence.getJob(JOB_ID)).thenThrow(exception);
+
+    // map to runtime exception
+    assertThrows(RuntimeException.class, () -> jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, failureSummary));
+    // emit analytics
+    verify(helper).trackCompletionForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER, JobStatus.FAILED, exception);
+  }
+
+  @ParameterizedTest
+  @MethodSource("randomObjects")
+  void persistJobCancellationValidatesFailureSummary(final Object thing) {
+    assertThrows(BadRequestException.class, () -> jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, thing));
+  }
+
+  private static Stream<Arguments> randomObjects() {
+    return Stream.of(
+        Arguments.of(123L),
+        Arguments.of(true),
+        Arguments.of(List.of("123", "123")),
+        Arguments.of("a string"),
+        Arguments.of(543.0));
   }
 
   @Test

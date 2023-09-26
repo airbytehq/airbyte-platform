@@ -19,6 +19,7 @@ import io.airbyte.api.client.model.generated.FailAttemptRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
@@ -209,19 +210,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final long jobId = input.getJobId();
-      final int attemptNumber = input.getAttemptNumber();
-      jobPersistence.failAttempt(jobId, attemptNumber);
-      jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, input.getAttemptFailureSummary());
-      jobPersistence.cancelJob(jobId);
+      final var req = new PersistCancelJobRequestBody()
+          .connectionId(input.getConnectionId())
+          .jobId(input.getJobId())
+          .attemptNumber(input.getAttemptNumber())
+          .attemptFailureSummary(input.getAttemptFailureSummary());
 
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
-      jobNotifier.failJob("Job was cancelled", job);
-      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
-    } catch (final IOException e) {
-      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
-          JobStatus.FAILED, e);
+      jobsApi.persistJobCancellation(req);
+    } catch (final ApiException e) {
       throw new RetryableException(e);
     }
   }

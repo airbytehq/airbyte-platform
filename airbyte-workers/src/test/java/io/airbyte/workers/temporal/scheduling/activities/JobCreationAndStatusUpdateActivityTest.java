@@ -25,6 +25,7 @@ import io.airbyte.api.client.model.generated.JobCreate;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
@@ -71,7 +72,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -356,30 +357,37 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void setJobCancelled() throws IOException {
-      jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(
-          new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, failureSummary));
+    void cancelJobHappyPath() throws ApiException {
+      final var input = new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          failureSummary);
 
-      // attempt must be failed before job is cancelled, or else job state machine is not respected
-      final InOrder orderVerifier = Mockito.inOrder(mJobPersistence);
-      orderVerifier.verify(mJobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-      orderVerifier.verify(mJobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
-      orderVerifier.verify(mJobPersistence).cancelJob(JOB_ID);
+      final ArgumentCaptor<PersistCancelJobRequestBody> jobReq = ArgumentCaptor.forClass(PersistCancelJobRequestBody.class);
+
+      jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(input);
+
+      verify(jobsApi).persistJobCancellation(jobReq.capture());
+      assertEquals(JOB_ID, jobReq.getValue().getJobId());
+      assertEquals(ATTEMPT_NUMBER, jobReq.getValue().getAttemptNumber());
+      assertEquals(CONNECTION_ID, jobReq.getValue().getConnectionId());
+      assertEquals(failureSummary, jobReq.getValue().getAttemptFailureSummary());
     }
 
     @Test
-    void setJobCancelledWrapException() throws IOException {
-      final Exception exception = new IOException();
-      Mockito.doThrow(exception)
-          .when(mJobPersistence).cancelJob(JOB_ID);
+    void cancelJobThrowsRetryableOnJobsApiFailure() throws ApiException {
+      final var input = new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          failureSummary);
 
-      Assertions
-          .assertThatThrownBy(() -> jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(
-              new JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, null)))
-          .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
+      Mockito.doThrow(new ApiException("bang")).when(jobsApi).persistJobCancellation(any());
 
-      verify(mJobtracker, times(1)).trackSyncForInternalFailure(JOB_ID, CONNECTION_ID, ATTEMPT_NUMBER, JobState.FAILED, exception);
+      assertThrows(
+          RetryableException.class,
+          () -> jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(input));
     }
 
     @Test
