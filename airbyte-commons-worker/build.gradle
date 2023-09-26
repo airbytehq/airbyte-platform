@@ -1,6 +1,8 @@
 plugins {
     id "io.airbyte.gradle.jvm.lib"
     id "io.airbyte.gradle.publish"
+    id "org.jetbrains.kotlin.jvm"
+    id "org.jetbrains.kotlin.kapt"
 }
 
 configurations.all {
@@ -8,12 +10,18 @@ configurations.all {
         force libs.platform.testcontainers.postgresql
     }
 }
+
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
 
+    kapt libs.bundles.micronaut.annotation.processor
+
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+
+    implementation libs.kotlin.logging
+    implementation libs.micronaut.kotlin.extensions
 
     implementation libs.bundles.kubernetes.client
     implementation 'com.auth0:java-jwt:3.19.2'
@@ -79,4 +87,13 @@ test {
     useJUnitPlatform {
         excludeTags("cloud-storage")
     }
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java _with_ lombok dependencies.
+// Kapt, by default, runs all annotation processors and disables annotation processing by javac, however
+// this default behavior breaks the lombok java annotation processor.  To avoid lombok breaking, kapt has
+// keepJavacAnnotationProcessors enabled, which causes duplicate META-INF files to be generated.
+// Once lombok has been removed, this can also be removed.
+tasks.withType(Jar).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

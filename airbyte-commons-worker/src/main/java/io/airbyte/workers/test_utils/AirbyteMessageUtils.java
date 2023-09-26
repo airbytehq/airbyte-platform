@@ -195,4 +195,39 @@ public class AirbyteMessageUtils {
         .withTrace(airbyteTraceMessage);
   }
 
+  public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream, final AirbyteTraceMessage.Type type) {
+    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
+        .withStatus(AirbyteStreamStatus.STARTED)
+        .withStreamDescriptor(stream);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(type)
+        .withStreamStatus(airbyteStreamStatusTraceMessage);
+
+    if (type != null) {
+      switch (type) {
+        case ERROR -> {
+          final var error = new AirbyteErrorTraceMessage();
+          airbyteTraceMessage.withError(error);
+        }
+        case ESTIMATE -> {
+          final var estimate = new AirbyteEstimateTraceMessage();
+          airbyteTraceMessage.withEstimate(estimate);
+        }
+        case STREAM_STATUS -> {
+          final var streamStatus = new AirbyteStreamStatusTraceMessage();
+          airbyteTraceMessage.withStreamStatus(streamStatus);
+        }
+        default -> {
+          // Do nothing.
+        }
+      }
+    }
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
 }

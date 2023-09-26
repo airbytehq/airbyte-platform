@@ -41,14 +41,14 @@ import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.SyncStatsBuilder;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.SyncStatsBuilder;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -75,7 +75,7 @@ class ReplicationWorkerHelper {
   private final AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   private final FieldSelector fieldSelector;
   private final AirbyteMapper mapper;
-  private final MessageTracker messageTracker;
+  private final AirbyteMessageTracker messageTracker;
   private final MetricClient metricClient;
   private final SyncPersistence syncPersistence;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
@@ -98,7 +98,7 @@ class ReplicationWorkerHelper {
                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                  final FieldSelector fieldSelector,
                                  final AirbyteMapper mapper,
-                                 final MessageTracker messageTracker,
+                                 final AirbyteMessageTracker messageTracker,
                                  final SyncPersistence syncPersistence,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                  final ThreadedTimeTracker timeTracker,
@@ -200,7 +200,7 @@ class ReplicationWorkerHelper {
    */
   private void handleReplicationFailure(final AirbyteMessageOrigin failureOrigin, final Supplier<StreamDescriptor> streamSupplier) {
     replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(), replicationContext, failureOrigin,
-        Optional.of(StreamStatusIncompleteRunCause.FAILED));
+        StreamStatusIncompleteRunCause.FAILED);
   }
 
   /**
@@ -376,7 +376,7 @@ class ReplicationWorkerHelper {
      */
     if (cancelled.get()) {
       replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(new StreamDescriptor(), replicationContext,
-          AirbyteMessageOrigin.INTERNAL, Optional.of(StreamStatusIncompleteRunCause.CANCELED));
+          AirbyteMessageOrigin.INTERNAL, StreamStatusIncompleteRunCause.CANCELED);
     } else {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
           AirbyteMessageOrigin.INTERNAL);

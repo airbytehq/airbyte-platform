@@ -43,14 +43,13 @@ import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
-import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.StreamStatusTracker;
-import io.airbyte.workers.internal.book_keeping.events.AirbyteControlMessageEventListener;
-import io.airbyte.workers.internal.book_keeping.events.AirbyteStreamStatusMessageEventListener;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.StreamStatusTracker;
+import io.airbyte.workers.internal.bookkeeping.events.AirbyteControlMessageEventListener;
+import io.airbyte.workers.internal.bookkeeping.events.AirbyteStreamStatusMessageEventListener;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.micronaut.context.event.ApplicationEventListener;
 import java.nio.file.Path;
@@ -74,7 +73,7 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final AirbyteSource source,
                                                          final AirbyteMapper mapper,
                                                          final AirbyteDestination destination,
-                                                         final MessageTracker messageTracker,
+                                                         final AirbyteMessageTracker messageTracker,
                                                          final SyncPersistence syncPersistence,
                                                          final RecordSchemaValidator recordSchemaValidator,
                                                          final FieldSelector fieldSelector,
@@ -110,9 +109,8 @@ public abstract class ReplicationWorkerPerformanceTest {
   // @Measurement(iterations = 2)
   public void executeOneSync() throws InterruptedException {
     log.warn("availableProcessors {}", Runtime.getRuntime().availableProcessors());
-    final var featureFlags = new EnvVariableFeatureFlags();
     final var perDestination = new EmptyAirbyteDestination();
-    final var messageTracker = new AirbyteMessageTracker(featureFlags);
+    final var messageTracker = mock(AirbyteMessageTracker.class);
     final var syncPersistence = mock(SyncPersistence.class);
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
