@@ -331,13 +331,16 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "number of notifications sent"),
   NON_AIRBYTE_MESSAGE_LOG_LINE(MetricEmittingApps.WORKER,
       "non_airbyte_message_log_line",
-      "number of notifications sent"),
+      "non airbyte message log"),
   LINE_SKIPPED_WITH_RECORD(MetricEmittingApps.WORKER,
       "line_skipped_with_record",
-      "number of notifications sent"),
+      "malformated line with a record"),
   LINE_SKIPPED_TOO_LONG(MetricEmittingApps.WORKER,
       "line_skipped_too_long",
-      "number of notifications sent");
+      "Skip the line because of its size"),
+  TOO_LONG_LINES_DISTRIBUTION(MetricEmittingApps.WORKER,
+      "too_long_lines_distribution",
+      "Too long line distribution");
 
   private final MetricEmittingApp application;
   private final String metricName;

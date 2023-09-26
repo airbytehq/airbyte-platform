@@ -14,11 +14,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.container_orchestrator.AsyncStateManager;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.AsyncKubePodStatus;
@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Runs replication worker.
  */
-public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncInput> {
+public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationInput> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Configs configs;
@@ -59,14 +59,14 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
   }
 
   @Override
-  public Class<StandardSyncInput> getInputClass() {
-    return StandardSyncInput.class;
+  public Class<ReplicationInput> getInputClass() {
+    return ReplicationInput.class;
   }
 
   @Trace(operationName = JOB_ORCHESTRATOR_OPERATION_NAME)
   @Override
   public Optional<String> runJob() throws Exception {
-    final var syncInput = readInput();
+    final var replicationInput = readInput();
 
     final var sourceLauncherConfig = JobOrchestrator.readAndDeserializeFile(
         Path.of(KubePodProcess.CONFIG_DIR, ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG),
@@ -83,12 +83,12 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
 
     final ReplicationWorker replicationWorker =
-        replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning);
+        replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, this::markJobRunning);
 
     log.info("Running replication worker...");
     final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
-    final ReplicationOutput replicationOutput = replicationWorker.run(syncInput, jobRoot);
+    final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));

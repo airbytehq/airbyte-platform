@@ -11,11 +11,10 @@ import {
 import { OperationsSection } from "components/connection/ConnectionForm/OperationsSection";
 import LoadingSchema from "components/LoadingSchema";
 
+import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateConnection } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
-import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
 import {
   ConnectionFormServiceProvider,
   tidyConnectionFormValues,

@@ -5,14 +5,19 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
 import static org.jooq.impl.DSL.asterisk;
+import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import io.airbyte.config.Organization;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +111,67 @@ public class OrganizationPersistence {
     return getOrganization(DEFAULT_ORGANIZATION_ID);
   }
 
+  /**
+   * List all organizations by user id, returning result ordered by org name. Supports keyword search.
+   */
+  public List<Organization> listOrganizationsByUserId(final UUID userId, final Optional<String> keyword)
+      throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .join(PERMISSION)
+        .on(ORGANIZATION.ID.eq(PERMISSION.ORGANIZATION_ID))
+        .where(PERMISSION.USER_ID.eq(userId))
+        .and(PERMISSION.ORGANIZATION_ID.isNotNull())
+        .and(keyword.isPresent() ? ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) : noCondition())
+        .orderBy(ORGANIZATION.NAME.asc())
+        .fetch())
+        .stream()
+        .map(OrganizationPersistence::createOrganizationFromRecord)
+        .toList();
+  }
+
+  /**
+   * List all organizations by user id, returning result ordered by org name. Supports pagination and
+   * keyword search.
+   */
+  public List<Organization> listOrganizationsByUserIdPaginated(final ResourcesByUserQueryPaginated query, final Optional<String> keyword)
+      throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .join(PERMISSION)
+        .on(ORGANIZATION.ID.eq(PERMISSION.ORGANIZATION_ID))
+        .where(PERMISSION.USER_ID.eq(query.userId()))
+        .and(PERMISSION.ORGANIZATION_ID.isNotNull())
+        .and(keyword.isPresent() ? ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) : noCondition())
+        .orderBy(ORGANIZATION.NAME.asc())
+        .limit(query.pageSize())
+        .offset(query.rowOffset())
+        .fetch())
+        .stream()
+        .map(OrganizationPersistence::createOrganizationFromRecord)
+        .toList();
+  }
+
+  /**
+   * Get the matching organization that has the given sso config realm. If not exists, returns empty
+   * optional obejct.
+   */
+
+  public Optional<Organization> getOrganizationBySsoConfigRealm(final String ssoConfigRealm) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .join(SSO_CONFIG)
+        .on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .where(SSO_CONFIG.KEYCLOAK_REALM.eq(ssoConfigRealm)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
   private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
@@ -144,8 +210,10 @@ public class OrganizationPersistence {
 
   }
 
-  private Organization createOrganizationFromRecord(final Record record) {
-    return new Organization().withOrganizationId(record.get(ORGANIZATION.ID)).withName(record.get(ORGANIZATION.NAME))
+  private static Organization createOrganizationFromRecord(final Record record) {
+    return new Organization()
+        .withOrganizationId(record.get(ORGANIZATION.ID))
+        .withName(record.get(ORGANIZATION.NAME))
         .withEmail(record.get(ORGANIZATION.EMAIL))
         .withUserId(record.get(ORGANIZATION.USER_ID));
   }

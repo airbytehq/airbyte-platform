@@ -85,6 +85,8 @@ dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-container-orchestrator"))
 
+    testImplementation("com.airbyte:api:0.39.2")
+
     implementation(libs.bundles.kubernetes.client)
     implementation(libs.platform.testcontainers)
 

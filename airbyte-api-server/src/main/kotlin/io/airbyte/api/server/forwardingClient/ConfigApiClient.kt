@@ -40,6 +40,7 @@ import io.airbyte.api.client.model.generated.SourceReadList
 import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.api.client.model.generated.WorkspaceReadList
 import io.airbyte.api.client.model.generated.WorkspaceUpdate
@@ -282,4 +283,14 @@ interface ConfigApiClient {
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
     @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
   ): HttpResponse<WorkspaceReadList>
+
+  @Post(
+    value = "/api/internal/v1/oauth_params/workspace_override/create",
+    processes = [MediaType.APPLICATION_JSON],
+    produces = [MediaType.APPLICATION_JSON],
+  )
+  fun setWorkspaceOverrideOAuthParams(
+    @Body workspaceOverrideOauthParamsRequestBody: WorkspaceOverrideOauthParamsRequestBody?,
+    @Header(ENDPOINT_API_USER_INFO_HEADER) endpointUserInfo: String?,
+  ): HttpResponse<*>?
 }

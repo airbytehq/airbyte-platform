@@ -32,7 +32,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
-import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
@@ -122,8 +121,6 @@ class JobCreationAndStatusUpdateActivityTest {
       .withNormalizationSummary(
           new NormalizationSummary());
 
-  private static final JobOutput jobOutput = new JobOutput().withSync(standardSyncOutput);
-
   private static final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
       .withFailures(Collections.singletonList(
           new FailureReason()
@@ -183,7 +180,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(attemptApi.didPreviousJobSucceed(any()))
+      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
           .thenReturn(new BooleanRead().value(didSucceed));
 
       final boolean result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input);
@@ -201,7 +198,7 @@ class JobCreationAndStatusUpdateActivityTest {
           0,
           CONNECTION_ID);
 
-      Mockito.when(attemptApi.didPreviousJobSucceed(any()))
+      Mockito.when(jobsApi.didPreviousJobSucceed(any()))
           .thenThrow(new ApiException("bang"));
 
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input));
@@ -330,40 +327,32 @@ class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    void setAttemptFailure() throws IOException {
-      jobCreationAndStatusUpdateActivity
-          .attemptFailureWithAttemptNumber(new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID,
-              standardSyncOutput, failureSummary));
+    void attemptFailureWithAttemptNumberHappyPath() {
+      final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          standardSyncOutput,
+          failureSummary);
 
-      verify(mJobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-      verify(mJobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-      verify(mJobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary);
+      assertDoesNotThrow(
+          () -> jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input));
     }
 
     @Test
-    void setAttemptFailureManuallyTerminated() throws IOException {
-      jobCreationAndStatusUpdateActivity
-          .attemptFailureWithAttemptNumber(
-              new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput, null));
+    void attemptFailureWithAttemptNumberThrowsRetryableOnApiFailure() throws ApiException {
+      final var input = new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+          standardSyncOutput,
+          failureSummary);
 
-      verify(mJobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-      verify(mJobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
-      verify(mJobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, null);
-    }
+      Mockito.doThrow(new ApiException("bang")).when(attemptApi).failAttempt(any());
 
-    @Test
-    void setAttemptFailureWrapException() throws IOException {
-      final Exception exception = new IOException(TEST_EXCEPTION_MESSAGE);
-      Mockito.doThrow(exception)
-          .when(mJobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER);
-
-      Assertions
-          .assertThatThrownBy(
-              () -> jobCreationAndStatusUpdateActivity
-                  .attemptFailureWithAttemptNumber(
-                      new JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, null, failureSummary)))
-          .isInstanceOf(RetryableException.class)
-          .hasCauseInstanceOf(IOException.class);
+      assertThrows(
+          RetryableException.class,
+          () -> jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input));
     }
 
     @Test

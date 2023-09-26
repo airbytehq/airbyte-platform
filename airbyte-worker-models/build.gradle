@@ -11,6 +11,8 @@ dependencies {
     implementation libs.bundles.jackson
     implementation project(':airbyte-commons')
     implementation project(path: ':airbyte-config:config-models')
+    implementation libs.airbyte.protocol
+    implementation project(':airbyte-api')
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok

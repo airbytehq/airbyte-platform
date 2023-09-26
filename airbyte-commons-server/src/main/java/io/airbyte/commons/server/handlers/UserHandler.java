@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.AuthProvider;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
 import io.airbyte.api.model.generated.UserIdRequestBody;
@@ -20,22 +21,22 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
+import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.server.handlers.helpers.PermissionMerger;
+import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.Permission;
+import io.airbyte.config.Organization;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -57,15 +58,28 @@ public class UserHandler {
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
+  private final OrganizationPersistence organizationPersistence;
+
+  private final Optional<JwtUserResolver> jwtUserResolver;
+  private final Optional<InitialUserConfiguration> initialUserConfiguration;
 
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
                      final PermissionPersistence permissionPersistence,
-                     final Supplier<UUID> uuidGenerator) {
+                     final OrganizationPersistence organizationPersistence,
+                     final PermissionHandler permissionHandler,
+                     final Supplier<UUID> uuidGenerator,
+                     final Optional<JwtUserResolver> jwtUserResolver,
+                     final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
+    this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
+    this.jwtUserResolver = jwtUserResolver;
+    this.initialUserConfiguration = initialUserConfiguration;
   }
 
   /**
@@ -77,7 +91,7 @@ public class UserHandler {
    * @throws IOException if unable to create the new user.
    * @throws JsonValidationException if unable to create the new user.
    */
-  public UserRead createUser(final UserCreate userCreate) throws ConfigNotFoundException, IOException, JsonValidationException {
+  public UserRead createUser(final UserCreate userCreate) throws IOException, ConfigNotFoundException, JsonValidationException {
 
     final UUID userId = uuidGenerator.get();
     final User user = new User()
@@ -257,56 +271,124 @@ public class UserHandler {
 
   public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
-    return buildUserWithPermissionInfoReadList(userPermissions);
+    return new UserWithPermissionInfoReadList().users(userPermissions.stream()
+        .map(userPermission -> new UserWithPermissionInfoRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
+            .permissionId(userPermission.getPermission().getPermissionId()))
+        .collect(Collectors.toList()));
   }
 
-  private Map<User, Permission> collectUserPermissionToMap(final List<UserPermission> userPermissions) {
-    return userPermissions.stream()
-        .collect(Collectors.toMap(
-            UserPermission::getUser,
-            (UserPermission userPermission) -> userPermission.getPermission(),
-            (permission1, permission2) -> PermissionMerger.pickHigherPermission(permission1, permission2)));
+  public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final User.AuthProvider authProvider =
+        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+    if (user.isPresent()) {
+      return buildUserRead(user.get());
+    }
+
+    if (jwtUserResolver.isEmpty()) {
+      throw new ConfigNotFoundException(ConfigSchema.USER, userAuthIdRequestBody.getAuthUserId());
+    }
+    final User incomingUser = jwtUserResolver.get().resolveUser();
+
+    // Verify JWT token and request value are the same. Otherwise, throw errors.
+    if (!incomingUser.getAuthProvider().value().equals(userAuthIdRequestBody.getAuthProvider().toString())) {
+      throw new IllegalArgumentException("JWT token issuer doesn't match the auth provider from the request body.");
+    }
+
+    if (!incomingUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
+      throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
+    }
+
+    LOGGER.debug("Creating User: " + incomingUser);
+    final UserRead createdUser = createUser(new UserCreate()
+        .name(incomingUser.getName())
+        .authUserId(userAuthIdRequestBody.getAuthUserId())
+        .authProvider(userAuthIdRequestBody.getAuthProvider())
+        .email(incomingUser.getEmail()));
+
+    // If new user's email matches the initial user config email, create instance_admin permission for
+    // them.
+    createInstanceAdminPermissionIfInitialUser(createdUser);
+
+    // If incoming SSO Config matches with existing org, find that org and add user to it;
+    final String ssoRealm = jwtUserResolver.get().resolveSsoRealm();
+    if (ssoRealm != null) {
+      final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
+      if (attachedOrganization.isPresent()) {
+        permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+            .workspaceId(null)
+            .organizationId(attachedOrganization.get().getOrganizationId())
+            .userId(createdUser.getUserId())
+            .permissionType(PermissionType.ORGANIZATION_ADMIN));
+        return createdUser;
+      }
+    }
+    // Otherwise, this indicates user is not associated with org (non-sso user signs up).
+    return createdUser;
+  }
+
+  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {
+    if (initialUserConfiguration.isEmpty()) {
+      // do nothing if initial_user bean is not present.
+      return;
+    }
+
+    final String initialEmailFromConfig = initialUserConfiguration.get().getEmail();
+
+    if (initialEmailFromConfig == null || initialEmailFromConfig.isEmpty()) {
+      // do nothing if there is no initial_user email configured.
+      return;
+    }
+
+    // compare emails with case insensitivity because different email cases should be treated as the
+    // same user.
+    if (!initialEmailFromConfig.equalsIgnoreCase(createdUser.getEmail())) {
+      return;
+    }
+
+    LOGGER.info("creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
+        createdUser.getUserId());
+
+    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+        .workspaceId(null)
+        .organizationId(null)
+        .userId(createdUser.getUserId())
+        .permissionType(PermissionType.INSTANCE_ADMIN));
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
 
     return new WorkspaceUserReadList().users(
-        collectUserPermissionToMap(userPermissions)
-            .entrySet().stream()
-            .map((Entry<User, Permission> entry) -> new WorkspaceUserRead()
-                .userId(entry.getKey().getUserId())
-                .email(entry.getKey().getEmail())
-                .name(entry.getKey().getName())
-                .isDefaultWorkspace(workspaceId.equals(entry.getKey().getDefaultWorkspaceId()))
+        userPermissions
+            .stream()
+            .map(userPermission -> new WorkspaceUserRead()
+                .userId(userPermission.getUser().getUserId())
+                .email(userPermission.getUser().getEmail())
+                .name(userPermission.getUser().getName())
+                .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
                 .workspaceId(workspaceId)
-                .permissionId(entry.getValue().getPermissionId())
+                .permissionId(userPermission.getPermission().getPermissionId())
                 .permissionType(
-                    Enums.toEnum(entry.getValue().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
-            .collect(Collectors.toList()));
-  }
-
-  private UserWithPermissionInfoReadList buildUserWithPermissionInfoReadList(final List<UserPermission> userPermissions) {
-    return new UserWithPermissionInfoReadList().users(
-        collectUserPermissionToMap(userPermissions)
-            .entrySet().stream()
-            .map((Entry<User, Permission> entry) -> new UserWithPermissionInfoRead()
-                .userId(entry.getKey().getUserId())
-                .email(entry.getKey().getEmail())
-                .name(entry.getKey().getName())
-                .permissionId(entry.getValue().getPermissionId()))
+                    Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
+                        .get()))
             .collect(Collectors.toList()));
   }
 
   private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
-    return new OrganizationUserReadList().users(collectUserPermissionToMap(userPermissions)
-        .entrySet().stream()
-        .map((Entry<User, Permission> entry) -> new OrganizationUserRead()
-            .userId(entry.getKey().getUserId())
-            .email(entry.getKey().getEmail())
-            .name(entry.getKey().getName())
+    return new OrganizationUserReadList().users(userPermissions
+        .stream()
+        .map(userPermission -> new OrganizationUserRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
             .organizationId(organizationId)
-            .permissionId(entry.getValue().getPermissionId())
-            .permissionType(Enums.toEnum(entry.getValue().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
+            .permissionId(userPermission.getPermission().getPermissionId())
+            .permissionType(
+                Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class).get()))
         .collect(Collectors.toList()));
   }
 

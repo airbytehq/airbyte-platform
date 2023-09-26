@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.general;
 
-import io.airbyte.config.StandardSyncInput;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 
 /**
@@ -15,10 +15,10 @@ public class ReplicationFeatureFlagReader {
   /**
    * Read Feature flags we need to consider during a sync.
    *
-   * @param syncInput the input of the sync.
+   * @param replicationInput the input of the sync.
    * @return The flags.
    */
-  public ReplicationFeatureFlags readReplicationFeatureFlags(final StandardSyncInput syncInput) {
+  public ReplicationFeatureFlags readReplicationFeatureFlags(final ReplicationInput replicationInput) {
     return new ReplicationFeatureFlags();
   }
 

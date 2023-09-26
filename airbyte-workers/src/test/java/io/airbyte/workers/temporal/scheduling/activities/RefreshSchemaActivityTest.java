@@ -4,13 +4,16 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
+import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -19,6 +22,8 @@ import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.client.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
@@ -29,6 +34,7 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
+import io.airbyte.featureflag.AutoBackfillOnNewColumns;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -38,6 +44,7 @@ import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -47,11 +54,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
 class RefreshSchemaActivityTest {
 
   private SourceApi mSourceApi;
+  private ConnectionApi mConnectionApi;
   private WorkspaceApi mWorkspaceApi;
   private EnvVariableFeatureFlags mEnvVariableFeatureFlags;
   private TestClient mFeatureFlagClient;
@@ -60,16 +69,38 @@ class RefreshSchemaActivityTest {
 
   private static final UUID SOURCE_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID CATALOG_ID = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
+  private static final AirbyteCatalog CATALOG = new AirbyteCatalog()
+      .addStreamsItem(new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("test stream")));
+
+  private static final CatalogDiff CATALOG_DIFF = new CatalogDiff()
+      .addTransformsItem(new StreamTransform()
+          .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+          .streamDescriptor(new StreamDescriptor().name("test stream")));
 
   @BeforeEach
   void setUp() throws ApiException {
     mSourceApi = mock(SourceApi.class);
     mEnvVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
-    mSourceApi = mock(SourceApi.class);
-    mFeatureFlagClient = mock(TestClient.class);
-    mWorkspaceApi = mock(WorkspaceApi.class);
+    mSourceApi = mock(SourceApi.class, withSettings().strictness(Strictness.LENIENT));
+    mConnectionApi = mock(ConnectionApi.class);
+    mFeatureFlagClient = mock(TestClient.class, withSettings().strictness(Strictness.LENIENT));
+    mWorkspaceApi = mock(WorkspaceApi.class, withSettings().strictness(Strictness.LENIENT));
     when(mEnvVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
-    refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
+    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
+        .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
+    when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(SOURCE_ID))).thenReturn(new SourceRead().sourceDefinitionId(SOURCE_DEFINITION_ID));
+    when(mSourceApi.discoverSchemaForSource(
+        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true)))
+            .thenReturn(new SourceDiscoverSchemaRead()
+                .breakingChange(false)
+                .catalog(CATALOG)
+                .catalogDiff(CATALOG_DIFF)
+                .catalogId(CATALOG_ID));
+    refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
   }
 
   @Test
@@ -116,47 +147,21 @@ class RefreshSchemaActivityTest {
 
   @Test
   void testRefreshSchema() throws Exception {
-    final UUID sourceId = UUID.randomUUID();
-    final UUID connectionId = UUID.randomUUID();
-    final UUID catalogId = UUID.randomUUID();
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID sourceDefinitionId = UUID.randomUUID();
-    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
+    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(SOURCE_DEFINITION_ID), new Connection(CONNECTION_ID));
 
-    final AirbyteCatalog catalog = new AirbyteCatalog()
-        .addStreamsItem(new AirbyteStreamAndConfiguration()
-            .stream(new AirbyteStream().name("test stream")));
-    final CatalogDiff catalogDiff = new CatalogDiff()
-        .addTransformsItem(new StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(new StreamDescriptor().name("test stream")));
-
-    when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId))).thenReturn(new SourceRead().sourceDefinitionId(sourceDefinitionId));
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
-    final SourceDiscoverSchemaRequestBody requestBody =
-        new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
-    final SourceDiscoverSchemaRead discoveryResult = new SourceDiscoverSchemaRead()
-        .breakingChange(false)
-        .catalog(catalog)
-        .catalogDiff(catalogDiff)
-        .catalogId(catalogId);
+    refreshSchemaActivity.refreshSchema(SOURCE_ID, CONNECTION_ID);
 
-    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
-        .thenReturn(new WorkspaceRead().workspaceId(workspaceId));
-    when(mSourceApi.discoverSchemaForSource(requestBody))
-        .thenReturn(discoveryResult);
-
-    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
-
-    verify(mSourceApi).discoverSchemaForSource(requestBody);
-    verify(mWorkspaceApi).getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+    verify(mSourceApi).discoverSchemaForSource(
+        new SourceDiscoverSchemaRequestBody().sourceId(SOURCE_ID).disableCache(true).connectionId(CONNECTION_ID).notifySchemaChange(true));
+    verify(mWorkspaceApi).getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
     verify(mSourceApi).applySchemaChangeForSource(new SourceAutoPropagateChange()
-        .catalogId(catalogId)
-        .sourceId(sourceId)
-        .catalog(catalog)
-        .workspaceId(workspaceId));
+        .catalogId(CATALOG_ID)
+        .sourceId(SOURCE_ID)
+        .catalog(CATALOG)
+        .workspaceId(WORKSPACE_ID));
   }
 
   @Test
@@ -192,6 +197,32 @@ class RefreshSchemaActivityTest {
     refreshSchemaActivity.refreshSchema(sourceId, connectionId);
 
     verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
+  }
+
+  @Test
+  void testRefreshSchemaForAutoBackfillOnNewColumns() throws Exception {
+    // Test the version of schema refresh that will be used when we want to run backfills.
+
+    when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any())).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
+
+    when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange()
+        .connectionId(CONNECTION_ID)
+        .catalogId(CATALOG_ID)
+        .catalog(CATALOG)
+        .workspaceId(WORKSPACE_ID))).thenReturn(new ConnectionAutoPropagateResult()
+            .propagatedDiff(CATALOG_DIFF));
+
+    final var result = refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, CONNECTION_ID, WORKSPACE_ID));
+
+    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
+    verify(mConnectionApi, times(1)).applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange()
+        .connectionId(CONNECTION_ID)
+        .workspaceId(WORKSPACE_ID)
+        .catalogId(CATALOG_ID)
+        .catalog(CATALOG));
+    assertEquals(CATALOG_DIFF, result.getAppliedDiff());
   }
 
 }

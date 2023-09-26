@@ -5,6 +5,7 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.UserApi;
@@ -110,6 +111,14 @@ public class UserApiController implements UserApi {
   @Override
   public UserWithPermissionInfoReadList listInstanceAdminUsers() {
     return ApiHelper.execute(() -> userHandler.listInstanceAdminUsers());
+  }
+
+  @Post("/get_or_create_by_auth_id")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public UserRead getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.getOrCreateUserByAuthId(userAuthIdRequestBody));
   }
 
 }

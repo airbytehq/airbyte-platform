@@ -4,7 +4,7 @@
 
 package io.airbyte.api.server.constants
 
-const val INTERNAL_API_HOST = "http://\${airbyte.internal.api.host}"
+const val INTERNAL_API_HOST = "\${airbyte.internal.api.host}"
 const val AUTH_HEADER = "Authorization"
 const val ENDPOINT_API_USER_INFO_HEADER = "X-Endpoint-API-UserInfo"
 const val ANALYTICS_HEADER = "X-Airbyte-Analytic-Source"

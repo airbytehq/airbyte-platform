@@ -210,7 +210,7 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
     // Get relevant workspace Ids
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
 
     val requestBody = JobListForWorkspacesRequestBody()
       .workspaceIds(workspaceIdsToQuery)

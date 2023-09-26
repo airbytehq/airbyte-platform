@@ -14,9 +14,18 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.ConnectionState;
+import io.airbyte.api.client.model.generated.ConnectionStateType;
+import io.airbyte.api.client.model.generated.JobOptionalRead;
+import io.airbyte.commons.converters.CatalogClientConverters;
+import io.airbyte.commons.converters.ProtocolConverters;
+import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
@@ -29,15 +38,24 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
+import io.airbyte.config.State;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.RemoveLargeSyncInputs;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.Worker;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.micronaut.context.annotation.Value;
@@ -51,6 +69,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,6 +92,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final AirbyteApiClient airbyteApiClient;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
+  private final FeatureFlagClient featureFlagClient;
 
   public ReplicationActivityImpl(final SecretsHydrator secretsHydrator,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -83,7 +103,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final TemporalUtils temporalUtils,
                                  final AirbyteApiClient airbyteApiClient,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
-                                 final MetricClient metricClient) {
+                                 final MetricClient metricClient,
+                                 final FeatureFlagClient featureFlagClient) {
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -94,6 +115,88 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteApiClient = airbyteApiClient;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
+    this.featureFlagClient = featureFlagClient;
+  }
+
+  /**
+   * Performs the replication activity.
+   * <p>
+   * Takes a lite input (no catalog, no state, no secrets) to avoid passing those through Temporal and
+   * hydrates it before launching the replication orchestrator.
+   * <p>
+   * TODO: this is the preferred method. Once we remove `replicate`, this can be renamed.
+   *
+   * @param replicationActivityInput the input to the replication activity
+   * @return output from the replication activity, populated in the StandardSyncOutput
+   */
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public StandardSyncOutput replicateV2(final ReplicationActivityInput replicationActivityInput) {
+    if (!featureFlagClient.boolVariation(RemoveLargeSyncInputs.INSTANCE, new Workspace(replicationActivityInput.getWorkspaceId()))) {
+      return replicate(
+          replicationActivityInput.getJobRunConfig(),
+          replicationActivityInput.getSourceLauncherConfig(),
+          replicationActivityInput.getDestinationLauncherConfig(),
+          replicationActivityInput.getSyncInput(),
+          replicationActivityInput.getTaskQueue());
+    }
+    metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+    final Map<String, Object> traceAttributes =
+        Map.of(
+            ATTEMPT_NUMBER_KEY, replicationActivityInput.getJobRunConfig().getAttemptId(),
+            CONNECTION_ID_KEY, replicationActivityInput.getConnectionId(),
+            JOB_ID_KEY, replicationActivityInput.getJobRunConfig().getJobId(),
+            DESTINATION_DOCKER_IMAGE_KEY, replicationActivityInput.getDestinationLauncherConfig().getDockerImage(),
+            SOURCE_DOCKER_IMAGE_KEY, replicationActivityInput.getSourceLauncherConfig().getDockerImage());
+    ApmTraceUtils
+        .addTagsToTrace(traceAttributes);
+    if (replicationActivityInput.getIsReset()) {
+      metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
+    }
+    final ActivityExecutionContext context = Activity.getExecutionContext();
+
+    final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
+
+    return temporalUtils.withBackgroundHeartbeat(
+        cancellationCallback,
+        () -> {
+          final ReplicationInput hydratedReplicationInput = getHydratedReplicationInput(replicationActivityInput);
+          LOGGER.info("replicationInput: {}", hydratedReplicationInput);
+          final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
+              orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
+                  hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
+                  () -> context);
+          final var worker = workerFactory.get();
+          cancellationCallback.set(worker::cancel);
+
+          final TemporalAttemptExecution<ReplicationInput, ReplicationOutput> temporalAttempt =
+              new TemporalAttemptExecution<>(
+                  workspaceRoot,
+                  workerEnvironment,
+                  logConfigs,
+                  hydratedReplicationInput.getJobRunConfig(),
+                  worker,
+                  hydratedReplicationInput,
+                  airbyteApiClient,
+                  airbyteVersion,
+                  () -> context,
+                  Optional.ofNullable(replicationActivityInput.getTaskQueue()));
+
+          final ReplicationOutput attemptOutput = temporalAttempt.get();
+          final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
+
+          final String standardSyncOutputString = standardSyncOutput.toString();
+          LOGGER.info("sync summary: {}", standardSyncOutputString);
+          if (standardSyncOutputString.length() > MAX_TEMPORAL_MESSAGE_SIZE) {
+            LOGGER.error("Sync output exceeds the max temporal message size of {}, actual is {}.", MAX_TEMPORAL_MESSAGE_SIZE,
+                standardSyncOutputString.length());
+          } else {
+            LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
+          }
+
+          return standardSyncOutput;
+        },
+        () -> context);
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -128,19 +231,21 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         cancellationCallback,
         () -> {
           final var hydratedSyncInput = getHydratedSyncInput(syncInput);
-          final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory =
-              orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, () -> context);
+          final var replicationInput =
+              getReplicationInputFromSyncInput(hydratedSyncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig);
+          final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
+              orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, replicationInput, () -> context);
           final var worker = workerFactory.get();
           cancellationCallback.set(worker::cancel);
 
-          final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
+          final TemporalAttemptExecution<ReplicationInput, ReplicationOutput> temporalAttempt =
               new TemporalAttemptExecution<>(
                   workspaceRoot,
                   workerEnvironment,
                   logConfigs,
                   jobRunConfig,
                   worker,
-                  hydratedSyncInput,
+                  replicationInput,
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context,
@@ -173,6 +278,114 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     airbyteConfigValidator.ensureAsRuntime(ConfigSchema.STANDARD_SYNC_INPUT, Jsons.jsonNode(fullSyncInput));
     return fullSyncInput;
+  }
+
+  /**
+   * Converts a ReplicationActivityInput -- passed through Temporal to the replication activity -- to
+   * a ReplicationInput which will be passed down the stack to the actual
+   * source/destination/orchestrator processes.
+   *
+   * @param replicationActivityInput the input passed from the sync workflow to the replication
+   *        activity
+   * @return the input to be passed down to the source/destination/orchestrator processes
+   * @throws Exception from the Airbyte API
+   */
+  @VisibleForTesting
+  protected ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
+    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(replicationActivityInput);
+    if (replicationActivityInput.getIsReset()) {
+      // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.
+      updateCatalogForReset(replicationActivityInput, catalog);
+    }
+    // Retrieve the state.
+    final State state = retrieveState(replicationActivityInput);
+    // Hydrate the secrets.
+    final var fullSourceConfig = secretsHydrator.hydrate(replicationActivityInput.getSourceConfiguration());
+    final var fullDestinationConfig = secretsHydrator.hydrate(replicationActivityInput.getDestinationConfiguration());
+    return new ReplicationInput()
+        .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
+        .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
+        .withPrefix(replicationActivityInput.getPrefix())
+        .withSourceId(replicationActivityInput.getSourceId())
+        .withDestinationId(replicationActivityInput.getDestinationId())
+        .withSourceConfiguration(fullSourceConfig)
+        .withDestinationConfiguration(fullDestinationConfig)
+        .withSyncResourceRequirements(replicationActivityInput.getSyncResourceRequirements())
+        .withWorkspaceId(replicationActivityInput.getWorkspaceId())
+        .withConnectionId(replicationActivityInput.getConnectionId())
+        .withNormalizeInDestinationContainer(replicationActivityInput.getNormalizeInDestinationContainer())
+        .withIsReset(replicationActivityInput.getIsReset())
+        .withJobRunConfig(replicationActivityInput.getJobRunConfig())
+        .withSourceLauncherConfig(replicationActivityInput.getSourceLauncherConfig())
+        .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
+        .withCatalog(catalog)
+        .withState(state);
+  }
+
+  @NotNull
+  private ConfiguredAirbyteCatalog retrieveCatalog(ReplicationActivityInput replicationActivityInput) throws Exception {
+    final ConnectionRead connectionInfo =
+        AirbyteApiClient
+            .retryWithJitterThrows(
+                () -> airbyteApiClient.getConnectionApi()
+                    .getConnection(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
+                "retrieve the connection");
+    if (connectionInfo.getSyncCatalog() == null) {
+      throw new IllegalArgumentException("Connection is missing catalog, which is required");
+    }
+    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
+    return catalog;
+  }
+
+  private State retrieveState(ReplicationActivityInput replicationActivityInput) throws Exception {
+    final ConnectionState connectionState = AirbyteApiClient.retryWithJitterThrows(
+        () -> airbyteApiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
+        "retrieve the state");
+    final State state =
+        connectionState != null && !ConnectionStateType.NOT_SET.equals(connectionState.getStateType())
+            ? StateMessageHelper.getState(StateConverter.toInternal(StateConverter.fromClientToApi(connectionState)))
+            : null;
+    return state;
+  }
+
+  private void updateCatalogForReset(ReplicationActivityInput replicationActivityInput, ConfiguredAirbyteCatalog catalog) throws Exception {
+    final JobOptionalRead jobInfo = AirbyteApiClient.retryWithJitterThrows(
+        () -> airbyteApiClient.getJobsApi().getLastReplicationJob(
+            new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
+        "get job info to retrieve streams to reset");
+    final boolean hasStreamsToReset = jobInfo != null && jobInfo.getJob() != null && jobInfo.getJob().getResetConfig() != null
+        && jobInfo.getJob().getResetConfig().getStreamsToReset() != null;
+    if (hasStreamsToReset) {
+      final var streamsToReset =
+          jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ProtocolConverters::clientStreamDescriptorToProtocol).toList();
+      DefaultJobCreator.updateCatalogForReset(streamsToReset, catalog);
+    }
+  }
+
+  // Simple converter from StandardSyncInput to ReplicationInput.
+  // TODO: remove when the workflow version that passes a StandardSyncInput is removed.
+  private ReplicationInput getReplicationInputFromSyncInput(StandardSyncInput hydratedSyncInput,
+                                                            final JobRunConfig jobRunConfig,
+                                                            final IntegrationLauncherConfig sourceLauncherConfig,
+                                                            final IntegrationLauncherConfig destinationLauncherConfig) {
+    return new ReplicationInput()
+        .withNamespaceDefinition(hydratedSyncInput.getNamespaceDefinition())
+        .withNamespaceFormat(hydratedSyncInput.getNamespaceFormat())
+        .withPrefix(hydratedSyncInput.getPrefix())
+        .withSourceId(hydratedSyncInput.getSourceId())
+        .withDestinationId(hydratedSyncInput.getDestinationId())
+        .withSourceConfiguration(hydratedSyncInput.getSourceConfiguration())
+        .withDestinationConfiguration(hydratedSyncInput.getDestinationConfiguration())
+        .withSyncResourceRequirements(hydratedSyncInput.getSyncResourceRequirements())
+        .withWorkspaceId(hydratedSyncInput.getWorkspaceId())
+        .withConnectionId(hydratedSyncInput.getConnectionId())
+        .withNormalizeInDestinationContainer(hydratedSyncInput.getNormalizeInDestinationContainer())
+        .withIsReset(hydratedSyncInput.getIsReset())
+        .withJobRunConfig(jobRunConfig)
+        .withSourceLauncherConfig(sourceLauncherConfig)
+        .withDestinationLauncherConfig(destinationLauncherConfig)
+        .withCatalog(hydratedSyncInput.getCatalog())
+        .withState(hydratedSyncInput.getState());
   }
 
   private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {

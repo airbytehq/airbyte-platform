@@ -4,6 +4,7 @@
 
 package io.airbyte.api.server.services
 
+import io.airbyte.airbyte_api.model.generated.InitiateOauthRequest
 import io.airbyte.airbyte_api.model.generated.SourceCreateRequest
 import io.airbyte.airbyte_api.model.generated.SourcePatchRequest
 import io.airbyte.airbyte_api.model.generated.SourcePutRequest
@@ -34,6 +35,7 @@ import io.micronaut.http.client.exceptions.ReadTimeoutException
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import javax.ws.rs.core.Response
 
 interface SourceService {
 
@@ -61,11 +63,16 @@ interface SourceService {
 
     userInfo: String?,
   ): SourcesResponse
+
+  fun controllerInitiateOAuth(
+    initiateOauthRequest: InitiateOauthRequest?,
+    userInfo: String?,
+  ): Response
 }
 
 @Singleton
 @Secondary
-class SourceServiceImpl(
+open class SourceServiceImpl(
   private val configApiClient: ConfigApiClient,
   private val userService: UserServiceImpl,
 ) : SourceService {
@@ -225,7 +232,7 @@ class SourceServiceImpl(
     userInfo: String?,
   ): SourcesResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination
@@ -247,5 +254,9 @@ class SourceServiceImpl(
       offset,
       publicApiHost!!,
     )
+  }
+
+  override fun controllerInitiateOAuth(initiateOauthRequest: InitiateOauthRequest?, userInfo: String?): Response {
+    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
   }
 }

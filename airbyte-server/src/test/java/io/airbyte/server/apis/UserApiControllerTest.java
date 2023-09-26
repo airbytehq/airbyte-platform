@@ -110,4 +110,14 @@ class UserApiControllerTest extends BaseControllerTest {
         HttpStatus.OK);
   }
 
+  @Test
+  void testGetOrCreateUser() throws Exception {
+    Mockito.when(userHandler.getOrCreateUserByAuthId(Mockito.any()))
+        .thenReturn(new UserRead());
+    final String path = "/api/v1/users/get_or_create_by_auth_id";
+    testEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new UserAuthIdRequestBody())),
+        HttpStatus.OK);
+  }
+
 }

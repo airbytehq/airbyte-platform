@@ -13,6 +13,7 @@ import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver;
+import io.airbyte.commons.server.support.JwtTokenParser;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -88,8 +89,7 @@ public class KeycloakTokenValidator implements TokenValidator {
   }
 
   private Authentication getAuthentication(final String token, final HttpRequest<?> request) {
-    final String[] tokenParts = token.split("\\.");
-    final String payload = tokenParts[1];
+    final String payload = JwtTokenParser.getJwtPayloadToken(token);
 
     try {
       final String jwtPayloadString = new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8);
@@ -106,7 +106,9 @@ public class KeycloakTokenValidator implements TokenValidator {
         final Collection<String> roles = getInstanceAdminRoles();
         // final Collection<String> roles = getRoles(userId, request);
         log.debug("Authenticating user '{}' with roles {}...", userId, roles);
-        return Authentication.build(userId, roles);
+
+        final var userAttributeMap = JwtTokenParser.convertJwtPayloadToUserAttributes(jwtPayload);
+        return Authentication.build(userId, roles, userAttributeMap);
       } else {
         throw new AuthenticationException("Failed to authenticate the user because the userId was blank.");
       }

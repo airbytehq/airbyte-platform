@@ -37,6 +37,8 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.models.RefreshSchemaActivityInput;
+import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
@@ -245,6 +247,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -257,7 +260,7 @@ class SyncWorkflowTest {
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     assertEquals(
         replicationSuccessOutput.withNormalizationSummary(normalizationSummary).getStandardSyncSummary(),
         actualOutput.getStandardSyncSummary());
@@ -270,11 +273,12 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doThrow(new IllegalArgumentException("induced exception")).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
     verifyNoInteractions(dbtTransformationActivity);
@@ -287,6 +291,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationFailOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -296,7 +301,7 @@ class SyncWorkflowTest {
     final StandardSyncOutput actualOutput = execute();
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
@@ -312,6 +317,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doThrow(new IllegalArgumentException("induced exception")).when(normalizationActivity).normalize(
         JOB_RUN_CONFIG,
@@ -321,7 +327,7 @@ class SyncWorkflowTest {
     assertThrows(WorkflowFailedException.class, this::execute);
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyNoInteractions(dbtTransformationActivity);
@@ -337,11 +343,15 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doAnswer(ignored -> {
+      cancelWorkflow();
+      return replicationSuccessOutput;
+    }).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
     verifyNoInteractions(dbtTransformationActivity);
@@ -354,6 +364,7 @@ class SyncWorkflowTest {
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
         syncInput, SYNC_QUEUE);
+    doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doAnswer(ignored -> {
       cancelWorkflow();
@@ -366,7 +377,7 @@ class SyncWorkflowTest {
     assertThrows(WorkflowFailedException.class, this::execute);
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNormalize(normalizationActivity, normalizationInput);
     verifyNoInteractions(dbtTransformationActivity);
@@ -390,7 +401,7 @@ class SyncWorkflowTest {
     execute();
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyReplication(replicationActivity, syncInput);
     verifyNoInteractions(normalizationActivity);
     verifyDbtTransform(dbtTransformationActivity, null, operatorDbtInput);
@@ -399,6 +410,7 @@ class SyncWorkflowTest {
   @Test
   void testWebhookOperation() {
     when(replicationActivity.replicate(any(), any(), any(), any(), any())).thenReturn(new StandardSyncOutput());
+    when(replicationActivity.replicateV2(any())).thenReturn(new StandardSyncOutput());
     final StandardSyncOperation webhookOperation = new StandardSyncOperation()
         .withOperationId(UUID.randomUUID())
         .withOperatorType(OperatorType.WEBHOOK)
@@ -420,7 +432,7 @@ class SyncWorkflowTest {
     when(configFetchActivity.getStatus(any())).thenReturn(Optional.of(ConnectionStatus.INACTIVE));
     final StandardSyncOutput output = execute();
     verifyShouldRefreshSchema(refreshSchemaActivity);
-    verifyRefreshSchema(refreshSchemaActivity, sync);
+    verifyRefreshSchema(refreshSchemaActivity, sync, syncInput);
     verifyNoInteractions(replicationActivity);
     verifyNoInteractions(normalizationActivity);
     assertEquals(output.getStandardSyncSummary().getStatus(), ReplicationStatus.CANCELLED);
@@ -430,7 +442,7 @@ class SyncWorkflowTest {
   void testGetProperFailureIfRefreshFails() throws Exception {
     when(refreshSchemaActivity.shouldRefreshSchema(any())).thenReturn(true);
     doThrow(new RuntimeException())
-        .when(refreshSchemaActivity).refreshSchema(any(), any());
+        .when(refreshSchemaActivity).refreshSchemaV2(any());
     final StandardSyncOutput output = execute();
     assertEquals(output.getStandardSyncSummary().getStatus(), ReplicationStatus.FAILED);
     assertEquals(output.getFailures().size(), 1);
@@ -456,11 +468,24 @@ class SyncWorkflowTest {
   }
 
   private static void verifyReplication(final ReplicationActivity replicationActivity, final StandardSyncInput syncInput) {
-    verify(replicationActivity).replicate(
+    verify(replicationActivity).replicateV2(new ReplicationActivityInput(
+        syncInput,
+        syncInput.getSourceId(),
+        syncInput.getDestinationId(),
+        syncInput.getSourceConfiguration(),
+        syncInput.getDestinationConfiguration(),
         JOB_RUN_CONFIG,
         SOURCE_LAUNCHER_CONFIG,
         DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
+        syncInput.getSyncResourceRequirements(),
+        syncInput.getWorkspaceId(),
+        syncInput.getConnectionId(),
+        syncInput.getNormalizeInDestinationContainer(),
+        SYNC_QUEUE,
+        syncInput.getIsReset(),
+        syncInput.getNamespaceDefinition(),
+        syncInput.getNamespaceFormat(),
+        syncInput.getPrefix()));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {
@@ -484,8 +509,11 @@ class SyncWorkflowTest {
     verify(refreshSchemaActivity).shouldRefreshSchema(SOURCE_ID);
   }
 
-  private static void verifyRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity, final StandardSync sync) throws Exception {
-    verify(refreshSchemaActivity).refreshSchema(SOURCE_ID, sync.getConnectionId());
+  private static void verifyRefreshSchema(final RefreshSchemaActivity refreshSchemaActivity,
+                                          final StandardSync sync,
+                                          final StandardSyncInput syncInput)
+      throws Exception {
+    verify(refreshSchemaActivity).refreshSchemaV2(new RefreshSchemaActivityInput(SOURCE_ID, sync.getConnectionId(), syncInput.getWorkspaceId()));
   }
 
 }

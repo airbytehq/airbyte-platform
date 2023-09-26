@@ -2,6 +2,7 @@ import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
@@ -53,6 +54,10 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const stateSubscription = useRef<Subscription>();
   const [errorCode, setErrorCode] = useState<string>();
   const [isLoading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const loginRedirect = searchParams.get("loginRedirect");
+  const navigate = useNavigate();
+
   const [showSsoLogin] = useLocalStorage("airbyte_show-sso-login", false);
 
   useUnmount(() => {
@@ -85,6 +90,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
         }
         if (value === "done") {
           setLoading(false);
+          navigate(loginRedirect ?? "/", { replace: true });
         }
       },
       error: (error) => {

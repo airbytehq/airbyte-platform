@@ -23,7 +23,7 @@ import io.airbyte.api.client.model.generated.PartialDestinationUpdate
 import io.airbyte.api.server.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.api.server.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.api.server.forwardingClient.ConfigApiClient
-import io.airbyte.api.server.helpers.getIdFromName
+import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.api.server.mappers.DestinationReadMapper
 import io.airbyte.api.server.mappers.DestinationsResponseMapper
@@ -197,7 +197,7 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     userInfo: String?,
   ): DestinationsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination
@@ -231,7 +231,7 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     userInfo: String?,
   ): List<DestinationSyncMode> {
     val destinationDefinitionId: UUID =
-      getIdFromName(DESTINATION_NAME_TO_DEFINITION_ID, destinationResponse.destinationType)
+      getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationResponse.destinationType)
     val destinationDefinitionIdWithWorkspaceId = DestinationDefinitionIdWithWorkspaceId()
     destinationDefinitionIdWithWorkspaceId.destinationDefinitionId = destinationDefinitionId
     destinationDefinitionIdWithWorkspaceId.workspaceId = destinationResponse.workspaceId

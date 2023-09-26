@@ -4,22 +4,24 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper.SYNC_CONFIG_SET;
-
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
-import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
 import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.JobOutput;
+import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.LogClientSingleton;
@@ -30,9 +32,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,17 +164,38 @@ public class AttemptHandler {
     return new InternalOperationResult().succeeded(true);
   }
 
-  public BooleanRead didPreviousJobSucceed(final UUID connectionId, final long jobId) throws IOException {
-    // This DB call is a lift-n-shift from activity code to move database access out of the worker. It
-    // is knowingly brittle and awkward. By setting pageSize to 2 this should just fetch the latest and
-    // preceding job, but technically can fetch a much longer list.
-    final List<Job> jobs = jobPersistence.listJobsIncludingId(SYNC_CONFIG_SET, connectionId.toString(), jobId, 2);
+  public void failAttempt(final int attemptNumber, final long jobId, final Object rawFailureSummary, final Object rawSyncOutput)
+      throws IOException {
+    AttemptFailureSummary failureSummary = null;
+    if (rawFailureSummary != null) {
+      try {
+        failureSummary = Jsons.convertValue(rawFailureSummary, AttemptFailureSummary.class);
+      } catch (final Exception e) {
+        throw new BadRequestException("Unable to parse failureSummary.", e);
+      }
+    }
+    StandardSyncOutput output = null;
+    if (rawSyncOutput != null) {
+      try {
+        output = Jsons.convertValue(rawSyncOutput, StandardSyncOutput.class);
+      } catch (final Exception e) {
+        throw new BadRequestException("Unable to parse standardSyncOutput.", e);
+      }
+    }
 
-    final boolean previousJobSucceeded = jobCreationAndStatusUpdateHelper.findPreviousJob(jobs, jobId)
-        .map(jobCreationAndStatusUpdateHelper::didJobSucceed)
-        .orElse(false);
+    jobCreationAndStatusUpdateHelper.traceFailures(failureSummary);
 
-    return new BooleanRead().value(previousJobSucceeded);
+    jobPersistence.failAttempt(jobId, attemptNumber);
+    jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
+
+    if (output != null) {
+      final JobOutput jobOutput = new JobOutput().withSync(output);
+      jobPersistence.writeOutput(jobId, attemptNumber, jobOutput);
+    }
+
+    final Job job = jobPersistence.getJob(jobId);
+    jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
+    jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
   }
 
 }

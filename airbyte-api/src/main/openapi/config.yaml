@@ -3038,6 +3038,34 @@ paths:
       responses:
         "204":
           description: Successful operation
+  /v1/jobs/reportJobStart:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: For worker to report when a job starts.
+      operationId: reportJobStart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - connectionId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
 
   # USERS
   /v1/users/create:
@@ -3093,6 +3121,30 @@ paths:
         - user
       summary: Find Airbyte user by auth id
       operationId: getUserByAuthId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAuthIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/users/get_or_create_by_auth_id:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by auth id. If not existed, will create a user.
+      operationId: getOrCreateUserByAuthId
       requestBody:
         content:
           application/json:
@@ -3190,7 +3242,7 @@ paths:
               $ref: "#/components/schemas/OrganizationIdRequestBody"
       responses:
         "200":
-          description: Successfully retrieved workspaces under the given org id.
+          description: Successfully retrieved users under the given org id.
           content:
             application/json:
               schema:
@@ -3513,6 +3565,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/fail:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Fails an attempt with a failure summary and if provided a sync output.
+      operationId: failAttempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                failureSummary:
+                  description: Attempt failure summary serialized as a raw object
+                  type: object
+                standardSyncOutput:
+                  description: Sync output serialized as a raw object
+                  type: object
+        required: true
+      responses:
+        "204":
+          description: Successfully failed attempt
   /v1/attempt/get_combined_stats:
     post:
       tags:
@@ -3557,26 +3639,6 @@ paths:
                 $ref: "#/components/schemas/AttemptInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-  /v1/attempt/did_previous_job_succeed:
-    post:
-      tags:
-        - attempt
-        - internal
-      summary: Returns whether the job preceding the specified job succeeded
-      operationId: didPreviousJobSucceed
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectionJobRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BooleanRead"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -3730,6 +3792,26 @@ paths:
                 $ref: "#/components/schemas/RetryStateRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/did_previous_job_succeed:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Returns whether the job preceding the specified job succeeded
+      operationId: didPreviousJobSucceed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionJobRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BooleanRead"
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -3802,6 +3884,26 @@ paths:
       responses:
         "204":
           description: Successfully deleted organization.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/list_by_user_id:
+    post:
+      summary: List organizations by a given user id. The function also supports searching by keyword and pagination.
+      tags:
+        - organization
+      operationId: listOrganizationsByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListOrganizationsByUserRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved organizations by given user id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
@@ -5851,6 +5953,105 @@ components:
     OrganizationId:
       type: string
       format: uuid
+    OrganizationIdRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+    OrganizationUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+    OrganizationCreateRequestBody:
+      type: object
+      required:
+        - userId
+        - organizationName
+      properties:
+        userId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        email:
+          type: string
+    OrganizationRead:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - email
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        email:
+          type: string
+    OrganizationReadList:
+      type: object
+      required:
+        - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationRead"
+    ListOrganizationsByUserRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        keyword:
+          type: string
+    OrganizationUserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationUserRead"
+    OrganizationUserRead:
+      type: object
+      required:
+        - userId
+        - email
+        - permissionId
+        - permissionType
+        - organizationId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
 
     # PERMISSIONS
     PermissionIdRequestBody:
@@ -7890,33 +8091,6 @@ components:
           type: integer
         totalPartialFailures:
           type: integer
-    OrganizationIdRequestBody:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-    OrganizationUpdateRequestBody:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        organizationName:
-          type: string
-    OrganizationCreateRequestBody:
-      type: object
-      required:
-        - organizationName
-      properties:
-        organizationName:
-          type: string
-        email:
-          type: string
     ListWorkspacesInOrganizationRequestBody:
       type: object
       required:
@@ -7940,20 +8114,6 @@ components:
         pagination:
           $ref: "#/components/schemas/Pagination"
         keyword:
-          type: string
-    OrganizationRead:
-      type: object
-      required:
-        - organizationId
-        - organizationName
-        - email
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        organizationName:
-          type: string
-        email:
           type: string
     WorkspaceUserRead:
       type: object
@@ -7990,39 +8150,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceUserRead"
-    OrganizationUserReadList:
-      type: object
-      required:
-        - users
-      properties:
-        users:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrganizationUserRead"
-    OrganizationUserRead:
-      type: object
-      required:
-        - userId
-        - email
-        - permissionId
-        - permissionType
-        - organizationId
-      properties:
-        name:
-          description: Caption name for the user
-          type: string
-        userId:
-          $ref: "#/components/schemas/UserId"
-        email:
-          type: string
-          format: email
-        permissionId:
-          type: string
-          format: uuid
-        permissionType:
-          $ref: "#/components/schemas/PermissionType"
-        organizationId:
-          $ref: "#/components/schemas/OrganizationId"
     UserWithPermissionInfoReadList:
       type: object
       required:

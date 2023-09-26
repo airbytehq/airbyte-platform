@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import { StepsTypes } from "components/ConnectorBlocks";
@@ -20,12 +19,4 @@ export const useGetSourceFromSearchParams = () => {
     throw new Error("Source id is missing");
   }
   return useGetSource(sourceId);
-};
-
-export const useGetSourceTabFromParams = () => {
-  const params = useParams<{ "*": StepsTypes | "" | undefined; sourceId: string }>();
-
-  return useMemo<StepsTypes | undefined>(() => {
-    return params["*"] === "" ? StepsTypes.OVERVIEW : params["*"];
-  }, [params]);
 };

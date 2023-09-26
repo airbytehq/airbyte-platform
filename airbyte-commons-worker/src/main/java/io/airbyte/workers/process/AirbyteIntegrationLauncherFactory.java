@@ -10,6 +10,11 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FailSyncIfTooBig;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -24,6 +29,7 @@ import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import jakarta.inject.Singleton;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -36,15 +42,18 @@ public class AirbyteIntegrationLauncherFactory {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
+  private final FeatureFlagClient featureFlagClient;
 
   public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                           final FeatureFlags featureFlags) {
+                                           final FeatureFlags featureFlags,
+                                           final FeatureFlagClient featureFlagClient) {
     this.processFactory = processFactory;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -88,8 +97,14 @@ public class AirbyteIntegrationLauncherFactory {
                                            final HeartbeatMonitor heartbeatMonitor) {
     final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, syncResourceRequirements);
 
+    final boolean failTooLongRecords = featureFlagClient.boolVariation(FailSyncIfTooBig.INSTANCE,
+        new Multi(List.of(
+            new Connection(sourceLauncherConfig.getConnectionId()),
+            new Workspace(sourceLauncherConfig.getWorkspaceId()))));
+
     return new DefaultAirbyteSource(sourceLauncher,
-        getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
+        getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
+            failTooLongRecords),
         heartbeatMonitor,
         getProtocolSerializer(sourceLauncherConfig),
         featureFlags);
@@ -108,7 +123,7 @@ public class AirbyteIntegrationLauncherFactory {
     final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
     return new DefaultAirbyteDestination(destinationLauncher,
         getStreamFactory(destinationLauncherConfig, configuredAirbyteCatalog, DestinationException.class,
-            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
+            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, false),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
         getProtocolSerializer(destinationLauncherConfig));
@@ -121,9 +136,10 @@ public class AirbyteIntegrationLauncherFactory {
   private AirbyteStreamFactory getStreamFactory(final IntegrationLauncherConfig launcherConfig,
                                                 final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                                 final Class<? extends RuntimeException> exceptionClass,
-                                                final MdcScope.Builder mdcScopeBuilder) {
+                                                final MdcScope.Builder mdcScopeBuilder,
+                                                final boolean failTooLongRecords) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
-        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass));
+        Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass), failTooLongRecords);
   }
 
 }

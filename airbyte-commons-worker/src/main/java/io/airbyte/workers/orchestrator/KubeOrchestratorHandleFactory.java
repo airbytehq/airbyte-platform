@@ -10,13 +10,13 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
@@ -57,23 +57,23 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   }
 
   @Override
-  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                         final IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                         final JobRunConfig jobRunConfig,
-                                                                                         final StandardSyncInput syncInput,
-                                                                                         final Supplier<ActivityExecutionContext> activityContext) {
+  public CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                                        final JobRunConfig jobRunConfig,
+                                                                                        final ReplicationInput replicationInput,
+                                                                                        final Supplier<ActivityExecutionContext> activityContext) {
     final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorConfig(featureFlagClient, containerOrchestratorConfig,
-        syncInput.getConnectionId());
+        replicationInput.getConnectionId());
     final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.REPLICATION);
 
     return () -> new ReplicationLauncherWorker(
-        syncInput.getConnectionId(),
-        syncInput.getWorkspaceId(),
+        replicationInput.getConnectionId(),
+        replicationInput.getWorkspaceId(),
         finalConfig,
         sourceLauncherConfig,
         destinationLauncherConfig,
         jobRunConfig,
-        syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
+        replicationInput.getSyncResourceRequirements() != null ? replicationInput.getSyncResourceRequirements().getOrchestrator() : null,
         serverPort,
         workerConfigs,
         featureFlagClient);

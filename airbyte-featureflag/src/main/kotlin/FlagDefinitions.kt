@@ -53,6 +53,8 @@ object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key = "should-run-on
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
 
+object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = false)
+
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -109,6 +111,12 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
 
+/**
+ * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
+ * the sync input.
+ */
+object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-sync-inputs", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -134,6 +142,10 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 
   object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
+
+  object UseNewSchemaUpdateNotification : Temporary<Boolean>(key = "platform.use-new-schema-update-notification", default = false)
 }
 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
+
+object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)

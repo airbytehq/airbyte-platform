@@ -19,7 +19,7 @@ import io.airbyte.api.server.constants.PUT
 import io.airbyte.api.server.constants.SOURCES_PATH
 import io.airbyte.api.server.constants.SOURCES_WITH_ID_PATH
 import io.airbyte.api.server.constants.SOURCE_TYPE
-import io.airbyte.api.server.helpers.getIdFromName
+import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeSourceTypeNode
 import io.airbyte.api.server.mappers.SOURCE_NAME_TO_DEFINITION_ID
@@ -31,8 +31,9 @@ import io.micronaut.http.annotation.Patch
 import java.util.UUID
 import javax.ws.rs.core.Response
 
+// Marked as open because when not marked, micronaut failed to start up because generated beans couldn't extend this one since it was "final"
 @Controller(SOURCES_PATH)
-class SourcesController(
+open class SourcesController(
   private val sourceService: SourceService,
   private val userService: UserService,
 ) : SourcesApi {
@@ -44,7 +45,7 @@ class SourcesController(
       throw UnprocessableEntityProblem()
     }
     val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-    val sourceDefinitionId: UUID = getIdFromName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+    val sourceDefinitionId: UUID = getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
 
     removeSourceTypeNode(sourceCreateRequest)
 
@@ -125,8 +126,11 @@ class SourcesController(
       .build()
   }
 
-  override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest?, userInfo: String?): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
+  override fun initiateOAuth(
+    initiateOauthRequest: InitiateOauthRequest?,
+    userInfo: String?,
+  ): Response {
+    return sourceService.controllerInitiateOAuth(initiateOauthRequest, userInfo)
   }
 
   override fun listSources(
@@ -134,7 +138,6 @@ class SourcesController(
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
-
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)

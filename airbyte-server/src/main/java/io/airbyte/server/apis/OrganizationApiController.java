@@ -7,12 +7,15 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.OrganizationApi;
+import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody;
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
+import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.commons.server.handlers.OrganizationsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -52,6 +55,14 @@ public class OrganizationApiController implements OrganizationApi {
   @Override
   public void deleteOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
     // To be implemented; we need a tombstone column for organizations table.
+  }
+
+  @Post("/list_by_user_id")
+  @Secured({READER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public OrganizationReadList listOrganizationsByUser(@Body final ListOrganizationsByUserRequestBody request) {
+    return ApiHelper.execute(() -> organizationsHandler.listOrganizationsByUser(request));
   }
 
 }

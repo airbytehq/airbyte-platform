@@ -121,18 +121,21 @@ it("should build correct mixed schema structure for conditional case", () => {
   const expectedSchema = yup.object().shape({
     start_date: yup.string().trim().required("form.empty.error").transform(String),
     max_objects: yup.number().transform((x) => x),
-    credentials: yup.object().shape({
-      type: yup.mixed().required("form.empty.error"),
-      api_key: yup
-        .mixed()
-        // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-      redirect_uri: yup
-        .mixed()
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-        .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-    }),
+    credentials: yup
+      .object()
+      .shape({
+        type: yup.mixed(),
+        api_key: yup
+          .mixed()
+          // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+        redirect_uri: yup
+          .mixed()
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+      })
+      .required("form.empty.error"),
   });
 
   expect(JSON.parse(JSON.stringify(yupSchema))).toEqual(JSON.parse(JSON.stringify(expectedSchema)));

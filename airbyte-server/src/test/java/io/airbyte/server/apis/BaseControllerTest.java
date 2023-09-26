@@ -43,6 +43,7 @@ import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.runtime.server.EmbeddedServer;
+import io.micronaut.security.utils.SecurityService;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.temporal.client.WorkflowClient;
@@ -307,6 +308,12 @@ abstract class BaseControllerTest {
   @Replaces(TemporalClient.class)
   TemporalClient mmTemporalClient() {
     return Mockito.mock(TemporalClient.class);
+  }
+
+  @MockBean(SecurityService.class)
+  @Replaces(SecurityService.class)
+  SecurityService mmSecurityService() {
+    return Mockito.mock(SecurityService.class);
   }
 
   @MockBean(JobNotifier.class)

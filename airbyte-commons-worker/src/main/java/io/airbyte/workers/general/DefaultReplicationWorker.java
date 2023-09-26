@@ -11,13 +11,13 @@ import io.airbyte.commons.concurrency.VoidCallable;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
@@ -124,33 +124,33 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * should be treated as state that is safe to return from run. In the case when the destination
    * emits no state, we fall back on whatever state is pass in as an argument to this method.
    *
-   * @param syncInput all configuration for running replication
+   * @param replicationInput all configuration for running replication
    * @param jobRoot file root that worker is allowed to use
    * @return output of the replication attempt (including state)
    * @throws WorkerException exception from worker
    */
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
-  public final ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
+  public final ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
 
     LineGobbler.startSection("REPLICATION");
 
     try {
-      LOGGER.info("configured sync modes: {}", syncInput.getCatalog().getStreams()
+      LOGGER.info("configured sync modes: {}", replicationInput.getCatalog().getStreams()
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
 
       final ReplicationContext replicationContext =
-          new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
-              syncInput.getDestinationId(), Long.parseLong(jobId),
-              attempt, syncInput.getWorkspaceId());
+          new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
+              replicationInput.getDestinationId(), Long.parseLong(jobId),
+              attempt, replicationInput.getWorkspaceId());
 
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationInput);
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
-      replicate(jobRoot, syncInput);
+      replicate(jobRoot, replicationInput);
 
       return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
@@ -161,14 +161,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private void replicate(final Path jobRoot,
-                         final StandardSyncInput syncInput) {
+                         final ReplicationInput replicationInput) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
     try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
-      replicationWorkerHelper.startDestination(destination, syncInput, jobRoot);
-      replicationWorkerHelper.startSource(source, syncInput, jobRoot);
+      replicationWorkerHelper.startDestination(destination, replicationInput, jobRoot);
+      replicationWorkerHelper.startSource(source, replicationInput, jobRoot);
 
       replicationWorkerHelper.markReplicationRunning();
 

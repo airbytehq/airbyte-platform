@@ -385,4 +385,12 @@ public class JobCreationAndStatusUpdateHelper {
         .withAdditionalProperty(ATTEMPT_NUMBER_METADATA_KEY, attemptNumber);
   }
 
+  /**
+   * Report a job as started.
+   */
+  public void reportJobStart(final Long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+    jobTracker.trackSync(job, JobState.STARTED);
+  }
+
 }

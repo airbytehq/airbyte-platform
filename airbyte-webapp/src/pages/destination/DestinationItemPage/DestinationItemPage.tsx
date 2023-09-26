@@ -10,9 +10,9 @@ import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
 import { StepsTypes } from "components/ConnectorBlocks";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { useGetDestinationFromParams } from "area/connector/utils";
 import { useDestinationDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";

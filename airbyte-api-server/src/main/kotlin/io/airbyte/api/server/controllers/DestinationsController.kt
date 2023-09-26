@@ -18,7 +18,7 @@ import io.airbyte.api.server.constants.GET
 import io.airbyte.api.server.constants.PATCH
 import io.airbyte.api.server.constants.POST
 import io.airbyte.api.server.constants.PUT
-import io.airbyte.api.server.helpers.getIdFromName
+import io.airbyte.api.server.helpers.getActorDefinitionIdFromActorName
 import io.airbyte.api.server.helpers.getLocalUserInfoIfNull
 import io.airbyte.api.server.helpers.removeDestinationType
 import io.airbyte.api.server.mappers.DESTINATION_NAME_TO_DEFINITION_ID
@@ -48,7 +48,7 @@ open class DestinationsController(private val destinationService: DestinationSer
     }
     val destinationName =
       configurationJsonNode.findValue(DESTINATION_TYPE).toString().replace("\"", "")
-    val destinationDefinitionId: UUID = getIdFromName(DESTINATION_NAME_TO_DEFINITION_ID, destinationName)
+    val destinationDefinitionId: UUID = getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationName)
 
     removeDestinationType(destinationCreateRequest)
 

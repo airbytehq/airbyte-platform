@@ -14,13 +14,13 @@ import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
@@ -141,14 +141,14 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
-  public ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
+  public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
     LineGobbler.startSection("REPLICATION");
 
     try {
-      final ReplicationContext replicationContext = getReplicationContext(syncInput);
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
+      final ReplicationContext replicationContext = getReplicationContext(replicationInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationInput);
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
       // note: resources are closed in the opposite order in which they are declared. thus source will be
@@ -157,8 +157,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         scheduledExecutors.scheduleAtFixedRate(this::reportObservabilityMetrics, 0, observabilityMetricsPeriodInSeconds, TimeUnit.SECONDS);
 
         CompletableFuture.allOf(
-            runAsync(() -> replicationWorkerHelper.startDestination(destination, syncInput, jobRoot), mdc),
-            runAsync(() -> replicationWorkerHelper.startSource(source, syncInput, jobRoot), mdc)).join();
+            runAsync(() -> replicationWorkerHelper.startDestination(destination, replicationInput, jobRoot), mdc),
+            runAsync(() -> replicationWorkerHelper.startSource(source, replicationInput, jobRoot), mdc)).join();
 
         replicationWorkerHelper.markReplicationRunning();
 
@@ -260,10 +260,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     }
   }
 
-  private ReplicationContext getReplicationContext(final StandardSyncInput syncInput) {
-    return new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
-        syncInput.getDestinationId(), Long.parseLong(jobId),
-        attempt, syncInput.getWorkspaceId());
+  private ReplicationContext getReplicationContext(final ReplicationInput replicationInput) {
+    return new ReplicationContext(replicationInput.getIsReset(), replicationInput.getConnectionId(), replicationInput.getSourceId(),
+        replicationInput.getDestinationId(), Long.parseLong(jobId),
+        attempt, replicationInput.getWorkspaceId());
   }
 
   @Override

@@ -17,10 +17,10 @@ import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.NotImplementedMetricClient;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
@@ -132,7 +132,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     catalogMigrator.initialize();
     final var migratorFactory = new AirbyteProtocolVersionedMigratorFactory(msgMigrator, catalogMigrator);
 
-    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false);
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
         new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
@@ -176,7 +176,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final Thread workerThread = new Thread(() -> {
       try {
         final var ignoredPath = Path.of("/");
-        final StandardSyncInput testInput = new StandardSyncInput().withCatalog(
+        final ReplicationInput testInput = new ReplicationInput().withCatalog(
             // The stream fields here are intended to match the records emitted by the
             // LimitedFatRecordSourceProcess
             // class.

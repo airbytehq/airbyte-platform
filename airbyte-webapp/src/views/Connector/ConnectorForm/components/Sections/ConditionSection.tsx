@@ -69,8 +69,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
     [conditions]
   );
 
-  const selectionKeyPath = `${path}.${formField.selectionKey}`;
-  const error = get(useFormState({ name: selectionKeyPath }).errors, selectionKeyPath);
+  const error = get(useFormState({ name: path }).errors, path);
 
   return (
     <SectionContainer>

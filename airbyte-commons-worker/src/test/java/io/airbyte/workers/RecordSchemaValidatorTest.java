@@ -8,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncInput;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class RecordSchemaValidatorTest {
 
-  private StandardSyncInput syncInput;
+  private ReplicationInput replicationInput;
   private static final AirbyteStreamNameNamespacePair AIRBYTE_STREAM_NAME_NAMESPACE_PAIR = new AirbyteStreamNameNamespacePair("user_preferences", "");
   private static final String STREAM_NAME = AIRBYTE_STREAM_NAME_NAMESPACE_PAIR.getName();
   private static final String FIELD_NAME = "favorite_color";
@@ -40,15 +40,15 @@ class RecordSchemaValidatorTest {
 
   @BeforeEach
   void setup() {
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
-    syncInput = syncPair.getValue();
+    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
+    replicationInput = syncPair.getValue();
     validationErrors = new ConcurrentHashMap<>();
     uncountedValidationErrors = new ConcurrentHashMap<>();
   }
 
   @Test
   void testValidateValidSchema() {
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(replicationInput.getCatalog()));
     recordSchemaValidator.validateSchema(VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
         validationErrors);
 
@@ -57,7 +57,7 @@ class RecordSchemaValidatorTest {
 
   @Test
   void testValidateValidSchemaWithoutCounting() {
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(replicationInput.getCatalog()));
     recordSchemaValidator.validateSchemaWithoutCounting(VALID_RECORD.getRecord(),
         AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
         uncountedValidationErrors);
@@ -68,7 +68,7 @@ class RecordSchemaValidatorTest {
   @Test
   void testValidateInvalidSchema() throws InterruptedException {
     final var executorService = Executors.newFixedThreadPool(1);
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(replicationInput.getCatalog()), executorService);
     final List<AirbyteMessage> messagesToValidate = new ArrayList<>(Arrays.asList(INVALID_RECORD_1, INVALID_RECORD_2, VALID_RECORD));
 
     messagesToValidate.forEach(message -> recordSchemaValidator.validateSchema(
@@ -83,7 +83,7 @@ class RecordSchemaValidatorTest {
   @Test
   void testValidateInvalidSchemaWithoutCounting() throws InterruptedException {
     final var executorService = Executors.newFixedThreadPool(1);
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(replicationInput.getCatalog()), executorService);
     final List<AirbyteMessage> messagesToValidate = new ArrayList<>(Arrays.asList(INVALID_RECORD_1, INVALID_RECORD_2, VALID_RECORD));
 
     messagesToValidate.forEach(message -> recordSchemaValidator.validateSchemaWithoutCounting(

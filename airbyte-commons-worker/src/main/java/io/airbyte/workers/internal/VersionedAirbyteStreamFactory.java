@@ -88,6 +88,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   private boolean shouldDetectVersion = false;
 
+  private final boolean failTooLongRecords;
+
   /**
    * In some cases, we know the stream will never emit messages that need to be migrated. This is
    * particularly true for tests. This is a convenience method for those cases.
@@ -95,8 +97,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
-  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory() {
-    return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory());
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final boolean failTooLongRecords) {
+    return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
+        failTooLongRecords);
   }
 
   /**
@@ -108,7 +111,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final Logger logger,
                                                                                        final MdcScope.Builder mdcBuilder,
                                                                                        final Optional<Class<? extends RuntimeException>> clazz,
-                                                                                       final long maxMemory) {
+                                                                                       final long maxMemory,
+                                                                                       final boolean failTooLongRecords) {
     final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
         List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
@@ -122,7 +126,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
 
     return new VersionedAirbyteStreamFactory<>(provider, fac, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, Optional.empty(), logger,
-        mdcBuilder, clazz, maxMemory);
+        mdcBuilder, clazz, maxMemory, failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -130,18 +134,20 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean failTooLongRecords) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
-        Runtime.getRuntime().maxMemory());
+        Runtime.getRuntime().maxMemory(), failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean failTooLongRecords) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, DEFAULT_LOGGER, DEFAULT_MDC_SCOPE, exceptionClass,
-        DEFAULT_MEMORY_LIMIT);
+        DEFAULT_MEMORY_LIMIT, failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -151,7 +157,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Logger logger,
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final long maxMemory) {
+                                       final long maxMemory,
+                                       final boolean failTooLongRecords) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
@@ -163,6 +170,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     this.migratorFactory = migratorFactory;
     this.configuredAirbyteCatalog = configuredAirbyteCatalog;
     this.initializeForProtocolVersion(protocolVersion);
+    this.failTooLongRecords = failTooLongRecords;
   }
 
   /**
@@ -364,7 +372,11 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     try (final var mdcScope = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
-        throw new IllegalStateException("Record is too big");
+        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+        LOGGER.error("[LINE TOO BIG] line is too big with size: " + line.length());
+        if (failTooLongRecords) {
+          throw new IllegalStateException("Record is too long, the size is: " + line.length());
+        }
       } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
         logger.debug(line);

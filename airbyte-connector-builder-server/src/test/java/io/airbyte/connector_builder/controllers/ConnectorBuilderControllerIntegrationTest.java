@@ -69,7 +69,7 @@ class ConnectorBuilderControllerIntegrationTest {
   void setup() {
     this.healthHandler = mock(HealthHandler.class);
     this.writer = new MockAirbyteFileWriterImpl();
-    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false);
   }
 
   @BeforeAll
