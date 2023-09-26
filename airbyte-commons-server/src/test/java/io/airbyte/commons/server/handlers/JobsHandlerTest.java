@@ -29,7 +29,6 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.tracker.JobTracker;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +45,6 @@ class JobsHandlerTest {
 
   private JobPersistence jobPersistence;
   private JobNotifier jobNotifier;
-  private JobTracker jobTracker;
   private JobsHandler jobsHandler;
   private JobCreationAndStatusUpdateHelper helper;
 
@@ -66,7 +64,6 @@ class JobsHandlerTest {
   void beforeEach() {
     jobPersistence = mock(JobPersistence.class);
     jobNotifier = mock(JobNotifier.class);
-    jobTracker = mock(JobTracker.class);
 
     helper = mock(JobCreationAndStatusUpdateHelper.class);
     jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier);

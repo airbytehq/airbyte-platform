@@ -171,7 +171,7 @@ public class AttemptHandler {
       try {
         failureSummary = Jsons.convertValue(rawFailureSummary, AttemptFailureSummary.class);
       } catch (final Exception e) {
-        throw new BadRequestException("Unable to parse failureSummary.");
+        throw new BadRequestException("Unable to parse failureSummary.", e);
       }
     }
     StandardSyncOutput output = null;
@@ -179,7 +179,7 @@ public class AttemptHandler {
       try {
         output = Jsons.convertValue(rawSyncOutput, StandardSyncOutput.class);
       } catch (final Exception e) {
-        throw new BadRequestException("Unable to parse standardSyncOutput.");
+        throw new BadRequestException("Unable to parse standardSyncOutput.", e);
       }
     }
 
