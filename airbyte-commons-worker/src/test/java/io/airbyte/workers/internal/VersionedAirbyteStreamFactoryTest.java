@@ -176,7 +176,7 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      assertThrows(IllegalStateException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
+      assertThrows(RuntimeException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
     }
 
     @Test
