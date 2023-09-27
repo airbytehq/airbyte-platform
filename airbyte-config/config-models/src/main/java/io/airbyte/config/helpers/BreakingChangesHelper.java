@@ -49,4 +49,20 @@ public class BreakingChangesHelper {
     return !upgradingOverABreakingChange;
   }
 
+  /**
+   * Given a list of breaking changes and the current default version, filter for breaking changes
+   * that would affect the current default version. This is used to avoid considering breaking changes
+   * that may have been rolled back.
+   *
+   * @param breakingChanges - breaking changes for a definition
+   * @param currentDefaultVersion - current default version for a definition
+   * @return filtered breaking changes
+   */
+  public static List<ActorDefinitionBreakingChange> filterApplicableBreakingChanges(final List<ActorDefinitionBreakingChange> breakingChanges,
+                                                                                    final Version currentDefaultVersion) {
+    return breakingChanges.stream()
+        .filter(breakingChange -> currentDefaultVersion.greaterThanOrEqualTo(breakingChange.getVersion()))
+        .toList();
+  }
+
 }

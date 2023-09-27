@@ -365,7 +365,7 @@ public class ConfigRepository {
    */
   public StandardWorkspace getStandardWorkspaceNoSecrets(final UUID workspaceId, final boolean includeTombstone)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return listWorkspaceQuery(Optional.of(workspaceId), includeTombstone)
+    return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
   }
@@ -419,6 +419,17 @@ public class ConfigRepository {
   }
 
   /**
+   * List workspaces with given ids.
+   *
+   * @param includeTombstone include tombstoned workspaces
+   * @return workspaces
+   * @throws IOException - you never know when you IO
+   */
+  public List<StandardWorkspace> listStandardWorkspacesWithIds(final List<UUID> workspaceIds, final boolean includeTombstone) throws IOException {
+    return listWorkspaceQuery(Optional.of(workspaceIds), includeTombstone).toList();
+  }
+
+  /**
    * List ALL workspaces (paginated) with some filtering.
    *
    * @param resourcesQueryPaginated - contains all the information we need to paginate
@@ -438,11 +449,11 @@ public class ConfigRepository {
         .toList();
   }
 
-  private Stream<StandardWorkspace> listWorkspaceQuery(final Optional<UUID> workspaceId, final boolean includeTombstone) throws IOException {
+  private Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
         .where(includeTombstone ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
-        .and(workspaceId.map(WORKSPACE.ID::eq).orElse(noCondition()))
+        .and(workspaceIds.map(WORKSPACE.ID::in).orElse(noCondition()))
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace);

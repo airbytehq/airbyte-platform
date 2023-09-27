@@ -11,6 +11,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.helpers.BreakingChangesHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -79,9 +80,8 @@ public class SupportStateUpdater {
     }
 
     // Filter for breaking changes that would affect the current default version, in case of rollbacks.
-    final List<ActorDefinitionBreakingChange> applicableBreakingChanges = breakingChangesForDefinition.stream()
-        .filter(breakingChange -> currentDefaultVersion.greaterThanOrEqualTo(breakingChange.getVersion()))
-        .toList();
+    final List<ActorDefinitionBreakingChange> applicableBreakingChanges =
+        BreakingChangesHelper.filterApplicableBreakingChanges(breakingChangesForDefinition, currentDefaultVersion);
 
     // Latest stale breaking change is the most recent breaking change for which the upgrade deadline
     // has passed (as of the reference date).
