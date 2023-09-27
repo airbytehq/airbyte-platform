@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
-import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,36 +25,20 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
-import io.airbyte.config.JobConfig;
-import io.airbyte.config.JobConfig.ConfigType;
-import io.airbyte.config.JobResetConnectionConfig;
-import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
-import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.persistence.job.JobNotifier;
-import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.models.JobStatus;
-import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput;
-import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,27 +60,10 @@ class JobCreationAndStatusUpdateActivityTest {
   public static final String REASON = "reason";
 
   @Mock
-  private JobPersistence mJobPersistence;
-
-  @Mock
-  private JobNotifier mJobNotifier;
-
-  @Mock
-  private JobTracker mJobtracker;
-
-  @Mock
-  private JobErrorReporter mJobErrorReporter;
-
-  @Mock
-  private ConfigRepository mConfigRepository;
-
-  @Mock
   private JobsApi jobsApi;
 
   @Mock
   private AttemptApi attemptApi;
-
-  private FeatureFlagClient mFeatureFlagClient;
 
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
@@ -123,9 +88,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @BeforeEach
   void beforeEach() {
-    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(
-        mJobPersistence, mJobNotifier, mJobtracker, mConfigRepository, mJobErrorReporter, jobsApi,
-        attemptApi);
+    jobCreationAndStatusUpdateActivity = new JobCreationAndStatusUpdateActivityImpl(jobsApi, attemptApi);
   }
 
   @Nested
@@ -335,53 +298,6 @@ class JobCreationAndStatusUpdateActivityTest {
           () -> jobCreationAndStatusUpdateActivity.ensureCleanJobState(new EnsureCleanJobStateInput(CONNECTION_ID)));
     }
 
-  }
-
-  @Test
-  void testReleaseStageOrdering() {
-    final List<ReleaseStage> input = List.of(ReleaseStage.ALPHA, ReleaseStage.CUSTOM, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
-    final List<ReleaseStage> expected = List.of(ReleaseStage.CUSTOM, ReleaseStage.ALPHA, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
-
-    Assertions.assertThat(JobCreationAndStatusUpdateActivityImpl.orderByReleaseStageAsc(input))
-        .containsExactlyElementsOf(expected);
-  }
-
-  @Test
-  void testGetSyncJobToReleaseStages() throws IOException {
-    final UUID sourceDefVersionId = UUID.randomUUID();
-    final UUID destinationDefVersionId = UUID.randomUUID();
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(SYNC)
-        .withSync(new JobSyncConfig()
-            .withSourceDefinitionVersionId(sourceDefVersionId)
-            .withDestinationDefinitionVersionId(destinationDefVersionId));
-    final Job job = new Job(JOB_ID, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
-
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
-        .thenReturn(List.of(
-            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
-            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
-
-    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
-
-    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
-  }
-
-  @Test
-  void testGetResetJobToReleaseStages() throws IOException {
-    final UUID destinationDefVersionId = UUID.randomUUID();
-    final JobConfig jobConfig = new JobConfig()
-        .withConfigType(RESET_CONNECTION)
-        .withResetConnection(new JobResetConnectionConfig()
-            .withDestinationDefinitionVersionId(destinationDefVersionId));
-    final Job job = new Job(JOB_ID, RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
-
-    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
-        .thenReturn(List.of(
-            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
-    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
-
-    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA);
   }
 
 }

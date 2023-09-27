@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
@@ -14,18 +13,15 @@ import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.micronaut.config.AirbyteConfigurationBeanFactory;
-import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
-import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -74,32 +70,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public FeatureFlags featureFlags() {
     return new EnvVariableFeatureFlags();
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  public JobNotifier jobNotifier(
-                                 final ConfigRepository configRepository,
-                                 final TrackingClient trackingClient,
-                                 final WebUrlHelper webUrlHelper,
-                                 final WorkspaceHelper workspaceHelper,
-                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new JobNotifier(
-        webUrlHelper,
-        configRepository,
-        workspaceHelper,
-        trackingClient,
-        actorDefinitionVersionHelper);
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  public JobTracker jobTracker(
-                               final ConfigRepository configRepository,
-                               final JobPersistence jobPersistence,
-                               final TrackingClient trackingClient,
-                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Singleton

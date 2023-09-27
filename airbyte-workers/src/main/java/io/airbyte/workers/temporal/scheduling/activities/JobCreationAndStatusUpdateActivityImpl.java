@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
@@ -21,22 +20,12 @@ import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
 import io.airbyte.api.client.model.generated.ReportJobStartRequest;
-import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.persistence.job.JobNotifier;
-import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
-import java.io.IOException;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -47,32 +36,13 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
-  private final JobPersistence jobPersistence;
-  private final JobNotifier jobNotifier;
-  private final JobTracker jobTracker;
-  private final JobErrorReporter jobErrorReporter;
-  private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobsApi jobsApi;
   private final AttemptApi attemptApi;
 
-  public JobCreationAndStatusUpdateActivityImpl(final JobPersistence jobPersistence,
-                                                final JobNotifier jobNotifier,
-                                                final JobTracker jobTracker,
-                                                final ConfigRepository configRepository,
-                                                final JobErrorReporter jobErrorReporter,
-                                                final JobsApi jobsApi,
+  public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
                                                 final AttemptApi attemptApi) {
-    this.jobPersistence = jobPersistence;
-    this.jobNotifier = jobNotifier;
-    this.jobTracker = jobTracker;
-    this.jobErrorReporter = jobErrorReporter;
     this.jobsApi = jobsApi;
     this.attemptApi = attemptApi;
-    this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
-        jobPersistence,
-        configRepository,
-        jobNotifier,
-        jobTracker);
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -222,16 +192,6 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     } catch (final ApiException e) {
       throw new RetryableException(e);
     }
-  }
-
-  @VisibleForTesting
-  List<ReleaseStage> getJobToReleaseStages(final Job job) throws IOException {
-    return jobCreationAndStatusUpdateHelper.getJobToReleaseStages(job);
-  }
-
-  @VisibleForTesting
-  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
-    return JobCreationAndStatusUpdateHelper.orderByReleaseStageAsc(releaseStages);
   }
 
 }
