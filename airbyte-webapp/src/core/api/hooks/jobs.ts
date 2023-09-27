@@ -1,6 +1,7 @@
 import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useExperiment } from "hooks/services/Experiment";
+import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
+
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import {
@@ -10,7 +11,7 @@ import {
   getJobInfoWithoutLogs,
   listJobsFor,
 } from "../generated/AirbyteClient";
-import { JobListRequestBody, JobReadList, JobStatus } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -27,7 +28,8 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
 
   const result = useQuery(queryKey, () => listJobsFor(listParams, requestOptions), {
     refetchInterval: (data) => {
-      return data?.jobs?.[0]?.job?.status === JobStatus.running ? 2500 : 10000;
+      const jobStatus = data?.jobs?.[0]?.job?.status;
+      return jobStatus && jobStatusesIndicatingFinishedExecution.includes(jobStatus) ? 10000 : 2500;
     },
     keepPreviousData,
     suspense: true,
@@ -39,12 +41,12 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
   };
 };
 
-export const useListJobsForConnectionStatus = (connectionId: string) => {
+export const useListJobsForConnection = (connectionId: string, pageSize = 1) => {
   return useListJobs({
     configId: connectionId,
     configTypes: ["sync", "reset_connection"],
     pagination: {
-      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
+      pageSize,
     },
   });
 };

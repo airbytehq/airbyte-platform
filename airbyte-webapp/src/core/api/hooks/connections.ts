@@ -1,4 +1,4 @@
-import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Updater, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
@@ -12,6 +12,7 @@ import { SCOPE_WORKSPACE } from "services/Scope";
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
 import { useAppMonitoringService } from "../../../hooks/services/AppMonitoringService";
 import { useNotificationService } from "../../../hooks/services/Notification";
+import { getConnectionStatuses } from "../generated/AirbyteClient";
 import {
   createOrUpdateStateSafe,
   deleteConnection,
@@ -30,6 +31,7 @@ import {
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
   ConnectionStatus,
+  ConnectionStatusesRead,
   ConnectionStream,
   DestinationRead,
   NamespaceDefinitionType,
@@ -408,4 +410,37 @@ export const useCreateOrUpdateState = () => {
       },
     }
   );
+};
+
+export const useListConnectionsStatuses = (connectionIds: string[]) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = [SCOPE_WORKSPACE, "connections", "status", connectionIds];
+
+  return useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
+    refetchInterval: (data) => {
+      // when any of the polled connections is running, refresh 2.5s instead of 10s
+      return data?.some(({ isRunning }) => isRunning) ? 2500 : 10000;
+    },
+  });
+};
+
+export const useSetConnectionRunState = (connectionId: string) => {
+  const queryClient = useQueryClient();
+
+  return (isRunning: boolean) => {
+    queryClient.setQueriesData([SCOPE_WORKSPACE, "connections", "status"], ((data) => {
+      if (data) {
+        data = data.map((connectionStatus) => {
+          if (connectionStatus.connectionId === connectionId) {
+            const nextConnectionStatus = structuredClone(connectionStatus); // don't mutate existing object
+            nextConnectionStatus.isRunning = isRunning; // set run state
+            delete nextConnectionStatus.failureType; // new runs reset failure state
+            return nextConnectionStatus;
+          }
+          return connectionStatus;
+        });
+      }
+      return data;
+    }) as Updater<ConnectionStatusesRead | undefined, ConnectionStatusesRead>);
+  };
 };

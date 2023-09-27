@@ -2,16 +2,18 @@ import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { jobStatusesIndicatingFinishedExecution } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Message, MessageProps, MessageType, isHigherSeverity } from "components/ui/Message";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useListJobsForConnection } from "core/api";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
 import { shouldDisplayBreakingChangeBanner, getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import {
   ActorDefinitionVersionRead,
+  AttemptRead,
   FailureOrigin,
   FailureType,
   JobWithAttemptsRead,
@@ -24,13 +26,45 @@ import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import styles from "./ErrorMessage.module.scss";
 
 const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
-  const latestAttempt = job?.attempts?.slice(-1)[0];
-  if (latestAttempt?.failureSummary?.failures?.[0]?.failureType !== "manual_cancellation") {
+  if (!job || !job.job) {
+    return null;
+  }
+
+  const attempts = job.attempts ? [...job.attempts] : [];
+
+  // sort most recent attempt to top
+  attempts.sort((a, b) => {
+    if (a.createdAt < b.createdAt) {
+      return 1;
+    } else if (a.createdAt > b.createdAt) {
+      return -1;
+    }
+    return 0;
+  });
+
+  const isJobComplete = jobStatusesIndicatingFinishedExecution.includes(job.job.status);
+
+  let attemptToReadErrorFrom: undefined | AttemptRead = undefined;
+  if (isJobComplete) {
+    // use the most recent attempt
+    if (attempts[0]?.failureSummary?.failures?.[0]?.failureType !== FailureType.manual_cancellation) {
+      [attemptToReadErrorFrom] = attempts;
+    }
+  } else {
+    // use the most recent errored attempt, so the error message persists
+    // if the job is still running, bridging any gap as a new attempt spins up
+    attemptToReadErrorFrom = attempts.find((attempt) => {
+      const failureType = attempt.failureSummary?.failures?.[0]?.failureType;
+      return failureType && failureType !== FailureType.manual_cancellation;
+    });
+  }
+
+  if (attemptToReadErrorFrom) {
     return {
-      errorMessage: latestAttempt?.failureSummary?.failures?.[0]?.externalMessage,
-      failureOrigin: latestAttempt?.failureSummary?.failures?.[0]?.failureOrigin,
-      failureType: latestAttempt?.failureSummary?.failures?.[0]?.failureType,
-      attemptId: latestAttempt?.id,
+      errorMessage: attemptToReadErrorFrom?.failureSummary?.failures?.[0]?.externalMessage,
+      failureOrigin: attemptToReadErrorFrom?.failureSummary?.failures?.[0]?.failureOrigin,
+      failureType: attemptToReadErrorFrom?.failureSummary?.failures?.[0]?.failureType,
+      attemptId: attemptToReadErrorFrom?.id,
       jobId: job?.job?.id,
     };
   }
@@ -81,7 +115,9 @@ export const ErrorMessage: React.FC = () => {
 
   const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
-  const { lastCompletedSyncJob } = useConnectionSyncContext();
+  const {
+    data: { jobs },
+  } = useListJobsForConnection(connection.connectionId);
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
@@ -90,8 +126,7 @@ export const ErrorMessage: React.FC = () => {
   const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
     const errorMessages: MessageProps[] = [];
 
-    const { jobId, attemptId, errorMessage, failureType, failureOrigin } =
-      getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
+    const { jobId, attemptId, errorMessage, failureType, failureOrigin } = getErrorMessageFromJob(jobs?.[0]) ?? {};
     // If we have an error message and no breaking schema changes, show the error message
     if (errorMessage && !hasBreakingSchemaChange) {
       const isConfigError = failureType === FailureType.config_error;
@@ -212,7 +247,7 @@ export const ErrorMessage: React.FC = () => {
     formatMessage,
     hasBreakingSchemaChange,
     hasSchemaChanges,
-    lastCompletedSyncJob,
+    jobs,
     navigate,
     connection.sourceId,
     connection.destinationId,
