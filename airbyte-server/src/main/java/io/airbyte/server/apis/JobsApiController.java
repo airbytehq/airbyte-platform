@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.BooleanRead;
 import io.airbyte.api.model.generated.CheckInput;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionJobRequestBody;
+import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobDebugInfoRead;
@@ -35,6 +36,7 @@ import io.airbyte.commons.server.handlers.JobInputHandler;
 import io.airbyte.commons.server.handlers.JobsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.temporal.StreamResetRecordsHelper;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
@@ -54,15 +56,18 @@ public class JobsApiController implements JobsApi {
   private final SchedulerHandler schedulerHandler;
   private final JobsHandler jobsHandler;
   private final JobInputHandler jobInputHandler;
+  private final StreamResetRecordsHelper streamResetRecordsHelper;
 
   public JobsApiController(final JobHistoryHandler jobHistoryHandler,
                            final SchedulerHandler schedulerHandler,
                            final JobInputHandler jobInputHandler,
-                           final JobsHandler jobsHandler) {
+                           final JobsHandler jobsHandler,
+                           final StreamResetRecordsHelper streamResetRecordsHelper) {
     this.jobHistoryHandler = jobHistoryHandler;
     this.schedulerHandler = schedulerHandler;
     this.jobInputHandler = jobInputHandler;
     this.jobsHandler = jobsHandler;
+    this.streamResetRecordsHelper = streamResetRecordsHelper;
   }
 
   @Post("/cancel")
@@ -226,6 +231,17 @@ public class JobsApiController implements JobsApi {
     ApiHelper.execute(() -> {
       jobsHandler.persistJobCancellation(requestBody.getConnectionId(), requestBody.getJobId(), requestBody.getAttemptNumber(),
           requestBody.getAttemptFailureSummary());
+      return null;
+    });
+  }
+
+  @Override
+  @Post("/delete_stream_reset_records")
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public void deleteStreamResetRecordsForJob(final DeleteStreamResetRecordsForJobRequest requestBody) {
+    ApiHelper.execute(() -> {
+      streamResetRecordsHelper.deleteStreamResetRecordsForJob(requestBody.getJobId(), requestBody.getConnectionId());
       return null;
     });
   }

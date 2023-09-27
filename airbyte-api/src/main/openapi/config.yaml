@@ -3101,6 +3101,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/delete_stream_reset_records:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Deletes all stream reset records for the specified job
+      operationId: deleteStreamResetRecordsForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - jobId
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "204":
+          description: Successfully delete stream reset records for job
 
   # USERS
   /v1/users/create:

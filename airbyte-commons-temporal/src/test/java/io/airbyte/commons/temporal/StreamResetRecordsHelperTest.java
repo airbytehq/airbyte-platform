@@ -2,14 +2,13 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal;
+package io.airbyte.commons.temporal;
 
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.temporal.StreamResetRecordsHelper;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.persistence.job.JobPersistence;
