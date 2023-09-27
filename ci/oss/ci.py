@@ -10,7 +10,6 @@ from aircmd.models.click_commands import (
 )
 from aircmd.models.click_params import ParameterType
 from aircmd.models.click_utils import LazyPassDecorator
-from aircmd.models.github import github_integration
 from aircmd.models.plugins import DeveloperPlugin
 from dagger import Client, Container
 from prefect import State, flow
@@ -83,7 +82,6 @@ class TestCommand(ClickCommandMetadata):
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Build")
-@github_integration
 async def oss_build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name)
     results: List[List[State]] = await gather(backend_build, frontend_build, args=[(), ()], kwargs=[{'scan': scan, 'client': client},{'client': client}])
@@ -93,7 +91,6 @@ async def oss_build(settings: OssSettings, ctx: PipelineContext, client: Optiona
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Backend Build")
-@github_integration
 async def backend_build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     backend_build_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name)
     backend_build_result = await build_oss_backend_task.submit(settings, ctx, backend_build_client, scan)
@@ -103,7 +100,6 @@ async def backend_build(settings: OssSettings, ctx: PipelineContext, client: Opt
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Frontend Build")
-@github_integration
 async def frontend_build(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None) -> List[Container]:
     frontend_build_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name)
     frontend_storybook_result = await build_storybook_oss_frontend_task.submit(settings, ctx, frontend_build_client)
@@ -118,7 +114,6 @@ async def frontend_build(settings: OssSettings, ctx: PipelineContext, client: Op
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Test")
-@github_integration
 async def oss_test(settings: OssSettings, ctx: PipelineContext, build_results: Optional[List[Container]] = None, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     build_results = await oss_build(scan=scan, client=test_client) if build_results is None else build_results
@@ -131,7 +126,6 @@ async def oss_test(settings: OssSettings, ctx: PipelineContext, build_results: O
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS Backend Test")
-@github_integration
 async def backend_test(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> Container:
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     build_results = await backend_build(scan=scan, client=test_client)
@@ -144,7 +138,6 @@ async def backend_test(settings: OssSettings, ctx: PipelineContext, client: Opti
 @pass_global_settings
 @pass_pipeline_context
 @flow(validate_parameters=False, name="OSS CI")
-@github_integration
 async def oss_ci(settings: OssSettings, ctx: PipelineContext, client: Optional[Client] = None, scan: bool = False) -> List[Container]:
     ci_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     ci_results = await oss_test(scan=scan, client=ci_client)
