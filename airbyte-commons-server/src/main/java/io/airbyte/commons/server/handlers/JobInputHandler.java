@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.CheckInput;

@@ -24,6 +24,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
