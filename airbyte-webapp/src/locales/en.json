@@ -1204,6 +1204,10 @@
   "login.sso.quickLink": "Bookmark <a>cloud.airbyte.com/sso/<b>{companyIdentifier}</b></a> for direct access to your organization's SSO login.",
   "login.sso.quickLink.placeholder": "your-company-name",
   "login.sso.getSsoLogin": "You want to enable Single Sign-On in Airbyte? <a>Talk to us!</a>",
+  "login.sso.companyIdentifierNotFound": "Company identifier <b>{companyIdentifier}</b> not found.",
+  "login.sso.companyIdentifierFound": "Company identifier <b>{companyIdentifier}</b> found. Redirecting you to your SSO login...",
+  "login.sso.backToSsoLogin": "Back to SSO login",
+  "login.sso.invalidCompanyIdentifier": "Invalid company identifier",
 
   "signup.details.noCreditCard": "No credit card required",
   "signup.details.instantSetup": "Instant setup",
