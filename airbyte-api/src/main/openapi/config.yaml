@@ -2194,6 +2194,37 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/get_task_queue_name:
+    post:
+      tags:
+        - connection
+        - internal
+      summary: Gets the string task queue name for a connection and job type.
+      operationId: getTaskQueueName
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - temporalJobType
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                temporalJobType:
+                  description: Raw stringified name of the TemporalJobType.
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskQueueNameRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/operations/check:
     post:
       tags:
@@ -8350,6 +8381,14 @@ components:
       properties:
         value:
           type: boolean
+    TaskQueueNameRead:
+      type: object
+      required:
+        - taskQueueName
+      properties:
+        taskQueueName:
+          description: Name of the temporal task queue.
+          type: string
 
   responses:
     NotFoundResponse:
