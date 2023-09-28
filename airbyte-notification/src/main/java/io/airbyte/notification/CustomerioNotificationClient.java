@@ -10,7 +10,6 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.EnvConfigs;
-import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -180,8 +179,13 @@ public class CustomerioNotificationClient extends NotificationClient {
   @Override
   public boolean notifySchemaChange(final UUID connectionId,
                                     final boolean isBreaking,
-                                    final SlackNotificationConfiguration config,
                                     final String url) {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, boolean isBreaking)
+      throws IOException, InterruptedException {
     throw new NotImplementedException();
   }
 
