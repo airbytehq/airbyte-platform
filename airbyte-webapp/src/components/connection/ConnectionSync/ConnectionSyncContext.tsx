@@ -2,21 +2,23 @@ import { createContext, useCallback, useContext, useMemo } from "react";
 
 import {
   useResetConnection,
+  useResetConnectionStream,
   useSyncConnection,
   useCancelJob,
-  useListJobsForConnection,
+  useListJobsForConnectionStatus,
   useSetConnectionJobsData,
-  useSetConnectionRunState,
 } from "core/api";
 import {
   ConnectionStatus,
   ConnectionStream,
   JobWithAttemptsRead,
+  JobConfigType,
   JobStatus,
   JobInfoRead,
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;
@@ -28,27 +30,20 @@ interface ConnectionSyncContext {
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;
   jobResetRunning: boolean;
+  lastCompletedSyncJob?: JobWithAttemptsRead;
 }
 
-export const jobStatusesIndicatingFinishedExecution: string[] = [
-  JobStatus.succeeded,
-  JobStatus.failed,
-  JobStatus.cancelled,
-];
+export const jobStatusesIndicatingFinishedExecution: string[] = [JobStatus.succeeded, JobStatus.failed];
 const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): ConnectionSyncContext => {
-  const { connectionId } = connection;
-  const jobsPageSize = 1;
+  const jobsPageSize = useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10);
   const {
     data: { jobs },
-  } = useListJobsForConnection(connectionId);
+  } = useListJobsForConnectionStatus(connection.connectionId);
   const connectionEnabled = connection.status === ConnectionStatus.active;
-  const setConnectionJobsData = useSetConnectionJobsData(connectionId);
-  const setConnectionStatusRunState = useSetConnectionRunState(connectionId);
+  const setConnectionJobsData = useSetConnectionJobsData(connection.connectionId);
 
   const prependJob = useCallback(
     (newJob: JobInfoRead) => {
-      const isNewJobRunning = newJob.job.status === JobStatus.pending || newJob.job.status === JobStatus.running;
-      setConnectionStatusRunState(isNewJobRunning);
       setConnectionJobsData((prev) => {
         // if the new job id is already in the list, don't add it again
         if (prev?.jobs?.[0]?.job?.id === newJob.job.id) {
@@ -59,7 +54,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
           job: {
             ...newJob.job,
             // if the new job's status is pending, set to running so the UI updates immediately
-            status: isNewJobRunning ? JobStatus.running : newJob.job.status,
+            status: newJob.job.status === JobStatus.pending ? JobStatus.running : newJob.job.status,
           },
           attempts: [],
         };
@@ -71,7 +66,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
         };
       });
     },
-    [setConnectionJobsData, jobsPageSize, setConnectionStatusRunState]
+    [setConnectionJobsData, jobsPageSize]
   );
 
   const { mutateAsync: doSyncConnection, isLoading: syncStarting } = useSyncConnection();
@@ -84,7 +79,6 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     const jobId = jobs?.[0]?.job?.id;
     if (jobId) {
       await doCancelJob(jobId);
-      setConnectionStatusRunState(false);
       setConnectionJobsData((prev) => {
         // deep copy from previous data because
         // 1. we don't want to mutate the in-state objects
@@ -99,13 +93,22 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
         };
       });
     }
-  }, [jobs, doCancelJob, setConnectionJobsData, setConnectionStatusRunState]);
+  }, [jobs, doCancelJob, setConnectionJobsData]);
 
   const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
-  const resetStreams = useCallback(async () => {
-    // Reset all streams
-    prependJob(await doResetConnection(connectionId));
-  }, [connectionId, doResetConnection, prependJob]);
+  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const resetStreams = useCallback(
+    async (streams?: ConnectionStream[]) => {
+      if (streams) {
+        // Reset a set of streams.
+        prependJob(await resetStream(streams));
+      } else {
+        // Reset all selected streams
+        prependJob(await doResetConnection(connection.connectionId));
+      }
+    },
+    [connection.connectionId, doResetConnection, resetStream, prependJob]
+  );
 
   const activeJob = jobs[0]?.job;
   const jobSyncRunning = useMemo(
@@ -119,6 +122,11 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     [activeJob?.configType, activeJob?.status]
   );
 
+  const lastCompletedSyncJob = jobs.find(
+    ({ job }) =>
+      job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
+  );
+
   return {
     syncConnection,
     connectionEnabled,
@@ -129,6 +137,7 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     resetStreams,
     resetStarting,
     jobResetRunning,
+    lastCompletedSyncJob,
   };
 };
 
