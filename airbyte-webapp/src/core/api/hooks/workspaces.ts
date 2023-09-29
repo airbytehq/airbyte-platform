@@ -14,7 +14,13 @@ import {
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
-import { WorkspaceRead, WorkspaceReadList, WorkspaceUpdate, WorkspaceUpdateName } from "../types/AirbyteClient";
+import {
+  WorkspaceCreate,
+  WorkspaceRead,
+  WorkspaceReadList,
+  WorkspaceUpdate,
+  WorkspaceUpdateName,
+} from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -44,7 +50,7 @@ export const useCreateWorkspace = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
-  return useMutation(async (name: string) => createWorkspace({ name }, requestOptions), {
+  return useMutation(async (workspaceCreate: WorkspaceCreate) => createWorkspace(workspaceCreate, requestOptions), {
     onSuccess: (result) => {
       queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => ({
         workspaces: [result, ...(old?.workspaces ?? [])],

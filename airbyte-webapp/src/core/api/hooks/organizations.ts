@@ -9,10 +9,11 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
+  lists: () => [...organizationKeys.all, "list"] as const,
+  list: (filters: string[]) => [...organizationKeys.lists(), filters] as const,
   detail: (organizationId: string) => [...organizationKeys.all, "details", organizationId] as const,
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
-  workspaces: (organizationIds: string[]) => [...organizationKeys.all, "workspaces", organizationIds] as const,
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -33,6 +34,15 @@ export const useUpdateOrganization = () => {
         queryClient.setQueryData(organizationKeys.detail(data.organizationId), data);
       },
     }
+  );
+};
+
+export const useListOrganizationsById = (organizationIds: string[]) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = organizationKeys.list(organizationIds);
+
+  return useSuspenseQuery(queryKey, () =>
+    Promise.all(organizationIds.map((organizationId) => getOrganization({ organizationId }, requestOptions)))
   );
 };
 
