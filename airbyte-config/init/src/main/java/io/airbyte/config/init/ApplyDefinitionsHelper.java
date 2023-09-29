@@ -17,7 +17,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RunSupportStateUpdater;

@@ -2,8 +2,9 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.persistence;
+package io.airbyte.config.init;
 
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,14 +16,25 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
+import io.airbyte.config.ActorType;
+import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.persistence.SupportStateUpdater.SupportStateUpdate;
+import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
+import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import kotlin.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,13 +48,22 @@ class SupportStateUpdaterTest {
   private static final String V3_0_0 = "3.0.0";
 
   private ConfigRepository mConfigRepository;
+  private ActorDefinitionVersionHelper mActorDefinitionVersionHelper;
+  private BreakingChangeNotificationHelper mBreakingChangeNotificationHelper;
 
   private SupportStateUpdater supportStateUpdater;
 
   @BeforeEach
   void setup() {
     mConfigRepository = mock(ConfigRepository.class);
-    supportStateUpdater = new SupportStateUpdater(mConfigRepository);
+    mBreakingChangeNotificationHelper = mock(BreakingChangeNotificationHelper.class);
+    mActorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS)))
+        .thenReturn(true);
+    supportStateUpdater = new SupportStateUpdater(mConfigRepository, DeploymentMode.CLOUD, mActorDefinitionVersionHelper,
+        mBreakingChangeNotificationHelper, featureFlagClient);
   }
 
   ActorDefinitionBreakingChange createBreakingChange(final String version, final String upgradeDeadline) {
@@ -140,7 +161,8 @@ class SupportStateUpdaterTest {
 
     final UUID destinationDefinitionId = UUID.randomUUID();
     final ActorDefinitionVersion DEST_V0_1_0 = createActorDefinitionVersion(V0_1_0)
-        .withActorDefinitionId(destinationDefinitionId);
+        .withActorDefinitionId(destinationDefinitionId)
+        .withSupportState(SupportState.SUPPORTED);
     final ActorDefinitionVersion DEST_V1_0_0 = createActorDefinitionVersion(V1_0_0)
         .withActorDefinitionId(destinationDefinitionId);
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
@@ -159,19 +181,33 @@ class SupportStateUpdaterTest {
         .thenReturn(List.of(SRC_V0_1_0, SRC_V1_0_0));
     when(mConfigRepository.listActorDefinitionVersionsForDefinition(destinationDefinitionId))
         .thenReturn(List.of(DEST_V0_1_0, DEST_V1_0_0));
+    when(mConfigRepository.getActorDefinitionVersion(DEST_V1_0_0.getVersionId())).thenReturn(DEST_V1_0_0);
+
+    final List<UUID> workspaceIdsToNotify = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(DEST_V0_1_0.getVersionId())))
+        .thenReturn(workspaceIdsToNotify.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID()))).toList());
 
     supportStateUpdater.updateSupportStates(LocalDate.parse("2020-01-15"));
+
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId()), SupportState.UNSUPPORTED);
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(DEST_V0_1_0.getVersionId()), SupportState.DEPRECATED);
+    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V1_0_0.getVersionId()),
+        SupportState.SUPPORTED);
+
+    verify(mBreakingChangeNotificationHelper).notifyDeprecatedSyncs(
+        List.of(new BreakingChangeNotificationData(ActorType.DESTINATION, destinationDefinition.getName(), workspaceIdsToNotify, DEST_BC_1_0_0)));
 
     verify(mConfigRepository).listPublicSourceDefinitions(false);
     verify(mConfigRepository).listPublicDestinationDefinitions(false);
     verify(mConfigRepository).listBreakingChanges();
     verify(mConfigRepository).listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID);
     verify(mConfigRepository).listActorDefinitionVersionsForDefinition(destinationDefinitionId);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V0_1_0.getVersionId()), SupportState.UNSUPPORTED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(DEST_V0_1_0.getVersionId()), SupportState.DEPRECATED);
-    verify(mConfigRepository).setActorDefinitionVersionSupportStates(List.of(SRC_V1_0_0.getVersionId(), DEST_V1_0_0.getVersionId()),
-        SupportState.SUPPORTED);
+    verify(mConfigRepository).getActorDefinitionVersion(DEST_V1_0_0.getVersionId());
+    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition,
+        List.of(DEST_V0_1_0.getVersionId()));
     verifyNoMoreInteractions(mConfigRepository);
+    verifyNoMoreInteractions(mActorDefinitionVersionHelper);
+    verifyNoMoreInteractions(mBreakingChangeNotificationHelper);
   }
 
   @Test
@@ -256,6 +292,66 @@ class SupportStateUpdaterTest {
 
     assertEquals(expectedSupportStateUpdate, supportStateUpdate);
     verifyNoInteractions(mConfigRepository);
+  }
+
+  @Test
+  void testBuildSourceNotificationData() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("Test Source");
+
+    final ActorDefinitionVersion ADV_1_0_0 = createActorDefinitionVersion(V1_0_0).withSupportState(SupportState.UNSUPPORTED);
+    final ActorDefinitionVersion ADV_2_0_0 = createActorDefinitionVersion(V2_0_0).withSupportState(SupportState.DEPRECATED);
+    final ActorDefinitionVersion ADV_3_0_0 = createActorDefinitionVersion(V3_0_0).withSupportState(SupportState.SUPPORTED);
+
+    final List<ActorDefinitionVersion> versionsBeforeUpdate = List.of(ADV_1_0_0, ADV_2_0_0, ADV_3_0_0);
+    final SupportStateUpdate supportStateUpdate =
+        new SupportStateUpdate(List.of(), List.of(ADV_1_0_0.getVersionId(), ADV_3_0_0.getVersionId()), List.of());
+
+    final List<UUID> workspaceIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, List.of(ADV_3_0_0.getVersionId())))
+        .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
+
+    final ActorDefinitionBreakingChange latestBreakingChange = new ActorDefinitionBreakingChange()
+        .withMessage("Test Breaking Change");
+
+    final BreakingChangeNotificationData expectedNotificationData =
+        new BreakingChangeNotificationData(ActorType.SOURCE, sourceDefinition.getName(), workspaceIds, latestBreakingChange);
+    final BreakingChangeNotificationData notificationData =
+        supportStateUpdater.buildSourceNotificationData(sourceDefinition, latestBreakingChange, versionsBeforeUpdate, supportStateUpdate);
+    assertEquals(expectedNotificationData, notificationData);
+
+    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, List.of(ADV_3_0_0.getVersionId()));
+  }
+
+  @Test
+  void testBuildDestinationNotificationData() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("Test Destination");
+
+    final ActorDefinitionVersion ADV_1_0_0 = createActorDefinitionVersion(V1_0_0).withSupportState(SupportState.UNSUPPORTED);
+    final ActorDefinitionVersion ADV_2_0_0 = createActorDefinitionVersion(V2_0_0).withSupportState(SupportState.DEPRECATED);
+    final ActorDefinitionVersion ADV_3_0_0 = createActorDefinitionVersion(V3_0_0).withSupportState(SupportState.SUPPORTED);
+
+    final List<ActorDefinitionVersion> versionsBeforeUpdate = List.of(ADV_1_0_0, ADV_2_0_0, ADV_3_0_0);
+    final SupportStateUpdate supportStateUpdate =
+        new SupportStateUpdate(List.of(), List.of(ADV_1_0_0.getVersionId(), ADV_3_0_0.getVersionId()), List.of());
+
+    final List<UUID> workspaceIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(mActorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(ADV_3_0_0.getVersionId())))
+        .thenReturn(workspaceIds.stream().map(id -> new Pair<>(id, List.of(UUID.randomUUID(), UUID.randomUUID()))).toList());
+
+    final ActorDefinitionBreakingChange latestBreakingChange = new ActorDefinitionBreakingChange()
+        .withMessage("Test Breaking Change 2");
+
+    final BreakingChangeNotificationData expectedNotificationData =
+        new BreakingChangeNotificationData(ActorType.DESTINATION, destinationDefinition.getName(), workspaceIds, latestBreakingChange);
+    final BreakingChangeNotificationData notificationData =
+        supportStateUpdater.buildDestinationNotificationData(destinationDefinition, latestBreakingChange, versionsBeforeUpdate, supportStateUpdate);
+    assertEquals(expectedNotificationData, notificationData);
+
+    verify(mActorDefinitionVersionHelper).getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, List.of(ADV_3_0_0.getVersionId()));
   }
 
 }

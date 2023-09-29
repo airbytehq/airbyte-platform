@@ -2,16 +2,27 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.persistence;
+package io.airbyte.config.init;
+
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
+import io.airbyte.config.ActorType;
+import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.helpers.BreakingChangesHelper;
+import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.BreakingChangesHelper;
+import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -24,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import kotlin.Pair;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -51,10 +63,22 @@ public class SupportStateUpdater {
 
   }
 
+  private final DeploymentMode deploymentMode;
   private final ConfigRepository configRepository;
+  private final FeatureFlagClient featureFlagClient;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final BreakingChangeNotificationHelper breakingChangeNotificationHelper;
 
-  public SupportStateUpdater(final ConfigRepository configRepository) {
+  public SupportStateUpdater(final ConfigRepository configRepository,
+                             final DeploymentMode deploymentMode,
+                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                             final BreakingChangeNotificationHelper breakingChangeNotificationHelper,
+                             final FeatureFlagClient featureFlagClient) {
+    this.deploymentMode = deploymentMode;
     this.configRepository = configRepository;
+    this.featureFlagClient = featureFlagClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.breakingChangeNotificationHelper = breakingChangeNotificationHelper;
   }
 
   /**
@@ -186,6 +210,12 @@ public class SupportStateUpdater {
     updateSupportStates(LocalDate.now());
   }
 
+  private boolean shouldNotifyBreakingChanges() {
+    // we only want to notify about these on Cloud
+    return deploymentMode == DeploymentMode.CLOUD
+        && featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS));
+  }
+
   /**
    * Updates the version support states for all source and destination definitions based on a
    * reference date, and disables syncs with unsupported versions.
@@ -200,6 +230,7 @@ public class SupportStateUpdater {
         .collect(Collectors.groupingBy(ActorDefinitionBreakingChange::getActorDefinitionId));
 
     SupportStateUpdate comboSupportStateUpdate = new SupportStateUpdate(List.of(), List.of(), List.of());
+    final List<BreakingChangeNotificationData> notificationData = new ArrayList<>();
 
     for (final StandardSourceDefinition sourceDefinition : sourceDefinitions) {
       final List<ActorDefinitionVersion> actorDefinitionVersions =
@@ -211,6 +242,16 @@ public class SupportStateUpdater {
       final SupportStateUpdate supportStateUpdate =
           getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions);
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate);
+
+      if (shouldNotifyBreakingChanges() && !supportStateUpdate.deprecatedVersionIds.isEmpty()) {
+        final ActorDefinitionBreakingChange latestBreakingChange =
+            BreakingChangesHelper.getLastApplicableBreakingChange(configRepository, sourceDefinition.getDefaultVersionId(), breakingChangesForDef);
+        notificationData.add(buildSourceNotificationData(
+            sourceDefinition,
+            latestBreakingChange,
+            actorDefinitionVersions,
+            supportStateUpdate));
+      }
     }
 
     for (final StandardDestinationDefinition destinationDefinition : destinationDefinitions) {
@@ -223,10 +264,67 @@ public class SupportStateUpdater {
       final SupportStateUpdate supportStateUpdate =
           getSupportStateUpdate(currentDefaultVersion, referenceDate, breakingChangesForDef, actorDefinitionVersions);
       comboSupportStateUpdate = SupportStateUpdate.merge(comboSupportStateUpdate, supportStateUpdate);
+
+      if (shouldNotifyBreakingChanges() && !supportStateUpdate.deprecatedVersionIds.isEmpty()) {
+        final ActorDefinitionBreakingChange latestBreakingChange = BreakingChangesHelper.getLastApplicableBreakingChange(configRepository,
+            destinationDefinition.getDefaultVersionId(), breakingChangesForDef);
+        notificationData.add(buildDestinationNotificationData(
+            destinationDefinition,
+            latestBreakingChange,
+            actorDefinitionVersions,
+            supportStateUpdate));
+      }
     }
 
     executeSupportStateUpdate(comboSupportStateUpdate);
+    breakingChangeNotificationHelper.notifyDeprecatedSyncs(notificationData);
     log.info("Finished updating support states for all definitions");
+  }
+
+  /**
+   * Gets the version IDs that will go from SUPPORTED to DEPRECATED after applying the
+   * SupportStateUpdate. This is used when sending notifications, to ensure we only notify on this
+   * specific state transition.
+   */
+  private List<UUID> getNewlyDeprecatedVersionIds(final List<ActorDefinitionVersion> versionsBeforeUpdate,
+                                                  final SupportStateUpdate supportStateUpdate) {
+    final List<UUID> previouslySupportedVersionIds =
+        versionsBeforeUpdate.stream().filter(v -> v.getSupportState() == SupportState.SUPPORTED).map(ActorDefinitionVersion::getVersionId).toList();
+    return supportStateUpdate.deprecatedVersionIds.stream().filter(previouslySupportedVersionIds::contains).toList();
+  }
+
+  @VisibleForTesting
+  BreakingChangeNotificationData buildDestinationNotificationData(final StandardDestinationDefinition destinationDefinition,
+                                                                  final ActorDefinitionBreakingChange breakingChange,
+                                                                  final List<ActorDefinitionVersion> versionsBeforeUpdate,
+                                                                  final SupportStateUpdate supportStateUpdate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
+    final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
+        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithDestinationVersionIds(destinationDefinition, newlyDeprecatedVersionIds);
+    final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
+    return new BreakingChangeNotificationData(
+        ActorType.DESTINATION,
+        destinationDefinition.getName(),
+        workspaceIds,
+        breakingChange);
+  }
+
+  @VisibleForTesting
+  BreakingChangeNotificationData buildSourceNotificationData(final StandardSourceDefinition sourceDefinition,
+                                                             final ActorDefinitionBreakingChange breakingChange,
+                                                             final List<ActorDefinitionVersion> versionsBeforeUpdate,
+                                                             final SupportStateUpdate supportStateUpdate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
+    final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
+        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, newlyDeprecatedVersionIds);
+    final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
+    return new BreakingChangeNotificationData(
+        ActorType.SOURCE,
+        sourceDefinition.getName(),
+        workspaceIds,
+        breakingChange);
   }
 
   /**
