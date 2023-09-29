@@ -284,7 +284,7 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
   private fun sendUpdate(
     statusId: UUID?,
     streamName: String,
-    streamNamespace: String,
+    streamNamespace: String?,
     transition: Duration,
     ctx: ReplicationContext,
     streamStatusRunState: StreamStatusRunState,
@@ -401,7 +401,7 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
  */
 data class StreamStatusKey(
   val streamName: String,
-  val streamNamespace: String,
+  val streamNamespace: String?,
   val workspaceId: UUID,
   val connectionId: UUID,
   val jobId: Long,
