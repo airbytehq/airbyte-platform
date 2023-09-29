@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
@@ -64,6 +65,17 @@ const LinkRelativePathReplacer: React.FC<React.AnchorHTMLAttributes<HTMLAnchorEl
   );
 };
 
+const markdownOptions = {
+  overrides: {
+    img: {
+      component: ImgRelativePathReplacer,
+    },
+    a: {
+      component: LinkRelativePathReplacer,
+    },
+  },
+};
+
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
@@ -100,6 +112,14 @@ export const DocumentationPanel: React.FC = () => {
     },
   ];
 
+  const docsContent = useMemo(
+    () =>
+      docs && !error
+        ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
+        : formatMessage({ id: "connector.setupGuide.notFound" }),
+    [docs, error, formatMessage]
+  );
+
   return isLoading || documentationUrl === "" ? (
     <LoadingPage />
   ) : (
@@ -126,24 +146,7 @@ export const DocumentationPanel: React.FC = () => {
 
       {match(activeTab)
         .with("setupGuide", () => (
-          <Markdown
-            className={styles.content}
-            content={
-              docs && !error
-                ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
-                : formatMessage({ id: "connector.setupGuide.notFound" })
-            }
-            options={{
-              overrides: {
-                img: {
-                  component: ImgRelativePathReplacer,
-                },
-                a: {
-                  component: LinkRelativePathReplacer,
-                },
-              },
-            }}
-          />
+          <Markdown className={styles.content} content={docsContent} options={markdownOptions} />
         ))
         .with("schema", () => (
           <ResourceNotAvailable
