@@ -99,9 +99,9 @@ class OrganizationsHandlerTest {
         .userId(userId)
         .keyword("keyword");
     when(organizationPersistence.listOrganizationsByUserId(any(), any())).thenReturn(
-        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName("org name").withEmail("email")));
+        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName("org name").withEmail(ORGANIZATION_EMAIL)));
     final OrganizationReadList expectedList = new OrganizationReadList()
-        .organizations(List.of(new OrganizationRead().organizationName("org name").organizationId(orgId).email("email")));
+        .organizations(List.of(new OrganizationRead().organizationName("org name").organizationId(orgId).email(ORGANIZATION_EMAIL)));
     assertEquals(expectedList, organizationsHandler.listOrganizationsByUser(request));
 
   }
@@ -115,9 +115,9 @@ class OrganizationsHandlerTest {
         .keyword("keyword")
         .pagination(new Pagination().pageSize(10).rowOffset(1));
     when(organizationPersistence.listOrganizationsByUserIdPaginated(any(), any())).thenReturn(
-        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName("org name").withEmail("email")));
+        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName(ORGANIZATION_NAME).withEmail(ORGANIZATION_EMAIL)));
     final OrganizationReadList expectedList = new OrganizationReadList()
-        .organizations(List.of(new OrganizationRead().organizationName("org name").organizationId(orgId).email("email")));
+        .organizations(List.of(new OrganizationRead().organizationName(ORGANIZATION_NAME).organizationId(orgId).email(ORGANIZATION_EMAIL)));
     assertEquals(expectedList, organizationsHandler.listOrganizationsByUser(request));
 
   }

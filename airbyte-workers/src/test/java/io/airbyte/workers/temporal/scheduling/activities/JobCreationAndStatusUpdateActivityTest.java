@@ -58,6 +58,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class JobCreationAndStatusUpdateActivityTest {
 
   public static final String REASON = "reason";
+  private static final String EXCEPTION_MESSAGE = "bang";
 
   @Mock
   private JobsApi jobsApi;
@@ -146,7 +147,7 @@ class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID);
 
       when(jobsApi.didPreviousJobSucceed(any()))
-          .thenThrow(new ApiException("bang"));
+          .thenThrow(new ApiException(EXCEPTION_MESSAGE));
 
       assertThrows(RetryableException.class, () -> jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input));
     }
@@ -242,7 +243,7 @@ class JobCreationAndStatusUpdateActivityTest {
           standardSyncOutput,
           failureSummary);
 
-      Mockito.doThrow(new ApiException("bang")).when(attemptApi).failAttempt(any());
+      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(attemptApi).failAttempt(any());
 
       assertThrows(
           RetryableException.class,
@@ -276,7 +277,7 @@ class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
           failureSummary);
 
-      Mockito.doThrow(new ApiException("bang")).when(jobsApi).persistJobCancellation(any());
+      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(jobsApi).persistJobCancellation(any());
 
       assertThrows(
           RetryableException.class,
@@ -291,7 +292,7 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void ensureCleanJobStateThrowsRetryableOnApiFailure() throws ApiException {
-      Mockito.doThrow(new ApiException("bang")).when(jobsApi).failNonTerminalJobs(any());
+      Mockito.doThrow(new ApiException(EXCEPTION_MESSAGE)).when(jobsApi).failNonTerminalJobs(any());
 
       assertThrows(
           RetryableException.class,

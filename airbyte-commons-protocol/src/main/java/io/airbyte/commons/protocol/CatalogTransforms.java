@@ -11,6 +11,9 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import java.util.List;
 
+/**
+ * Utility class for transforming catalogs.
+ */
 public class CatalogTransforms {
 
   /**

@@ -104,9 +104,10 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings({"PMD.DoubleBraceInitialization"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(Lifecycle.PER_CLASS)
-public class AirbyteApiAcceptanceTests {
+class AirbyteApiAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteApiAcceptanceTests.class);
   private static Airbyte airbyteApiClient;
@@ -321,7 +322,7 @@ public class AirbyteApiAcceptanceTests {
     assertEquals(configApiJobsList.size(), actualJobsResponse.size());
 
     // then reset and list jobs
-    expectedJobType = JobTypeEnum.RESET;
+    // expectedJobType = JobTypeEnum.RESET;
     // The lines below are commented out, and we use the adminApiClient because the test harness does
     // not currently have a getMostRecentResetJobId method
     // jobCreate.setJobType(expectedJobType);
@@ -438,7 +439,7 @@ public class AirbyteApiAcceptanceTests {
         .withLimit(0);
     final ConnectionResponse[] connectionResponsesNewWorkspaceNoPage =
         airbyteApiConnectionsClient.listConnections(listConnectionsRequestNoPage).connectionsResponse.data;
-    assertTrue(connectionResponsesNewWorkspaceNoPage == null);
+    assertNull(connectionResponsesNewWorkspaceNoPage);
 
     final ListConnectionsRequest listConnectionsRequestOffset = new ListConnectionsRequest()
         .withWorkspaceIds(new String[] {newWorkspaceId.toString()})
@@ -447,7 +448,7 @@ public class AirbyteApiAcceptanceTests {
         .withOffset(1);
     final ConnectionResponse[] connectionResponsesNewWorkspaceOffset =
         airbyteApiConnectionsClient.listConnections(listConnectionsRequestOffset).connectionsResponse.data;
-    assertTrue(connectionResponsesNewWorkspaceOffset == null);
+    assertNull(connectionResponsesNewWorkspaceOffset);
   }
 
   @Disabled
@@ -524,7 +525,7 @@ public class AirbyteApiAcceptanceTests {
         .withIncludeDeleted(false);
     final SourceResponse[] sourceResponsesNoPage =
         airbyteApiSourcesClient.listSources(listSourcesRequestNoPage).sourcesResponse.data;
-    assertTrue(sourceResponsesNoPage == null);
+    assertNull(sourceResponsesNoPage);
 
     final ListSourcesRequest listSourcesRequestOffset = new ListSourcesRequest()
         .withWorkspaceIds(new String[] {newWorkspaceId.toString()})

@@ -185,7 +185,7 @@ class UserHandlerTest {
   class GetOrCreateUserByAuthIdTest {
 
     @ParameterizedTest
-    @EnumSource(value = AuthProvider.class)
+    @EnumSource(AuthProvider.class)
     void authIdExists(final AuthProvider authProvider) throws Exception {
       // set the auth provider for the existing user to match the test case
       user.setAuthProvider(authProvider);
@@ -208,7 +208,7 @@ class UserHandlerTest {
     }
 
     @Nested
-    class NewUser {
+    class NewUserTest {
 
       private static final String NEW_AUTH_USER_ID = "new_auth_user_id";
       private static final UUID NEW_USER_ID = UUID.randomUUID();
@@ -285,8 +285,8 @@ class UserHandlerTest {
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider) throws IOException {
         verify(userPersistence).writeUser(argThat(user -> user.getUserId().equals(NEW_USER_ID)
-            && user.getEmail().equals(NEW_EMAIL)
-            && user.getAuthUserId().equals(NEW_AUTH_USER_ID)
+            && NEW_EMAIL.equals(user.getEmail())
+            && NEW_AUTH_USER_ID.equals(user.getAuthUserId())
             && user.getAuthProvider().equals(expectedAuthProvider)));
       }
 
