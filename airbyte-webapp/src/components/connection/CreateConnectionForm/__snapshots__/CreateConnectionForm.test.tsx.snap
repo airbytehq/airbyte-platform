@@ -313,11 +313,11 @@ exports[`CreateConnectionForm should render 1`] = `
                       data-testid="destination-namespace-edit-button"
                       type="button"
                     >
-                      <div
+                      <span
                         class="<removed-for-snapshot-test>"
                       >
                         Edit
-                      </div>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -400,11 +400,11 @@ exports[`CreateConnectionForm should render 1`] = `
                       data-testid="destination-stream-prefix-edit-button"
                       type="button"
                     >
-                      <div
+                      <span
                         class="<removed-for-snapshot-test>"
                       >
                         Edit
-                      </div>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -560,7 +560,7 @@ exports[`CreateConnectionForm should render 1`] = `
                 data-testid="refresh-source-schema-btn"
                 type="button"
               >
-                <div
+                <span
                   class="<removed-for-snapshot-test>"
                 >
                   <svg
@@ -579,7 +579,7 @@ exports[`CreateConnectionForm should render 1`] = `
                     />
                   </svg>
                   Refresh source schema
-                </div>
+                </span>
               </button>
             </div>
             <div
@@ -678,7 +678,7 @@ exports[`CreateConnectionForm should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             type="button"
                           >
-                            <div
+                            <span
                               class="<removed-for-snapshot-test>"
                             >
                               <svg
@@ -696,7 +696,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                   fill="currentColor"
                                 />
                               </svg>
-                            </div>
+                            </span>
                           </button>
                         </p>
                       </div>
@@ -712,7 +712,7 @@ exports[`CreateConnectionForm should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             type="button"
                           >
-                            <div
+                            <span
                               class="<removed-for-snapshot-test>"
                             >
                               <svg
@@ -730,7 +730,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                   fill="currentColor"
                                 />
                               </svg>
-                            </div>
+                            </span>
                           </button>
                         </p>
                       </div>
@@ -1250,11 +1250,11 @@ exports[`CreateConnectionForm should render 1`] = `
                     data-testid="addItemButton"
                     type="button"
                   >
-                    <div
+                    <span
                       class="<removed-for-snapshot-test>"
                     >
                       + Add transformation
-                    </div>
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1272,11 +1272,11 @@ exports[`CreateConnectionForm should render 1`] = `
               class="<removed-for-snapshot-test>"
               type="submit"
             >
-              <div
+              <span
                 class="<removed-for-snapshot-test>"
               >
                 Set up connection
-              </div>
+              </span>
             </button>
           </div>
         </div>
@@ -1357,11 +1357,11 @@ exports[`CreateConnectionForm should render with an error 1`] = `
                 fill="currentColor"
               />
             </svg>
-            <div
+            <span
               class="<removed-for-snapshot-test>"
             >
               Try again
-            </div>
+            </span>
           </button>
         </div>
         <div

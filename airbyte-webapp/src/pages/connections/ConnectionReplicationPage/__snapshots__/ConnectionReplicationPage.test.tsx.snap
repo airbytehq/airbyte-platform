@@ -121,7 +121,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                   data-testid="refresh-source-schema-btn"
                   type="button"
                 >
-                  <div
+                  <span
                     class="<removed-for-snapshot-test>"
                   >
                     <svg
@@ -140,7 +140,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                       />
                     </svg>
                     Refresh source schema
-                  </div>
+                  </span>
                 </button>
               </div>
               <div
@@ -239,7 +239,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               class="<removed-for-snapshot-test>"
                               type="button"
                             >
-                              <div
+                              <span
                                 class="<removed-for-snapshot-test>"
                               >
                                 <svg
@@ -257,7 +257,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                     fill="currentColor"
                                   />
                                 </svg>
-                              </div>
+                              </span>
                             </button>
                           </p>
                         </div>
@@ -273,7 +273,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               class="<removed-for-snapshot-test>"
                               type="button"
                             >
-                              <div
+                              <span
                                 class="<removed-for-snapshot-test>"
                               >
                                 <svg
@@ -291,7 +291,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                     fill="currentColor"
                                   />
                                 </svg>
-                              </div>
+                              </span>
                             </button>
                           </p>
                         </div>
@@ -727,11 +727,11 @@ exports[`ConnectionReplicationPage should render 1`] = `
                   disabled=""
                   type="button"
                 >
-                  <div
+                  <span
                     class="<removed-for-snapshot-test>"
                   >
                     Cancel
-                  </div>
+                  </span>
                 </button>
                 <button
                   class="<removed-for-snapshot-test>"
@@ -739,11 +739,11 @@ exports[`ConnectionReplicationPage should render 1`] = `
                   disabled=""
                   type="submit"
                 >
-                  <div
+                  <span
                     class="<removed-for-snapshot-test>"
                   >
                     Save changes
-                  </div>
+                  </span>
                 </button>
               </div>
             </div>
@@ -792,11 +792,11 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                   fill="currentColor"
                 />
               </svg>
-              <div
+              <span
                 class="<removed-for-snapshot-test>"
               >
                 Try again
-              </div>
+              </span>
             </button>
           </div>
           <div
