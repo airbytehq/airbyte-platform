@@ -1,4 +1,5 @@
-{{- if and (eq .Values.global.deploymentMode "oss") (eq .Values.global.edition "pro") }}
+# If Cloud or Pro, render the keycloak service template.
+{{- if or (eq .Values.global.deploymentMode "cloud") (eq .Values.global.edition "pro") }}
 ---
 apiVersion: v1
 kind: Service
