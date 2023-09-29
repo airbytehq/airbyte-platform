@@ -6173,6 +6173,10 @@ components:
         - permissionType
         - userId
       properties:
+        permissionId:
+          type: string
+          format: uuid
+          description: This is a temporary and optional field just for dual write purpose during the data migration.
         permissionType:
           $ref: "#/components/schemas/PermissionType"
         userId:

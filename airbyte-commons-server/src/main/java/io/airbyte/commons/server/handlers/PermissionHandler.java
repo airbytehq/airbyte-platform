@@ -68,7 +68,7 @@ public class PermissionHandler {
       return existingPermission.get();
     }
 
-    final UUID permissionId = uuidGenerator.get();
+    final UUID permissionId = permissionCreate.getPermissionId() != null ? permissionCreate.getPermissionId() : uuidGenerator.get();
 
     final Permission permission = new Permission()
         .withPermissionId(permissionId)
