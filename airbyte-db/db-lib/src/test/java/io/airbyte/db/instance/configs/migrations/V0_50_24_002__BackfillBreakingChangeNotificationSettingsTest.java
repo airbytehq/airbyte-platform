@@ -5,6 +5,7 @@
 package io.airbyte.db.instance.configs.migrations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.airbyte.commons.json.Jsons;
@@ -53,10 +54,12 @@ class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest extends Abstr
     final UUID workspaceId = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
     final UUID workspaceId3 = UUID.randomUUID();
+    final UUID workspaceId4 = UUID.randomUUID();
+    final UUID workspaceId5 = UUID.randomUUID();
 
     final NotificationSettings stdNotificationSettings = buildNotificationSettingsWithBCItem(null);
     final NotificationSettings settingsWithDisabledBreakingChangeConfig = buildNotificationSettingsWithBCItem(EMPTY_NOTIFICATION_ITEM);
-    final NotificationSettings settingsWithExisingBreakingChangeConfig = buildNotificationSettingsWithBCItem(EMAIL_NOTIFICATION_ITEM);
+    final NotificationSettings settingsWithBreakingChangeConfig = buildNotificationSettingsWithBCItem(EMAIL_NOTIFICATION_ITEM);
 
     ctx.insertInto(DSL.table(WORKSPACE_TABLE))
         .columns(
@@ -76,25 +79,44 @@ class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest extends Abstr
             "name2",
             "wk2-slug",
             true,
-            JSONB.valueOf(Jsons.serialize(settingsWithExisingBreakingChangeConfig)))
+            JSONB.valueOf(Jsons.serialize(settingsWithBreakingChangeConfig)))
         .values(
             workspaceId3,
             "name3",
             "wk3-slug",
             true,
             JSONB.valueOf(Jsons.serialize(settingsWithDisabledBreakingChangeConfig)))
+        .values(
+            workspaceId4,
+            "name4",
+            "wk4-slug",
+            true,
+            JSONB.valueOf("null"))
+        .values(
+            workspaceId5,
+            "name5",
+            "wk5-slug",
+            true,
+            null)
         .execute();
 
     V0_50_24_002__BackfillBreakingChangeNotificationSettings.backfillNotificationSettings(ctx);
 
     final String wkspc1Result = fetchNotificationSettingsData(ctx, workspaceId);
-    assertEquals(settingsWithExisingBreakingChangeConfig, Jsons.deserialize(wkspc1Result, NotificationSettings.class));
+    assertEquals(settingsWithBreakingChangeConfig, Jsons.deserialize(wkspc1Result, NotificationSettings.class));
 
     final String wkspc2Result = fetchNotificationSettingsData(ctx, workspaceId2);
-    assertEquals(settingsWithExisingBreakingChangeConfig, Jsons.deserialize(wkspc2Result, NotificationSettings.class));
+    assertEquals(settingsWithBreakingChangeConfig, Jsons.deserialize(wkspc2Result, NotificationSettings.class));
 
     final String wkspc3Result = fetchNotificationSettingsData(ctx, workspaceId3);
     assertEquals(settingsWithDisabledBreakingChangeConfig, Jsons.deserialize(wkspc3Result, NotificationSettings.class));
+
+    final String wkspc4Result = fetchNotificationSettingsData(ctx, workspaceId4);
+    assertNull(Jsons.deserialize(wkspc4Result, NotificationSettings.class));
+
+    final String wkspc5Result = fetchNotificationSettingsData(ctx, workspaceId5);
+    assertNull(wkspc5Result);
+
   }
 
   private static String fetchNotificationSettingsData(final DSLContext ctx, final UUID id) {
@@ -103,7 +125,8 @@ class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest extends Abstr
         .where(DSL.field("id").eq(id)));
 
     assert record != null;
-    return record.get(NOTIFICATION_SETTINGS_COLUMN, JSONB.class).data();
+    final JSONB notificationSettingsCol = record.get(NOTIFICATION_SETTINGS_COLUMN, JSONB.class);
+    return notificationSettingsCol != null ? notificationSettingsCol.data() : null;
   }
 
   private static NotificationSettings buildNotificationSettingsWithBCItem(final NotificationItem breakingChangeNotificationItem) {

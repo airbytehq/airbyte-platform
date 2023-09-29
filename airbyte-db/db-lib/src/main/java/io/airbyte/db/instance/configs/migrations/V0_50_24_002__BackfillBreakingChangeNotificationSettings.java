@@ -56,7 +56,8 @@ public class V0_50_24_002__BackfillBreakingChangeNotificationSettings extends Ba
     ctx.update(DSL.table(WORKSPACE_TABLE))
         .set(NOTIFICATION_SETTINGS_COLUMN,
             DSL.field("jsonb_set(?, ARRAY[?], ?::jsonb)", JSONB.class, NOTIFICATION_SETTINGS_COLUMN, notificationSettingKey, cioNotificationItem))
-        .where(not(DSL.field("? ?? ?", Boolean.class, NOTIFICATION_SETTINGS_COLUMN, notificationSettingKey)))
+        .where(DSL.field("jsonb_typeof(?)", String.class, NOTIFICATION_SETTINGS_COLUMN).eq("object"))
+        .and(not(DSL.field("? ?? ?", Boolean.class, NOTIFICATION_SETTINGS_COLUMN, notificationSettingKey)))
         .execute();
   }
 
