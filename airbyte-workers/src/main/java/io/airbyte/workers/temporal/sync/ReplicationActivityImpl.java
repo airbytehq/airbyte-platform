@@ -28,6 +28,7 @@ import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.protocol.CatalogTransforms;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -49,7 +50,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -358,7 +358,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     if (hasStreamsToReset) {
       final var streamsToReset =
           jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ProtocolConverters::clientStreamDescriptorToProtocol).toList();
-      DefaultJobCreator.updateCatalogForReset(streamsToReset, catalog);
+      CatalogTransforms.updateCatalogForReset(streamsToReset, catalog);
     }
   }
 

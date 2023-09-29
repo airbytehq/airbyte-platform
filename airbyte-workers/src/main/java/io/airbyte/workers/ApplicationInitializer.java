@@ -89,9 +89,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Named(TaskExecutors.IO)
   private ExecutorService executorService;
   @Inject
-  @Named("jobsDatabaseMigrationCheck")
-  private Optional<DatabaseMigrationCheck> jobsDatabaseMigrationCheck;
-  @Inject
   @Named("jobsDatabaseAvailabilityCheck")
   private Optional<JobsDatabaseAvailabilityCheck> jobsDatabaseAvailabilityCheck;
 
@@ -204,14 +201,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     // Ensure that the Configuration database has been migrated to the latest version
     log.info("Checking config database flyway migration version...");
     configsDatabaseMigrationCheck.orElseThrow().check();
-
-    // Ensure that the Jobs database has been migrated to the latest version
-    log.info("Checking jobs database flyway migration version...");
-    jobsDatabaseMigrationCheck.orElseThrow().check();
-
-    // Ensure that the Jobs database is available
-    log.info("Checking jobs database availability...");
-    jobsDatabaseAvailabilityCheck.orElseThrow().check();
   }
 
   private void registerWorkerFactory(final WorkerFactory workerFactory,

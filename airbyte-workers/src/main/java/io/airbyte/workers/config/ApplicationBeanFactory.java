@@ -6,7 +6,6 @@ package io.airbyte.workers.config;
 
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -14,11 +13,9 @@ import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
-import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -59,12 +56,6 @@ public class ApplicationBeanFactory {
                                                                  @Value("${airbyte.protocol.min-version}") final String minVersion,
                                                                  @Value("${airbyte.protocol.max-version}") final String maxVersion) {
     return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  public WebUrlHelper webUrlHelper(@Value("${airbyte.web-app.url}") final String webAppUrl) {
-    return new WebUrlHelper(webAppUrl);
   }
 
   @Singleton
