@@ -9,10 +9,14 @@ import datadog.trace.api.Tracer;
 import io.airbyte.commons.temporal.TemporalInitializationUtils;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.MaxWorkersConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.db.check.DatabaseCheckException;
+import io.airbyte.db.check.DatabaseMigrationCheck;
+import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
@@ -39,6 +43,7 @@ import io.temporal.worker.WorkflowImplementationOptions;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -62,7 +67,9 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Inject
   @Named("checkConnectionActivities")
   private Optional<List<Object>> checkConnectionActivities;
-
+  @Inject
+  @Named("configsDatabaseMigrationCheck")
+  private Optional<DatabaseMigrationCheck> configsDatabaseMigrationCheck;
   @Inject
   @Named("connectionManagerActivities")
   private Optional<List<Object>> connectionManagerActivities;
@@ -71,12 +78,19 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private Optional<List<Object>> discoverActivities;
 
   @Inject
+  @Named("notifyActivities")
+  private Optional<List<Object>> notifyActivities;
+
+  @Inject
   @Named("notificationActivities")
   private Optional<List<Object>> notificationActivities;
 
   @Inject
   @Named(TaskExecutors.IO)
   private ExecutorService executorService;
+  @Inject
+  @Named("jobsDatabaseAvailabilityCheck")
+  private Optional<JobsDatabaseAvailabilityCheck> jobsDatabaseAvailabilityCheck;
 
   @Inject
   private Optional<LogConfigs> logConfigs;
@@ -142,6 +156,12 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
       configureTracer();
       initializeCommonDependencies();
 
+      if (environment.getActiveNames().contains(WorkerMode.CONTROL_PLANE)) {
+        initializeControlPlaneDependencies();
+      } else {
+        log.info("Skipping Control Plane dependency initialization.");
+      }
+
       registerWorkerFactory(workerFactory,
           new MaxWorkersConfig(maxCheckWorkers, maxDiscoverWorkers, maxSpecWorkers,
               maxSyncWorkers, maxNotifyWorkers));
@@ -150,7 +170,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
       workerFactory.start();
 
       log.info("Application initialized.");
-    } catch (final ExecutionException | InterruptedException | TimeoutException e) {
+    } catch (final DatabaseCheckException | ExecutionException | InterruptedException | IOException | TimeoutException e) {
       log.error("Unable to initialize application.", e);
       throw new IllegalStateException(e);
     }
@@ -175,6 +195,12 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     }
 
     configureTemporal(temporalUtils, temporalService);
+  }
+
+  private void initializeControlPlaneDependencies() throws DatabaseCheckException, IOException {
+    // Ensure that the Configuration database has been migrated to the latest version
+    log.info("Checking config database flyway migration version...");
+    configsDatabaseMigrationCheck.orElseThrow().check();
   }
 
   private void registerWorkerFactory(final WorkerFactory workerFactory,
