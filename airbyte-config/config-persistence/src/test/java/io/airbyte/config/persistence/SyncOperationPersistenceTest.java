@@ -15,6 +15,7 @@ import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -70,7 +71,7 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER, new WorkspaceServiceJooqImpl(database));
     createWorkspace();
 
     for (final StandardSyncOperation op : OPS) {

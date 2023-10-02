@@ -164,6 +164,7 @@ public class AttemptHandler {
     return new InternalOperationResult().succeeded(true);
   }
 
+  @SuppressWarnings("PMD")
   public void failAttempt(final int attemptNumber, final long jobId, final Object rawFailureSummary, final Object rawSyncOutput)
       throws IOException {
     AttemptFailureSummary failureSummary = null;

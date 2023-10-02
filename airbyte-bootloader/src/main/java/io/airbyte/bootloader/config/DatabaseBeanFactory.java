@@ -9,6 +9,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
@@ -23,6 +24,7 @@ import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.MetadataPersistence;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
@@ -102,9 +104,11 @@ public class DatabaseBeanFactory {
   }
 
   @Singleton
+  @Replaces(ConfigRepository.class)
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
-                                           final FeatureFlagClient featureFlagClient) {
-    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
+                                           final FeatureFlagClient featureFlagClient,
+                                           final WorkspaceService workspaceService) {
+    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient), workspaceService);
   }
 
   @Singleton

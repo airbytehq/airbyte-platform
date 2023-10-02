@@ -31,8 +31,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.DbConverter;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.db.Database;
@@ -43,6 +42,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -68,7 +68,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   private final ExceptionWrappingDatabase database;
 
   @VisibleForTesting
-  public WorkspaceServiceJooqImpl(final Database database) {
+  public WorkspaceServiceJooqImpl(@Named("configDatabase") final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
   }
 
@@ -85,7 +85,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public StandardWorkspace getStandardWorkspaceNoSecrets(final UUID workspaceId, final boolean includeTombstone)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return listWorkspaceQuery(Optional.of(workspaceId), includeTombstone)
+    return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
         .findFirst()
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
   }
@@ -163,11 +163,11 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   @Override
-  public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<UUID> workspaceId, final boolean includeTombstone) throws IOException {
+  public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
         .where(includeTombstone ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
-        .and(workspaceId.map(WORKSPACE.ID::eq).orElse(noCondition()))
+        .and(workspaceIds.map(WORKSPACE.ID::in).orElse(noCondition()))
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace);
