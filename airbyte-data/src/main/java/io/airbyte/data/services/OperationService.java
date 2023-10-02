@@ -5,7 +5,7 @@
 package io.airbyte.data.services;
 
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;

@@ -57,8 +57,7 @@ import org.mockito.Mockito;
 /**
  * JobsHandlerTest.
  */
-@SuppressWarnings("PMD")
-public class JobsHandlerTest {
+class JobsHandlerTest {
 
   private JobPersistence jobPersistence;
   private JobNotifier jobNotifier;

@@ -8,7 +8,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;

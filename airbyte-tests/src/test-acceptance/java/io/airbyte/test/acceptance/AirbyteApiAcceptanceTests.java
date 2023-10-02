@@ -104,13 +104,10 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * This class contains tests that run against the Airbyte API.
- */
+@SuppressWarnings({"PMD.DoubleBraceInitialization"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(Lifecycle.PER_CLASS)
-@SuppressWarnings("PMD")
-public class AirbyteApiAcceptanceTests {
+class AirbyteApiAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteApiAcceptanceTests.class);
   private static Airbyte airbyteApiClient;

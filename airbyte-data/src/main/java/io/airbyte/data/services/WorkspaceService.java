@@ -7,7 +7,7 @@ package io.airbyte.data.services;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -32,7 +32,7 @@ public interface WorkspaceService {
 
   List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
-  Stream<StandardWorkspace> listWorkspaceQuery(Optional<List<UUID>> workspaceId, boolean includeTombstone) throws IOException;
+  Stream<StandardWorkspace> listWorkspaceQuery(Optional<UUID> workspaceId, boolean includeTombstone) throws IOException;
 
   List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 

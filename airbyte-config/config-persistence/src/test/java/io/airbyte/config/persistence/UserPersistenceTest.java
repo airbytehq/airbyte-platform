@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Optional;
@@ -26,10 +25,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private void setupTestData() throws IOException, JsonValidationException {
-    final ConfigRepository configRepository = new ConfigRepository(
-        database,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-        new WorkspaceServiceJooqImpl(database));
+    final ConfigRepository configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
