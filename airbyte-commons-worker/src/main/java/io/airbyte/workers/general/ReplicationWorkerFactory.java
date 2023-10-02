@@ -45,11 +45,10 @@ import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
-import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
@@ -146,7 +145,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
-    final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags);
+    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
@@ -223,8 +222,8 @@ public class ReplicationWorkerFactory {
   /**
    * Create MessageTracker.
    */
-  private static MessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                     final FeatureFlags featureFlags) {
+  private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
+                                                            final FeatureFlags featureFlags) {
     return new AirbyteMessageTracker(syncPersistence, featureFlags);
   }
 
@@ -252,7 +251,7 @@ public class ReplicationWorkerFactory {
    */
   private static ReplicationWorker createReplicationWorker(final AirbyteSource source,
                                                            final AirbyteDestination destination,
-                                                           final MessageTracker messageTracker,
+                                                           final AirbyteMessageTracker messageTracker,
                                                            final SyncPersistence syncPersistence,
                                                            final RecordSchemaValidator recordSchemaValidator,
                                                            final FieldSelector fieldSelector,
@@ -316,7 +315,7 @@ public class ReplicationWorkerFactory {
                                                                   final AirbyteSource source,
                                                                   final AirbyteMapper mapper,
                                                                   final AirbyteDestination destination,
-                                                                  final MessageTracker messageTracker,
+                                                                  final AirbyteMessageTracker messageTracker,
                                                                   final SyncPersistence syncPersistence,
                                                                   final RecordSchemaValidator recordSchemaValidator,
                                                                   final FieldSelector fieldSelector,

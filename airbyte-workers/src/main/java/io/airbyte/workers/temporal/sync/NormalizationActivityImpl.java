@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
@@ -32,6 +35,8 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.RemoveLargeSyncInputs;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -124,8 +129,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     return temporalUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
-          final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
-          final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
+          final NormalizationInput fullInput = hydrateNormalizationInput(input);
 
           // Check the version of normalization
           // We require at least version 0.3.0 to support data types v1. Using an older version would lead to
@@ -174,7 +178,17 @@ public class NormalizationActivityImpl implements NormalizationActivity {
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
+  }
+
+  private NormalizationInput hydrateNormalizationInput(NormalizationInput input) throws Exception {
+    // Hydrate the destination config.
+    final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
+    // Retrieve the catalog.
+    final ConfiguredAirbyteCatalog catalog = featureFlagClient.boolVariation(RemoveLargeSyncInputs.INSTANCE, new Workspace(input.getWorkspaceId()))
+        ? retrieveCatalog(input.getConnectionId())
+        : input.getCatalog();
+    return input.withDestinationConfiguration(fullDestinationConfig).withCatalog(catalog);
   }
 
   /**
@@ -274,6 +288,20 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         containerOrchestratorConfig.get(),
         serverPort,
         featureFlagClient);
+  }
+
+  private ConfiguredAirbyteCatalog retrieveCatalog(UUID connectionId) throws Exception {
+    final ConnectionRead connectionInfo =
+        AirbyteApiClient
+            .retryWithJitterThrows(
+                () -> airbyteApiClient.getConnectionApi()
+                    .getConnection(new ConnectionIdRequestBody().connectionId(connectionId)),
+                "retrieve the connection");
+    if (connectionInfo.getSyncCatalog() == null) {
+      throw new IllegalArgumentException("Connection is missing catalog, which is required");
+    }
+    final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
+    return catalog;
   }
 
 }

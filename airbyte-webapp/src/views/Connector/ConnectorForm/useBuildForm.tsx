@@ -46,6 +46,11 @@ export function setDefaultValues(
           options.respectExistingValues && values[property.fieldKey] ? values[property.fieldKey] : {};
         setDefaultValues(property, values[property.fieldKey] as Record<string, unknown>, options);
         break;
+      case "objectArray":
+        if (property.isRequired && !(options.respectExistingValues && values[property.fieldKey])) {
+          values[property.fieldKey] = [];
+        }
+        break;
       case "formCondition":
         values[property.fieldKey] = {};
         let chosenCondition = property.conditions[0];

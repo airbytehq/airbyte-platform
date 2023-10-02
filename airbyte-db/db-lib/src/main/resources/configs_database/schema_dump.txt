@@ -224,6 +224,8 @@ create table "public"."organization" (
   "email" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "pba" boolean not null default false,
+  "org_level_billing" boolean not null default false,
   constraint "organization_pkey"
     primary key ("id")
 );

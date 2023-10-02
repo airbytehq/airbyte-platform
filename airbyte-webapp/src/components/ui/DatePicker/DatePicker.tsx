@@ -59,6 +59,7 @@ export interface DatePickerProps {
   disabled?: boolean;
   readOnly?: boolean;
   onBlur?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
 }
 
@@ -94,6 +95,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   error,
   onChange,
   onBlur,
+  onFocus,
   placeholder,
   value = "",
   withTime = false,
@@ -164,7 +166,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         error={error}
         value={value}
         onChange={handleInputChange}
-        onFocus={() => datepickerRef.current?.setOpen(true)}
+        onFocus={() => {
+          datepickerRef.current?.setOpen(true);
+          onFocus?.();
+        }}
         className={styles.input}
         ref={inputRef}
         disabled={disabled}

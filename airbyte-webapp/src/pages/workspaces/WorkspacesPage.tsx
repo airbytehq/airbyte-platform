@@ -13,12 +13,14 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { useCreateWorkspace, useListWorkspaces } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
+import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
 
 const WorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const { workspaces } = useListWorkspaces();
+
   const { mutateAsync: createWorkspace } = useCreateWorkspace();
 
   return (
@@ -43,8 +45,11 @@ const WorkspacesPage: React.FC = () => {
           </FlexContainer>
         }
       />
-      <Box py="2xl" className={styles.content}>
-        <WorkspacesList workspaces={workspaces} createWorkspace={createWorkspace} />
+      <Box pt="lg">
+        <FlexContainer direction="column" className={styles.content}>
+          <WorkspacesCreateControl createWorkspace={createWorkspace} />
+          <WorkspacesList workspaces={workspaces} />
+        </FlexContainer>
       </Box>
     </>
   );

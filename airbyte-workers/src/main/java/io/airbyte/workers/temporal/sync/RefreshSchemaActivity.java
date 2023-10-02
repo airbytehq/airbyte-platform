@@ -26,7 +26,6 @@ public interface RefreshSchemaActivity {
    *
    * @param input includes the source catalog id, connection id, and workspace id
    * @return any diff that was auto-propagated
-   * @throws Exception
    */
   RefreshSchemaActivityOutput refreshSchemaV2(final RefreshSchemaActivityInput input) throws Exception;
 

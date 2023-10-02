@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers.helpers;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
-import static io.airbyte.persistence.job.models.AttemptStatus.FAILED;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -42,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -105,25 +103,6 @@ public class JobCreationAndStatusUpdateHelper {
     } else {
       return Integer.toString(attemptNumber);
     }
-  }
-
-  public OptionalLong getPreviousJobId(final Long activeJobId, final List<Long> jobIdsList) {
-    return jobIdsList.stream()
-        .filter(jobId -> !Objects.equals(jobId, activeJobId))
-        .mapToLong(jobId -> jobId).max();
-  }
-
-  public boolean checkActiveJobPreviousAttempt(final Job activeJob, final int attemptId) {
-    final int minAttemptSize = 1;
-    boolean result = false;
-
-    if (activeJob.getAttempts().size() > minAttemptSize) {
-      final Optional<Attempt> optionalAttempt = activeJob.getAttempts().stream()
-          .filter(attempt -> attempt.getAttemptNumber() == (attemptId - 1)).findFirst();
-      result = optionalAttempt.isPresent() && optionalAttempt.get().getStatus().equals(FAILED);
-    }
-
-    return result;
   }
 
   public Optional<Job> findPreviousJob(final List<Job> jobs, final long targetJobId) {

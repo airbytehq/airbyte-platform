@@ -121,12 +121,12 @@ export const buildYupFormForJsonSchema = (
       .default(undefined);
 
     // If the field is hidden, the user cannot select a value for it, so don't make it required
-    if (formField.airbyte_hidden) {
+    // If the field is not required, it's OK to not have a value for it as well
+    if (formField.airbyte_hidden || !formField.isRequired) {
       return oneOfSchema;
     }
 
     // Otherwise require that all oneOfs have an option selected, as the user has no way to unselect an option.
-    // This means that all non-hidden oneOfs are effectively required, even if they aren't marked as such in the spec.
     return oneOfSchema.required("form.empty.error");
   }
 

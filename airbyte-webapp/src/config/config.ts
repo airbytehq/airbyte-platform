@@ -1,6 +1,7 @@
 import { AirbyteWebappConfig } from "./types";
 
 export const config: AirbyteWebappConfig = {
+  keycloakBaseUrl: process.env.REACT_APP_KEYCLOAK_BASE_URL || window.location.origin,
   segment: {
     token: process.env.REACT_APP_SEGMENT_TOKEN,
     enabled: !window.TRACKING_STRATEGY || window.TRACKING_STRATEGY === "segment",

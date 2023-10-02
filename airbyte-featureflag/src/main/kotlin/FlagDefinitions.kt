@@ -69,11 +69,13 @@ object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useA
 
 object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
 
+object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
+
+object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
+
 object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
-
-object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.resources", default = "")
 
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "buffered")
 
@@ -108,8 +110,6 @@ object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides"
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
-
-object UseNewIsLastJobOrAttemptFailure : Permanent<Boolean>(key = "use-new-is-last-job-or-attempt-failure", default = false)
 
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through

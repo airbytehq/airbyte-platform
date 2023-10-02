@@ -25,11 +25,12 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.15.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.15.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.15.0" apply false
-    id "io.airbyte.gradle.docker" version "0.15.0" apply false
-    id "io.airbyte.gradle.publish" version "0.15.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.16.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.16.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.16.0" apply false
+    id "io.airbyte.gradle.docker" version "0.16.0" apply false
+    id "io.airbyte.gradle.publish" version "0.16.0" apply false
+    id "jacoco-report-aggregation"
 }
 
 repositories {
@@ -45,6 +46,64 @@ repositories {
             password System.getenv('CLOUDREPO_PASSWORD')
         }
     }
+}
+
+reporting {
+    reports {
+        testAggregateTestReport(JacocoCoverageReport) {
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
+}
+
+dependencies {
+    jacocoAggregation project(":airbyte-commons")
+
+    jacocoAggregation project(":airbyte-api")
+    jacocoAggregation project(":airbyte-api-server")
+    jacocoAggregation project(":airbyte-commons-protocol")
+    jacocoAggregation project(":airbyte-config:specs")
+    jacocoAggregation project(":airbyte-config:init")
+    jacocoAggregation project(":airbyte-config:config-models") // reused by acceptance tests in connector base.
+    jacocoAggregation project(":airbyte-db:db-lib") // reused by acceptance tests in connector base.
+    jacocoAggregation project(":airbyte-json-validation")
+    jacocoAggregation project(":airbyte-metrics:metrics-lib")
+    jacocoAggregation project(":airbyte-oauth")
+    jacocoAggregation project(":airbyte-test-utils")
+
+    jacocoAggregation project(":airbyte-analytics") // transitively used by airbyte-workers.
+    jacocoAggregation project(":airbyte-commons-temporal")
+    jacocoAggregation project(":airbyte-commons-converters")
+    jacocoAggregation project(":airbyte-commons-worker")
+    jacocoAggregation project(":airbyte-config:config-persistence") // transitively used by airbyte-workers.
+    jacocoAggregation project(":airbyte-featureflag")
+    jacocoAggregation project(":airbyte-db:jooq") // transitively used by airbyte-workers.
+    jacocoAggregation project(":airbyte-notification") // transitively used by airbyte-workers.
+    jacocoAggregation project(":airbyte-persistence:job-persistence") // transitively used by airbyte-workers.
+    jacocoAggregation project(":airbyte-worker-models")
+
+    jacocoAggregation project(":airbyte-bootloader")
+    jacocoAggregation project(":airbyte-commons-auth")
+    jacocoAggregation project(":airbyte-commons-license")
+    jacocoAggregation project(":airbyte-commons-micronaut")
+    jacocoAggregation project(":airbyte-commons-server")
+    jacocoAggregation project(":airbyte-commons-with-dependencies")
+    jacocoAggregation project(":airbyte-connector-builder-server")
+    jacocoAggregation project(":airbyte-container-orchestrator")
+    jacocoAggregation project(":airbyte-cron")
+    jacocoAggregation project(":airbyte-keycloak")
+    jacocoAggregation project(":airbyte-keycloak-setup")
+    jacocoAggregation project(":airbyte-metrics:reporter")
+    jacocoAggregation project(":airbyte-proxy")
+    jacocoAggregation project(":airbyte-server")
+    jacocoAggregation project(":airbyte-temporal")
+    jacocoAggregation project(":airbyte-tests")
+    jacocoAggregation project(":airbyte-webapp")
+    jacocoAggregation project(":airbyte-workers")
+}
+
+tasks.named("check") {
+    dependsOn tasks.named("testAggregateTestReport", JacocoReport)
 }
 
 Properties env = new Properties()
@@ -161,6 +220,7 @@ subprojects { sp ->
         dependsOn tasks.named("buildDockerImage")
     }
 }
+
 
 tasks.register('generate-docker') {
     dependsOn(':airbyte-bootloader:assemble')

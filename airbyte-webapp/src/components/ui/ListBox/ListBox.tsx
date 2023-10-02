@@ -114,6 +114,7 @@ export const ListBox = <T,>({
         >
           <Listbox.Button
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
+            onClick={(e) => e.stopPropagation()}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
@@ -128,6 +129,7 @@ export const ListBox = <T,>({
                     className={classNames(styles.option, optionClassName, {
                       [styles.disabled]: disabled,
                     })}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {({ active, selected }) => (
                       <FlexContainer

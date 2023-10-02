@@ -6,7 +6,7 @@ package io.airbyte.workers.internal.exception;
 
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
-import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin;
 import java.io.Serial;
 
 /**

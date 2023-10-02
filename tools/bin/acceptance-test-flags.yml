@@ -21,7 +21,5 @@ flags:
     serve: true
   - name: connection.columnSelection
     serve: true
-  - name: handle.stream.status
-    serve: false
   - name: refreshSchema.period.hours
     serve: 0

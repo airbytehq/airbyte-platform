@@ -68,6 +68,7 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
         [styles.smallTooltip]: size === "small",
         [styles.mediumTooltip]: size === "medium",
       })}
+      placement="top"
     >
       <FormattedMessage
         id={

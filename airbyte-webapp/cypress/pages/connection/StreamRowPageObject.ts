@@ -109,7 +109,7 @@ export class StreamRowPageObject {
     cy.get(this.stream).scrollIntoView();
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
-      cy.get(`.react-select__option`)
+      cy.get('li[role="option"]')
         // It's possible that there are multiple options with the same text, so we need to filter by exact text content
         // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
         .filter((_, element) => Cypress.$(element).text().trim() === syncMode)

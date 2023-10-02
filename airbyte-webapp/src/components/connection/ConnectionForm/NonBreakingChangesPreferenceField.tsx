@@ -72,7 +72,7 @@ export const NonBreakingChangesPreferenceField: React.FC<FieldProps<string>> = (
       {showAutoPropagationMessage && (
         <Message
           type="info"
-          text={<FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagtion.message" />}
+          text={<FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.message" />}
         />
       )}
     </>

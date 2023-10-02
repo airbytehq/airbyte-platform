@@ -2,7 +2,7 @@ import { faIdCardClip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { createSearchParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
@@ -37,8 +37,14 @@ const GoogleButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 };
 
 const SsoButton: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const loginRedirectString = searchParams.get("loginRedirect");
+  const linkLocation = loginRedirectString
+    ? { pathname: CloudRoutes.Sso, search: createSearchParams({ loginRedirect: loginRedirectString }).toString() }
+    : CloudRoutes.Sso;
+
   return (
-    <Link className={styles.sso} to={CloudRoutes.Sso}>
+    <Link className={styles.sso} to={linkLocation}>
       <FontAwesomeIcon icon={faIdCardClip} />
       <FormattedMessage id="login.sso.continueWithSSO" tagName="span" />
     </Link>

@@ -147,12 +147,25 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaChange(final UUID connectionId, final boolean isBreaking, final SlackNotificationConfiguration config, final String url)
+  public boolean notifySchemaChange(final UUID connectionId, final boolean isBreaking, final String url)
       throws IOException, InterruptedException {
     final String message = renderTemplate(
         isBreaking ? "slack/breaking_schema_change_slack_notification_template.txt"
             : "slack/non_breaking_schema_change_slack_notification_template.txt",
         connectionId.toString(), url);
+    final String webhookUrl = config.getWebhook();
+    if (!Strings.isEmpty(webhookUrl)) {
+      return notify(message);
+    }
+    return false;
+  }
+
+  @Override
+  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, boolean isBreaking)
+      throws IOException, InterruptedException {
+    final String summary = String.join("\n", changes);
+    final String message = isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), url)
+        : renderTemplate("slack/schema_propagation_slack_notification.txt", connectionId.toString(), summary, url);
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);

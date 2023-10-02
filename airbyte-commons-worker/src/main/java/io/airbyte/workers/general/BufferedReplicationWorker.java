@@ -33,11 +33,11 @@ import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -101,7 +101,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final AirbyteSource source,
                                    final AirbyteMapper mapper,
                                    final AirbyteDestination destination,
-                                   final MessageTracker messageTracker,
+                                   final AirbyteMessageTracker messageTracker,
                                    final SyncPersistence syncPersistence,
                                    final RecordSchemaValidator recordSchemaValidator,
                                    final FieldSelector fieldSelector,

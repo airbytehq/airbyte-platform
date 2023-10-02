@@ -147,7 +147,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   private CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> getLegacyWorkerFactory(final IntegrationLauncherConfig destinationLauncherConfig,

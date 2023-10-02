@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
+import { DevToolsToggle } from "components/DevToolsToggle";
 
 import { config } from "config";
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
@@ -13,6 +14,7 @@ import { defaultOssFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
 import { ServicesProvider } from "core/servicesProvider";
+import { isDevelopment } from "core/utils/isDevelopment";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -77,6 +79,7 @@ const App: React.FC = () => {
           </I18nProvider>
         </StyleProvider>
       </AirbyteThemeProvider>
+      {isDevelopment() && <DevToolsToggle />}
     </React.StrictMode>
   );
 };

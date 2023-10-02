@@ -220,17 +220,13 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
           if (exceptionClass.isPresent()) {
             final long messageSize = str.getBytes(StandardCharsets.UTF_8).length;
             if (messageSize > maxMemory * MAX_SIZE_RATIO) {
-              try {
-                final String errorMessage = String.format(
-                    "Airbyte has received a message at %s UTC which is larger than %s (size: %s). "
-                        + "The sync has been failed to prevent running out of memory.",
-                    DateTime.now(),
-                    humanReadableByteCountSI(maxMemory),
-                    humanReadableByteCountSI(messageSize));
-                throw exceptionClass.get().getConstructor(String.class).newInstance(errorMessage);
-              } catch (final InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                throw new RuntimeException(e);
-              }
+              final String errorMessage = String.format(
+                  "Airbyte has received a message at %s UTC which is larger than %s (size: %s). "
+                      + "The sync has been failed to prevent running out of memory.",
+                  DateTime.now(),
+                  humanReadableByteCountSI(maxMemory),
+                  humanReadableByteCountSI(messageSize));
+              throwExceptionClass(errorMessage);
             }
           }
         })
@@ -375,7 +371,11 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
         LOGGER.error("[LINE TOO BIG] line is too big with size: " + line.length());
         if (failTooLongRecords) {
-          throw new IllegalStateException("Record is too long, the size is: " + line.length());
+          if (exceptionClass.isPresent()) {
+            throwExceptionClass("One record is too big and can't be processed, the sync will be failed");
+          } else {
+            throw new IllegalStateException("Record is too long, the size is: " + line.length());
+          }
         }
       } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
@@ -389,6 +389,15 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       throw e;
     }
     return m.stream();
+  }
+
+  private void throwExceptionClass(final String message) {
+    try {
+      throw exceptionClass.get().getConstructor(String.class)
+          .newInstance(message);
+    } catch (final InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   protected Stream<AirbyteMessage> upgradeMessage(final AirbyteMessage msg) {

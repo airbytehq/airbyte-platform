@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
+import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,6 +16,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -27,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +44,7 @@ import org.junit.jupiter.api.Test;
  */
 class JobCreationAndStatusUpdateHelperTest {
 
+  ConfigRepository mConfigRepository;
   JobNotifier mJobNotifier;
 
   JobPersistence mJobPersistence;
@@ -45,13 +55,14 @@ class JobCreationAndStatusUpdateHelperTest {
 
   @BeforeEach
   void setup() {
+    mConfigRepository = mock(ConfigRepository.class);
     mJobNotifier = mock(JobNotifier.class);
     mJobPersistence = mock(JobPersistence.class);
     mJobTracker = mock(JobTracker.class);
 
     helper = new JobCreationAndStatusUpdateHelper(
         mJobPersistence,
-        mock(ConfigRepository.class),
+        mConfigRepository,
         mJobNotifier,
         mJobTracker);
   }
@@ -152,9 +163,60 @@ class JobCreationAndStatusUpdateHelperTest {
     verify(mJobTracker).trackSync(job, JobState.STARTED);
   }
 
+  @Test
+  void testReleaseStageOrdering() {
+    final List<ReleaseStage> input = List.of(ReleaseStage.ALPHA, ReleaseStage.CUSTOM, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
+    final List<ReleaseStage> expected = List.of(ReleaseStage.CUSTOM, ReleaseStage.ALPHA, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
+
+    Assertions.assertThat(helper.orderByReleaseStageAsc(input))
+        .containsExactlyElementsOf(expected);
+  }
+
+  @Test
+  void testGetSyncJobToReleaseStages() throws IOException {
+    final UUID sourceDefVersionId = UUID.randomUUID();
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(SYNC)
+        .withSync(new JobSyncConfig()
+            .withSourceDefinitionVersionId(sourceDefVersionId)
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(Fixtures.JOB_ID, ConfigType.SYNC, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
+        0L, 0L, 0L);
+
+    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
+
+    final List<ReleaseStage> releaseStages = helper.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
+  }
+
+  @Test
+  void testGetResetJobToReleaseStages() throws IOException {
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(RESET_CONNECTION)
+        .withResetConnection(new JobResetConnectionConfig()
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(Fixtures.JOB_ID, RESET_CONNECTION, Fixtures.CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING,
+        0L, 0L, 0L);
+
+    when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
+    final List<ReleaseStage> releaseStages = helper.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA);
+  }
+
   static class Fixtures {
 
     static final UUID CONNECTION_ID = UUID.randomUUID();
+
+    private static final long JOB_ID = 123L;
 
     static Job job(final long id, final long createdAt) {
       return new Job(id, null, null, null, null, null, null, createdAt, 0);

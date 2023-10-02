@@ -2194,6 +2194,37 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/get_task_queue_name:
+    post:
+      tags:
+        - connection
+        - internal
+      summary: Gets the string task queue name for a connection and job type.
+      operationId: getTaskQueueName
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - temporalJobType
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                temporalJobType:
+                  description: Raw stringified name of the TemporalJobType.
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskQueueNameRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/operations/check:
     post:
       tags:
@@ -3066,6 +3097,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/job_failure:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Marks a job as failed
+      operationId: jobFailure
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+                - connectionId
+                - reason
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                reason:
+                  type: string
+                  description: Reason of the failure
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/delete_stream_reset_records:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Deletes all stream reset records for the specified job
+      operationId: deleteStreamResetRecordsForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - jobId
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "204":
+          description: Successfully delete stream reset records for job
 
   # USERS
   /v1/users/create:
@@ -3812,6 +3902,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BooleanRead"
+  /v1/jobs/persist_cancellation:
+    post:
+      summary: Persists the cancellation of a job and kicks off any post processing (e.g notifications).
+      tags:
+        - jobs
+        - internal
+      operationId: persistJobCancellation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersistCancelJobRequestBody"
+      responses:
+        "204":
+          description: Successfully persisted the job cancellation.
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -6068,6 +6173,10 @@ components:
         - permissionType
         - userId
       properties:
+        permissionId:
+          type: string
+          format: uuid
+          description: This is a temporary and optional field just for dual write purpose during the data migration.
         permissionType:
           $ref: "#/components/schemas/PermissionType"
         userId:
@@ -8252,6 +8361,23 @@ components:
           $ref: "#/components/schemas/ConnectionId"
         jobId:
           $ref: "#/components/schemas/JobId"
+    PersistCancelJobRequestBody:
+      type: object
+      required:
+        - attemptFailureSummary
+        - attemptNumber
+        - connectionId
+        - jobId
+      properties:
+        attemptFailureSummary:
+          description: Attempt failure summary serialized as a raw object
+          type: object
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
     BooleanRead:
       type: object
       required:
@@ -8259,6 +8385,14 @@ components:
       properties:
         value:
           type: boolean
+    TaskQueueNameRead:
+      type: object
+      required:
+        - taskQueueName
+      properties:
+        taskQueueName:
+          description: Name of the temporal task queue.
+          type: string
 
   responses:
     NotFoundResponse:
