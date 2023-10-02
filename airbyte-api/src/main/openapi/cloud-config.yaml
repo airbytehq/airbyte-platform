@@ -1300,6 +1300,9 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
+        organizationId:
+          type: string
+          format: uuid
     PermissionedCloudWorkspaceCreate:
       type: object
       required:
@@ -1310,6 +1313,9 @@ components:
           type: string
         userId:
           $ref: "#/components/schemas/UserId"
+        organizationId:
+          type: string
+          format: uuid
     CloudWorkspaceRead:
       type: object
       required:
@@ -1321,6 +1327,9 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         creatorUserId:
           $ref: "#/components/schemas/UserId"
+        organizationId:
+          type: string
+          format: uuid
         tombstone:
           description:
             If not set or false, the configuration is active. If true, then this
