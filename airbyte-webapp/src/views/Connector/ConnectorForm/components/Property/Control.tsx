@@ -10,6 +10,7 @@ import { TextArea } from "components/ui/TextArea";
 
 import { FormBaseItem } from "core/form/types";
 import { isDefined } from "core/utils/common";
+import { useOptionalDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import SecretConfirmationControl from "./SecretConfirmationControl";
 
@@ -27,6 +28,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
     formState: { defaultValues: initialValues },
   } = useFormContext();
   const { field } = useController({ name });
+  const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -47,6 +49,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         error={!!error}
         disabled={disabled || property.readOnly}
         onBlur={() => field.onBlur()}
+        onFocus={() => setFocusedField?.(name)}
       />
     );
   }
@@ -84,6 +87,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         value={field.value}
         disabled={disabled}
         readOnly={property.readOnly}
+        onFocus={() => setFocusedField?.(name)}
         onBlur={() => field.onBlur()}
       />
     );
@@ -100,6 +104,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         onChange={(selectedItem) => selectedItem && field.onChange(selectedItem.value)}
         value={field.value}
         isDisabled={disabled || property.readOnly}
+        onFocus={() => setFocusedField?.(name)}
         error={error}
       />
     );
@@ -114,6 +119,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         disabled={disabled}
         error={error}
         onUpload={(val) => field.onChange(val)}
+        onFocus={() => setFocusedField?.(name)}
         readOnly={property.readOnly}
       />
     );
@@ -125,6 +131,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         multiline={Boolean(property.multiline)}
         showButtons={isFormInEditMode}
         disabled={disabled || property.readOnly}
+        onFocus={() => setFocusedField?.(name)}
         error={error}
         onChange={onChange}
       />
@@ -142,6 +149,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       value={field.value ?? ""}
       disabled={disabled}
       readOnly={property.readOnly}
+      onFocus={() => setFocusedField?.(name)}
       error={error}
     />
   );

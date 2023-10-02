@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import classNames from "classnames";
+import { useEffect, useMemo, useRef, useState } from "react";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -65,6 +66,26 @@ const LinkRelativePathReplacer: React.FC<React.AnchorHTMLAttributes<HTMLAnchorEl
   );
 };
 
+const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field, children }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { focusedField } = useDocumentationPanelContext();
+  const isFieldFocused = field
+    .split(",")
+    .some((currentField) => focusedField === `connectionConfiguration.${currentField.trim()}`);
+
+  useEffect(() => {
+    if (isFieldFocused && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isFieldFocused]);
+
+  return (
+    <div ref={ref} className={classNames(styles.focusable, { [styles["focusable--focused"]]: isFieldFocused })}>
+      {children}
+    </div>
+  );
+};
+
 const markdownOptions = {
   overrides: {
     img: {
@@ -72,6 +93,9 @@ const markdownOptions = {
     },
     a: {
       component: LinkRelativePathReplacer,
+    },
+    FieldAnchor: {
+      component: FieldAnchor,
     },
   },
 };

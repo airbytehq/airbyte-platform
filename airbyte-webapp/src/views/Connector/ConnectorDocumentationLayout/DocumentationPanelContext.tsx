@@ -8,6 +8,7 @@ export const useDocumentationPanelState = () => {
   const [documentationPanelOpen, setDocumentationPanelOpen] = useState(false);
   const [documentationUrl, setDocumentationUrlState] = useState("");
   const [selectedConnectorDefinition, setSelectedConnectorDefinition] = useState<ConnectorDefinition>();
+  const [focusedField, setFocusedField] = useState<string | undefined>();
 
   /* Ad blockers prevent the Google Ads docs .md file from rendering.  Because these URLs are
    * standardized, we work around this without changing the main file URL by:
@@ -28,6 +29,8 @@ export const useDocumentationPanelState = () => {
     setDocumentationUrl,
     selectedConnectorDefinition,
     setSelectedConnectorDefinition,
+    focusedField,
+    setFocusedField,
   };
 };
 
@@ -35,6 +38,8 @@ export const useDocumentationPanelState = () => {
 export const documentationPanelContext = createContext<DocumentationPanelContext>();
 
 export const useDocumentationPanelContext = () => useContext(documentationPanelContext);
+export const useOptionalDocumentationPanelContext = () =>
+  useContext(documentationPanelContext) as DocumentationPanelContext | undefined;
 
 export const DocumentationPanelProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (

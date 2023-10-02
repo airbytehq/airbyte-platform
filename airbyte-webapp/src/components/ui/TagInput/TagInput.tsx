@@ -75,6 +75,7 @@ interface TagInputProps {
   itemType?: string;
   onChange: (value: string[]) => void;
   onBlur?: () => void;
+  onFocus?: () => void;
   error?: boolean;
   disabled?: boolean;
   id?: string;
@@ -99,6 +100,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   error,
   itemType,
   onBlur,
+  onFocus,
   directionalStyle,
 }) => {
   const [draftValue, setDraftValue] = useState("");
@@ -242,6 +244,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         onInputChange={handleInputChange}
         onKeyDown={handleKeyDown}
         value={tags}
+        onFocus={onFocus}
         isDisabled={disabled}
         styles={customStyles(directionalStyle, disabled)}
       />
