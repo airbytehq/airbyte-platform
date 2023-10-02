@@ -9,6 +9,8 @@ required:
   - name
   - userId
   - email
+  - pba
+  - orgLevelBilling
 additionalProperties: true
 properties:
   organizationId:
@@ -22,3 +24,7 @@ properties:
   email:
     type: string
     format: email
+  pba:
+    type: boolean
+  orgLevelBilling:
+    type: boolean

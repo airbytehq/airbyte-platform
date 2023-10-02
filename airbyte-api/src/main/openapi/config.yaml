@@ -6076,6 +6076,10 @@ components:
           format: uuid
         organizationName:
           type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
     OrganizationCreateRequestBody:
       type: object
       required:
@@ -6089,12 +6093,18 @@ components:
           type: string
         email:
           type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
     OrganizationRead:
       type: object
       required:
         - organizationId
         - organizationName
         - email
+        - pba
+        - orgLevelBilling
       properties:
         organizationId:
           type: string
@@ -6103,6 +6113,10 @@ components:
           type: string
         email:
           type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
     OrganizationReadList:
       type: object
       required:
