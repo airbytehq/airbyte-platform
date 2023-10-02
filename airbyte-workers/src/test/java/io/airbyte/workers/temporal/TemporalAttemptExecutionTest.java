@@ -18,7 +18,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.config.Configs;
-import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import java.io.IOException;
@@ -69,7 +68,7 @@ class TemporalAttemptExecutionTest {
 
   @SuppressWarnings("unchecked")
   @BeforeEach
-  void setup() throws IOException, DatabaseInitializationException {
+  void setup() throws IOException {
     final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
 
