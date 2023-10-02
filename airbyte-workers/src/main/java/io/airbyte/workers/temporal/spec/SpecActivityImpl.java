@@ -126,7 +126,7 @@ public class SpecActivityImpl implements SpecActivity {
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   private CheckedSupplier<Worker<JobGetSpecConfig, ConnectorJobOutput>, Exception> getWorkerFactory(

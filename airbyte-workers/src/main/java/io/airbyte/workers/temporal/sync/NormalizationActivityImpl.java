@@ -178,7 +178,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   private NormalizationInput hydrateNormalizationInput(NormalizationInput input) throws Exception {

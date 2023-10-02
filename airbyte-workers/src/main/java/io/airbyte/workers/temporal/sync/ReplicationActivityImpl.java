@@ -196,7 +196,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           return standardSyncOutput;
         },
-        () -> context);
+        context);
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -265,7 +265,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           return standardSyncOutput;
         },
-        () -> context));
+        context));
   }
 
   private StandardSyncInput getHydratedSyncInput(final StandardSyncInput syncInput) {

@@ -139,7 +139,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                   () -> context);
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
 
   }
 

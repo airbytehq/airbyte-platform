@@ -135,7 +135,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                   () -> context);
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
