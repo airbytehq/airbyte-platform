@@ -6,7 +6,7 @@ package io.airbyte.data.services;
 
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;

@@ -22,11 +22,14 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
+import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
+import static org.jooq.impl.SQLDataType.VARCHAR;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -65,7 +68,6 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.Tables;
@@ -86,7 +88,6 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
-import jakarta.inject.Inject;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -232,23 +233,17 @@ public class ConfigRepository {
 
   private final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier;
 
-  @Inject
-  private WorkspaceService workspaceService;
+  public ConfigRepository(final Database database, final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
+    this(database, new StandardSyncPersistence(database), heartbeatMaxSecondBetweenMessageSupplier);
+  }
 
   @VisibleForTesting
   public ConfigRepository(final Database database,
                           final StandardSyncPersistence standardSyncPersistence,
-                          final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier,
-                          final WorkspaceService workspaceService) {
+                          final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
     this.database = new ExceptionWrappingDatabase(database);
     this.standardSyncPersistence = standardSyncPersistence;
     this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;
-    this.workspaceService = workspaceService;
-  }
-
-  @VisibleForTesting
-  public ConfigRepository(Database database, Supplier<Long> maxSecondsBetweenMessageSupplier, WorkspaceService workspaceService) {
-    this(database, new StandardSyncPersistence(database), maxSecondsBetweenMessageSupplier, workspaceService);
   }
 
   /**
@@ -367,15 +362,11 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
-  @Deprecated
-  @SuppressWarnings("PMD")
   public StandardWorkspace getStandardWorkspaceNoSecrets(final UUID workspaceId, final boolean includeTombstone)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      return workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId.toString());
-    }
+    return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
+        .findFirst()
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
   }
 
   /**
@@ -386,10 +377,20 @@ public class ConfigRepository {
    * @return workspace, if present.
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public Optional<StandardWorkspace> getWorkspaceBySlugOptional(final String slug, final boolean includeTombstone)
       throws IOException {
-    return workspaceService.getWorkspaceBySlugOptional(slug, includeTombstone);
+    final Result<Record> result;
+    if (includeTombstone) {
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+          .from(WORKSPACE)
+          .where(WORKSPACE.SLUG.eq(slug))).fetch();
+    } else {
+      result = database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+          .from(WORKSPACE)
+          .where(WORKSPACE.SLUG.eq(slug)).andNot(WORKSPACE.TOMBSTONE)).fetch();
+    }
+
+    return result.stream().findFirst().map(DbConverter::buildStandardWorkspace);
   }
 
   /**
@@ -401,14 +402,8 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
-  @Deprecated
-  @SuppressWarnings("PMD")
   public StandardWorkspace getWorkspaceBySlug(final String slug, final boolean includeTombstone) throws IOException, ConfigNotFoundException {
-    try {
-      return workspaceService.getWorkspaceBySlug(slug, includeTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, slug);
-    }
+    return getWorkspaceBySlugOptional(slug, includeTombstone).orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, slug));
   }
 
   /**
@@ -418,9 +413,8 @@ public class ConfigRepository {
    * @return workspaces
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public List<StandardWorkspace> listStandardWorkspaces(final boolean includeTombstone) throws IOException {
-    return workspaceService.listStandardWorkspaces(includeTombstone);
+    return listWorkspaceQuery(Optional.empty(), includeTombstone).toList();
   }
 
   /**
@@ -441,15 +435,17 @@ public class ConfigRepository {
    * @return A List of StandardWorkspace objects
    * @throws IOException you never know when you IO
    */
-  @Deprecated
   public List<StandardWorkspace> listAllWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return workspaceService.listAllWorkspacesPaginated(
-        new io.airbyte.data.services.shared.ResourcesQueryPaginated(
-            resourcesQueryPaginated.workspaceIds(),
-            resourcesQueryPaginated.includeDeleted(),
-            resourcesQueryPaginated.pageSize(),
-            resourcesQueryPaginated.rowOffset(),
-            resourcesQueryPaginated.nameContains()));
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(resourcesQueryPaginated.nameContains() != null ? WORKSPACE.NAME.contains(resourcesQueryPaginated.nameContains()) : noCondition())
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .toList();
   }
 
   private Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
@@ -469,15 +465,17 @@ public class ConfigRepository {
    * @return A List of StandardWorkspace objects
    * @throws IOException you never know when you IO
    */
-  @Deprecated
   public List<StandardWorkspace> listStandardWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return workspaceService.listStandardWorkspacesPaginated(
-        new io.airbyte.data.services.shared.ResourcesQueryPaginated(
-            resourcesQueryPaginated.workspaceIds(),
-            resourcesQueryPaginated.includeDeleted(),
-            resourcesQueryPaginated.pageSize(),
-            resourcesQueryPaginated.rowOffset(),
-            resourcesQueryPaginated.nameContains()));
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(WORKSPACE.ID.in(resourcesQueryPaginated.workspaceIds()))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .toList();
   }
 
   /**
@@ -489,9 +487,69 @@ public class ConfigRepository {
    * @throws JsonValidationException - throws is the workspace is invalid
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public void writeStandardWorkspaceNoSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException {
-    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+    database.transaction(ctx -> {
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(WORKSPACE)
+          .where(WORKSPACE.ID.eq(workspace.getWorkspaceId())));
+
+      if (isExistingConfig) {
+        ctx.update(WORKSPACE)
+            .set(WORKSPACE.ID, workspace.getWorkspaceId())
+            .set(WORKSPACE.CUSTOMER_ID, workspace.getCustomerId())
+            .set(WORKSPACE.NAME, workspace.getName())
+            .set(WORKSPACE.SLUG, workspace.getSlug())
+            .set(WORKSPACE.EMAIL, workspace.getEmail())
+            .set(WORKSPACE.INITIAL_SETUP_COMPLETE, workspace.getInitialSetupComplete())
+            .set(WORKSPACE.ANONYMOUS_DATA_COLLECTION, workspace.getAnonymousDataCollection())
+            .set(WORKSPACE.SEND_NEWSLETTER, workspace.getNews())
+            .set(WORKSPACE.SEND_SECURITY_UPDATES, workspace.getSecurityUpdates())
+            .set(WORKSPACE.DISPLAY_SETUP_WIZARD, workspace.getDisplaySetupWizard())
+            .set(WORKSPACE.TOMBSTONE, workspace.getTombstone() != null && workspace.getTombstone())
+            .set(WORKSPACE.NOTIFICATIONS, JSONB.valueOf(Jsons.serialize(workspace.getNotifications())))
+            .set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.valueOf(Jsons.serialize(workspace.getNotificationSettings())))
+            .set(WORKSPACE.FIRST_SYNC_COMPLETE, workspace.getFirstCompletedSync())
+            .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
+            .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
+                workspace.getDefaultGeography().value(),
+                io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
+                : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
+            .where(WORKSPACE.ID.eq(workspace.getWorkspaceId()))
+            .execute();
+      } else {
+        ctx.insertInto(WORKSPACE)
+            .set(WORKSPACE.ID, workspace.getWorkspaceId())
+            .set(WORKSPACE.CUSTOMER_ID, workspace.getCustomerId())
+            .set(WORKSPACE.NAME, workspace.getName())
+            .set(WORKSPACE.SLUG, workspace.getSlug())
+            .set(WORKSPACE.EMAIL, workspace.getEmail())
+            .set(WORKSPACE.INITIAL_SETUP_COMPLETE, workspace.getInitialSetupComplete())
+            .set(WORKSPACE.ANONYMOUS_DATA_COLLECTION, workspace.getAnonymousDataCollection())
+            .set(WORKSPACE.SEND_NEWSLETTER, workspace.getNews())
+            .set(WORKSPACE.SEND_SECURITY_UPDATES, workspace.getSecurityUpdates())
+            .set(WORKSPACE.DISPLAY_SETUP_WIZARD, workspace.getDisplaySetupWizard())
+            .set(WORKSPACE.TOMBSTONE, workspace.getTombstone() != null && workspace.getTombstone())
+            .set(WORKSPACE.NOTIFICATIONS, JSONB.valueOf(Jsons.serialize(workspace.getNotifications())))
+            .set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.valueOf(Jsons.serialize(workspace.getNotificationSettings())))
+            .set(WORKSPACE.FIRST_SYNC_COMPLETE, workspace.getFirstCompletedSync())
+            .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
+            .set(WORKSPACE.CREATED_AT, timestamp)
+            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
+                workspace.getDefaultGeography().value(),
+                io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+            .set(WORKSPACE.ORGANIZATION_ID, workspace.getOrganizationId())
+            .set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, workspace.getWebhookOperationConfigs() == null ? null
+                : JSONB.valueOf(Jsons.serialize(workspace.getWebhookOperationConfigs())))
+            .execute();
+      }
+      return null;
+
+    });
   }
 
   /**
@@ -500,9 +558,9 @@ public class ConfigRepository {
    * @param workspaceId workspace id.
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public void setFeedback(final UUID workspaceId) throws IOException {
-    workspaceService.setFeedback(workspaceId);
+    database.query(ctx -> ctx.update(WORKSPACE).set(WORKSPACE.FEEDBACK_COMPLETE, true).set(WORKSPACE.UPDATED_AT, OffsetDateTime.now())
+        .where(WORKSPACE.ID.eq(workspaceId)).execute());
   }
 
   /**
@@ -558,13 +616,15 @@ public class ConfigRepository {
    * @param isTombstone include tombstoned workspaces
    * @return workspace to which the connection belongs
    */
-  @Deprecated
-  @SuppressWarnings("PMD")
   public StandardWorkspace getStandardWorkspaceFromConnection(final UUID connectionId, final boolean isTombstone) throws ConfigNotFoundException {
     try {
-      return workspaceService.getStandardWorkspaceFromConnection(connectionId, isTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, connectionId.toString());
+      final StandardSync sync = getStandardSync(connectionId);
+      final SourceConnection source = getSourceConnection(sync.getSourceId());
+      return getStandardWorkspaceNoSecrets(source.getWorkspaceId(), isTombstone);
+    } catch (final ConfigNotFoundException e) {
+      throw e;
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -1168,9 +1228,8 @@ public class ConfigRepository {
    * @return true, if the workspace has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    return workspaceService.workspaceCanUseDefinition(actorDefinitionId, workspaceId);
+    return scopeCanUseDefinition(actorDefinitionId, workspaceId, ScopeType.workspace.toString());
   }
 
   /**
@@ -1200,9 +1259,14 @@ public class ConfigRepository {
    * @return true, if the workspace has access. otherwise, false.
    * @throws IOException - you never know when you IO
    */
-  @Deprecated
   public boolean workspaceCanUseCustomDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
-    return workspaceService.workspaceCanUseCustomDefinition(actorDefinitionId, workspaceId);
+    final Result<Record> records = actorDefinitionsJoinedWithGrants(
+        workspaceId,
+        ScopeType.workspace,
+        JoinType.JOIN,
+        ACTOR_DEFINITION.ID.eq(actorDefinitionId),
+        ACTOR_DEFINITION.CUSTOM.eq(true));
+    return records.isNotEmpty();
   }
 
   private <T> List<T> listStandardActorDefinitions(final ActorType actorType,
@@ -1548,9 +1612,19 @@ public class ConfigRepository {
    * @return list of workspace IDs
    * @throws IOException - failed to query data
    */
-  @Deprecated
   public List<UUID> listActiveWorkspacesByMostRecentlyRunningJobs(final int timeWindowInHours) throws IOException {
-    return workspaceService.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours);
+    final Result<Record1<UUID>> records = database.query(ctx -> ctx.selectDistinct(ACTOR.WORKSPACE_ID)
+        .from(ACTOR)
+        .join(WORKSPACE)
+        .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .join(CONNECTION)
+        .on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .join(JOBS)
+        .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
+        .where(JOBS.UPDATED_AT.greaterOrEqual(OffsetDateTime.now().minusHours(timeWindowInHours)))
+        .and(WORKSPACE.TOMBSTONE.isFalse())
+        .fetch());
+    return records.stream().map(record -> record.get(ACTOR.WORKSPACE_ID)).collect(Collectors.toList());
   }
 
   /**
@@ -2639,9 +2713,13 @@ public class ConfigRepository {
    * @return number of connections in workspace
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Deprecated
   public int countConnectionsForWorkspace(final UUID workspaceId) throws IOException {
-    return workspaceService.countConnectionsForWorkspace(workspaceId);
+    return database.query(ctx -> ctx.selectCount()
+        .from(CONNECTION)
+        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .and(CONNECTION.STATUS.notEqual(StatusType.deprecated))
+        .andNot(ACTOR.TOMBSTONE)).fetchOne().into(int.class);
   }
 
   /**
@@ -2651,9 +2729,12 @@ public class ConfigRepository {
    * @return number of sources in workspace
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Deprecated
   public int countSourcesForWorkspace(final UUID workspaceId) throws IOException {
-    return workspaceService.countSourcesForWorkspace(workspaceId);
+    return database.query(ctx -> ctx.selectCount()
+        .from(ACTOR)
+        .where(ACTOR.WORKSPACE_ID.equal(workspaceId))
+        .and(ACTOR.ACTOR_TYPE.eq(ActorType.source))
+        .andNot(ACTOR.TOMBSTONE)).fetchOne().into(int.class);
   }
 
   /**
@@ -2663,9 +2744,12 @@ public class ConfigRepository {
    * @return number of destinations in workspace
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Deprecated
   public int countDestinationsForWorkspace(final UUID workspaceId) throws IOException {
-    return workspaceService.countDestinationsForWorkspace(workspaceId);
+    return database.query(ctx -> ctx.selectCount()
+        .from(ACTOR)
+        .where(ACTOR.WORKSPACE_ID.equal(workspaceId))
+        .and(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+        .andNot(ACTOR.TOMBSTONE)).fetchOne().into(int.class);
   }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {
@@ -2684,16 +2768,16 @@ public class ConfigRepository {
    * @throws ConfigNotFoundException if the config does not exist
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Deprecated
-  @SuppressWarnings("PMD")
   public WorkspaceServiceAccount getWorkspaceServiceAccountNoSecrets(final UUID workspaceId) throws IOException, ConfigNotFoundException {
     // breaking the pattern of doing a list query, because we never want to list this resource without
     // scoping by workspace id.
-    try {
-      return workspaceService.getWorkspaceServiceAccountNoSecrets(workspaceId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(ConfigSchema.WORKSPACE_SERVICE_ACCOUNT, workspaceId.toString());
-    }
+    return database.query(ctx -> ctx.select(asterisk()).from(WORKSPACE_SERVICE_ACCOUNT)
+        .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceId))
+        .fetch())
+        .map(DbConverter::buildWorkspaceServiceAccount)
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.WORKSPACE_SERVICE_ACCOUNT, workspaceId));
   }
 
   /**
@@ -2702,9 +2786,48 @@ public class ConfigRepository {
    * @param workspaceServiceAccount workspace service account
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Deprecated
   public void writeWorkspaceServiceAccountNoSecrets(final WorkspaceServiceAccount workspaceServiceAccount) throws IOException {
-    workspaceService.writeWorkspaceServiceAccountNoSecrets(workspaceServiceAccount);
+    database.transaction(ctx -> {
+      writeWorkspaceServiceAccount(Collections.singletonList(workspaceServiceAccount), ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Write workspace service account.
+   *
+   * @param configs list of workspace service account
+   * @param ctx database context
+   */
+  private void writeWorkspaceServiceAccount(final List<WorkspaceServiceAccount> configs, final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    configs.forEach((workspaceServiceAccount) -> {
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(WORKSPACE_SERVICE_ACCOUNT)
+          .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceServiceAccount.getWorkspaceId())));
+
+      if (isExistingConfig) {
+        ctx.update(WORKSPACE_SERVICE_ACCOUNT)
+            .set(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID, workspaceServiceAccount.getWorkspaceId())
+            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_ID, workspaceServiceAccount.getServiceAccountId())
+            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_EMAIL, workspaceServiceAccount.getServiceAccountEmail())
+            .set(WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getJsonCredential())))
+            .set(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getHmacKey())))
+            .set(WORKSPACE_SERVICE_ACCOUNT.UPDATED_AT, timestamp)
+            .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceServiceAccount.getWorkspaceId()))
+            .execute();
+      } else {
+        ctx.insertInto(WORKSPACE_SERVICE_ACCOUNT)
+            .set(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID, workspaceServiceAccount.getWorkspaceId())
+            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_ID, workspaceServiceAccount.getServiceAccountId())
+            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_EMAIL, workspaceServiceAccount.getServiceAccountEmail())
+            .set(WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getJsonCredential())))
+            .set(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getHmacKey())))
+            .set(WORKSPACE_SERVICE_ACCOUNT.CREATED_AT, timestamp)
+            .set(WORKSPACE_SERVICE_ACCOUNT.UPDATED_AT, timestamp)
+            .execute();
+      }
+    });
   }
 
   /**
@@ -2756,9 +2879,12 @@ public class ConfigRepository {
    * @return geography
    * @throws IOException exception while interacting with the db
    */
-  @Deprecated
   public Geography getGeographyForWorkspace(final UUID workspaceId) throws IOException {
-    return workspaceService.getGeographyForWorkspace(workspaceId);
+    return database.query(ctx -> ctx.select(WORKSPACE.GEOGRAPHY)
+        .from(WORKSPACE)
+        .where(WORKSPACE.ID.eq(workspaceId))
+        .limit(1))
+        .fetchOneInto(Geography.class);
   }
 
   /**
@@ -2774,9 +2900,20 @@ public class ConfigRepository {
    * @param workspaceId ID of the workspace to check connectors for
    * @return boolean indicating if an alpha or beta connector exists within the workspace
    */
-  @Deprecated
   public boolean getWorkspaceHasAlphaOrBetaConnector(final UUID workspaceId) throws IOException {
-    return workspaceService.getWorkspaceHasAlphaOrBetaConnector(workspaceId);
+    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
+        .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
+
+    final Integer countResult = database.query(ctx -> ctx.selectCount()
+        .from(ACTOR)
+        .join(ACTOR_DEFINITION).on(ACTOR_DEFINITION.ID.eq(ACTOR.ACTOR_DEFINITION_ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.eq(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
+        .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
+        .and(ACTOR.TOMBSTONE.notEqual(true))
+        .and(releaseStageAlphaOrBeta))
+        .fetchOneInto(Integer.class);
+
+    return countResult > 0;
   }
 
   /**

@@ -50,7 +50,6 @@ dependencies {
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-config:specs')
-    implementation project(':airbyte-data')
     implementation project(":airbyte-featureflag")
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-db:db-lib')

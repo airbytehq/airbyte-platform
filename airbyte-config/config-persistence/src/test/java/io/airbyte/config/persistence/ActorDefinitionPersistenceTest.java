@@ -21,7 +21,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -45,12 +44,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException {
     truncateAllTables();
 
-    configRepository = spy(
-        new ConfigRepository(
-            database,
-            mock(StandardSyncPersistence.class),
-            MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-            new WorkspaceServiceJooqImpl(database)));
+    configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test

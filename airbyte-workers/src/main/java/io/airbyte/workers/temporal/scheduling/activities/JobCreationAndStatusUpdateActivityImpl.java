@@ -172,12 +172,6 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
-  /**
-   * This method is used to determine if the current job is the last job or attempt failure.
-   *
-   * @param input - JobCheckFailureInput.
-   * @return - boolean.
-   */
   @Override
   public boolean isLastJobOrAttemptFailure(final JobCheckFailureInput input) {
     // If there has been a previous attempt, that means it failed. We don't create subsequent attempts
