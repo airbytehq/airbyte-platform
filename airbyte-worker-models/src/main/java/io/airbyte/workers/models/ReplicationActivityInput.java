@@ -68,5 +68,8 @@ public class ReplicationActivityInput {
   private String namespaceFormat;
   // Prefix that will be prepended to the name of each stream when it is written to the destination.
   private String prefix;
+  // The results of schema refresh, including the applied diff which is used to determine which
+  // streams to backfill.
+  private RefreshSchemaActivityOutput schemaRefreshOutput;
 
 }

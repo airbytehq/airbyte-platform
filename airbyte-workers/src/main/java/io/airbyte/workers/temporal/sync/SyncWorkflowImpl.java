@@ -34,6 +34,7 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
+import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
@@ -85,6 +86,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
     final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
+    RefreshSchemaActivityOutput refreshSchemaOutput = null;
     if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
       LOGGER.info("Refreshing source schema...");
       try {
@@ -92,7 +94,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         if (version == Workflow.DEFAULT_VERSION) {
           refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
         } else {
-          refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
+          refreshSchemaOutput =
+              refreshSchemaActivity.refreshSchemaV2(new RefreshSchemaActivityInput(sourceId.get(), connectionId, syncInput.getWorkspaceId()));
         }
       } catch (final Exception e) {
         ApmTraceUtils.addExceptionToTrace(e);
@@ -121,7 +124,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     } else {
       syncOutput =
           replicationActivity
-              .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue));
+              .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+                  refreshSchemaOutput));
     }
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
@@ -197,7 +201,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final JobRunConfig jobRunConfig,
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
-                                                                    final String taskQueue) {
+                                                                    final String taskQueue,
+                                                                    RefreshSchemaActivityOutput refreshSchemaOutput) {
     return new ReplicationActivityInput(
         syncInput,
         syncInput.getSourceId(),
@@ -215,7 +220,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getIsReset(),
         syncInput.getNamespaceDefinition(),
         syncInput.getNamespaceFormat(),
-        syncInput.getPrefix());
+        syncInput.getPrefix(),
+        refreshSchemaOutput);
   }
 
 }

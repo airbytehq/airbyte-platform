@@ -23,6 +23,7 @@ import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.ConnectionUpdate;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.client.model.generated.SchemaChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
@@ -74,6 +75,7 @@ class SchemaManagementTests {
   public static final int MAX_TRIES = 3;
   public static final String A_NEW_COLUMN = "a_new_column";
   public static final String FIELD_NAME = "name";
+  private static final int DEFAULT_VALUE = 50;
   private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
@@ -101,6 +103,7 @@ class SchemaManagementTests {
             discoverResult.getCatalogId())
                 .setNormalizationOperationId(normalizationOpId)
                 .build());
+    LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
     createdConnectionWithSameSource = testHarness.createConnection(new TestConnectionCreate.Builder(
@@ -188,7 +191,7 @@ class SchemaManagementTests {
   @Timeout(
            value = 10,
            unit = TimeUnit.MINUTES)
-  void testPropagateAllChangesViaWebBackendGetConnection() throws Exception {
+  void testPropagateAllChangesViaSyncRefresh() throws Exception {
     // Update one connection to apply all (column + stream) changes.
     AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
         new ConnectionUpdate()
@@ -203,7 +206,6 @@ class SchemaManagementTests {
     // better way to know when the catalog
     // refresh step is complete.
     final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
-    // testHarness.waitForSuccessfulSyncNoTimeout(createdConnection.getConnectionId());
     testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
 
     // This connection has auto propagation enabled, so we expect it to be updated.
@@ -220,6 +222,49 @@ class SchemaManagementTests {
     assertEquals(createdConnectionWithSameSource.getSyncCatalog(), currentConnectionWithSameSource.getSyncCatalog());
   }
 
+  @Test
+  @Timeout(
+           value = 10,
+           unit = TimeUnit.MINUTES)
+  void testBackfillOnNewColumn() throws Exception {
+    AirbyteApiClient.retryWithJitter(() -> apiClient.getConnectionApi().updateConnection(
+        new ConnectionUpdate()
+            .connectionId(createdConnection.getConnectionId())
+            .nonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY)),
+        "update connection non breaking change preference", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    // We sometimes get a race where the connection manager isn't ready, and this results in
+    // `syncConnection` simply
+    // hanging. This is a bug we should fix in the backend, but we tolerate it here for now.
+    Thread.sleep(1000 * 5);
+    // Run a sync with the initial data.
+    final var jobRead = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    testHarness.waitForSuccessfulSyncNoTimeout(jobRead);
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndName());
+
+    // Modify the source to add a new column, which will be populated with a default value.
+    testHarness.runSqlScriptInSource("postgres_add_column_with_default_value.sql");
+
+    // Sync again. This should update the schema, and also run a backfill for the affected stream.
+    final JobRead jobReadWithBackfills = testHarness.syncConnection(createdConnection.getConnectionId()).getJob();
+    testHarness.waitForSuccessfulSyncNoTimeout(jobReadWithBackfills);
+    final var currentConnection = testHarness.getConnection(createdConnection.getConnectionId());
+    // Expect that we have the two original fields, plus the new one.
+    assertEquals(3, currentConnection.getSyncCatalog().getStreams().get(0).getStream().getJsonSchema().get("properties").size());
+    Asserts.assertNormalizedDestinationContains(testHarness.getDestinationDatabase(), createdConnection.getNamespaceFormat(),
+        getExpectedRecordsForIdAndNameWithBackfilledColumn());
+  }
+
+  private List<JsonNode> getExpectedRecordsForIdAndName() {
+    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
+    return List.of(
+        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif"),
+        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles"),
+        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared"),
+        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel"),
+        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john"));
+  }
+
   private List<JsonNode> getExpectedRecordsForIdAndNameWithUpdatedCatalog() {
     final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
     return List.of(
@@ -229,6 +274,18 @@ class SchemaManagementTests {
         new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, (String) null),
         new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, (String) null),
         new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, "contents-of-the-new-column"));
+  }
+
+  private List<JsonNode> getExpectedRecordsForIdAndNameWithBackfilledColumn() {
+    final var nodeFactory = JsonNodeFactory.withExactBigDecimals(false);
+    return List.of(
+        new ObjectNode(nodeFactory).put("id", 1).put(FIELD_NAME, "sherif").put(A_NEW_COLUMN, DEFAULT_VALUE),
+        new ObjectNode(nodeFactory).put("id", 2).put(FIELD_NAME, "charles").put(A_NEW_COLUMN, DEFAULT_VALUE),
+        new ObjectNode(nodeFactory).put("id", 3).put(FIELD_NAME, "jared").put(A_NEW_COLUMN, DEFAULT_VALUE),
+        new ObjectNode(nodeFactory).put("id", 4).put(FIELD_NAME, "michel").put(A_NEW_COLUMN, DEFAULT_VALUE),
+        new ObjectNode(nodeFactory).put("id", 5).put(FIELD_NAME, "john").put(A_NEW_COLUMN, DEFAULT_VALUE),
+        // Note: this is a new record, with a different value from the default.
+        new ObjectNode(nodeFactory).put("id", 6).put(FIELD_NAME, "a-new-name").put(A_NEW_COLUMN, 100));
   }
 
   private AirbyteCatalog getExpectedCatalogWithExtraColumnAndTable() {

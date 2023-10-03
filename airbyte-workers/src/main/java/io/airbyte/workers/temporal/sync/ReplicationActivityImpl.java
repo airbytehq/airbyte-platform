@@ -23,6 +23,7 @@ import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
@@ -55,6 +56,8 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.Worker;
+import io.airbyte.workers.helpers.BackfillHelper;
+import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -65,6 +68,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -193,7 +197,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-
+          final List<StreamDescriptor> streamsToBackfill = BackfillHelper
+              .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
+          BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
           return standardSyncOutput;
         },
         context);
@@ -262,7 +268,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-
           return standardSyncOutput;
         },
         context));
@@ -298,7 +303,10 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       updateCatalogForReset(replicationActivityInput, catalog);
     }
     // Retrieve the state.
-    final State state = retrieveState(replicationActivityInput);
+    State state = retrieveState(replicationActivityInput);
+    if (replicationActivityInput.getSchemaRefreshOutput() != null) {
+      state = getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(), catalog);
+    }
     // Hydrate the secrets.
     final var fullSourceConfig = secretsHydrator.hydrate(replicationActivityInput.getSourceConfiguration());
     final var fullDestinationConfig = secretsHydrator.hydrate(replicationActivityInput.getDestinationConfiguration());
@@ -320,6 +328,16 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         .withDestinationLauncherConfig(replicationActivityInput.getDestinationLauncherConfig())
         .withCatalog(catalog)
         .withState(state);
+  }
+
+  private State getUpdatedStateForBackfill(State state, RefreshSchemaActivityOutput schemaRefreshOutput, final ConfiguredAirbyteCatalog catalog) {
+    if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
+      final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
+      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
+      return BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
+    }
+    // No schema refresh output, so we just return the original state.
+    return state;
   }
 
   @NotNull
