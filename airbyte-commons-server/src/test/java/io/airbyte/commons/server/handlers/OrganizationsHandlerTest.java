@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("PMD")
 class OrganizationsHandlerTest {
 
   private PermissionPersistence permissionPersistence;

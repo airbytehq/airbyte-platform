@@ -20,6 +20,7 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
 import java.io.IOException;
@@ -62,7 +63,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void beforeEach() throws Exception {
     truncateAllTables();
-    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER, new WorkspaceServiceJooqImpl(database));
   }
 
   @Test

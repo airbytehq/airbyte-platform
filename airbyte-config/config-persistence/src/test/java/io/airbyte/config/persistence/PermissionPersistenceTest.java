@@ -11,6 +11,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +35,10 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   private void setupTestData() throws IOException, JsonValidationException {
     final UserPersistence userPersistence = new UserPersistence(database);
-    final ConfigRepository configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    final ConfigRepository configRepository = new ConfigRepository(
+        database,
+        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
+        new WorkspaceServiceJooqImpl(database));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);

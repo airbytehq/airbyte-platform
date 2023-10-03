@@ -155,6 +155,7 @@ class AttemptHandlerTest {
   }
 
   @Test
+  @SuppressWarnings("PMD")
   void testInternalHandlerSetsAttemptSyncConfig() throws Exception {
     final ArgumentCaptor<Integer> attemptNumberCapture = ArgumentCaptor.forClass(Integer.class);
     final ArgumentCaptor<Long> jobIdCapture = ArgumentCaptor.forClass(Long.class);
