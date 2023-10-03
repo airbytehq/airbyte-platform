@@ -224,6 +224,11 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     }
   }
 
+  /**
+   * Retrieves the full or inapp documentation for the specified connector repo and version.
+   *
+   * @return Optional containing the connector doc if it can be found, or empty otherwise.
+   */
   public Optional<String> getConnectorDocumentation(final String connectorRepository, final String version, final Boolean inapp) {
     final URL docUrl = getDocUrl(connectorRepository, version, inapp);
     final Request request = new Request.Builder()
