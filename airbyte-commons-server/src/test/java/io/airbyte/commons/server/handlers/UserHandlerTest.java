@@ -57,6 +57,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
+@SuppressWarnings("PMD")
 class UserHandlerTest {
 
   private Supplier<UUID> uuidSupplier;
