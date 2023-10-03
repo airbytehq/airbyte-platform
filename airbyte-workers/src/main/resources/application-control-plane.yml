@@ -1,5 +1,5 @@
 datasources:
-  local-secrets:
+  config:
     connection-test-query: SELECT 1
     connection-timeout: 30000
     idle-timeout: 600000
@@ -12,8 +12,20 @@ datasources:
     password: ${DATABASE_PASSWORD}
     pool-name: config-pool
 
+flyway:
+  enabled: true
+  datasources:
+    config:
+      enabled: false
+      locations:
+        - "classpath:io/airbyte/db/instance/configs/migrations"
+    jobs:
+      enabled: false
+      locations:
+        - "classpath:io/airbyte/db/instance/jobs/migrations"
+
 jooq:
   datasources:
-    local-secrets:
+    config:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES

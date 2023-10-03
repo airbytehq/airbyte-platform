@@ -43,6 +43,7 @@ dependencies {
     implementation libs.google.cloud.storage
     implementation libs.bundles.micronaut
     implementation libs.micronaut.cache.caffeine
+    implementation libs.flyway.core
     implementation libs.jooq
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
