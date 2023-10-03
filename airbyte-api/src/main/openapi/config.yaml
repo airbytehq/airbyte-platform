@@ -862,6 +862,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_documentation/get:
+    post:
+      tags:
+        - connector_documentation
+      summary: Get the documentation for a connector
+      operationId: getConnectorDocumentation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorDocumentationRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorDocumentationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/create:
     post:
       tags:
@@ -4506,6 +4529,29 @@ components:
       properties:
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
+    # Connector Documentation
+    ConnectorDocumentationRequestBody:
+      type: object
+      required:
+        - actorType
+        - actorDefinitionId
+        - workspaceId
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        actorId:
+          $ref: "#/components/schemas/ActorId"
+    ConnectorDocumentationRead:
+      type: object
+      required:
+        - doc
+      properties:
+        doc:
+          type: string
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -7241,6 +7287,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionId"
         actorType:
           $ref: "#/components/schemas/ActorType"
+    ActorId:
+      description: A unique identifier for an actor.
+      type: string
+      format: uuid
     NormalizationDestinationDefinitionConfig:
       description: describes a normalization config for destination definition version
       type: object
