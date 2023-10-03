@@ -76,7 +76,7 @@ async function parseResponse<T>(response: Response, requestUrl: string): Promise
       throw new VersionError(jsonError.error);
     }
 
-    throw new CommonRequestError(response, jsonError?.message ?? JSON.stringify(jsonError?.detail));
+    throw new CommonRequestError(response, jsonError);
   }
 
   let responseText: string | undefined;
@@ -90,12 +90,11 @@ async function parseResponse<T>(response: Response, requestUrl: string): Promise
 
   const requestId = shortUuid();
 
-  const error = new CommonRequestError(
-    response,
-    `${response.status === 502 || response.status === 503 ? "Server temporarily unavailable" : "Unknown error"} (http.${
-      response.status
-    }.${requestId})`
-  );
+  const error = new CommonRequestError(response, {
+    message: `${
+      response.status === 502 || response.status === 503 ? "Server temporarily unavailable" : "Unknown error"
+    } (http.${response.status}.${requestId})`,
+  });
 
   trackError(error, {
     httpStatus: response.status,

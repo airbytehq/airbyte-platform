@@ -33,7 +33,7 @@ import {
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
 } from "core/api";
-import { ConnectorConfig, StreamRead } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorConfig, KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
@@ -82,6 +82,7 @@ interface FormStateContext {
 interface TestReadContext {
   resolvedManifest: ConnectorManifest;
   resolveErrorMessage: string | undefined;
+  resolveError: Error | KnownExceptionInfo | null;
   streamRead: UseQueryResult<StreamRead, unknown>;
   isResolving: boolean;
   testInputJson: ConnectorConfig;
@@ -622,6 +623,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const ctx = {
     resolvedManifest,
     resolveErrorMessage,
+    resolveError,
     streamRead,
     isResolving,
     testInputJson: testInputWithDefaults,

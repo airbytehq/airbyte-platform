@@ -3,13 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { CommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
@@ -35,6 +39,7 @@ export const StreamTester: React.FC<{
     resolvedManifest,
     isResolving,
     resolveErrorMessage,
+    resolveError,
     streamRead: {
       data: streamReadData,
       refetch: readStream,
@@ -66,6 +71,7 @@ export const StreamTester: React.FC<{
       ? error.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
+  const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
     () =>
@@ -140,9 +146,14 @@ export const StreamTester: React.FC<{
       {resolveErrorMessage !== undefined && (
         <div className={styles.listErrorDisplay}>
           <Text>
-            <FormattedMessage id="connectorBuilder.couldNotDetectStreams" />
+            <FormattedMessage id="connectorBuilder.couldNotValidateConnectorSpec" />
           </Text>
           <Text bold>{resolveErrorMessage}</Text>
+          {errorExceptionStack && (
+            <Collapsible label={formatMessage({ id: "connectorBuilder.tracebackLabel" })} className={styles.traceback}>
+              <Pre longLines>{errorExceptionStack}</Pre>
+            </Collapsible>
+          )}
           <Text>
             <FormattedMessage
               id="connectorBuilder.ensureProperYaml"
