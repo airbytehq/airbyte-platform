@@ -188,6 +188,7 @@ Helm chart to deploy airbyte
 | postgresql.postgresqlDatabase | string | `"db-airbyte"`                       |  |
 | postgresql.postgresqlPassword | string | `"airbyte"`                          |  |
 | postgresql.postgresqlUsername | string | `"airbyte"`                          |  |
+| postgresql.storage.volumeClaimValue | string | `500Mi` |  |
 | server.affinity | object | `{}`                                 |  |
 | server.containerSecurityContext | object | `{}`                                 |  |
 | server.enabled | bool | `true`                               |  |
