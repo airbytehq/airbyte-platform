@@ -13,8 +13,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.concurrency.VoidCallable;
+import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteMapper;
+import io.airbyte.workers.internal.FieldSelector;
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
+import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,18 +30,25 @@ class ReplicationWorkerHelperTest {
 
   private ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteMapper mapper = mock(AirbyteMapper.class);
+  private final AirbyteMessageDataExtractor extractor = mock(AirbyteMessageDataExtractor.class);
+  private final FieldSelector fieldSelector = mock(FieldSelector.class);
+  private final AirbyteMessageTracker messageTracker = mock(AirbyteMessageTracker.class);
+  private final SyncPersistence syncPersistence = mock(SyncPersistence.class);
+  private final ReplicationAirbyteMessageEventPublishingHelper eventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
+  private final ThreadedTimeTracker timeTracker = mock(ThreadedTimeTracker.class);
+  private final VoidCallable running = mock(VoidCallable.class);
 
   @BeforeEach
   void setUp() {
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
-        null,
-        null,
+        extractor,
+        fieldSelector,
         mapper,
-        null,
-        null,
-        null,
-        null,
-        null));
+        messageTracker,
+        syncPersistence,
+        eventPublishingHelper,
+        timeTracker,
+        running));
   }
 
   @Test

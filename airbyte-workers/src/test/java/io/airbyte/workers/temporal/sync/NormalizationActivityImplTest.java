@@ -48,6 +48,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class NormalizationActivityImplTest {
 
   private static TestActivityEnvironment testEnv;

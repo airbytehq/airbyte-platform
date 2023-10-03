@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Set default value for breaking change notifications for workspaces
+ * Set default value for breaking change notifications for workspaces.
  */
 public class V0_50_24_002__BackfillBreakingChangeNotificationSettings extends BaseJavaMigration {
 
