@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
-import { ConnectionStatus, ReleaseStage, SupportLevel } from "core/request/AirbyteClient";
+import { ConnectionStatus, SupportLevel } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -25,19 +25,10 @@ interface ConnectorBlockProps {
   id: string;
   supportLevel?: SupportLevel;
   custom?: boolean;
-  releaseStage?: ReleaseStage;
   type: "source" | "destination";
 }
 
-const ConnectorBlock: React.FC<ConnectorBlockProps> = ({
-  name,
-  icon,
-  id,
-  supportLevel,
-  custom,
-  type,
-  releaseStage,
-}) => {
+const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, supportLevel, custom, type }) => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}`;
   const connectorTypePath = type === "source" ? RoutePaths.Source : RoutePaths.Destination;
@@ -49,7 +40,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({
         <Text color="grey" size="lg">
           {name}
         </Text>
-        <SupportLevelBadge supportLevel={supportLevel} custom={custom} releaseStage={releaseStage} />
+        <SupportLevelBadge supportLevel={supportLevel} custom={custom} />
       </FlexContainer>
     </Link>
   );
@@ -78,7 +69,6 @@ export const ConnectionTitleBlock = () => {
             id={source.sourceId}
             supportLevel={sourceDefinitionVersion.supportLevel}
             custom={sourceDefinition.custom}
-            releaseStage={sourceDefinition.releaseStage}
             type="source"
           />
           <Icon type="arrowRight" />
@@ -88,7 +78,6 @@ export const ConnectionTitleBlock = () => {
             id={destination.destinationId}
             supportLevel={destDefinitionVersion.supportLevel}
             custom={destDefinition.custom}
-            releaseStage={destDefinition.releaseStage}
             type="destination"
           />
         </FlexContainer>

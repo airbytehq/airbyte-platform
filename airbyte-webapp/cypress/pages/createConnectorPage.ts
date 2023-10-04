@@ -12,7 +12,7 @@ const optionalFieldsButton = "button[data-testid='optional-fields']";
 const xminOption = "label[data-testid='radio-option.1']";
 
 export const selectServiceType = (type: string) => {
-  // Make sure alpha connectors are visible in the grid, since they are hidden by default
+  // Make sure community connectors are visible in the grid, since they are hidden by default
   cy.get("#filter-support-level-community").check({ force: true });
   cy.contains("button", type).click();
 };

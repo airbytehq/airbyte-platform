@@ -26,12 +26,7 @@ export const ConnectorOptionLabel: React.FC<ConnectorOptionLabelProps> = ({ conn
         {connector.name}
       </Text>
       <FlexItem>
-        <SupportLevelBadge
-          supportLevel={connector.supportLevel}
-          custom={connector.custom}
-          size="small"
-          releaseStage={connector.releaseStage}
-        />
+        <SupportLevelBadge supportLevel={connector.supportLevel} custom={connector.custom} size="small" />
       </FlexItem>
     </FlexContainer>
   );

@@ -5,6 +5,7 @@
 const BASE_DOCS_LINK = "https://docs.airbyte.com";
 
 export const links = {
+  connectorSupportLevels: `${BASE_DOCS_LINK}/project-overview/product-support-levels/`,
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
   dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
@@ -13,7 +14,6 @@ export const links = {
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
-  productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",
   supportPortal: "https://support.airbyte.com",
   docsLink: BASE_DOCS_LINK,

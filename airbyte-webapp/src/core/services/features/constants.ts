@@ -13,7 +13,6 @@ export const defaultCloudFeatures = [
   FeatureItem.AllowOAuthConnector,
   FeatureItem.AllowChangeDataGeographies,
   FeatureItem.AllowDBTCloudIntegration,
-  FeatureItem.FreeConnectorProgram,
   FeatureItem.EmailNotifications,
   FeatureItem.ShowInviteUsersHint,
   FeatureItem.RestrictAdminInForeignWorkspace,
