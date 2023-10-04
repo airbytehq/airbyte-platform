@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
  * UserHandler, provides basic CRUD operation access for users. Some are migrated from Cloud
  * UserHandler.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
 public class UserHandler {
 

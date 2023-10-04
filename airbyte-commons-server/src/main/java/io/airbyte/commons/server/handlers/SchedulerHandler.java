@@ -113,7 +113,7 @@ import org.slf4j.LoggerFactory;
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Singleton
 @Slf4j
 public class SchedulerHandler {

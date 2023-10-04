@@ -14,7 +14,6 @@ import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.util.Optional;
 import org.junit.Test;
 
-@SuppressWarnings("MissingJavadocType")
 public class BasicAirbyteMessageValidatorTest {
 
   @Test

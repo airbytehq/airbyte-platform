@@ -18,7 +18,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/actor_definition_versions")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class ActorDefinitionVersionApiController implements ActorDefinitionVersionApi {

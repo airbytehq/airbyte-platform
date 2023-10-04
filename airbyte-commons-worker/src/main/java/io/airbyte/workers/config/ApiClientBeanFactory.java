@@ -48,7 +48,6 @@ public class ApiClientBeanFactory {
   private static final String INTERNAL_API_AUTH_TOKEN_BEAN_NAME = "internalApiAuthToken";
   private static final int JWT_TTL_MINUTES = 5;
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("apiClient")
   public ApiClient apiClient(
@@ -130,7 +129,6 @@ public class ApiClientBeanFactory {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("internalApiScheme")
   public String internalApiScheme(@Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode, final Environment environment) {

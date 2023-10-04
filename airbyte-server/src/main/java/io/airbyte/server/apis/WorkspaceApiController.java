@@ -35,7 +35,7 @@ import io.micronaut.security.rules.SecurityRule;
 
 @Controller("/api/v1/workspaces")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocType"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class WorkspaceApiController implements WorkspaceApi {
 
   private final WorkspacesHandler workspacesHandler;

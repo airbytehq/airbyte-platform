@@ -12,7 +12,6 @@ import java.io.IOException;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 
-@SuppressWarnings("MissingJavadocType")
 public abstract class AbstractJobsDatabaseTest extends AbstractDatabaseTest {
 
   @Override

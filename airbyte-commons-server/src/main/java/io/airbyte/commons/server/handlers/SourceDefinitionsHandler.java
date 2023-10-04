@@ -62,7 +62,7 @@ import java.util.stream.Stream;
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidCatchingNPE")
 @Singleton
 public class SourceDefinitionsHandler {
 

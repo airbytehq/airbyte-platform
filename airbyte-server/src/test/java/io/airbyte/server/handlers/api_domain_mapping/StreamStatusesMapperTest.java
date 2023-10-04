@@ -34,7 +34,6 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@SuppressWarnings("MissingJavadocType")
 public class StreamStatusesMapperTest {
 
   final StreamStatusesMapper mapper = new StreamStatusesMapper();

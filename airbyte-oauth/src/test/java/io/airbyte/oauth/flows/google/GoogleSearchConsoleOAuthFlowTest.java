@@ -8,7 +8,6 @@ import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.flows.BaseOAuthFlowTest;
 import java.util.List;
 
-@SuppressWarnings("MissingJavadocType")
 public class GoogleSearchConsoleOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

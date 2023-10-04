@@ -25,7 +25,6 @@ import org.jooq.TableField;
 /**
  * Data Access layer for StreamStatus.
  */
-@SuppressWarnings("MissingJavadocType")
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface StreamStatusesRepository extends PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
 

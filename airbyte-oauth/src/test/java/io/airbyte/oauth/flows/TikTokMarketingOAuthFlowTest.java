@@ -12,7 +12,7 @@ import io.airbyte.protocol.models.OAuthConfigSpecification;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class TikTokMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

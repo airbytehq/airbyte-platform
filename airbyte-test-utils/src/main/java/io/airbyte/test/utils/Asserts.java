@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
  * too unwieldy, it is very common to assert the source/destination databasess match in the
  * acceptance tests. These assertions simplify this and reduce mistakes.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 public class Asserts {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Asserts.class);

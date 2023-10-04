@@ -7,7 +7,6 @@ package io.airbyte.workers.temporal.stubs;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
-@SuppressWarnings("MissingJavadocType")
 @ActivityInterface
 public interface TestActivity {
 

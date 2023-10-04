@@ -18,7 +18,6 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.io.File;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/logs")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)

@@ -27,7 +27,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 /**
  * Collection of Acceptance test database queries to simplify test set up.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 public class Databases {
 
   private static final String COLUMN_NAME_DATA = "_airbyte_data";

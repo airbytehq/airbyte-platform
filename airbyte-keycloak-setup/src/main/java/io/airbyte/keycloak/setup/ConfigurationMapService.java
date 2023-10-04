@@ -17,7 +17,6 @@ import org.keycloak.admin.client.resource.RealmResource;
  * removing, and updating configuration settings.
  */
 @Singleton
-@SuppressWarnings("MissingJavadocMethod")
 public class ConfigurationMapService {
 
   private final String webappUrl;

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 @MicronautTest
 @Requires(property = "mockito.test.enabled",
           defaultValue = StringUtils.TRUE,

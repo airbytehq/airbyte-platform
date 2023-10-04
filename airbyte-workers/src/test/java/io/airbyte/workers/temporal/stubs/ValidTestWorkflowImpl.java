@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.stubs;
 
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 
-@SuppressWarnings("MissingJavadocType")
 public class ValidTestWorkflowImpl implements TestWorkflow {
 
   private boolean cancelled = false;

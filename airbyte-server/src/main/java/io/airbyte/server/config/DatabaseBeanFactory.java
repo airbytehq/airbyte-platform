@@ -44,7 +44,7 @@ import org.jooq.impl.DataSourceConnectionProvider;
 @Factory
 @Slf4j
 
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod", "LineLength"})
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength"})
 public class DatabaseBeanFactory {
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";

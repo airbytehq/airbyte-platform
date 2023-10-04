@@ -29,7 +29,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings({"MissingJavadocType", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Controller("/api/v1/operations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class OperationApiController implements OperationApi {

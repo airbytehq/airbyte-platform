@@ -11,7 +11,6 @@ import io.airbyte.config.persistence.split_secrets.SecretsTestCase;
 import java.util.Map;
 import java.util.function.Consumer;
 
-@SuppressWarnings("MissingJavadocType")
 public class SimpleTestCase implements SecretsTestCase {
 
   @Override

@@ -62,7 +62,7 @@ import java.util.stream.Stream;
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod", "LineLength"})
+@SuppressWarnings({"PMD.AvoidCatchingNPE", "LineLength"})
 @Singleton
 public class DestinationDefinitionsHandler {
 

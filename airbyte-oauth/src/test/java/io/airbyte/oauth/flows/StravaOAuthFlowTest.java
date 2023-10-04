@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import io.airbyte.oauth.BaseOAuthFlow;
 
-@SuppressWarnings("MissingJavadocType")
 public class StravaOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

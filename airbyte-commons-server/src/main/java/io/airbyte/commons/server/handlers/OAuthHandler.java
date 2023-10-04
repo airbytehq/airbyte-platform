@@ -75,7 +75,7 @@ import org.slf4j.LoggerFactory;
 /**
  * OAuthHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Singleton
 public class OAuthHandler {
 
