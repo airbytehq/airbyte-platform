@@ -12,9 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class V0_50_24_004__AddTombstoneToOrganizationTable extends BaseJavaMigration {
+public class V0_50_24_005__AddTombstoneToOrganizationTable extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_24_004__AddTombstoneToOrganizationTable.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_24_005__AddTombstoneToOrganizationTable.class);
   private static final String ORGANIZATION_TABLE = "organization";
   private static final String TOMBSTONE_COLUMN = "tombstone";
 
