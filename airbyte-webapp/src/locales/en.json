@@ -560,6 +560,12 @@
   "connection.status.onTrack.failureDescription": "The previous sync encountered an issue but is expected to automatically recover in the next sync.",
   "connection.status.onTrack.delayedDescription": "The connection is delayed but is expected to catch up before the next sync.",
 
+  "connection.uptimeStatus.onTime": "On time",
+  "connection.uptimeStatus.late": "Behind schedule",
+  "connection.uptimeStatus.error": "Stopped due to error(s)",
+  "connection.uptimeStatus.actionRequired": "Stopped (action required)",
+  "connection.uptimeStatus.cancelled": "Cancelled",
+
   "connection.stream.status.actionRequired": "Action required",
   "connection.stream.status.onTime": "On time",
   "connection.stream.status.onTrack": "On track",
