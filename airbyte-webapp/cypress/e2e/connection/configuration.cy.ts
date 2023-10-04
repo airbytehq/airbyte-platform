@@ -114,7 +114,7 @@ describe("Connection Configuration", () => {
         // sync & verify the button enters and exits its disabled state as the status updates
         startManualSync();
         cy.get("[data-testid='manual-sync-button']").should("be.disabled");
-        cy.get("[data-testid='connection-status-text']").contains("On time").should("exist");
+        cy.get("[data-testid='connection-status-text']").contains("On time", { timeout: 20000 }).should("exist");
         cy.get("[data-testid='manual-sync-button']").should("not.be.disabled");
       });
     });

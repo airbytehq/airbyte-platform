@@ -18,6 +18,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import org.jooq.DSLContext;
 
 /**
  * Micronaut bean factory for secret persistence-related singletons.
@@ -25,6 +26,17 @@ import jakarta.inject.Singleton;
 @Factory
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class SecretPersistenceBeanFactory {
+
+  /**
+   * This exists solely to power LocalTestingSecretPersistence. Do not otherwise access the database
+   * in this project.
+   */
+  @Singleton
+  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Named("localTestingSecretsDatabase")
+  public Database localTestingSecretsDatabase(@Named("local-secrets") final DSLContext dslContext) {
+    return new Database(dslContext);
+  }
 
   @Singleton
   @Requires(property = "airbyte.secret.persistence",
@@ -37,8 +49,8 @@ public class SecretPersistenceBeanFactory {
             pattern = "(?i)^(?!aws_secret_manager).*")
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("secretPersistence")
-  public SecretPersistence defaultSecretPersistence(@Named("configDatabase") final Database configDatabase) {
-    return localTestingSecretPersistence(configDatabase);
+  public SecretPersistence defaultSecretPersistence(@Named("localTestingSecretsDatabase") final Database localTestingSecretsDatabase) {
+    return localTestingSecretPersistence(localTestingSecretsDatabase);
   }
 
   @Singleton
@@ -46,8 +58,8 @@ public class SecretPersistenceBeanFactory {
             pattern = "(?i)^testing_config_db_table$")
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("secretPersistence")
-  public SecretPersistence localTestingSecretPersistence(@Named("configDatabase") final Database configDatabase) {
-    return new LocalTestingSecretPersistence(configDatabase);
+  public SecretPersistence localTestingSecretPersistence(@Named("localTestingSecretsDatabase") final Database localTestingSecretsDatabase) {
+    return new LocalTestingSecretPersistence(localTestingSecretsDatabase);
   }
 
   @Singleton
