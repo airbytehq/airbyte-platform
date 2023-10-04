@@ -264,4 +264,18 @@ class RemoteDefinitionsProviderTest {
     assertEquals(destinationDef, definition.get());
   }
 
+  @Test
+  void testGetConnectorDocumentation() {
+    final String connectorDocumentationBody = "The documentation contents";
+
+    final MockResponse validResponse = makeResponse(200, connectorDocumentationBody);
+    webServer.enqueue(validResponse);
+
+    final RemoteDefinitionsProvider remoteDefinitionsProvider =
+        new RemoteDefinitionsProvider(baseUrl, DEPLOYMENT_MODE, TimeUnit.SECONDS.toMillis(30));
+    final Optional<String> documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION, false);
+    assertTrue(documentationResult.isPresent());
+    assertEquals(documentationResult.get(), connectorDocumentationBody);
+  }
+
 }

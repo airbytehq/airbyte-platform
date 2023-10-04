@@ -49,7 +49,7 @@ import java.util.function.Supplier;
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Singleton
 public class DestinationHandler {
 

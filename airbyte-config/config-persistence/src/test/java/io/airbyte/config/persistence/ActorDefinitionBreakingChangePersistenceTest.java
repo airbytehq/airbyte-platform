@@ -15,6 +15,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -92,7 +93,11 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   void setup() throws SQLException, JsonValidationException, IOException {
     truncateAllTables();
 
-    configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(
+        new ConfigRepository(database,
+            mock(StandardSyncPersistence.class),
+            MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
+            new WorkspaceServiceJooqImpl(database)));
 
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

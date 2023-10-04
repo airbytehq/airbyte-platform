@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 /**
  * AttemptHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class AttemptHandler {
 
@@ -164,6 +163,7 @@ public class AttemptHandler {
     return new InternalOperationResult().succeeded(true);
   }
 
+  @SuppressWarnings("PMD")
   public void failAttempt(final int attemptNumber, final long jobId, final Object rawFailureSummary, final Object rawSyncOutput)
       throws IOException {
     AttemptFailureSummary failureSummary = null;

@@ -54,7 +54,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings("PMD")
 class JobCreationAndStatusUpdateActivityTest {
 
   public static final String REASON = "reason";

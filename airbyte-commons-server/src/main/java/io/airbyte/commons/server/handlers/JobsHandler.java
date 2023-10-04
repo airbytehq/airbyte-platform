@@ -58,6 +58,9 @@ public class JobsHandler {
 
   /**
    * Mark job as failure.
+   *
+   * @param input - the request object.
+   * @return - the result of the operation.
    */
   public InternalOperationResult jobFailure(final JobFailureRequest input) {
     try {
@@ -130,6 +133,10 @@ public class JobsHandler {
 
   /**
    * Fail non terminal jobs.
+   *
+   * @param connectionId - the connection id.
+   * @throws IOException - exception.
+   *
    */
   public void failNonTerminalJobs(final UUID connectionId) throws IOException {
     jobCreationAndStatusUpdateHelper.failNonTerminalJobs(connectionId);
@@ -145,6 +152,11 @@ public class JobsHandler {
 
   /**
    * Did previous job succeed.
+   *
+   * @param connectionId - the connection id.
+   * @param jobId - the job id.
+   * @return - the result of the operation.
+   * @throws IOException - exception.
    */
   public BooleanRead didPreviousJobSucceed(final UUID connectionId, final long jobId) throws IOException {
     // This DB call is a lift-n-shift from activity code to move database access out of the worker. It

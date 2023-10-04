@@ -16,6 +16,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.commons.converters.CatalogClientConverters;
+import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
@@ -27,6 +28,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
@@ -46,6 +48,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
+import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
@@ -301,7 +304,13 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
     final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
-    return catalog;
+
+    // NOTE: when we passed the catalog through the activity input, this mapping was previously done
+    // during replication.
+    return new NamespacingMapper(
+        Enums.convertTo(connectionInfo.getNamespaceDefinition(), JobSyncConfig.NamespaceDefinitionType.class),
+        connectionInfo.getNamespaceFormat(),
+        connectionInfo.getPrefix()).mapCatalog(catalog);
   }
 
 }

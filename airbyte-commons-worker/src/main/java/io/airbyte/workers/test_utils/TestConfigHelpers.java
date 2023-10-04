@@ -162,6 +162,7 @@ public class TestConfigHelpers {
 
     final ReplicationInput replicationInput = new ReplicationInput()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withConnectionId(connectionId)
         .withPrefix(standardSync.getPrefix())
         .withSourceId(sourceId)
         .withDestinationId(destinationId)

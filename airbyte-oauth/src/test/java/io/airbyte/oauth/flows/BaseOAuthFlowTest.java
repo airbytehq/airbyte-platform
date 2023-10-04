@@ -31,7 +31,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("MissingJavadocType")
 public abstract class BaseOAuthFlowTest {
 
   private static final String REDIRECT_URL = "https://airbyte.io";

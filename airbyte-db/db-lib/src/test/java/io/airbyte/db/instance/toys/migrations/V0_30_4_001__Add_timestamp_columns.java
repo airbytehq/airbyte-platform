@@ -14,7 +14,6 @@ import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
-@SuppressWarnings("MissingJavadocType")
 public class V0_30_4_001__Add_timestamp_columns extends BaseJavaMigration {
 
   @Override

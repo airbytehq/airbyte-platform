@@ -32,7 +32,6 @@ import java.util.Map;
 /**
  * Static utility methods for creating {@link AirbyteMessage}s.
  */
-@SuppressWarnings("MissingJavadocMethod")
 public class AirbyteMessageUtils {
 
   public static AirbyteMessage createRecordMessage(final String tableName,

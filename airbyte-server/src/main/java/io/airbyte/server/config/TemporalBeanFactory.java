@@ -34,7 +34,6 @@ import java.io.IOException;
 @Factory
 public class TemporalBeanFactory {
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public TrackingClient trackingClient(final TrackingStrategy trackingStrategy,
                                        final DeploymentMode deploymentMode,

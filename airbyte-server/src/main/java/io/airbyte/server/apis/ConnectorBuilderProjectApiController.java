@@ -30,7 +30,6 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("/api/v1/connector_builder_projects")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@SuppressWarnings("MissingJavadocType")
 public class ConnectorBuilderProjectApiController implements ConnectorBuilderProjectApi {
 
   private final ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;

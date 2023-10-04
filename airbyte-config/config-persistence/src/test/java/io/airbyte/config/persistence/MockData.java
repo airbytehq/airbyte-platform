@@ -77,7 +77,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Data;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType", "LineLength"})
+@SuppressWarnings("LineLength")
 public class MockData {
 
   public static final UUID WORKSPACE_ID_1 = UUID.randomUUID();

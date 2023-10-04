@@ -32,7 +32,6 @@ import io.micronaut.security.rules.SecurityRule;
  * User related APIs. TODO: migrate all User endpoints (including some endpoints in WebBackend API)
  * from Cloud to OSS.
  */
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/users")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class UserApiController implements UserApi {

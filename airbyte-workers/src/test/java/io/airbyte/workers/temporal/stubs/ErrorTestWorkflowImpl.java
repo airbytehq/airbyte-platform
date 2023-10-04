@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.stubs;
 
 import io.airbyte.commons.temporal.exception.RetryableException;
 
-@SuppressWarnings("MissingJavadocType")
 public class ErrorTestWorkflowImpl implements TestWorkflow {
 
   @Override

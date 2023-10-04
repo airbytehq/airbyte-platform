@@ -32,6 +32,7 @@ import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.SynchronousJobRead;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
@@ -99,7 +100,8 @@ class RefreshSchemaActivityTest {
                 .breakingChange(false)
                 .catalog(CATALOG)
                 .catalogDiff(CATALOG_DIFF)
-                .catalogId(CATALOG_ID));
+                .catalogId(CATALOG_ID)
+                .jobInfo(new SynchronousJobRead().succeeded(true)));
     refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mConnectionApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
   }
 

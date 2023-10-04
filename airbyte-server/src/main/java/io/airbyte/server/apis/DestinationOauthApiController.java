@@ -23,7 +23,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/destination_oauths")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)

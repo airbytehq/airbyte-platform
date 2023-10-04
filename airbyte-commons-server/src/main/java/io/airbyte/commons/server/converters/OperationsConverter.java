@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /**
  * Convert between API and internal versions of operations models.
  */
-@SuppressWarnings({"MissingJavadocMethod", "MissingSwitchDefault"})
+@SuppressWarnings("MissingSwitchDefault")
 public class OperationsConverter {
 
   public static void populateOperatorConfigFromApi(final OperatorConfiguration operatorConfig, final StandardSyncOperation standardSyncOperation) {

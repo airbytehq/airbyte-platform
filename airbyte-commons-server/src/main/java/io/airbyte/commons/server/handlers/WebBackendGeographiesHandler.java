@@ -16,8 +16,7 @@ import java.util.Collections;
  * It should operate exclusively by calling other endpoints that are exposed in the API.
  *
  * Javadocs suppressed because api docs should be used as source of truth.
- **/
-@SuppressWarnings("MissingJavadocMethod")
+ */
 @Singleton
 public class WebBackendGeographiesHandler {
 

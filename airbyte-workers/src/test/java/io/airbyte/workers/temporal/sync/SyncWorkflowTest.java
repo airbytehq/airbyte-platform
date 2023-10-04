@@ -485,7 +485,8 @@ class SyncWorkflowTest {
         syncInput.getIsReset(),
         syncInput.getNamespaceDefinition(),
         syncInput.getNamespaceFormat(),
-        syncInput.getPrefix()));
+        syncInput.getPrefix(),
+        null));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

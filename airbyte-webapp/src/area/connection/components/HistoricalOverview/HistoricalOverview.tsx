@@ -5,7 +5,8 @@ import { Box } from "components/ui/Box";
 import { Tabs } from "components/ui/Tabs";
 import { ButtonTab } from "components/ui/Tabs/ButtonTab";
 
-import { DataMovedGraph } from "../data-moved-graph";
+import { DataMovedGraph } from "../DataMovedGraph";
+import { UptimeStatusGraph } from "../UptimeStatusGraph";
 
 export const HistoricalOverview: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<"uptimeStatus" | "dataMoved">("uptimeStatus");
@@ -27,7 +28,7 @@ export const HistoricalOverview: React.FC = () => {
         />
       </Tabs>
       <Box pt="sm">
-        {selectedTab === "uptimeStatus" && <div>uptime</div>}
+        {selectedTab === "uptimeStatus" && <UptimeStatusGraph />}
         {selectedTab === "dataMoved" && <DataMovedGraph />}
       </Box>
     </Box>

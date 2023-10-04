@@ -51,7 +51,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class ConnectionHelpers {
 
   private static final String STREAM_NAME_BASE = "users-data";

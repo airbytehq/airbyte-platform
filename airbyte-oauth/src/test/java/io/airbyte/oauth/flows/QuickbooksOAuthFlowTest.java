@@ -13,7 +13,7 @@ import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class QuickbooksOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

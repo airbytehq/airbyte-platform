@@ -17,7 +17,6 @@ import jakarta.inject.Singleton;
 /**
  * Interface layer between the API and Persistence layers.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class StreamStatusesHandler {
 

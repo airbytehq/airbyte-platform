@@ -61,7 +61,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("MissingJavadocType")
 public abstract class ReplicationWorkerPerformanceTest {
 
   private static final Logger log = LoggerFactory.getLogger(ReplicationWorkerPerformanceTest.class);

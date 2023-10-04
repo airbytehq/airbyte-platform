@@ -57,7 +57,7 @@ import java.util.function.Supplier;
 /**
  * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Singleton
 public class SourceHandler {
 

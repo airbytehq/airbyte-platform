@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
  * PermissionHandler, provides basic CRUD operation access for permissions. Some are migrated from
  * Cloud PermissionHandler {@link io.airbyte.cloud.server.handlers.PermissionHandler}.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
 public class PermissionHandler {
 

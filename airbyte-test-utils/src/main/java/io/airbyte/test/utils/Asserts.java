@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.JobInfoRead;
@@ -30,7 +31,9 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.db.Database;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,7 +45,6 @@ import org.slf4j.LoggerFactory;
  * too unwieldy, it is very common to assert the source/destination databasess match in the
  * acceptance tests. These assertions simplify this and reduce mistakes.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 public class Asserts {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Asserts.class);
@@ -118,16 +120,51 @@ public class Asserts {
       throws Exception {
     final String finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, streamName.replace(".", "_"));
     final List<JsonNode> destinationRecords = Databases.retrieveRecordsFromDatabase(dst, finalDestinationTable);
+    dropAirbyteSystemColumns(destinationRecords);
 
     assertEquals(sourceRecords.size(), destinationRecords.size(),
         String.format("destination contains: %s record. source contains: %s", sourceRecords.size(), destinationRecords.size()));
-
     for (final JsonNode sourceStreamRecord : sourceRecords) {
+      assertTrue(recordIsContainedIn(sourceStreamRecord, destinationRecords));
       assertTrue(
           destinationRecords.stream()
               .anyMatch(r -> r.get(COLUMN_NAME).asText().equals(sourceStreamRecord.get(COLUMN_NAME).asText())
                   && r.get(COLUMN_ID).asInt() == sourceStreamRecord.get(COLUMN_ID).asInt()),
           String.format("destination does not contain record:\n %s \n destination contains:\n %s\n", sourceStreamRecord, destinationRecords));
+    }
+  }
+
+  private static boolean recordIsContainedIn(JsonNode sourceStreamRecord, final List<JsonNode> destinationRecords) {
+    // NOTE: I would expect the simple `equals` method to do this deep comparison, but it didn't seem to
+    // be working, so this is a short-term workaround.
+    for (final JsonNode destinationRecord : destinationRecords) {
+      if (sourceStreamRecord.size() != destinationRecord.size()) {
+        continue;
+      }
+      boolean fieldsMatch = true;
+      for (Iterator<Map.Entry<String, JsonNode>> it = sourceStreamRecord.fields(); it.hasNext();) {
+        final var field = it.next();
+        final var destinationValue = destinationRecord.findValue(field.getKey());
+        fieldsMatch &= destinationValue.asText().equals(field.getValue().asText());
+      }
+      if (fieldsMatch) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static void dropAirbyteSystemColumns(final List<JsonNode> destinationRecords) {
+    for (final var record : destinationRecords) {
+      // Clear the properties prefixed with "_airbyte", since we add those, and they won't be in the
+      // source.
+      final List<String> fieldsToKeep = new ArrayList<>();
+      record.fieldNames().forEachRemaining(fieldName -> {
+        if (!fieldName.startsWith("_airbyte")) {
+          fieldsToKeep.add(fieldName);
+        }
+      });
+      ((ObjectNode) record).retain(fieldsToKeep);
     }
   }
 

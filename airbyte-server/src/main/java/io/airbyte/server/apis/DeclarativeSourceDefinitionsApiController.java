@@ -26,7 +26,6 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("/api/v1/declarative_source_definitions")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@SuppressWarnings("MissingJavadocType")
 public class DeclarativeSourceDefinitionsApiController implements DeclarativeSourceDefinitionsApi {
 
   private final DeclarativeSourceDefinitionsHandler handler;
