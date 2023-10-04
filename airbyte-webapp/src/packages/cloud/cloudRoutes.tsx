@@ -50,7 +50,6 @@ const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnec
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
-const DefaultView = React.lazy(() => import("./views/DefaultView"));
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
@@ -103,7 +102,11 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
       {[CloudRoutes.Login, CloudRoutes.Signup, CloudRoutes.FirebaseAction].map((r) => (
-        <Route key={r} path={`${r}/*`} element={query.from ? <Navigate to={query.from} replace /> : <DefaultView />} />
+        <Route
+          key={r}
+          path={`${r}/*`}
+          element={query.from ? <Navigate to={query.from} replace /> : <CloudWorkspacesPage />}
+        />
       ))}
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
@@ -117,7 +120,7 @@ const CloudMainViewRoutes = () => {
           </CloudWorkspaceDataPrefetcher>
         }
       />
-      <Route path="*" element={<DefaultView />} />
+      <Route path="*" element={<CloudWorkspacesPage />} />
     </Routes>
   );
 };
