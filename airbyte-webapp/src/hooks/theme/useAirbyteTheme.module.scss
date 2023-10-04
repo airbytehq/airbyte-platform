@@ -1,18 +1,7 @@
 @use "scss/colors";
 
 :export {
-  colorVariables:
-    colors.$dark-blue
-    colors.$blue-500
-    colors.$orange-600
-    colors.$inverse
-    colors.$green-600
-    colors.$grey-300
-    colors.$grey-900
-    colors.$grey-50
-    colors.$grey-100
-    colors.$grey-400
-    colors.$inverse
-    colors.$dark-blue-50
-    colors.$dark-blue-40;
+  colorVariables: colors.$dark-blue colors.$blue-500 colors.$orange-600 colors.$inverse colors.$green-600
+    colors.$grey-300 colors.$grey-900 colors.$grey-50 colors.$grey-100 colors.$grey-400 colors.$inverse
+    colors.$dark-blue-50 colors.$dark-blue-40;
 }
