@@ -102,7 +102,9 @@ create table "public"."actor_definition_version" (
   "support_state" "public"."support_state" not null default cast('supported' as support_state),
   "support_level" "public"."support_level" not null,
   constraint "actor_definition_version_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "actor_definition_version_actor_definition_id_version_key"
+    unique ("actor_definition_id", "docker_image_tag")
 );
 create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
@@ -493,7 +495,6 @@ create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);
 create index "actor_catalog_catalog_hash_id_idx" on "public"."actor_catalog"("catalog_hash" asc);
 create index "actor_catalog_fetch_event_actor_catalog_id_idx" on "public"."actor_catalog_fetch_event"("actor_catalog_id" asc);
 create index "actor_catalog_fetch_event_actor_id_idx" on "public"."actor_catalog_fetch_event"("actor_id" asc);
-create index "actor_definition_version_definition_image_tag_idx" on "public"."actor_definition_version"("actor_definition_id" asc, "docker_image_tag" asc);
 create index "actor_oauth_parameter_workspace_definition_idx" on "public"."actor_oauth_parameter"("workspace_id" asc, "actor_definition_id" asc);
 create index "airbyte_configs_migrations_s_idx" on "public"."airbyte_configs_migrations"("success" asc);
 create index "connection_destination_id_idx" on "public"."connection"("destination_id" asc);
