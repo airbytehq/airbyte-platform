@@ -6,6 +6,7 @@ package io.airbyte.notification;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -22,6 +24,7 @@ import okhttp3.Response;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +57,8 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   private static final String CUSTOMERIO_BASE_URL = "https://api.customer.io/";
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "v1/send/email";
-  private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/campaigns/%s/triggers";
+  private static final String CAMPAIGNS_PATH_SEGMENT = "campaigns";
+  private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/" + CAMPAIGNS_PATH_SEGMENT + "/%s/triggers";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
   private static final String CUSTOMERIO_TYPE = "customerio";
@@ -66,8 +70,10 @@ public class CustomerioNotificationClient extends NotificationClient {
   public CustomerioNotificationClient() {
     final EnvConfigs configs = new EnvConfigs();
     this.apiToken = configs.getCustomerIoKey();
-    this.okHttpClient = new OkHttpClient();
     this.baseUrl = CUSTOMERIO_BASE_URL;
+    this.okHttpClient = new OkHttpClient.Builder()
+        .addInterceptor(new CampaignsRateLimitInterceptor())
+        .build();
   }
 
   @VisibleForTesting
@@ -75,7 +81,36 @@ public class CustomerioNotificationClient extends NotificationClient {
                                       final String baseUrl) {
     this.apiToken = apiToken;
     this.baseUrl = baseUrl;
-    this.okHttpClient = new OkHttpClient();
+    this.okHttpClient = new OkHttpClient.Builder()
+        .addInterceptor(new CampaignsRateLimitInterceptor())
+        .build();
+  }
+
+  /**
+   * Customer.io has a rate limit of 10 requests per second for broadcasts. This interceptor will
+   * sleep for 10 seconds if a broadcast request fails with a 429 error.
+   */
+  static class CampaignsRateLimitInterceptor implements Interceptor {
+
+    @NotNull
+    @Override
+    public Response intercept(@NotNull final Chain chain) throws IOException {
+      final Request request = chain.request();
+      Response response = chain.proceed(request);
+
+      final int maxRetries = 5;
+      int retryCount = 0;
+      while (retryCount < maxRetries && !response.isSuccessful() && response.code() == 429
+          && request.url().pathSegments().contains(CAMPAIGNS_PATH_SEGMENT)) {
+        LOGGER.info("sleeping for 10s due to rate limit hit when sending broadcast...");
+        Exceptions.swallow(() -> Thread.sleep(10000));
+        response = chain.proceed(request);
+        retryCount++;
+      }
+
+      return response;
+    }
+
   }
 
   @Override
@@ -184,7 +219,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, boolean isBreaking)
+  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, final boolean isBreaking)
       throws IOException, InterruptedException {
     throw new NotImplementedException();
   }
