@@ -36,6 +36,5 @@ export interface Experiments {
   "upcomingFeaturesPage.url": string;
   "workspaces.newWorkspacesUI": boolean;
   "settings.accessManagement": boolean;
-  "platform.sunset-fcp": boolean;
   "form.createConnectionHookForm": boolean;
 }

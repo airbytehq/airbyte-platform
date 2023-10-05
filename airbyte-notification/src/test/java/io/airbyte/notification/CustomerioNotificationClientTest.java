@@ -122,6 +122,8 @@ class CustomerioNotificationClientTest {
 
   @Test
   void testNotifyBreakingChangeSyncsDisabled() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
     mockWebServer.enqueue(new MockResponse());
 
     final String connectorName = "MyConnector";

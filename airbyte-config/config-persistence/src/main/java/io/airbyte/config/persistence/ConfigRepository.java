@@ -19,7 +19,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUI
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
@@ -65,6 +64,7 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -235,20 +235,34 @@ public class ConfigRepository {
   @Inject
   private WorkspaceService workspaceService;
 
+  @Inject
+  private OrganizationService organizationService;
+
   @VisibleForTesting
   public ConfigRepository(final Database database,
                           final StandardSyncPersistence standardSyncPersistence,
                           final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier,
-                          final WorkspaceService workspaceService) {
+                          final WorkspaceService workspaceService,
+                          final OrganizationService organizationService) {
     this.database = new ExceptionWrappingDatabase(database);
     this.standardSyncPersistence = standardSyncPersistence;
     this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;
     this.workspaceService = workspaceService;
+    this.organizationService = organizationService;
   }
 
   @VisibleForTesting
-  public ConfigRepository(Database database, Supplier<Long> maxSecondsBetweenMessageSupplier, WorkspaceService workspaceService) {
-    this(database, new StandardSyncPersistence(database), maxSecondsBetweenMessageSupplier, workspaceService);
+  public ConfigRepository(
+                          Database database,
+                          Supplier<Long> maxSecondsBetweenMessageSupplier,
+                          WorkspaceService workspaceService,
+                          OrganizationService organizationService) {
+    this(
+        database,
+        new StandardSyncPersistence(database),
+        maxSecondsBetweenMessageSupplier,
+        workspaceService,
+        organizationService);
   }
 
   /**
@@ -275,13 +289,9 @@ public class ConfigRepository {
    * @return organization, if present.
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
-    final Result<Record> result;
-    result = database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(ORGANIZATION.ID.eq(organizationId))).fetch();
-
-    return result.stream().findFirst().map(DbConverter::buildOrganization);
+    return organizationService.getOrganization(organizationId);
   }
 
   /**
@@ -290,32 +300,9 @@ public class ConfigRepository {
    * @param organization - The configuration of the organization
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public void writeOrganization(final Organization organization) throws IOException {
-    database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ORGANIZATION)
-          .where(ORGANIZATION.ID.eq(organization.getOrganizationId())));
-
-      if (isExistingConfig) {
-        ctx.update(ORGANIZATION)
-            .set(ORGANIZATION.ID, organization.getOrganizationId())
-            .set(ORGANIZATION.NAME, organization.getName())
-            .set(ORGANIZATION.EMAIL, organization.getEmail())
-            .set(ORGANIZATION.UPDATED_AT, timestamp)
-            .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
-            .execute();
-      } else {
-        ctx.insertInto(ORGANIZATION)
-            .set(ORGANIZATION.ID, organization.getOrganizationId())
-            .set(ORGANIZATION.NAME, organization.getName())
-            .set(ORGANIZATION.EMAIL, organization.getEmail())
-            .set(WORKSPACE.CREATED_AT, timestamp)
-            .set(WORKSPACE.UPDATED_AT, timestamp)
-            .execute();
-      }
-      return null;
-    });
+    organizationService.writeOrganization(organization);
   }
 
   /**
@@ -324,17 +311,9 @@ public class ConfigRepository {
    * @return organizations
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public List<Organization> listOrganizations() throws IOException {
-    return listOrganizationQuery(Optional.empty()).toList();
-  }
-
-  private Stream<Organization> listOrganizationQuery(final Optional<UUID> organizationId) throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(organizationId.map(ORGANIZATION.ID::eq).orElse(noCondition()))
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization);
+    return organizationService.listOrganizations();
   }
 
   /**
@@ -344,17 +323,15 @@ public class ConfigRepository {
    * @return A List of organizations objects
    * @throws IOException you never know when you IO
    */
+  @Deprecated
   public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
       throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(ORGANIZATION.ID.in(resourcesByOrganizationQueryPaginated.organizationId()))
-        .limit(resourcesByOrganizationQueryPaginated.pageSize())
-        .offset(resourcesByOrganizationQueryPaginated.rowOffset())
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization)
-        .toList();
+    final var queryPaginated = new io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated(
+        resourcesByOrganizationQueryPaginated.organizationId(),
+        resourcesByOrganizationQueryPaginated.includeDeleted(),
+        resourcesByOrganizationQueryPaginated.pageSize(),
+        resourcesByOrganizationQueryPaginated.rowOffset());
+    return organizationService.listOrganizationsPaginated(queryPaginated);
   }
 
   /**

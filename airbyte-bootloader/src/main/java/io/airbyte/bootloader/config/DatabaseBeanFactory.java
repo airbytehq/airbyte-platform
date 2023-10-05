@@ -9,6 +9,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
@@ -107,8 +108,13 @@ public class DatabaseBeanFactory {
   @Replaces(ConfigRepository.class)
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
                                            final FeatureFlagClient featureFlagClient,
-                                           final WorkspaceService workspaceService) {
-    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient), workspaceService);
+                                           final WorkspaceService workspaceService,
+                                           final OrganizationService organizationService) {
+    return new ConfigRepository(
+        configDatabase,
+        ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
+        workspaceService,
+        organizationService);
   }
 
   @Singleton
