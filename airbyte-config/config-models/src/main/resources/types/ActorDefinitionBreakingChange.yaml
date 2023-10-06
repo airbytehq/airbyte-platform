@@ -26,4 +26,5 @@ properties:
     type: string
     format: date
   message:
+    description: message describing the breaking change, in markdown
     type: string

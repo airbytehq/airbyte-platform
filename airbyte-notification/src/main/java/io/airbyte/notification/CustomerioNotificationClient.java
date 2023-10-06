@@ -12,6 +12,8 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.EnvConfigs;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,6 +26,9 @@ import okhttp3.Response;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,8 +187,8 @@ public class CustomerioNotificationClient extends NotificationClient {
         "connector_name", connectorName,
         "connector_type", actorType.value(),
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_upgrade_deadline", breakingChange.getUpgradeDeadline(),
-        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
+        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
   }
 
@@ -197,7 +202,7 @@ public class CustomerioNotificationClient extends NotificationClient {
         "connector_name", connectorName,
         "connector_type", actorType.value(),
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
   }
 
@@ -219,8 +224,7 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, final boolean isBreaking)
-      throws IOException, InterruptedException {
+  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, final boolean isBreaking) {
     throw new NotImplementedException();
   }
 
@@ -284,6 +288,19 @@ public class CustomerioNotificationClient extends NotificationClient {
   public String renderTemplate(final String templateFile, final String... data) throws IOException {
     final String template = MoreResources.readResource(templateFile);
     return String.format(template, data);
+  }
+
+  private String convertMarkdownToHtml(final String message) {
+    final Parser markdownParser = Parser.builder().build();
+    final Node document = markdownParser.parse(message);
+    final HtmlRenderer renderer = HtmlRenderer.builder().build();
+    return renderer.render(document);
+  }
+
+  private String formatDate(final String dateString) {
+    final LocalDate date = LocalDate.parse(dateString);
+    final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+    return date.format(formatter);
   }
 
 }
