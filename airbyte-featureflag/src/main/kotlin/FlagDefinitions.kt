@@ -65,6 +65,8 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
+object DestinationCallsElapsedTimeTrackingEnabled : Permanent<Boolean>(key = "destination-calls-elapsed-time-tracking-enabled", default = false)
+
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
 object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)

@@ -313,9 +313,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "worker_destination_message_sent",
       "whenever a message is sent to the destination"),
 
+  WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS(MetricEmittingApps.WORKER,
+      "notify_end_of_input_elapsed_time",
+      "milliseconds spent waiting for a destination to notify end of input. Waiting times under 10 minutes are ignored"),
+
   WORKER_SOURCE_BUFFER_SIZE(MetricEmittingApps.WORKER,
       "worker_source_buffer_size",
       "the size of the replication worker source buffer queue"),
+
+  WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS(MetricEmittingApps.WORKER,
+      "accept_elapsed_time",
+      "milliseconds spent waiting for a message to be accepted. Waiting times under 10 minutes are ignored"),
 
   WORKER_SOURCE_MESSAGE_READ(MetricEmittingApps.WORKER,
       "worker_source_message_read",

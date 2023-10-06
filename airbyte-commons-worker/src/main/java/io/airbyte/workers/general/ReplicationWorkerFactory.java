@@ -136,7 +136,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog());
+        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), metricClient, replicationInput, featureFlagClient);
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 

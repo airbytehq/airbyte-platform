@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.internal;
 
+import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS;
+import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -17,6 +20,9 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricsRegistry;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
@@ -30,6 +36,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
@@ -49,10 +58,18 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
       143 // SIGTERM
   );
 
+  private static final int EXECUTOR_SHUTDOWN_GRACE_PERIOD_SECONDS = 10;
+  public static final int EMIT_ELAPSED_TIME_METRIC_INTERVAL_SECONDS = 10 * 60;
+
   private final IntegrationLauncher integrationLauncher;
   private final AirbyteStreamFactory streamFactory;
   private final AirbyteMessageBufferedWriterFactory messageWriterFactory;
   private final ProtocolSerializer protocolSerializer;
+  private final boolean elapsedTimeTrackingEnabled;
+  private final ScheduledExecutorService scheduledExecutor;
+  private final MetricClient metricClient;
+  private final MetricAttribute[] metricAttrs;
+  private final int emitElapsedTimeMetricIntervalSeconds;
 
   private final AtomicBoolean inputHasEnded = new AtomicBoolean(false);
 
@@ -67,17 +84,45 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(LOGGER, CONTAINER_LOG_MDC_BUILDER, Optional.empty(),
             Runtime.getRuntime().maxMemory(), false),
         new DefaultAirbyteMessageBufferedWriterFactory(),
-        new DefaultProtocolSerializer());
+        new DefaultProtocolSerializer(), false, null, null);
+  }
+
+  @VisibleForTesting
+  DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
+                            final AirbyteStreamFactory streamFactory,
+                            final AirbyteMessageBufferedWriterFactory messageWriterFactory,
+                            final ProtocolSerializer protocolSerializer,
+                            final boolean elapsedTimeTrackingEnabled,
+                            final MetricClient metricClient,
+                            final MetricAttribute[] metricAttrs,
+                            final int emitElapsedTimeMetricIntervalSeconds) {
+    this.integrationLauncher = integrationLauncher;
+    this.streamFactory = streamFactory;
+    this.messageWriterFactory = messageWriterFactory;
+    this.protocolSerializer = protocolSerializer;
+    this.elapsedTimeTrackingEnabled = elapsedTimeTrackingEnabled;
+    this.metricClient = metricClient;
+    this.metricAttrs = metricAttrs;
+    this.emitElapsedTimeMetricIntervalSeconds = emitElapsedTimeMetricIntervalSeconds;
+    this.scheduledExecutor = elapsedTimeTrackingEnabled ? Executors.newSingleThreadScheduledExecutor() : null;
   }
 
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
                                    final AirbyteStreamFactory streamFactory,
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
-                                   final ProtocolSerializer protocolSerializer) {
-    this.integrationLauncher = integrationLauncher;
-    this.streamFactory = streamFactory;
-    this.messageWriterFactory = messageWriterFactory;
-    this.protocolSerializer = protocolSerializer;
+                                   final ProtocolSerializer protocolSerializer,
+                                   final boolean elapsedTimeTrackingEnabled,
+                                   final MetricClient metricClient,
+                                   final MetricAttribute[] metricAttrs) {
+    this(
+        integrationLauncher,
+        streamFactory,
+        messageWriterFactory,
+        protocolSerializer,
+        elapsedTimeTrackingEnabled,
+        metricClient,
+        metricAttrs,
+        EMIT_ELAPSED_TIME_METRIC_INTERVAL_SECONDS);
   }
 
   @Override
@@ -104,6 +149,17 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void accept(final AirbyteMessage message) throws IOException {
+    if (elapsedTimeTrackingEnabled) {
+      final ScheduledFuture<?> scheduledFuture = emitAcceptElapsedTimeMetricOnInterval();
+      acceptWithoutTrackingElapsedTime(message);
+      scheduledFuture.cancel(true);
+    } else {
+      acceptWithoutTrackingElapsedTime(message);
+    }
+  }
+
+  @VisibleForTesting
+  void acceptWithoutTrackingElapsedTime(final AirbyteMessage message) throws IOException {
     Preconditions.checkState(destinationProcess != null && !inputHasEnded.get());
 
     writer.write(message);
@@ -111,6 +167,17 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void notifyEndOfInput() throws IOException {
+    if (elapsedTimeTrackingEnabled) {
+      final ScheduledFuture<?> scheduledFuture = emitNotifyEndOfInputElapsedTimeMetricOnInterval();
+      notifyEndOfInputWithoutTrackingElapsedTime();
+      scheduledFuture.cancel(true);
+    } else {
+      notifyEndOfInputWithoutTrackingElapsedTime();
+    }
+  }
+
+  @VisibleForTesting
+  void notifyEndOfInputWithoutTrackingElapsedTime() throws IOException {
     Preconditions.checkState(destinationProcess != null && !inputHasEnded.get());
 
     writer.flush();
@@ -127,6 +194,20 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
     if (!inputHasEnded.get()) {
       notifyEndOfInput();
+    }
+
+    if (elapsedTimeTrackingEnabled) {
+      scheduledExecutor.shutdownNow();
+
+      try {
+        scheduledExecutor.awaitTermination(EXECUTOR_SHUTDOWN_GRACE_PERIOD_SECONDS, TimeUnit.SECONDS);
+        if (!scheduledExecutor.isTerminated()) {
+          LOGGER.error("Failed to shutdown scheduled executor");
+        }
+      } catch (final InterruptedException e) {
+        // Preserve the interrupt status
+        Thread.currentThread().interrupt();
+      }
     }
 
     LOGGER.debug("Closing destination process");
@@ -178,6 +259,23 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
     Preconditions.checkState(destinationProcess != null);
 
     return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
+  }
+
+  public ScheduledFuture<?> emitNotifyEndOfInputElapsedTimeMetricOnInterval() {
+    return emitMetricOnInterval(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS);
+  }
+
+  public ScheduledFuture<?> emitAcceptElapsedTimeMetricOnInterval() {
+    return emitMetricOnInterval(WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS);
+  }
+
+  private ScheduledFuture<?> emitMetricOnInterval(final MetricsRegistry metric) {
+    final long startTime = System.currentTimeMillis();
+
+    return scheduledExecutor.scheduleAtFixedRate(() -> metricClient.gauge(
+        metric,
+        System.currentTimeMillis() - startTime,
+        metricAttrs), emitElapsedTimeMetricIntervalSeconds, emitElapsedTimeMetricIntervalSeconds, TimeUnit.SECONDS);
   }
 
 }
