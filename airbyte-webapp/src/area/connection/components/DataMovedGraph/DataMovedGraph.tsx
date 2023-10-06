@@ -4,6 +4,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Box } from "components/ui/Box";
 
 import styles from "./DataMovedGraph.module.scss";
+import { tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
 
 const sampleData: Array<{ date: number; bytes: number }> = [];
 for (let i = 1; i <= 30; i++) {
@@ -14,15 +15,12 @@ export const DataMovedGraph: React.FC = () => {
   return (
     <ResponsiveContainer width="100%" height={100}>
       <BarChart data={sampleData}>
-        <XAxis
-          style={{ fontSize: "10px" }}
-          type="category"
-          dataKey="date"
-          stroke={styles.graphColor}
-          tickFormatter={(x) => new Date(x).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-        />
+        <XAxis dataKey="date" {...xAxisConfig} />
+
+        <Bar dataKey="bytes" fill={xAxisConfig.stroke} isAnimationActive={false} />
+
         <Tooltip
-          cursor={{ fill: styles.chartHoverFill }}
+          cursor={{ fill: styles.chartHoverFill, opacity: 0.65 }}
           labelStyle={{ color: styles.tooltipLabelColor }}
           itemStyle={{ color: styles.tooltipItemColor }}
           wrapperClassName={styles.tooltipWrapper}
@@ -40,8 +38,8 @@ export const DataMovedGraph: React.FC = () => {
               undefined,
             ] as unknown as [number, string];
           }}
+          {...tooltipConfig}
         />
-        <Bar dataKey="bytes" fill={styles.graphColor} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -17,7 +17,6 @@ import { Text } from "components/ui/Text";
 import { ConnectionStatus } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
@@ -105,49 +104,44 @@ export const StreamsList = () => {
   const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
 
   return (
-    <>
-      <Box mb="md">
-        <ConnectionStatusCard />
-      </Box>
-      <Card
-        title={
-          <FlexContainer justifyContent="space-between" alignItems="center">
-            <FormattedMessage id="connection.stream.status.title" />
-            <StreamSearchFiltering className={styles.search} />
-          </FlexContainer>
-        }
-      >
-        <FlexContainer direction="column" gap="sm">
-          <div className={styles.tableContainer} data-survey="streamcentric">
-            <Table
-              columns={columns}
-              data={streamEntries}
-              variant="inBlock"
-              className={styles.table}
-              getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
-              sorting={false}
-            />
-
-            {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
-            {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
-              <Box m="lg">
-                <Message
-                  text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
-                  actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
-                  type="info"
-                  onAction={() => {
-                    updateConnection({
-                      connectionId: connection.connectionId,
-                      status: ConnectionStatus.active,
-                    });
-                  }}
-                  actionBtnProps={connectionUpdating ? { disabled: true } : {}}
-                />
-              </Box>
-            )}
-          </div>
+    <Card
+      title={
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <FormattedMessage id="connection.stream.status.title" />
+          <StreamSearchFiltering className={styles.search} />
         </FlexContainer>
-      </Card>
-    </>
+      }
+    >
+      <FlexContainer direction="column" gap="sm">
+        <div className={styles.tableContainer} data-survey="streamcentric">
+          <Table
+            columns={columns}
+            data={streamEntries}
+            variant="inBlock"
+            className={styles.table}
+            getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
+            sorting={false}
+          />
+
+          {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
+          {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
+            <Box m="lg">
+              <Message
+                text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
+                actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
+                type="info"
+                onAction={() => {
+                  updateConnection({
+                    connectionId: connection.connectionId,
+                    status: ConnectionStatus.active,
+                  });
+                }}
+                actionBtnProps={connectionUpdating ? { disabled: true } : {}}
+              />
+            </Box>
+          )}
+        </div>
+      </FlexContainer>
+    </Card>
   );
 };

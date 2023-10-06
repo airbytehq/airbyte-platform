@@ -1,4 +1,4 @@
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ResponsiveContainer, Tooltip, XAxis } from "recharts";
 // these are not worth typing
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -10,9 +10,12 @@ import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
 import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
 
+import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+
 import styles from "./UptimeStatusGraph.module.scss";
 import { UptimeStatusGraphTooltip } from "./UptimeStatusGraphTooltip";
 import { UptimeDayEntry, Waffle } from "./WaffleChart";
+import { tooltipConfig, xAxisConfig } from "../HistoricalOverview/ChartConfig";
 
 // Build placeholder data
 const STREAMS_COUNT = 20;
@@ -59,30 +62,23 @@ const StreamChart = generateCategoricalChart({
 
 // wrapped in memo to avoid redrawing the chart when the component tree re-renders
 export const UptimeStatusGraph: React.FC = React.memo(() => {
-  const chartRef = useRef<typeof ResponsiveContainer>();
   const [colorMap, setColorMap] = useState<Record<string, string>>({});
 
+  const { colorValues } = useAirbyteTheme();
+
   useEffect(() => {
-    // nested currents as ResponsiveContainer's ref is itself a ref 🤦🏻‍♂️
-    // https://github.com/recharts/recharts/blob/1346e7123922b6427186ae13d4b0d36b076bc371/src/component/ResponsiveContainer.tsx#L73-L74
-    const wrapperDiv = (chartRef as unknown as MutableRefObject<MutableRefObject<HTMLDivElement>>).current?.current;
-    if (wrapperDiv) {
-      const style = window.getComputedStyle(wrapperDiv);
-      const extractVariableNameFromCssVar = /^var\((.*)\)$/;
-      const colorMap: Record<string, string> = {
-        green: style.getPropertyValue(styles.greenVar.replace(extractVariableNameFromCssVar, "$1")),
-        darkBlue: style.getPropertyValue(styles.darkBlueVar.replace(extractVariableNameFromCssVar, "$1")),
-        red: style.getPropertyValue(styles.redVar.replace(extractVariableNameFromCssVar, "$1")),
-        black: style.getPropertyValue(styles.blackVar.replace(extractVariableNameFromCssVar, "$1")),
-        empty: style.getPropertyValue(styles.emptyVar.replace(extractVariableNameFromCssVar, "$1")),
-      };
-      setColorMap(colorMap);
-    }
-  }, []);
+    const colorMap: Record<string, string> = {
+      green: colorValues[styles.greenVar],
+      darkBlue: colorValues[styles.darkBlueVar],
+      red: colorValues[styles.redVar],
+      black: colorValues[styles.blackVar],
+      empty: colorValues[styles.emptyVar],
+    };
+    setColorMap(colorMap);
+  }, [colorValues]);
 
   return (
     <ResponsiveContainer
-      ref={chartRef}
       width="100%"
       height={Math.max(
         CHART_MIN_HEIGHT,
@@ -98,25 +94,13 @@ export const UptimeStatusGraph: React.FC = React.memo(() => {
           />
         )}
 
-        <XAxis
-          domain={["dataMin - 43200000", "dataMax + 43200000"]} // add 12 hours to each side of the chart to avoid trimming the first and last column widths
-          tickCount={6}
-          interval="preserveStartEnd"
-          style={{ fontSize: "10px" }}
-          type="number"
-          dataKey="date"
-          stroke={styles.labelColor}
-          tickFormatter={(x) => new Date(x).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-        />
+        <XAxis dataKey="date" {...xAxisConfig} />
 
         <Tooltip
-          animationDuration={300}
-          animationEasing="ease-out"
-          allowEscapeViewBox={{ x: false, y: true }}
           wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}
-          offset={0}
           content={UptimeStatusGraphTooltip}
-          cursor={false}
+          cursor={false /* Waffle handles the cursor rendering */}
+          {...tooltipConfig}
         />
       </StreamChart>
     </ResponsiveContainer>
