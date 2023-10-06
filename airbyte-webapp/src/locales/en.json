@@ -832,6 +832,7 @@
   "connector.connectorsInDevelopment.docLink": "See our <lnk>documentation</lnk> for more details.",
   "connector.setupGuide": "Setup Guide",
   "connector.setupGuide.notFound": "No Setup Guide found for this connector.",
+  "connector.setupGuide.fullDocs": "Open full docs",
   "connector.optionsHeader": "Options",
   "connector.exampleValues": "Example {count, plural, one {value} other {values}}",
   "connector.oauthCredentialsMissing": "OAuth login is temporarily unavailable for this connector. Please try again later.",

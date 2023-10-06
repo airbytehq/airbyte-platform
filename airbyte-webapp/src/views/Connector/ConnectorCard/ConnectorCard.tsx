@@ -91,8 +91,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
 
-  const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
-    useDocumentationPanelContext();
+  const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -127,14 +126,12 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       return;
     }
 
-    setDocumentationUrl(selectedConnectorDefinition?.documentationUrl ?? "");
     setDocumentationPanelOpen(true);
     setSelectedConnectorDefinition(selectedConnectorDefinition);
   }, [
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition,
     setDocumentationPanelOpen,
-    setDocumentationUrl,
     setSelectedConnectorDefinition,
   ]);
 
