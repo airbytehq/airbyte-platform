@@ -6456,6 +6456,10 @@ components:
         - authProvider
         - email
       properties:
+        userId:
+          description: User ID. This is a temporary and optional field just for dual write purpose during the data migration.
+          type: string
+          format: uuid
         name:
           description: Caption name for the user
           type: string
