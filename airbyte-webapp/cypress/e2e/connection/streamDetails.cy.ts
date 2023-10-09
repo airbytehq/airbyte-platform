@@ -153,8 +153,14 @@ describe("Connection - Stream details", () => {
       columnsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       columnsStreamRow.showStreamDetails();
 
-      streamDetails.selectCursor("field_49");
-      streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
+      streamDetails.scrollToBottom().then(() => {
+        streamDetails.selectCursor("field_49");
+      });
+
+      streamDetails.scrollToTop().then(() => {
+        streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
+      });
+
       streamDetails.close();
       columnsStreamRow.verifyCursor("field_0");
     });

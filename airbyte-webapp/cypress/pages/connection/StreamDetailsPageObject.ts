@@ -82,6 +82,14 @@ export class StreamDetailsPageObject {
     cy.get(streamDetailsPanel).should("not.exist");
   }
 
+  scrollToBottom() {
+    return cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+  }
+
+  scrollToTop() {
+    return cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+  }
+
   enableSyncStream() {
     cy.get(syncStreamSwitch).check({ force: true });
   }
@@ -145,7 +153,7 @@ export class StreamDetailsPageObject {
 
   selectCursor(fieldName: string) {
     getRowByFieldName(fieldName).within(() => {
-      cy.get(cursorRadioButton).parent().click();
+      cy.get(cursorRadioButton).parent().click({ scrollBehavior: false });
       cy.get(cursorRadioButton).should("be.checked");
     });
   }
