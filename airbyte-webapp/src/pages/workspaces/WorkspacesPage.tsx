@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
@@ -5,6 +6,7 @@ import { useDebounce } from "react-use";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
 import { Box } from "components/ui/Box";
+import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
@@ -15,6 +17,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCreateWorkspace, useListWorkspacesInfinite } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useAuthService } from "core/services/auth";
 
 import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
@@ -23,6 +26,7 @@ import styles from "./WorkspacesPage.module.scss";
 export const WORKSPACE_LIST_LENGTH = 50;
 
 const WorkspacesPage: React.FC = () => {
+  const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
 
@@ -37,6 +41,7 @@ const WorkspacesPage: React.FC = () => {
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
   const { mutateAsync: createWorkspace } = useCreateWorkspace();
+  const { logout } = useAuthService();
 
   useDebounce(
     () => {
@@ -50,7 +55,14 @@ const WorkspacesPage: React.FC = () => {
     <>
       <HeadTitle titles={[{ id: "workspaces.title" }]} />
       <Box px="lg" className={styles.brandingHeader}>
-        <AirbyteLogo width={110} />
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <AirbyteLogo width={110} />
+          {logout && (
+            <Button variant="clear" onClick={() => handleLogout()} isLoading={isLoading}>
+              <FormattedMessage id="settings.accountSettings.logoutText" />
+            </Button>
+          )}
+        </FlexContainer>
       </Box>
       <PageHeader
         leftComponent={
