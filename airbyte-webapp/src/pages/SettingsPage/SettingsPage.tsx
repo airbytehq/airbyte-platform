@@ -14,7 +14,6 @@ import { GeneralWorkspaceSettingsPage } from "./GeneralWorkspaceSettingsPage";
 import { OrganizationAccessManagementPage } from "./pages/AccessManagementPage/OrganizationAccessManagementPage";
 import { WorkspaceAccessManagementPage } from "./pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import { AccountPage } from "./pages/AccountPage";
-import { ConfigurationsPage } from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
 import { MetricsPage } from "./pages/MetricsPage";
 
@@ -55,23 +54,22 @@ export const SettingsPage: React.FC = () => {
                         },
                       ]
                     : []),
-                  {
-                    path: `${SettingsRoutePaths.Source}`,
-                    name: <FormattedMessage id="tables.sources" />,
-                    indicatorCount: countNewSourceVersion,
-                    component: SourcesPage,
-                  },
-                  {
-                    path: `${SettingsRoutePaths.Destination}`,
-                    name: <FormattedMessage id="tables.destinations" />,
-                    indicatorCount: countNewDestinationVersion,
-                    component: DestinationsPage,
-                  },
-                  {
-                    path: `${SettingsRoutePaths.Configuration}`,
-                    name: <FormattedMessage id="admin.configuration" />,
-                    component: ConfigurationsPage,
-                  },
+                  ...(!newWorkspacesUI
+                    ? [
+                        {
+                          path: `${SettingsRoutePaths.Source}`,
+                          name: <FormattedMessage id="tables.sources" />,
+                          indicatorCount: countNewSourceVersion,
+                          component: SourcesPage,
+                        },
+                        {
+                          path: `${SettingsRoutePaths.Destination}`,
+                          name: <FormattedMessage id="tables.destinations" />,
+                          indicatorCount: countNewDestinationVersion,
+                          component: DestinationsPage,
+                        },
+                      ]
+                    : []),
                   {
                     path: `${SettingsRoutePaths.Notifications}`,
                     name: <FormattedMessage id="settings.notifications" />,
@@ -114,6 +112,27 @@ export const SettingsPage: React.FC = () => {
                         },
                       ]
                     : []),
+                ],
+              },
+            ]
+          : []),
+        ...(newWorkspacesUI
+          ? [
+              {
+                category: <FormattedMessage id="settings.instanceSettings" />,
+                routes: [
+                  {
+                    path: `${SettingsRoutePaths.Source}`,
+                    name: <FormattedMessage id="tables.sources" />,
+                    indicatorCount: countNewSourceVersion,
+                    component: SourcesPage,
+                  },
+                  {
+                    path: `${SettingsRoutePaths.Destination}`,
+                    name: <FormattedMessage id="tables.destinations" />,
+                    indicatorCount: countNewDestinationVersion,
+                    component: DestinationsPage,
+                  },
                 ],
               },
             ]

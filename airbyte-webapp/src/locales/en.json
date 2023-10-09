@@ -715,6 +715,7 @@
 
   "settings.userSettings": "User settings",
   "settings.workspaceSettings": "Workspace settings",
+  "settings.instanceSettings": "Instance settings",
   "settings.workspaceSettings.updateWorkspaceNameSuccess": "Workspace name has been updated!",
   "settings.workspaceSettings.updateWorkspaceNameError": "Something went wrong while updating your workspace name. Please try again.",
   "settings.workspaceSettings.updateWorkspaceNameForm.name.label": "Workspace name",
