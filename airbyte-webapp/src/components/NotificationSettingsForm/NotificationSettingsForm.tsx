@@ -1,5 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
+import React from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
@@ -8,7 +9,6 @@ import { SchemaOf } from "yup";
 import { FormDevTools } from "components/forms/FormDevTools";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
-import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
@@ -36,7 +36,7 @@ interface NotificationSettingsFormProps {
 export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> = ({ updateNotificationSettings }) => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
   const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications", false);
-  const { notificationSettings, email } = useCurrentWorkspace();
+  const { notificationSettings } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();
   const { formatMessage } = useIntl();
@@ -122,68 +122,61 @@ export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> =
   };
 
   return (
-    <Card title="Notification settings">
-      <Box p="xl">
-        <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)} data-testid="notification-settings-form">
-            <FormDevTools />
-            <Box mb="xl">
-              <Text>
-                <FormattedMessage id="settings.notifications.description" />
-                {emailNotificationsFeatureEnabled && (
-                  <FormattedMessage id="settings.notifications.emailRecipient" values={{ email }} />
-                )}
-              </Text>
-            </Box>
-            <Box
-              mb="md"
-              className={classNames(styles.inputGrid, {
-                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
-              })}
-            >
-              <span />
-              {emailNotificationsFeatureEnabled && (
-                <Text align="center" color="grey">
-                  <FormattedMessage id="settings.notifications.email" />
-                </Text>
-              )}
-              <Text align="center" color="grey">
-                <FormattedMessage id="settings.notifications.webhook" />
-              </Text>
-              <Text color="grey">
-                <FormattedMessage id="settings.notifications.webhookUrl" />
-              </Text>
-              <span />
-            </Box>
-            <div
-              className={classNames(styles.inputGrid, {
-                [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
-              })}
-            >
-              <NotificationItemField name="sendOnFailure" />
-              <NotificationItemField name="sendOnSuccess" />
-              <NotificationItemField name="sendOnConnectionUpdate" />
-              <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
-              <NotificationItemField name="sendOnSyncDisabledWarning" />
-              <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
-              {breakingChangeNotificationsExperimentEnabled && (
-                <>
-                  <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
-                  <NotificationItemField
-                    name="sendOnBreakingChangeSyncsDisabled"
-                    emailNotificationRequired
-                    slackNotificationUnsupported
-                  />
-                </>
-              )}
-            </div>
-            <Box mt="lg">
-              <FormSubmissionButtons submitKey="form.saveChanges" />
-            </Box>
-          </form>
-        </FormProvider>
-      </Box>
-    </Card>
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(onSubmit)} data-testid="notification-settings-form">
+        <FormDevTools />
+        <Box mb="xl">
+          <Text>
+            <FormattedMessage id="settings.notifications.description" />
+          </Text>
+        </Box>
+        <Box
+          mb="md"
+          className={classNames(styles.inputGrid, {
+            [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
+          })}
+        >
+          <span />
+          {emailNotificationsFeatureEnabled && (
+            <Text align="center" color="grey">
+              <FormattedMessage id="settings.notifications.email" />
+            </Text>
+          )}
+          <Text align="center" color="grey">
+            <FormattedMessage id="settings.notifications.webhook" />
+          </Text>
+          <Text color="grey">
+            <FormattedMessage id="settings.notifications.webhookUrl" />
+          </Text>
+          <span />
+        </Box>
+        <div
+          className={classNames(styles.inputGrid, {
+            [styles["inputGrid--withoutEmail"]]: !emailNotificationsFeatureEnabled,
+          })}
+        >
+          <NotificationItemField name="sendOnFailure" />
+          <NotificationItemField name="sendOnSuccess" />
+          <NotificationItemField name="sendOnConnectionUpdate" />
+          <NotificationItemField name="sendOnConnectionUpdateActionRequired" emailNotificationRequired />
+          <NotificationItemField name="sendOnSyncDisabledWarning" />
+          <NotificationItemField name="sendOnSyncDisabled" emailNotificationRequired />
+          {breakingChangeNotificationsExperimentEnabled && (
+            <>
+              <NotificationItemField name="sendOnBreakingChangeWarning" slackNotificationUnsupported />
+              <NotificationItemField
+                name="sendOnBreakingChangeSyncsDisabled"
+                emailNotificationRequired
+                slackNotificationUnsupported
+              />
+            </>
+          )}
+        </div>
+        <Box mt="lg">
+          <FormSubmissionButtons submitKey="form.saveChanges" />
+        </Box>
+      </form>
+    </FormProvider>
   );
 };
 
