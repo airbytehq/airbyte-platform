@@ -5,9 +5,8 @@ import * as yup from "yup";
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
 import { useNotificationService } from "hooks/services/Notification";
-import useWorkspace from "hooks/services/useWorkspace";
 
 const ACCOUNT_UPDATE_NOTIFICATION_ID = "account-update-notification";
 
@@ -23,10 +22,10 @@ const AccountForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const workspace = useCurrentWorkspace();
-  const { updatePreferences } = useWorkspace();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
 
   const onSubmit = async (values: AccountFormValues) => {
-    await updatePreferences(values);
+    await updateWorkspace({ workspaceId: workspace.workspaceId, ...values });
   };
 
   useEffect(
