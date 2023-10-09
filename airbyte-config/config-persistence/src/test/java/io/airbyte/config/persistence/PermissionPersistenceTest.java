@@ -17,6 +17,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import org.jooq.exception.DataAccessException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,10 +62,35 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void createPermissionExceptionTest() {
+    // permission_type cannot be null
+    Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(MockData.permission8));
+  }
+
+  @Test
+  void permissionTypeTest() throws IOException {
+    for (final Permission permission : MockData.permissions()) {
+      final Optional<Permission> permissionFromDb = permissionPersistence.getPermission(permission.getPermissionId());
+      if (permission.getPermissionType() == PermissionType.WORKSPACE_OWNER) {
+        Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, permissionFromDb.get().getPermissionType());
+      } else {
+        Assertions.assertEquals(permission.getPermissionType(), permissionFromDb.get().getPermissionType());
+      }
+    }
+  }
+
+  @Test
   void getPermissionByIdTest() throws IOException {
     for (final Permission permission : MockData.permissions()) {
       final Optional<Permission> permissionFromDb = permissionPersistence.getPermission(permission.getPermissionId());
-      Assertions.assertEquals(permission, permissionFromDb.get());
+      Assertions.assertEquals(permission.getPermissionId(), permissionFromDb.get().getPermissionId());
+      Assertions.assertEquals(permission.getOrganizationId(), permissionFromDb.get().getOrganizationId());
+      Assertions.assertEquals(permission.getWorkspaceId(), permissionFromDb.get().getWorkspaceId());
+      Assertions.assertEquals(permission.getUserId(), permissionFromDb.get().getUserId());
+      // permission type "WORKSPACE_OWNER" will be converted into "WORKSPACE_ADMIN"
+      Assertions.assertEquals(
+          permission.getPermissionType() == PermissionType.WORKSPACE_OWNER ? PermissionType.WORKSPACE_ADMIN : permission.getPermissionType(),
+          permissionFromDb.get().getPermissionType());
     }
   }
 

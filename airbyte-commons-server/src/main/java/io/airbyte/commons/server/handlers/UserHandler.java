@@ -43,7 +43,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +116,7 @@ public class UserHandler {
     UserRead userRead = null;
     try {
       userRead = getUserByAuthId(userAuthIdRequestBody);
-    } catch (final NotFoundException e) {
+    } catch (final ConfigNotFoundException e) {
       // This is "expected" if we want to create a new user.
       LOGGER.debug("Unable to find user with auth ID {} and auth provider {}.", userAuthIdRequestBody.getAuthUserId(),
           userAuthIdRequestBody.getAuthProvider());
@@ -152,14 +151,15 @@ public class UserHandler {
    * @throws IOException if unable to retrieve the user.
    * @throws JsonValidationException if unable to retrieve the user.
    */
-  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) throws IOException, JsonValidationException {
+  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final User.AuthProvider authProvider =
         Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
     final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
     if (user.isPresent()) {
       return buildUserRead(user.get());
     } else {
-      throw new NotFoundException(String.format("User not found %s", userAuthIdRequestBody));
+      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
     }
   }
 

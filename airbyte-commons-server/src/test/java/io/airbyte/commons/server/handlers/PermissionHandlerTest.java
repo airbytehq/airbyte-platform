@@ -13,9 +13,7 @@ import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +35,7 @@ class PermissionHandlerTest {
       .withPermissionId(permissionId)
       .withUserId(userId)
       .withWorkspaceId(workspaceId)
-      .withPermissionType(PermissionType.WORKSPACE_OWNER);
+      .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
   @BeforeEach
   void setUp() {
@@ -47,7 +45,7 @@ class PermissionHandlerTest {
   }
 
   @Test
-  void testCreatePermission() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testCreatePermission() throws IOException {
     final List<Permission> existingPermissions = List.of();
     when(permissionPersistence.listPermissionsByUser(any())).thenReturn(existingPermissions);
     when(uuidSupplier.get()).thenReturn(permissionId);
@@ -59,7 +57,7 @@ class PermissionHandlerTest {
     final PermissionRead actualRead = permissionHandler.createPermission(permissionCreate);
     final PermissionRead expectedRead = new PermissionRead()
         .permissionId(permissionId)
-        .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_OWNER)
+        .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
         .userId(userId)
         .workspaceId(workspaceId);
 
