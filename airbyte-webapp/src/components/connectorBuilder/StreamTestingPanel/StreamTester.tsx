@@ -1,5 +1,5 @@
 import partition from "lodash/partition";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -63,14 +63,13 @@ export const StreamTester: React.FC<{
 
   const analyticsService = useAnalyticsService();
 
-  const [logsFlex, setLogsFlex] = useState(0);
-
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const errorMessage = isError
     ? error instanceof Error
       ? error.message || unknownErrorMessage
       : unknownErrorMessage
     : undefined;
+
   const errorExceptionStack = (resolveError as CommonRequestError<KnownExceptionInfo>)?.payload?.exceptionStack;
 
   const [errorLogs, nonErrorLogs] = useMemo(
@@ -81,13 +80,12 @@ export const StreamTester: React.FC<{
     [streamReadData]
   );
 
-  useEffect(() => {
-    if (isError || errorLogs.length > 0) {
-      setLogsFlex(0.75);
-    } else {
-      setLogsFlex(0);
-    }
-  }, [isError, errorLogs]);
+  const hasAuxiliaryRequests = auxiliaryRequests && auxiliaryRequests.length > 0;
+  const hasRegularRequests =
+    streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
+
+  const logsFlex = isError || errorLogs.length > 0 ? 0.75 : 0;
+  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? 0.75 : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -191,12 +189,9 @@ export const StreamTester: React.FC<{
             {
               children: (
                 <>
-                  {streamReadData !== undefined &&
-                    !isError &&
-                    streamReadData.slices &&
-                    streamReadData.slices.length > 0 && (
-                      <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
-                    )}
+                  {hasRegularRequests && (
+                    <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
+                  )}
                 </>
               ),
               minWidth: 40,
@@ -212,12 +207,12 @@ export const StreamTester: React.FC<{
                   },
                 ]
               : []),
-            ...(auxiliaryRequests && auxiliaryRequests.length > 0
+            ...(hasAuxiliaryRequests
               ? [
                   {
                     children: <GlobalRequestsDisplay requests={auxiliaryRequests} />,
                     minWidth: 0,
-                    flex: 0,
+                    flex: auxiliaryRequestsFlex,
                     splitter: (
                       <Splitter
                         label={formatMessage({ id: "connectorBuilder.auxiliaryRequests" })}
