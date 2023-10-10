@@ -872,6 +872,7 @@
   "credits.talkToSales": "Talk to Sales",
   "credits.remainingCredits": "Remaining credits",
   "credits.creditUsage": "Credit Usage",
+  "credits.autoRechargeEnabled": "Credits will automatically be added when they run low. <contact>Contact us</contact> to change this behavior.",
 
   "docs.notFoundError": "We were not able to receive docs. Please click the link above to open docs on our website",
   "errorView.notFound": "Resource not found.",

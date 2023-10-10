@@ -12,6 +12,7 @@ export interface Experiments {
   "authPage.signup.hideName": boolean;
   "autopropagation.enabled": boolean;
   "billing.newTrialPolicy": boolean;
+  "billing.autoRecharge": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
