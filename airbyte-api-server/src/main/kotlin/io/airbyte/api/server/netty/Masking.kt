@@ -34,7 +34,7 @@ private val FIELDS_TO_MASK = Stream.of(
   .flatMap { x: List<String> -> x.stream() }
   .collect(Collectors.toList())
 
-private val HEADERS_TO_MASK = listOf("Authorization")
+private val HEADERS_TO_MASK = listOf("Authorization", "X-Endpoint-API-UserInfo")
 
 const val defaultMask = "__masked__"
 val fieldStringMasks = FIELDS_TO_MASK.associate { field -> field.lowercase() to defaultMask }.toMap()
