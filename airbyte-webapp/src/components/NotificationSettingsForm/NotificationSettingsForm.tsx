@@ -12,30 +12,23 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
-import {
-  NotificationReadStatus,
-  NotificationSettings,
-  NotificationTrigger,
-  WorkspaceRead,
-} from "core/request/AirbyteClient";
+import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isFulfilled } from "core/utils/promises";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
+import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
 
 import { formValuesToNotificationSettings } from "./formValuesToNotificationSettings";
 import { NotificationItemField } from "./NotificationItemField";
 import styles from "./NotificationSettingsForm.module.scss";
 import { notificationSettingsToFormValues } from "./notificationSettingsToFormValues";
-import { useExperiment } from "../../hooks/services/Experiment";
 
-interface NotificationSettingsFormProps {
-  updateNotificationSettings: (notificationSettings: NotificationSettings) => Promise<WorkspaceRead>;
-}
-
-export const NotificationSettingsForm: React.FC<NotificationSettingsFormProps> = ({ updateNotificationSettings }) => {
+export const NotificationSettingsForm: React.FC = () => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
   const breakingChangeNotificationsExperimentEnabled = useExperiment("settings.breakingChangeNotifications", false);
+  const updateNotificationSettings = useUpdateNotificationSettings();
   const { notificationSettings } = useCurrentWorkspace();
   const defaultValues = notificationSettingsToFormValues(notificationSettings);
   const testWebhook = useTryNotificationWebhook();

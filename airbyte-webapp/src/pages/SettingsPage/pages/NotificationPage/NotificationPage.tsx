@@ -10,11 +10,9 @@ import { WorkspaceEmailForm } from "components/WorkspaceEmailForm";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
 
 export const NotificationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_NOTIFICATION);
-  const updateNotificationSettings = useUpdateNotificationSettings();
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
 
   return (
@@ -30,7 +28,7 @@ export const NotificationPage: React.FC = () => {
         )}
         <Card title="Notification settings">
           <Box p="xl">
-            <NotificationSettingsForm updateNotificationSettings={updateNotificationSettings} />
+            <NotificationSettingsForm />
           </Box>
         </Card>
       </FlexContainer>
