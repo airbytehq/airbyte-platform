@@ -12,7 +12,6 @@ dependencies {
     implementation libs.appender.log4j2
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
-    implementation libs.sts
 
     implementation project(':airbyte-commons')
     implementation project(':airbyte-config:config-models')
