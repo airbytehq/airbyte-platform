@@ -12,9 +12,12 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
+import io.airbyte.featureflag.ConnectorApmEnabled;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.helper.ConnectorDatadogSupportHelper;
+import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -47,7 +50,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,8 +117,6 @@ public class KubePodProcess implements KubePod {
   public static final String MAIN_CONTAINER_NAME = "main";
   public static final String INIT_CONTAINER_NAME = "init";
 
-  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
-
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
   private static final String STDOUT_PIPE_FILE = PIPES_DIR + "/stdout";
@@ -145,7 +145,7 @@ public class KubePodProcess implements KubePod {
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
-  private static final ConnectorDatadogSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorDatadogSupportHelper();
+  private static final ConnectorApmSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorApmSupportHelper();
   private final KubernetesClient fabricClient;
   private final Pod podDefinition;
 
@@ -204,7 +204,9 @@ public class KubePodProcess implements KubePod {
         .build();
   }
 
-  private static Container getMain(final String image,
+  private static Container getMain(final FeatureFlagClient featureFlagClient,
+                                   final Context featureFlagContext,
+                                   final String image,
                                    final String imagePullPolicy,
                                    final boolean usesStdin,
                                    final String entrypointOverride,
@@ -237,8 +239,8 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
-    if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null && isSupportDatadog(image)) {
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addDatadogVars(envVars);
+    if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(envVars);
       CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
     }
 
@@ -257,11 +259,6 @@ public class KubePodProcess implements KubePod {
       containerBuilder.withResources(resourceRequirementsBuilder.build());
     }
     return containerBuilder.build();
-  }
-
-  private static boolean isSupportDatadog(final String image) {
-    return Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(","))
-        .anyMatch(connectorNameAndVersion -> CONNECTOR_DATADOG_SUPPORT_HELPER.connectorVersionCompare(connectorNameAndVersion, image));
   }
 
   /**
@@ -393,6 +390,8 @@ public class KubePodProcess implements KubePod {
   @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
   public KubePodProcess(final String processRunnerHost,
                         final KubernetesClient fabricClient,
+                        final FeatureFlagClient featureFlagClient,
+                        final Context featureFlagContext,
                         final String podName,
                         final String namespace,
                         final String serviceAccount,
@@ -532,6 +531,8 @@ public class KubePodProcess implements KubePod {
       // requirements should do.
       final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
       final Container main = getMain(
+          featureFlagClient,
+          featureFlagContext,
           image,
           imagePullPolicy,
           usesStdin,
