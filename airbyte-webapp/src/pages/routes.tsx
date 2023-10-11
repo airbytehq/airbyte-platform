@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
+import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -118,6 +120,11 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 
 export const Routing: React.FC = () => {
   useBuildUpdateCheck();
+  const { search } = useLocation();
+
+  useEffectOnce(() => {
+    storeUtmFromQuery(search);
+  });
 
   // TODO: Remove this after it is verified there are no problems with current routing
   const OldRoutes = useMemo(
