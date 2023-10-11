@@ -32,6 +32,7 @@ dependencies {
     implementation libs.guava
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
+    implementation libs.sts
     implementation libs.kubernetes.client
     implementation libs.bundles.datadog
     implementation libs.bundles.log4j

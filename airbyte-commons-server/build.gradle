@@ -25,6 +25,7 @@ dependencies {
     implementation libs.flyway.core
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
+    implementation libs.sts
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
