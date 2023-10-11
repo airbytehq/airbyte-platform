@@ -7,6 +7,7 @@ package io.airbyte.api.server.constants
 const val SOURCE_TYPE = "sourceType"
 const val DESTINATION_TYPE = "destinationType"
 
+const val ROOT_PATH = "/"
 const val CONNECTIONS_PATH = "/v1/connections"
 const val CONNECTIONS_WITH_ID_PATH = "$CONNECTIONS_PATH/{connectionId}"
 const val STREAMS_PATH = "/v1/streams"
