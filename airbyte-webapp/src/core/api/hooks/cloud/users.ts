@@ -15,7 +15,7 @@ import {
   updateUser,
   webBackendRevokeUserSession,
 } from "../../generated/CloudApi";
-import { UserUpdate, UserCreate, AuthProvider } from "../../types/CloudApi";
+import { UserUpdate, UserCreate } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 
@@ -25,7 +25,7 @@ export const useGetUserService = () => {
   const getByEmail = useCallback((email: string) => getUserByEmail({ email }, requestOptions), [requestOptions]);
 
   const getByAuthId = useCallback(
-    (authUserId: string, authProvider: AuthProvider) => getUserByAuthId({ authProvider, authUserId }, requestOptions),
+    (authUserId: string) => getUserByAuthId({ authUserId }, requestOptions),
     [requestOptions]
   );
 

@@ -55,7 +55,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void getUserByAuthIdTest() throws IOException {
     for (final User user : MockData.users()) {
-      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId(), user.getAuthProvider());
+      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId());
       Assertions.assertEquals(user, userFromDb.get());
     }
   }

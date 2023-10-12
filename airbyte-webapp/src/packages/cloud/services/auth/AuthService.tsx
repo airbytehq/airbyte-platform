@@ -85,7 +85,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   const onAfterAuth = useCallback(
     async (currentUser: FirebaseUser, user?: UserRead) => {
       try {
-        user ??= await userService.getByAuthId(currentUser.uid, AuthProviders.GoogleIdentityPlatform);
+        user ??= await userService.getByAuthId(currentUser.uid);
         loggedIn({
           user,
           emailVerified: currentUser.emailVerified,
@@ -246,7 +246,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         }
 
         if (firebaseUser) {
-          const user = await userService.getByAuthId(firebaseUser.uid, AuthProviders.GoogleIdentityPlatform);
+          const user = await userService.getByAuthId(firebaseUser.uid);
           await userService.update({ userId: user.userId, authUserId: firebaseUser.uid, name, news });
           await onAfterAuth(firebaseUser, { ...user, name });
         }

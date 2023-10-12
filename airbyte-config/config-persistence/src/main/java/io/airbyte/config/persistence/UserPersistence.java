@@ -145,17 +145,15 @@ public class UserPersistence {
    * Fetch user information from their authentication id.
    *
    * @param userAuthId the authentication Identifier of the user
-   * @param authProvider the authentication provider
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-  public Optional<User> getUserByAuthId(final String userAuthId, final User.AuthProvider authProvider) throws IOException {
+  public Optional<User> getUserByAuthId(final String userAuthId) throws IOException {
 
-    final AuthProvider sqlAuthProvider = Enums.toEnum(authProvider.value(), AuthProvider.class).orElseThrow();
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
-        .where(USER.AUTH_USER_ID.eq(userAuthId), USER.AUTH_PROVIDER.eq(sqlAuthProvider)).fetch());
+        .where(USER.AUTH_USER_ID.eq(userAuthId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();

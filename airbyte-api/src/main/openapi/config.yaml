@@ -6441,12 +6441,9 @@ components:
       type: object
       required:
         - authUserId
-        - authProvider
       properties:
         authUserId:
           type: string
-        authProvider:
-          $ref: "#/components/schemas/AuthProvider"
 
     UserCreate:
       type: object
