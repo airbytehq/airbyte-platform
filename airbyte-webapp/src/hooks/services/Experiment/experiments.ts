@@ -35,7 +35,6 @@ export interface Experiments {
   "settings.emailNotifications": boolean;
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
-  "workspaces.newWorkspacesUI": boolean;
   "settings.accessManagement": boolean;
   "form.createConnectionHookForm": boolean;
 }

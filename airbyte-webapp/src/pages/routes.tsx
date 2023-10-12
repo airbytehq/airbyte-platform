@@ -6,8 +6,8 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -133,7 +133,7 @@ export const Routing: React.FC = () => {
     []
   );
 
-  const isNewWorkspacesUIEnabled = useExperiment("workspaces.newWorkspacesUI", false);
+  const isNewWorkspacesUIEnabled = useFeature(FeatureItem.MultiWorkspaceUI);
 
   return (
     <Routes>

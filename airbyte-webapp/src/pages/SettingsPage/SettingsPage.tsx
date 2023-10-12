@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { useCurrentWorkspace } from "core/api";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -20,7 +21,7 @@ import { MetricsPage } from "./pages/MetricsPage";
 export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
-  const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
+  const newWorkspacesUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
   const canListWorkspaceUsers = useIntent("ListWorkspaceMembers", { workspaceId });
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId });
