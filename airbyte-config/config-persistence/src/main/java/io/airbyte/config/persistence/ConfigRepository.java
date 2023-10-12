@@ -233,14 +233,15 @@ public class ConfigRepository {
   private final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier;
 
   @Inject
-  final private WorkspaceService workspaceService;
+  private final WorkspaceService workspaceService;
 
   @Inject
-  final private OrganizationService organizationService;
+  private final OrganizationService organizationService;
 
   @Inject
-  final private OAuthService oAuthService;
+  private final OAuthService oAuthService;
 
+  @SuppressWarnings("ParameterName")
   @VisibleForTesting
   public ConfigRepository(final Database database,
                           final StandardSyncPersistence standardSyncPersistence,
@@ -257,6 +258,7 @@ public class ConfigRepository {
   }
 
   @VisibleForTesting
+  @SuppressWarnings("ParameterName")
   public ConfigRepository(
                           Database database,
                           Supplier<Long> maxSecondsBetweenMessageSupplier,
