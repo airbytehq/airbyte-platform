@@ -203,6 +203,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
           }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
+          LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
           return standardSyncOutput;
         },
         context);
