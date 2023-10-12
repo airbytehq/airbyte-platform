@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: airbyte-api-server
+  executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -15,11 +19,18 @@ micronaut:
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
-    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
+    thread-selection: auto
   http:
     client:
-      read-timeout: ${READ_TIMEOUT:150s}
+      read-timeout: ${READ_TIMEOUT:10m}
       max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
 
 airbyte:
   shutdown:
