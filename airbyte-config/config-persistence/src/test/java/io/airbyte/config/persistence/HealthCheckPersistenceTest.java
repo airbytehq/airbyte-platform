@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.Database;
@@ -31,7 +32,8 @@ class HealthCheckPersistenceTest {
         database,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         new WorkspaceServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database));
   }
 
   @Test

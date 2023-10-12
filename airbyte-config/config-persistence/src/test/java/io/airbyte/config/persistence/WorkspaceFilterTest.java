@@ -12,6 +12,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -118,7 +119,8 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         null,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         new WorkspaceServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database));
   }
 
   @Test

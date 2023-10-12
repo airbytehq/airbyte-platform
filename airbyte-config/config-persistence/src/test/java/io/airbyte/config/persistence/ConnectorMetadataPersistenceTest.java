@@ -25,6 +25,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -68,7 +69,8 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
             mock(StandardSyncPersistence.class),
             MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
             new WorkspaceServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database)));
+            new OrganizationServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database)));
     configRepository.writeStandardWorkspaceNoSecrets(new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
         .withName("default")

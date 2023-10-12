@@ -14,6 +14,7 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -56,7 +57,8 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
         database,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         new WorkspaceServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database));
   }
 
   @Test

@@ -88,6 +88,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   }
 
   @VisibleForTesting
+  @SuppressWarnings("PMD.ArrayIsStoredDirectly")
   DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
                             final AirbyteStreamFactory streamFactory,
                             final AirbyteMessageBufferedWriterFactory messageWriterFactory,
@@ -107,6 +108,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
     this.scheduledExecutor = elapsedTimeTrackingEnabled ? Executors.newSingleThreadScheduledExecutor() : null;
   }
 
+  @SuppressWarnings({"PMD.ArrayIsStoredDirectly", "PMD.UseVarargs"})
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
                                    final AirbyteStreamFactory streamFactory,
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
