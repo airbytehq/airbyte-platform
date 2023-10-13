@@ -275,14 +275,13 @@ public class UserHandler {
     updateUser(userUpdate);
   }
 
-  public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody)
-      throws ConfigNotFoundException, IOException {
+  public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody) throws IOException {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(organizationId);
     return buildOrganizationUserReadList(userPermissions, organizationId);
   }
 
-  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws ConfigNotFoundException, IOException {
+  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(workspaceId);
     return buildWorkspaceUserReadList(userPermissions, workspaceId);
@@ -315,12 +314,14 @@ public class UserHandler {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
 
-    LOGGER.debug("Creating User: " + incomingUser);
-    final UserRead createdUser = createUser(new UserCreate()
+    final UserCreate userCreate = new UserCreate()
         .name(incomingUser.getName())
         .authUserId(userAuthIdRequestBody.getAuthUserId())
         .authProvider(Enums.convertTo(incomingUser.getAuthProvider(), AuthProvider.class))
-        .email(incomingUser.getEmail()));
+        .email(incomingUser.getEmail());
+
+    LOGGER.debug("Creating User: " + userCreate);
+    final UserRead createdUser = createUser(userCreate);
 
     // If new user's email matches the initial user config email, create instance_admin permission for
     // them.
