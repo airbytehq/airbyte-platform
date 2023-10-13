@@ -204,7 +204,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     try {
       return kubernetesClient.pods()
           .inNamespace(pod.getMetadata().getNamespace())
-          .withName(pod.getFullResourceName())
+          .withName(pod.getMetadata().getName())
           .tailingLines(5)
           .getLog()
           .contains(JAVA_OOM_EXCEPTION_STRING);
