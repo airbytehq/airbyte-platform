@@ -33,7 +33,10 @@ dependencies {
 
 airbyte {
     spotless {
-        excludes = ["src/main/resources/seed/oss_registry.json"]
+        excludes = [
+                "src/main/resources/seed/oss_registry.json",
+                "src/main/resources/seed/local_oss_registry.json"
+        ]
     }
 }
 
