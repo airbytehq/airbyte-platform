@@ -9,7 +9,12 @@ export default {
 
 const Template: StoryFn<typeof WorkspaceItem> = (args) => (
   <div style={{ maxWidth: 680 }}>
-    <WorkspaceItem workspaceId={args.workspaceId} workspaceName={args.workspaceName} testId="select-this-workspace" />
+    <WorkspaceItem
+      workspaceId={args.workspaceId}
+      workspaceName={args.workspaceName}
+      testId="select-this-workspace"
+      ref={null}
+    />
   </div>
 );
 

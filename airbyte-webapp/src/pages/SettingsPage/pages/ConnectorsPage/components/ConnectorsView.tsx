@@ -99,7 +99,6 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
             custom={props.row.original.custom}
             id={Connector.id(props.row.original)}
             type={type}
-            releaseStage={props.row.original.releaseStage}
           />
         ),
       }),

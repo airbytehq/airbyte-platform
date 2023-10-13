@@ -134,6 +134,7 @@ public class Asserts {
     }
   }
 
+  @SuppressWarnings("PMD.ForLoopCanBeForeach")
   private static boolean recordIsContainedIn(JsonNode sourceStreamRecord, final List<JsonNode> destinationRecords) {
     // NOTE: I would expect the simple `equals` method to do this deep comparison, but it didn't seem to
     // be working, so this is a short-term workaround.

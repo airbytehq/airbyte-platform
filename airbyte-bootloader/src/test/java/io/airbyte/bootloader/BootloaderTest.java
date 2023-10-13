@@ -26,6 +26,8 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
@@ -80,7 +82,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.24.003";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.24.005";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -128,7 +130,9 @@ class BootloaderTest {
     val configRepository = new ConfigRepository(
         configDatabase,
         ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
-        new WorkspaceServiceJooqImpl(configDatabase));
+        new WorkspaceServiceJooqImpl(configDatabase),
+        new OrganizationServiceJooqImpl(configDatabase),
+        new OAuthServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -192,7 +196,9 @@ class BootloaderTest {
     val configRepository = new ConfigRepository(
         configDatabase,
         ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
-        new WorkspaceServiceJooqImpl(configDatabase));
+        new WorkspaceServiceJooqImpl(configDatabase),
+        new OrganizationServiceJooqImpl(configDatabase),
+        new OAuthServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -289,7 +295,9 @@ class BootloaderTest {
     val configRepository = new ConfigRepository(
         configDatabase,
         ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
-        new WorkspaceServiceJooqImpl(configDatabase));
+        new WorkspaceServiceJooqImpl(configDatabase),
+        new OrganizationServiceJooqImpl(configDatabase),
+        new OAuthServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));

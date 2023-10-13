@@ -12,14 +12,12 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
@@ -65,6 +63,8 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -233,22 +233,45 @@ public class ConfigRepository {
   private final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier;
 
   @Inject
-  private WorkspaceService workspaceService;
+  private final WorkspaceService workspaceService;
 
+  @Inject
+  private final OrganizationService organizationService;
+
+  @Inject
+  private final OAuthService oAuthService;
+
+  @SuppressWarnings("ParameterName")
   @VisibleForTesting
   public ConfigRepository(final Database database,
                           final StandardSyncPersistence standardSyncPersistence,
                           final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier,
-                          final WorkspaceService workspaceService) {
+                          final WorkspaceService workspaceService,
+                          final OrganizationService organizationService,
+                          final OAuthService oAuthService) {
     this.database = new ExceptionWrappingDatabase(database);
     this.standardSyncPersistence = standardSyncPersistence;
     this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;
     this.workspaceService = workspaceService;
+    this.organizationService = organizationService;
+    this.oAuthService = oAuthService;
   }
 
   @VisibleForTesting
-  public ConfigRepository(Database database, Supplier<Long> maxSecondsBetweenMessageSupplier, WorkspaceService workspaceService) {
-    this(database, new StandardSyncPersistence(database), maxSecondsBetweenMessageSupplier, workspaceService);
+  @SuppressWarnings("ParameterName")
+  public ConfigRepository(
+                          Database database,
+                          Supplier<Long> maxSecondsBetweenMessageSupplier,
+                          WorkspaceService workspaceService,
+                          OrganizationService organizationService,
+                          OAuthService oAuthService) {
+    this(
+        database,
+        new StandardSyncPersistence(database),
+        maxSecondsBetweenMessageSupplier,
+        workspaceService,
+        organizationService,
+        oAuthService);
   }
 
   /**
@@ -275,13 +298,9 @@ public class ConfigRepository {
    * @return organization, if present.
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
-    final Result<Record> result;
-    result = database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(ORGANIZATION.ID.eq(organizationId))).fetch();
-
-    return result.stream().findFirst().map(DbConverter::buildOrganization);
+    return organizationService.getOrganization(organizationId);
   }
 
   /**
@@ -290,32 +309,9 @@ public class ConfigRepository {
    * @param organization - The configuration of the organization
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public void writeOrganization(final Organization organization) throws IOException {
-    database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ORGANIZATION)
-          .where(ORGANIZATION.ID.eq(organization.getOrganizationId())));
-
-      if (isExistingConfig) {
-        ctx.update(ORGANIZATION)
-            .set(ORGANIZATION.ID, organization.getOrganizationId())
-            .set(ORGANIZATION.NAME, organization.getName())
-            .set(ORGANIZATION.EMAIL, organization.getEmail())
-            .set(ORGANIZATION.UPDATED_AT, timestamp)
-            .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
-            .execute();
-      } else {
-        ctx.insertInto(ORGANIZATION)
-            .set(ORGANIZATION.ID, organization.getOrganizationId())
-            .set(ORGANIZATION.NAME, organization.getName())
-            .set(ORGANIZATION.EMAIL, organization.getEmail())
-            .set(WORKSPACE.CREATED_AT, timestamp)
-            .set(WORKSPACE.UPDATED_AT, timestamp)
-            .execute();
-      }
-      return null;
-    });
+    organizationService.writeOrganization(organization);
   }
 
   /**
@@ -324,17 +320,9 @@ public class ConfigRepository {
    * @return organizations
    * @throws IOException - you never know when you IO
    */
+  @Deprecated
   public List<Organization> listOrganizations() throws IOException {
-    return listOrganizationQuery(Optional.empty()).toList();
-  }
-
-  private Stream<Organization> listOrganizationQuery(final Optional<UUID> organizationId) throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(organizationId.map(ORGANIZATION.ID::eq).orElse(noCondition()))
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization);
+    return organizationService.listOrganizations();
   }
 
   /**
@@ -344,17 +332,15 @@ public class ConfigRepository {
    * @return A List of organizations objects
    * @throws IOException you never know when you IO
    */
+  @Deprecated
   public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
       throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
-        .from(ORGANIZATION)
-        .where(ORGANIZATION.ID.in(resourcesByOrganizationQueryPaginated.organizationId()))
-        .limit(resourcesByOrganizationQueryPaginated.pageSize())
-        .offset(resourcesByOrganizationQueryPaginated.rowOffset())
-        .fetch())
-        .stream()
-        .map(DbConverter::buildOrganization)
-        .toList();
+    final var queryPaginated = new io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated(
+        resourcesByOrganizationQueryPaginated.organizationId(),
+        resourcesByOrganizationQueryPaginated.includeDeleted(),
+        resourcesByOrganizationQueryPaginated.pageSize(),
+        resourcesByOrganizationQueryPaginated.rowOffset());
+    return organizationService.listOrganizationsPaginated(queryPaginated);
   }
 
   /**
@@ -2111,18 +2097,6 @@ public class ConfigRepository {
     });
   }
 
-  private Stream<SourceOAuthParameter> listSourceOauthParamQuery(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      if (configId.isPresent()) {
-        return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source), ACTOR_OAUTH_PARAMETER.ID.eq(configId.get())).fetch();
-      }
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source)).fetch();
-    });
-
-    return result.map(DbConverter::buildSourceOAuthParameter).stream();
-  }
-
   /**
    * Get source oauth parameter.
    *
@@ -2131,16 +2105,10 @@ public class ConfigRepository {
    * @return source oauth parameter
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(final UUID workspaceId, final UUID sourceDefinitionId)
       throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source),
-          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId),
-          ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(sourceDefinitionId)).fetch();
-    });
-
-    return result.stream().findFirst().map(DbConverter::buildSourceOAuthParameter);
+    return oAuthService.getSourceOAuthParamByDefinitionIdOptional(workspaceId, sourceDefinitionId);
   }
 
   /**
@@ -2149,42 +2117,9 @@ public class ConfigRepository {
    * @param sourceOAuthParameter source oauth param
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public void writeSourceOAuthParam(final SourceOAuthParameter sourceOAuthParameter) throws IOException {
-    database.transaction(ctx -> {
-      writeSourceOauthParameter(Collections.singletonList(sourceOAuthParameter), ctx);
-      return null;
-    });
-  }
-
-  private void writeSourceOauthParameter(final List<SourceOAuthParameter> configs, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    configs.forEach((sourceOAuthParameter) -> {
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ACTOR_OAUTH_PARAMETER)
-          .where(ACTOR_OAUTH_PARAMETER.ID.eq(sourceOAuthParameter.getOauthParameterId())));
-
-      if (isExistingConfig) {
-        ctx.update(ACTOR_OAUTH_PARAMETER)
-            .set(ACTOR_OAUTH_PARAMETER.ID, sourceOAuthParameter.getOauthParameterId())
-            .set(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID, sourceOAuthParameter.getWorkspaceId())
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID, sourceOAuthParameter.getSourceDefinitionId())
-            .set(ACTOR_OAUTH_PARAMETER.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceOAuthParameter.getConfiguration())))
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE, ActorType.source)
-            .set(ACTOR_OAUTH_PARAMETER.UPDATED_AT, timestamp)
-            .where(ACTOR_OAUTH_PARAMETER.ID.eq(sourceOAuthParameter.getOauthParameterId()))
-            .execute();
-      } else {
-        ctx.insertInto(ACTOR_OAUTH_PARAMETER)
-            .set(ACTOR_OAUTH_PARAMETER.ID, sourceOAuthParameter.getOauthParameterId())
-            .set(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID, sourceOAuthParameter.getWorkspaceId())
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID, sourceOAuthParameter.getSourceDefinitionId())
-            .set(ACTOR_OAUTH_PARAMETER.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceOAuthParameter.getConfiguration())))
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE, ActorType.source)
-            .set(ACTOR_OAUTH_PARAMETER.CREATED_AT, timestamp)
-            .set(ACTOR_OAUTH_PARAMETER.UPDATED_AT, timestamp)
-            .execute();
-      }
-    });
+    oAuthService.writeSourceOAuthParam(sourceOAuthParameter);
   }
 
   /**
@@ -2194,29 +2129,9 @@ public class ConfigRepository {
    * @throws JsonValidationException if the workspace is or contains invalid json
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public List<SourceOAuthParameter> listSourceOAuthParam() throws JsonValidationException, IOException {
-    return listSourceOauthParamQuery(Optional.empty()).toList();
-  }
-
-  /**
-   * List destination oauth param query. If configId is present only returns the config for that oauth
-   * parameter id. if not present then lists all.
-   *
-   * @param configId oauth parameter id optional.
-   * @return stream of destination oauth params
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  private Stream<DestinationOAuthParameter> listDestinationOauthParamQuery(final Optional<UUID> configId)
-      throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      if (configId.isPresent()) {
-        return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination), ACTOR_OAUTH_PARAMETER.ID.eq(configId.get())).fetch();
-      }
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination)).fetch();
-    });
-
-    return result.map(DbConverter::buildDestinationOAuthParameter).stream();
+    return oAuthService.listSourceOAuthParam();
   }
 
   /**
@@ -2227,17 +2142,11 @@ public class ConfigRepository {
    * @return oauth parameters if present
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(final UUID workspaceId,
                                                                                             final UUID destinationDefinitionId)
       throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination),
-          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId),
-          ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(destinationDefinitionId)).fetch();
-    });
-
-    return result.stream().findFirst().map(DbConverter::buildDestinationOAuthParameter);
+    return oAuthService.getDestinationOAuthParamByDefinitionIdOptional(workspaceId, destinationDefinitionId);
   }
 
   /**
@@ -2246,44 +2155,9 @@ public class ConfigRepository {
    * @param destinationOAuthParameter destination oauth parameter
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public void writeDestinationOAuthParam(final DestinationOAuthParameter destinationOAuthParameter) throws IOException {
-    database.transaction(ctx -> {
-      writeDestinationOauthParameter(Collections.singletonList(destinationOAuthParameter), ctx);
-      return null;
-    });
-  }
-
-  private void writeDestinationOauthParameter(final List<DestinationOAuthParameter> configs, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    configs.forEach((destinationOAuthParameter) -> {
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ACTOR_OAUTH_PARAMETER)
-          .where(ACTOR_OAUTH_PARAMETER.ID.eq(destinationOAuthParameter.getOauthParameterId())));
-
-      if (isExistingConfig) {
-        ctx.update(ACTOR_OAUTH_PARAMETER)
-            .set(ACTOR_OAUTH_PARAMETER.ID, destinationOAuthParameter.getOauthParameterId())
-            .set(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID, destinationOAuthParameter.getWorkspaceId())
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID, destinationOAuthParameter.getDestinationDefinitionId())
-            .set(ACTOR_OAUTH_PARAMETER.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationOAuthParameter.getConfiguration())))
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE, ActorType.destination)
-            .set(ACTOR_OAUTH_PARAMETER.UPDATED_AT, timestamp)
-            .where(ACTOR_OAUTH_PARAMETER.ID.eq(destinationOAuthParameter.getOauthParameterId()))
-            .execute();
-
-      } else {
-        ctx.insertInto(ACTOR_OAUTH_PARAMETER)
-            .set(ACTOR_OAUTH_PARAMETER.ID, destinationOAuthParameter.getOauthParameterId())
-            .set(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID, destinationOAuthParameter.getWorkspaceId())
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID, destinationOAuthParameter.getDestinationDefinitionId())
-            .set(ACTOR_OAUTH_PARAMETER.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationOAuthParameter.getConfiguration())))
-            .set(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE, ActorType.destination)
-            .set(ACTOR_OAUTH_PARAMETER.CREATED_AT, timestamp)
-            .set(ACTOR_OAUTH_PARAMETER.UPDATED_AT, timestamp)
-            .execute();
-      }
-    });
-
+    oAuthService.writeDestinationOAuthParam(destinationOAuthParameter);
   }
 
   /**
@@ -2293,8 +2167,9 @@ public class ConfigRepository {
    * @throws JsonValidationException if the workspace is or contains invalid json
    * @throws IOException if there is an issue while interacting with db.
    */
+  @Deprecated
   public List<DestinationOAuthParameter> listDestinationOAuthParam() throws JsonValidationException, IOException {
-    return listDestinationOauthParamQuery(Optional.empty()).toList();
+    return oAuthService.listDestinationOAuthParam();
   }
 
   private Map<UUID, AirbyteCatalog> findCatalogByHash(final String catalogHash, final DSLContext context) {

@@ -6,6 +6,8 @@ package io.airbyte.config.persistence;
 
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -29,7 +31,9 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     final ConfigRepository configRepository = new ConfigRepository(
         database,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-        new WorkspaceServiceJooqImpl(database));
+        new WorkspaceServiceJooqImpl(database),
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -51,7 +55,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void getUserByAuthIdTest() throws IOException {
     for (final User user : MockData.users()) {
-      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId(), user.getAuthProvider());
+      final Optional<User> userFromDb = userPersistence.getUserByAuthId(user.getAuthUserId());
       Assertions.assertEquals(user, userFromDb.get());
     }
   }

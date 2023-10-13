@@ -75,6 +75,9 @@ dependencies:
   '@types/node-fetch':
     specifier: ^2.6.2
     version: 2.6.2
+  '@types/path-browserify':
+    specifier: ^1.0.0
+    version: 1.0.0
   '@types/react-virtualized-auto-sizer':
     specifier: ^1.0.1
     version: 1.0.1
@@ -150,6 +153,9 @@ dependencies:
   oidc-client-ts:
     specifier: ^2.2.4
     version: 2.2.4
+  path-browserify:
+    specifier: ^1.0.1
+    version: 1.0.1
   query-string:
     specifier: ^6.13.1
     version: 6.14.1
@@ -207,6 +213,9 @@ dependencies:
   react-virtualized-auto-sizer:
     specifier: ^1.0.17
     version: 1.0.17(react-dom@18.2.0)(react@18.2.0)
+  react-virtuoso:
+    specifier: ^4.6.0
+    version: 4.6.0(react-dom@18.2.0)(react@18.2.0)
   react-widgets:
     specifier: ^4.6.1
     version: 4.6.1(react-dom@18.2.0)(react@18.2.0)
@@ -8144,6 +8153,10 @@ packages:
   /@types/parse-json@4.0.0:
     resolution: {integrity: sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==}
 
+  /@types/path-browserify@1.0.0:
+    resolution: {integrity: sha512-XMCcyhSvxcch8b7rZAtFAaierBYdeHXVvg2iYnxOV0MCQHmPuRRmGZPFDRzPayxcGiiSL1Te9UIO+f3cuj0tfw==}
+    dev: false
+
   /@types/postcss-modules-local-by-default@4.0.0:
     resolution: {integrity: sha512-0VLab/pcLTLcfbxi6THSIMVYcw9hEUBGvjwwaGpW77mMgRXfGF+a76t7BxTGyLh1y68tBvrffp8UWnqvm76+yg==}
     dependencies:
@@ -15872,6 +15885,10 @@ packages:
     engines: {node: '>= 0.8'}
     dev: true
 
+  /path-browserify@1.0.1:
+    resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
+    dev: false
+
   /path-exists@3.0.0:
     resolution: {integrity: sha512-bpC7GYwiDYQ4wYLe+FA8lhRjhQCMcQGuSgGGqDkg/QerRWw9CmGRT0iSOVRSZJ29NMLZgIzqaljJ63oaL4NIJQ==}
     engines: {node: '>=4'}
@@ -17117,6 +17134,17 @@ packages:
       react-lifecycles-compat: 3.0.4
     dev: false
     patched: true
+
+  /react-virtuoso@4.6.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-paQbkLA8U6dRe9srltWgPeoFCtNKqUYIcOpUR01JyznzaXWVzgZQE0M9KGi9vMoq8vHvHkGzuxJ6jDCS6uzePg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=16 || >=17 || >= 18'
+      react-dom: '>=16 || >=17 || >= 18'
+    dependencies:
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    dev: false
 
   /react-widgets@4.6.1(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-x2n4EFQnk1ZG2rWsdekGK3js091k+b06e0CRI4pDEZ0uh/cft3NyGFKS5/x7CV/fN51kHMaM4r5IRGIbPfsLLw==}

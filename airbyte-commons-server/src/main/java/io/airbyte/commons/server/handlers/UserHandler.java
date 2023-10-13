@@ -23,6 +23,8 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.errors.InternalServerKnownException;
+import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
@@ -41,7 +43,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,10 @@ public class UserHandler {
    */
   public UserRead createUser(final UserCreate userCreate) throws IOException, ConfigNotFoundException, JsonValidationException {
 
-    final UUID userId = uuidGenerator.get();
+    final UserAuthIdRequestBody userAuthIdRequestBody = new UserAuthIdRequestBody().authUserId(userCreate.getAuthUserId());
+    assertAuthIdHasNotBeenUsed(userAuthIdRequestBody);
+
+    final UUID userId = userCreate.getUserId() != null ? userCreate.getUserId() : uuidGenerator.get();
     final User user = new User()
         .withName(userCreate.getName())
         .withUserId(userId)
@@ -104,6 +108,23 @@ public class UserHandler {
         .withNews(userCreate.getNews());
     userPersistence.writeUser(user);
     return buildUserRead(userId);
+  }
+
+  private void assertAuthIdHasNotBeenUsed(final UserAuthIdRequestBody userAuthIdRequestBody) {
+    UserRead userRead = null;
+    try {
+      userRead = getUserByAuthId(userAuthIdRequestBody);
+    } catch (final ConfigNotFoundException e) {
+      // This is "expected" if we want to create a new user.
+      LOGGER.debug("Unable to find user with auth ID {}.", userAuthIdRequestBody.getAuthUserId());
+    } catch (final IOException | JsonValidationException e) {
+      LOGGER.error("Error checking if auth id in unique: {}.", e.toString());
+      throw new InternalServerKnownException("Error performing auth id checks..", e);
+    }
+    if (userRead != null) {
+      // The user has already existed. Avoid to create a dup user.
+      throw new ValueConflictKnownException("Auth Id was already used to sign up");
+    }
   }
 
   /**
@@ -127,14 +148,13 @@ public class UserHandler {
    * @throws IOException if unable to retrieve the user.
    * @throws JsonValidationException if unable to retrieve the user.
    */
-  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) throws IOException, JsonValidationException {
-    final User.AuthProvider authProvider =
-        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
       return buildUserRead(user.get());
     } else {
-      throw new NotFoundException(String.format("User not found %s", userAuthIdRequestBody));
+      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
     }
   }
 
@@ -281,9 +301,7 @@ public class UserHandler {
 
   public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final User.AuthProvider authProvider =
-        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
       return buildUserRead(user.get());
     }
@@ -293,11 +311,6 @@ public class UserHandler {
     }
     final User incomingUser = jwtUserResolver.get().resolveUser();
 
-    // Verify JWT token and request value are the same. Otherwise, throw errors.
-    if (!incomingUser.getAuthProvider().value().equals(userAuthIdRequestBody.getAuthProvider().toString())) {
-      throw new IllegalArgumentException("JWT token issuer doesn't match the auth provider from the request body.");
-    }
-
     if (!incomingUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
@@ -306,7 +319,7 @@ public class UserHandler {
     final UserRead createdUser = createUser(new UserCreate()
         .name(incomingUser.getName())
         .authUserId(userAuthIdRequestBody.getAuthUserId())
-        .authProvider(userAuthIdRequestBody.getAuthProvider())
+        .authProvider(Enums.convertTo(incomingUser.getAuthProvider(), AuthProvider.class))
         .email(incomingUser.getEmail()));
 
     // If new user's email matches the initial user config email, create instance_admin permission for

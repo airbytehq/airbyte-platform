@@ -13,12 +13,12 @@ export enum FeatureItem {
   AllowChangeDataGeographies = "ALLOW_CHANGE_DATA_GEOGRAPHIES",
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
-  FreeConnectorProgram = "FREE_CONNECTOR_PROGRAM",
   KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
+  MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

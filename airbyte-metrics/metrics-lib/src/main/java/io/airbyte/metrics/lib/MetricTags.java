@@ -25,6 +25,7 @@ public class MetricTags {
   public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CONNECTION_ID = "connection_id";
   public static final String CRON_TYPE = "cron_type";
+  public static final String DESTINATION_ID = "destination_id";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";
   public static final String GEOGRAPHY = "geography";

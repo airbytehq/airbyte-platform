@@ -11,6 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { useConfig } from "config";
 import { useSetupInstanceConfiguration } from "core/api";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import { SecurityCheck } from "./SecurityCheck";
 
@@ -46,9 +47,16 @@ export const SetupForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: setUpInstance } = useSetupInstanceConfiguration();
   const config = useConfig();
+  const analyticsService = useAnalyticsService();
 
   const onSubmit = async (values: SetupFormValues) => {
     await setUpInstance({ ...values, initialSetupComplete: true, displaySetupWizard: false });
+    analyticsService.track(Namespace.ONBOARDING, Action.PREFERENCES, {
+      actionDescription: "Setup preferences set",
+      email: values.email,
+      anonymized: values.anonymousDataCollection,
+      security_check_result: values.securityCheck,
+    });
   };
 
   return (

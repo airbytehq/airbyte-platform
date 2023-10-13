@@ -10,14 +10,12 @@ import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
-import { Message } from "components/ui/Message";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
@@ -102,23 +100,22 @@ export const StreamsList = () => {
     [columnHelper, setShowRelativeTime, showRelativeTime]
   );
 
-  const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
+  const { connection } = useConnectionEditService();
+
+  const showTable = connection.status !== ConnectionStatus.inactive;
 
   return (
-    <>
-      <Box mb="md">
-        <ConnectionStatusCard />
-      </Box>
-      <Card
-        title={
-          <FlexContainer justifyContent="space-between" alignItems="center">
-            <FormattedMessage id="connection.stream.status.title" />
-            <StreamSearchFiltering className={styles.search} />
-          </FlexContainer>
-        }
-      >
-        <FlexContainer direction="column" gap="sm">
-          <div className={styles.tableContainer} data-survey="streamcentric">
+    <Card
+      title={
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <FormattedMessage id="connection.stream.status.title" />
+          <StreamSearchFiltering className={styles.search} />
+        </FlexContainer>
+      }
+    >
+      <FlexContainer direction="column" gap="sm">
+        <div className={styles.tableContainer} data-survey="streamcentric">
+          {showTable && (
             <Table
               columns={columns}
               data={streamEntries}
@@ -127,27 +124,17 @@ export const StreamsList = () => {
               getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
               sorting={false}
             />
+          )}
 
-            {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
-            {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
-              <Box m="lg">
-                <Message
-                  text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
-                  actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
-                  type="info"
-                  onAction={() => {
-                    updateConnection({
-                      connectionId: connection.connectionId,
-                      status: ConnectionStatus.active,
-                    });
-                  }}
-                  actionBtnProps={connectionUpdating ? { disabled: true } : {}}
-                />
-              </Box>
-            )}
-          </div>
-        </FlexContainer>
-      </Card>
-    </>
+          {!showTable && (
+            <Box p="xl">
+              <Text size="sm" color="grey" italicized>
+                <FormattedMessage id="connection.stream.status.table.emptyTable.message" />
+              </Text>
+            </Box>
+          )}
+        </div>
+      </FlexContainer>
+    </Card>
   );
 };

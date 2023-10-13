@@ -197,9 +197,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-          final List<StreamDescriptor> streamsToBackfill = BackfillHelper
-              .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
+          List<StreamDescriptor> streamsToBackfill = List.of();
+          if (replicationActivityInput.getSchemaRefreshOutput() != null) {
+            streamsToBackfill = BackfillHelper
+                .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
+          }
           BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
+          LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
           return standardSyncOutput;
         },
         context);

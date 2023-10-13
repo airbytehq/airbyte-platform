@@ -6,14 +6,18 @@ package io.airbyte.notification;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.EnvConfigs;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -22,6 +26,10 @@ import okhttp3.Response;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +54,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
   private static final String BREAKING_CHANGE_WARNING_BROADCAST_ID = "32";
   private static final String BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33";
+  private static final String SCHEMA_CHANGE_BROADCAST_ID = "23";
+  private static final String SCHEMA_BREAKING_CHANGE_BROADCAST_ID = "24";
 
   private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
   private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
@@ -54,7 +64,8 @@ public class CustomerioNotificationClient extends NotificationClient {
 
   private static final String CUSTOMERIO_BASE_URL = "https://api.customer.io/";
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "v1/send/email";
-  private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/campaigns/%s/triggers";
+  private static final String CAMPAIGNS_PATH_SEGMENT = "campaigns";
+  private static final String CUSTOMERIO_BROADCAST_API_ENDPOINT_TEMPLATE = "v1/" + CAMPAIGNS_PATH_SEGMENT + "/%s/triggers";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
   private static final String CUSTOMERIO_TYPE = "customerio";
@@ -66,8 +77,10 @@ public class CustomerioNotificationClient extends NotificationClient {
   public CustomerioNotificationClient() {
     final EnvConfigs configs = new EnvConfigs();
     this.apiToken = configs.getCustomerIoKey();
-    this.okHttpClient = new OkHttpClient();
     this.baseUrl = CUSTOMERIO_BASE_URL;
+    this.okHttpClient = new OkHttpClient.Builder()
+        .addInterceptor(new CampaignsRateLimitInterceptor())
+        .build();
   }
 
   @VisibleForTesting
@@ -75,7 +88,36 @@ public class CustomerioNotificationClient extends NotificationClient {
                                       final String baseUrl) {
     this.apiToken = apiToken;
     this.baseUrl = baseUrl;
-    this.okHttpClient = new OkHttpClient();
+    this.okHttpClient = new OkHttpClient.Builder()
+        .addInterceptor(new CampaignsRateLimitInterceptor())
+        .build();
+  }
+
+  /**
+   * Customer.io has a rate limit of 10 requests per second for broadcasts. This interceptor will
+   * sleep for 10 seconds if a broadcast request fails with a 429 error.
+   */
+  static class CampaignsRateLimitInterceptor implements Interceptor {
+
+    @NotNull
+    @Override
+    public Response intercept(@NotNull final Chain chain) throws IOException {
+      final Request request = chain.request();
+      Response response = chain.proceed(request);
+
+      final int maxRetries = 5;
+      int retryCount = 0;
+      while (retryCount < maxRetries && !response.isSuccessful() && response.code() == 429
+          && request.url().pathSegments().contains(CAMPAIGNS_PATH_SEGMENT)) {
+        LOGGER.info("sleeping for 10s due to rate limit hit when sending broadcast...");
+        Exceptions.swallow(() -> Thread.sleep(10000));
+        response = chain.proceed(request);
+        retryCount++;
+      }
+
+      return response;
+    }
+
   }
 
   @Override
@@ -147,8 +189,8 @@ public class CustomerioNotificationClient extends NotificationClient {
         "connector_name", connectorName,
         "connector_type", actorType.value(),
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_upgrade_deadline", breakingChange.getUpgradeDeadline(),
-        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_upgrade_deadline", formatDate(breakingChange.getUpgradeDeadline()),
+        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
   }
 
@@ -162,7 +204,7 @@ public class CustomerioNotificationClient extends NotificationClient {
         "connector_name", connectorName,
         "connector_type", actorType.value(),
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_change_description", convertMarkdownToHtml(breakingChange.getMessage()),
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl()));
   }
 
@@ -184,9 +226,19 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, boolean isBreaking)
-      throws IOException, InterruptedException {
-    throw new NotImplementedException();
+  public boolean notifySchemaPropagated(final UUID connectionId,
+                                        final String sourceName,
+                                        final List<String> changes,
+                                        final String url,
+                                        final List<String> recipients,
+                                        final boolean isBreaking)
+      throws IOException {
+    String templateId = isBreaking ? SCHEMA_CHANGE_BROADCAST_ID : SCHEMA_BREAKING_CHANGE_BROADCAST_ID;
+    String details = String.join("\n", changes);
+    return notifyByEmailBroadcast(templateId, recipients, Map.of(
+        "connection_id", connectionId.toString(),
+        "changes_details", details,
+        "source", sourceName));
   }
 
   @Override
@@ -249,6 +301,19 @@ public class CustomerioNotificationClient extends NotificationClient {
   public String renderTemplate(final String templateFile, final String... data) throws IOException {
     final String template = MoreResources.readResource(templateFile);
     return String.format(template, data);
+  }
+
+  private String convertMarkdownToHtml(final String message) {
+    final Parser markdownParser = Parser.builder().build();
+    final Node document = markdownParser.parse(message);
+    final HtmlRenderer renderer = HtmlRenderer.builder().build();
+    return renderer.render(document);
+  }
+
+  private String formatDate(final String dateString) {
+    final LocalDate date = LocalDate.parse(dateString);
+    final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+    return date.format(formatter);
   }
 
 }

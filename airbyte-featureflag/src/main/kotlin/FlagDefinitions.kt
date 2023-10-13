@@ -65,6 +65,8 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
+object DestinationCallsElapsedTimeTrackingEnabled : Permanent<Boolean>(key = "destination-calls-elapsed-time-tracking-enabled", default = false)
+
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
 object RunSupportStateUpdater : Temporary<Boolean>(key = "connectors.runSupportStateUpdater", default = true)
@@ -110,6 +112,8 @@ object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides"
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
+
+object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through

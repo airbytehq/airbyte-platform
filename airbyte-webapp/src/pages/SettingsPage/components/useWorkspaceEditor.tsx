@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useAsyncFn } from "react-use";
 
-import useWorkspace from "hooks/services/useWorkspace";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useUpdateWorkspace } from "core/api";
 
 const useWorkspaceEditor = (): {
   updateData: (data: {
@@ -15,7 +16,8 @@ const useWorkspaceEditor = (): {
   successMessage: React.ReactNode;
   loading?: boolean;
 } => {
-  const { updatePreferences } = useWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const [errorMessage, setErrorMessage] = useState<React.ReactNode>(null);
   const [successMessage, setSuccessMessage] = useState<React.ReactNode>(null);
 
@@ -24,7 +26,8 @@ const useWorkspaceEditor = (): {
       setErrorMessage(null);
       setSuccessMessage(null);
       try {
-        await updatePreferences({
+        await updateWorkspace({
+          workspaceId,
           email: data.email,
           anonymousDataCollection: data.anonymousDataCollection,
           news: data.news,

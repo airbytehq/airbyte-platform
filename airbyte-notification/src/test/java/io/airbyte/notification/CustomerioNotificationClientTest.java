@@ -98,7 +98,7 @@ class CustomerioNotificationClientTest {
     final String connectorName = "MyConnector";
     final ActorDefinitionBreakingChange breakingChange = new ActorDefinitionBreakingChange()
         .withUpgradeDeadline("2021-01-01")
-        .withMessage("my breaking change message")
+        .withMessage("my **breaking** change message [link](https://airbyte.io/)")
         .withVersion(new Version("2.0.0"))
         .withMigrationDocumentationUrl("https://airbyte.io/docs/migration-guide");
 
@@ -112,8 +112,8 @@ class CustomerioNotificationClientTest {
         "connector_type", "source",
         "connector_name", connectorName,
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_change_description", breakingChange.getMessage(),
-        "connector_version_upgrade_deadline", breakingChange.getUpgradeDeadline(),
+        "connector_version_change_description", "<p>my <strong>breaking</strong> change message <a href=\"https://airbyte.io/\">link</a></p>\n",
+        "connector_version_upgrade_deadline", "January 1, 2021",
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl());
 
     final JsonNode reqBody = Jsons.deserialize(recordedRequest.getBody().readUtf8());
@@ -122,6 +122,8 @@ class CustomerioNotificationClientTest {
 
   @Test
   void testNotifyBreakingChangeSyncsDisabled() throws IOException, InterruptedException {
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
+    mockWebServer.enqueue(new MockResponse().setResponseCode(429));
     mockWebServer.enqueue(new MockResponse());
 
     final String connectorName = "MyConnector";
@@ -142,7 +144,7 @@ class CustomerioNotificationClientTest {
         "connector_type", "destination",
         "connector_name", connectorName,
         "connector_version_new", breakingChange.getVersion().serialize(),
-        "connector_version_change_description", breakingChange.getMessage(),
+        "connector_version_change_description", "<p>my breaking change message</p>\n",
         "connector_version_migration_url", breakingChange.getMigrationDocumentationUrl());
 
     final JsonNode reqBody = Jsons.deserialize(recordedRequest.getBody().readUtf8());

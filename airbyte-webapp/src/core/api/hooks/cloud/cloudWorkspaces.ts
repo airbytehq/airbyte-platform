@@ -1,4 +1,4 @@
-import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { useCurrentUser } from "core/services/auth";
@@ -11,6 +11,7 @@ import {
   updateCloudWorkspace,
   webBackendCreatePermissionedCloudWorkspace,
   webBackendListWorkspacesByUser,
+  webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
 import { CloudWorkspaceRead, CloudWorkspaceReadList, ConsumptionTimeWindow } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
@@ -67,6 +68,29 @@ export function useCreateCloudWorkspace() {
     }
   );
 }
+
+export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains?: string) => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery(
+    workspaceKeys.list(`paginated`),
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await webBackendListWorkspacesByUserPaginated(
+          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, nameContains },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      suspense: true,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
+};
 
 export function useUpdateCloudWorkspace() {
   const requestOptions = useRequestOptions();

@@ -161,7 +161,12 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifySchemaPropagated(final UUID connectionId, final List<String> changes, final String url, boolean isBreaking)
+  public boolean notifySchemaPropagated(final UUID connectionId,
+                                        final String sourceName,
+                                        final List<String> changes,
+                                        final String url,
+                                        final List<String> recipients,
+                                        boolean isBreaking)
       throws IOException, InterruptedException {
     final String summary = String.join("\n", changes);
     final String message = isBreaking ? renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), url)

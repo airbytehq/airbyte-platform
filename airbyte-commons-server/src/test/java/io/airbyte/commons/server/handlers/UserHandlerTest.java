@@ -196,11 +196,9 @@ class UserHandlerTest {
       final io.airbyte.api.model.generated.AuthProvider apiAuthProvider =
           Enums.convertTo(authProvider, io.airbyte.api.model.generated.AuthProvider.class);
 
-      when(userPersistence.getUserByAuthId(authUserId, authProvider)).thenReturn(Optional.of(user));
+      when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(user));
 
-      final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody()
-          .authProvider(apiAuthProvider)
-          .authUserId(authUserId));
+      final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId));
 
       assertEquals(userRead.getUserId(), USER_ID);
       assertEquals(userRead.getEmail(), USER_EMAIL);
@@ -240,7 +238,7 @@ class UserHandlerTest {
       void setUp() throws IOException {
         newUser = new User().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
 
-        when(userPersistence.getUserByAuthId(anyString(), any())).thenReturn(Optional.empty());
+        when(userPersistence.getUserByAuthId(anyString())).thenReturn(Optional.empty());
         when(jwtUserResolver.resolveUser()).thenReturn(newUser);
         when(uuidSupplier.get()).thenReturn(NEW_USER_ID);
         when(userPersistence.getUser(NEW_USER_ID)).thenReturn(Optional.of(newUser));
@@ -276,7 +274,7 @@ class UserHandlerTest {
             Enums.convertTo(authProvider, io.airbyte.api.model.generated.AuthProvider.class);
 
         final UserRead userRead = userHandler.getOrCreateUserByAuthId(
-            new UserAuthIdRequestBody().authProvider(apiAuthProvider).authUserId(NEW_AUTH_USER_ID));
+            new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
 
         verifyCreatedUser(authProvider);
         verifyUserRead(userRead, apiAuthProvider);

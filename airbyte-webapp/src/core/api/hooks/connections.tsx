@@ -1,6 +1,6 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SyncSchema } from "core/domain/catalog";
@@ -29,7 +29,6 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
-  ConnectionStatus,
   ConnectionStream,
   DestinationRead,
   NamespaceDefinitionType,
@@ -229,6 +228,7 @@ export const useDeleteConnection = () => {
 };
 
 export const useUpdateConnection = () => {
+  const { registerNotification } = useNotificationService();
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
@@ -249,43 +249,13 @@ export const useUpdateConnection = () => {
             }) ?? [],
         }));
       },
-    }
-  );
-};
-
-/**
- * Sets the enable/disable status of a connection. It will use the useConnectionUpdate method
- * to make sure all caches are properly updated, but in addition will trigger the Reenable/Disable
- * analytic event.
- */
-export const useEnableConnection = () => {
-  const analyticsService = useAnalyticsService();
-  const { trackError } = useAppMonitoringService();
-  const { registerNotification } = useNotificationService();
-  const { formatMessage } = useIntl();
-  const { mutateAsync: updateConnection } = useUpdateConnection();
-
-  return useMutation(
-    ({ connectionId, enable }: { connectionId: WebBackendConnectionUpdate["connectionId"]; enable: boolean }) =>
-      updateConnection({ connectionId, status: enable ? ConnectionStatus.active : ConnectionStatus.inactive }),
-    {
       onError: (error: Error) => {
-        trackError(error);
+        // If there is not user-facing message in the API response, we should fall back to a generic message
+        const fallbackKey = error.message && error.message === "common.error" ? "connection.updateFailed" : undefined;
         registerNotification({
-          id: `tables.updateFailed.${error.message}`,
-          text: `${formatMessage({ id: "connection.updateFailed" })}: ${error.message}`,
+          id: "update-connection-error",
           type: "error",
-        });
-      },
-      onSuccess: (connection) => {
-        const action = connection.status === ConnectionStatus.active ? Action.REENABLE : Action.DISABLE;
-
-        analyticsService.track(Namespace.CONNECTION, action, {
-          frequency: getFrequencyFromScheduleData(connection.scheduleData),
-          connector_source: connection.source?.sourceName,
-          connector_source_definition_id: connection.source?.sourceDefinitionId,
-          connector_destination: connection.destination?.destinationName,
-          connector_destination_definition_id: connection.destination?.destinationDefinitionId,
+          text: fallbackKey ? <FormattedMessage id={fallbackKey} /> : error.message,
         });
       },
     }

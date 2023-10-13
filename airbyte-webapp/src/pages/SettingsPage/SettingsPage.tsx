@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { useCurrentWorkspace } from "core/api";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac/intent";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
@@ -14,14 +15,13 @@ import { GeneralWorkspaceSettingsPage } from "./GeneralWorkspaceSettingsPage";
 import { OrganizationAccessManagementPage } from "./pages/AccessManagementPage/OrganizationAccessManagementPage";
 import { WorkspaceAccessManagementPage } from "./pages/AccessManagementPage/WorkspaceAccessManagementPage";
 import { AccountPage } from "./pages/AccountPage";
-import { ConfigurationsPage } from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
 import { MetricsPage } from "./pages/MetricsPage";
 
 export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
-  const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
+  const newWorkspacesUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
   const canListWorkspaceUsers = useIntent("ListWorkspaceMembers", { workspaceId });
   const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId });
@@ -55,23 +55,22 @@ export const SettingsPage: React.FC = () => {
                         },
                       ]
                     : []),
-                  {
-                    path: `${SettingsRoutePaths.Source}`,
-                    name: <FormattedMessage id="tables.sources" />,
-                    indicatorCount: countNewSourceVersion,
-                    component: SourcesPage,
-                  },
-                  {
-                    path: `${SettingsRoutePaths.Destination}`,
-                    name: <FormattedMessage id="tables.destinations" />,
-                    indicatorCount: countNewDestinationVersion,
-                    component: DestinationsPage,
-                  },
-                  {
-                    path: `${SettingsRoutePaths.Configuration}`,
-                    name: <FormattedMessage id="admin.configuration" />,
-                    component: ConfigurationsPage,
-                  },
+                  ...(!newWorkspacesUI
+                    ? [
+                        {
+                          path: `${SettingsRoutePaths.Source}`,
+                          name: <FormattedMessage id="tables.sources" />,
+                          indicatorCount: countNewSourceVersion,
+                          component: SourcesPage,
+                        },
+                        {
+                          path: `${SettingsRoutePaths.Destination}`,
+                          name: <FormattedMessage id="tables.destinations" />,
+                          indicatorCount: countNewDestinationVersion,
+                          component: DestinationsPage,
+                        },
+                      ]
+                    : []),
                   {
                     path: `${SettingsRoutePaths.Notifications}`,
                     name: <FormattedMessage id="settings.notifications" />,
@@ -114,6 +113,27 @@ export const SettingsPage: React.FC = () => {
                         },
                       ]
                     : []),
+                ],
+              },
+            ]
+          : []),
+        ...(newWorkspacesUI
+          ? [
+              {
+                category: <FormattedMessage id="settings.instanceSettings" />,
+                routes: [
+                  {
+                    path: `${SettingsRoutePaths.Source}`,
+                    name: <FormattedMessage id="tables.sources" />,
+                    indicatorCount: countNewSourceVersion,
+                    component: SourcesPage,
+                  },
+                  {
+                    path: `${SettingsRoutePaths.Destination}`,
+                    name: <FormattedMessage id="tables.destinations" />,
+                    indicatorCount: countNewDestinationVersion,
+                    component: DestinationsPage,
+                  },
                 ],
               },
             ]

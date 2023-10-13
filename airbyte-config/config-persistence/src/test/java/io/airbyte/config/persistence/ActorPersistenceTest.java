@@ -16,6 +16,8 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -45,7 +47,9 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
             database,
             mock(StandardSyncPersistence.class),
             MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-            new WorkspaceServiceJooqImpl(database)));
+            new WorkspaceServiceJooqImpl(database),
+            new OrganizationServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database)));
     standardSourceDefinition = MockData.publicSourceDefinition();
     standardDestinationDefinition = MockData.publicDestinationDefinition();
     configRepository.writeConnectorMetadata(standardSourceDefinition, MockData.actorDefinitionVersion()
