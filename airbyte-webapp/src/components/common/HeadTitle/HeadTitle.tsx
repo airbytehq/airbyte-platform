@@ -2,6 +2,7 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 import { useIntl } from "react-intl";
 
+import { useAuthService } from "core/services/auth";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
@@ -50,6 +51,7 @@ const WorkspacePrefixedTitle: React.FC<WorkspacePrefixedTitleProps> = ({ title }
  */
 export const HeadTitle: React.FC<HeadTitleProps> = ({ titles }) => {
   const intl = useIntl();
+  const { user } = useAuthService();
   const [prefixWithWorkspace] = useLocalStorage("airbyte_workspace-in-title", false);
 
   const getTitle = (d: HeadTitleDefinition): string => {
@@ -58,7 +60,7 @@ export const HeadTitle: React.FC<HeadTitleProps> = ({ titles }) => {
 
   const headTitle = titles.map(getTitle).join(` ${SEPARATOR} `);
 
-  if (prefixWithWorkspace) {
+  if (prefixWithWorkspace && user) {
     return <WorkspacePrefixedTitle title={headTitle} />;
   }
 
