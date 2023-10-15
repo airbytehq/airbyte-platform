@@ -14,6 +14,7 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -45,15 +46,18 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final FeatureFlagClient featureFlagClient;
   private final Integer serverPort;
+  private final MetricClient metricClient;
 
   public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
                                        final FeatureFlagClient featureFlagClient,
-                                       @Value("${micronaut.server.port}") final Integer serverPort) {
+                                       @Value("${micronaut.server.port}") final Integer serverPort,
+                                       final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.featureFlagClient = featureFlagClient;
     this.serverPort = serverPort;
+    this.metricClient = metricClient;
   }
 
   @Override
@@ -76,7 +80,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         replicationInput.getSyncResourceRequirements() != null ? replicationInput.getSyncResourceRequirements().getOrchestrator() : null,
         serverPort,
         workerConfigs,
-        featureFlagClient);
+        featureFlagClient,
+        metricClient);
   }
 
   /**

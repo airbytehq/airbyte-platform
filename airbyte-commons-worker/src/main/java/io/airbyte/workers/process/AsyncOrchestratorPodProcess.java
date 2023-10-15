@@ -8,6 +8,10 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogClientSingleton;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -76,6 +80,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private final Integer serverPort;
   private final String serviceAccount;
   private final String schedulerName;
+  private final MetricClient metricClient;
+  private final String launcherType;
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
@@ -90,7 +96,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final Map<String, String> annotations,
                                      final Integer serverPort,
                                      final String serviceAccount,
-                                     final String schedulerName) {
+                                     final String schedulerName,
+                                     final MetricClient metricClient,
+                                     final String launcherType) {
     this.kubePodInfo = kubePodInfo;
     this.documentStoreClient = documentStoreClient;
     this.kubernetesClient = kubernetesClient;
@@ -105,6 +113,8 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.serverPort = serverPort;
     this.serviceAccount = serviceAccount;
     this.schedulerName = schedulerName;
+    this.metricClient = metricClient;
+    this.launcherType = launcherType;
   }
 
   /**
@@ -181,6 +191,7 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
         if (isOOM(pod)) {
           log.warn("Terminating due to OutOfMemoryError");
+          metricClient.count(OssMetricsRegistry.ORCHESTRATOR_OUT_OF_MEMORY, 1, new MetricAttribute(MetricTags.LAUNCHER, launcherType));
           return 137;
         }
 
