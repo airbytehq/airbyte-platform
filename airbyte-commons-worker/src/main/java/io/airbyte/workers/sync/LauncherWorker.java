@@ -261,13 +261,12 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   }
 
   /**
-   * @return an implementation specific map of labels. These labels are used to identify Kubernetes
-   *         pods.
+   * Return an implementation specific map of labels. Useful for identifying Kubernetes pods.
    */
   protected abstract Map<String, String> generateCustomMetadataLabels();
 
   /**
-   * @return the type of launcher. This is used for logging and tracing purposes.
+   * Return the type of launcher. This is used for logging and tracing purposes.
    */
   protected abstract String getLauncherType();
 
