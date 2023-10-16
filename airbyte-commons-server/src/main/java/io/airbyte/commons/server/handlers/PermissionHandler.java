@@ -15,15 +15,17 @@ import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.server.handlers.helpers.PermissionHelper;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,12 +44,15 @@ public class PermissionHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(PermissionHandler.class);
   private final Supplier<UUID> uuidGenerator;
   private final PermissionPersistence permissionPersistence;
+  private final WorkspaceService workspaceService;
 
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
+                           final WorkspaceService workspaceService,
                            final Supplier<UUID> uuidGenerator) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
+    this.workspaceService = workspaceService;
   }
 
   /**
@@ -176,61 +181,131 @@ public class PermissionHandler {
   }
 
   /**
-   * Checks the permissions associated with a user.
+   * Checks the permissions associated with a user. All user permissions are fetched and each one is
+   * checked against the requested permission. If any of the user's permissions meet the requirements
+   * of the permission check, then the check succeeds.
    *
-   * @param permissionCheckRequest The permission. check request.
+   * @param permissionCheckRequest The permission check request.
    * @return The result of the permission check.
    * @throws IOException if unable to check the permission.
-   * @throws JsonValidationException if unable to check the permission.
    */
   public PermissionCheckRead checkPermissions(final PermissionCheckRequest permissionCheckRequest) throws IOException {
-    final List<PermissionRead> permissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
-    final boolean anyMatch = permissions.stream().anyMatch(p -> checkPermissions(permissionCheckRequest, p));
+    final List<PermissionRead> userPermissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
+
+    final boolean anyMatch =
+        userPermissions.stream().anyMatch(userPermission -> Exceptions.toRuntime(() -> checkPermissions(permissionCheckRequest, userPermission)));
+
     return new PermissionCheckRead().status(anyMatch ? StatusEnum.SUCCEEDED : StatusEnum.FAILED);
   }
 
-  private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead permissionRead) {
-    if (!permissionCheckRequest.getUserId().equals(permissionRead.getUserId())) {
+  /**
+   * Checks whether a particular user permission meets the requirements of a particular permission
+   * check request. Organization-level user permissions grant workspace-level permissions as long as
+   * the workspace in question belongs to the user's organization, so this method contains logic to
+   * see if the requested permission is for a workspace that the user permission should grant access
+   * to.
+   */
+  private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead userPermission)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+
+    if (mismatchedUserIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    // instance admin permissions have access to everything
-    if (permissionRead.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+    // if the user is an instance admin, return true immediately, since instance admins have access to
+    // everything by definition.
+    if (userPermission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
       return true;
     }
 
-    if (permissionCheckRequest.getWorkspaceId() != null && !permissionCheckRequest.getWorkspaceId().equals(permissionRead.getWorkspaceId())) {
+    if (mismatchedWorkspaceIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    if (permissionCheckRequest.getOrganizationId() != null
-        && !permissionCheckRequest.getOrganizationId().equals(permissionRead.getOrganizationId())) {
+    if (mismatchedOrganizationIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    return permissionCheckRequest.getPermissionType().equals(permissionRead.getPermissionType());
+    if (requestedWorkspaceNotInOrganization(userPermission, permissionCheckRequest)) {
+      return false;
+    }
+
+    // by this point, we know we can directly compare the user permission's type to the requested
+    // permission's type, because all underlying user/workspace/organization IDs are valid.
+    return PermissionHelper.definedPermissionGrantsTargetPermission(userPermission.getPermissionType(), permissionCheckRequest.getPermissionType());
+  }
+
+  // check if this permission request is for a user that doesn't match the user permission.
+  // in practice, this shouldn't happen because we fetch user permissions based on the request.
+  private boolean mismatchedUserIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return !userPermission.getUserId().equals(request.getUserId());
+  }
+
+  // check if this permission request is for a workspace that doesn't match the user permission.
+  private boolean mismatchedWorkspaceIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return userPermission.getWorkspaceId() != null && !userPermission.getWorkspaceId().equals(request.getWorkspaceId());
+  }
+
+  // check if this permission request is for an organization that doesn't match the user permission.
+  private boolean mismatchedOrganizationIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return userPermission.getOrganizationId() != null
+        && request.getOrganizationId() != null
+        && !userPermission.getOrganizationId().equals(request.getOrganizationId());
+  }
+
+  // check if this permission request is for a workspace that belongs to a different organization than
+  // the user permission.
+  private boolean requestedWorkspaceNotInOrganization(final PermissionRead userPermission, final PermissionCheckRequest request)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+
+    // if the user permission is for an organization, and the request is for a workspace, return true if
+    // the workspace
+    // does not belong to the organization.
+    if (userPermission.getOrganizationId() != null && request.getWorkspaceId() != null) {
+      final UUID requestedWorkspaceOrganizationId =
+          workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
+      return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
+    }
+
+    // else, not a workspace-level request with an org-level user permission, so return false.
+    return false;
   }
 
   /**
    * Given multiple workspaceIds, checks whether the user has at least the given permissionType for
    * all workspaceIds.
    *
-   * @param permissionsCheckMultipleWorkspacesRequest The permissions check request
+   * @param multiRequest The permissions check request with multiple workspaces
    * @return The result of the permission check.
    * @throws IOException If unable to check the permission.
    */
   @SuppressWarnings("LineLength")
-  public PermissionCheckRead permissionsCheckMultipleWorkspaces(final PermissionsCheckMultipleWorkspacesRequest permissionsCheckMultipleWorkspacesRequest)
-      throws IOException {
-    final List<PermissionRead> permissions = listPermissionsByUser(permissionsCheckMultipleWorkspacesRequest.getUserId()).getPermissions();
-    final List<UUID> permissionedWorkspaceIds = permissions.stream()
-        .filter(
-            (permission) -> permission.getPermissionType() != null
-                && permission.getPermissionType().equals(permissionsCheckMultipleWorkspacesRequest.getPermissionType()))
-        .map(PermissionRead::getWorkspaceId).toList();
-    final boolean success =
-        new HashSet<UUID>(permissionedWorkspaceIds).containsAll(new HashSet<UUID>(permissionsCheckMultipleWorkspacesRequest.getWorkspaceIds()));
-    return success ? new PermissionCheckRead().status(StatusEnum.SUCCEEDED) : new PermissionCheckRead().status(StatusEnum.FAILED);
+  public PermissionCheckRead permissionsCheckMultipleWorkspaces(final PermissionsCheckMultipleWorkspacesRequest multiRequest) {
+
+    // Turn the multiple-request into a list of individual requests, one per workspace
+    final List<PermissionCheckRequest> permissionCheckRequests = multiRequest.getWorkspaceIds().stream()
+        .map(workspaceId -> new PermissionCheckRequest()
+            .userId(multiRequest.getUserId())
+            .permissionType(multiRequest.getPermissionType())
+            .workspaceId(workspaceId))
+        .toList();
+
+    // Perform the individual permission checks and store the results in a list
+    final List<PermissionCheckRead> results = permissionCheckRequests.stream()
+        .map(permissionCheckRequest -> {
+          try {
+            return checkPermissions(permissionCheckRequest);
+          } catch (IOException e) {
+            LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest);
+            return new PermissionCheckRead().status(StatusEnum.FAILED);
+          }
+        }).toList();
+
+    // If each individual workspace check succeeded, return an overall success. Otherwise, return an
+    // overall failure.
+    return results.stream().allMatch(result -> result.getStatus().equals(StatusEnum.SUCCEEDED))
+        ? new PermissionCheckRead().status(StatusEnum.SUCCEEDED)
+        : new PermissionCheckRead().status(StatusEnum.FAILED);
   }
 
   /**
