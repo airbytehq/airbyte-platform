@@ -5,6 +5,9 @@
 package io.airbyte.commons.converters;
 
 import com.google.common.base.Preconditions;
+import io.airbyte.api.model.generated.AirbyteCatalog;
+import io.airbyte.api.model.generated.AirbyteStream;
+import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.BasicSchedule;
@@ -19,7 +22,10 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
@@ -177,6 +183,40 @@ public class ConnectionHelper {
       default:
         throw new RuntimeException("Unhandled TimeUnitEnum: " + timeUnit);
     }
+  }
+
+  public static void validateCatalogDoesntContainDuplicateStreamNames(final AirbyteCatalog syncCatalog) {
+    final Set<StreamName> streamNames = new HashSet<>();
+    for (final AirbyteStreamAndConfiguration s : syncCatalog.getStreams()) {
+      final AirbyteStream stream = s.getStream();
+      if (!streamNames.add(new StreamName(stream.getNamespace(), stream.getName()))) {
+        throw new IllegalArgumentException(String.format("Catalog contains duplicate stream names: %s.%s", stream.getNamespace(), stream.getName()));
+      }
+    }
+  }
+
+  public record StreamName(String namespace, String name) {
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final StreamName that = (StreamName) o;
+      return Objects.equals(namespace, that.namespace) && Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = 17;
+      result = 31 * result + (namespace != null ? namespace.hashCode() : 0);
+      result = 31 * result + (name != null ? name.hashCode() : 0);
+      return result;
+    }
+
   }
 
 }

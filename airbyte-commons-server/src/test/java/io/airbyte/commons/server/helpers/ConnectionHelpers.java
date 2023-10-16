@@ -49,12 +49,14 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ConnectionHelpers {
 
   private static final String STREAM_NAME_BASE = "users-data";
   private static final String STREAM_NAME = STREAM_NAME_BASE + "0";
+  private static final String STREAM_NAMESPACE = "namespace";
   public static final String FIELD_NAME = "id";
 
   public static final String SECOND_FIELD_NAME = "id2";
@@ -367,6 +369,19 @@ public class ConnectionHelpers {
         .config(generateBasicApiStreamConfig(null))));
   }
 
+  public static AirbyteCatalog generateMultipleStreamsApiCatalog(final boolean uniqueNamespace,
+                                                                 final boolean uniqueStreamName,
+                                                                 final int streamsCount) {
+    final List<AirbyteStreamAndConfiguration> streamAndConfigurations = new ArrayList<>();
+    for (int i = 0; i < streamsCount; i++) {
+      streamAndConfigurations.add(new AirbyteStreamAndConfiguration()
+          .stream(generateApiStreamWithNamespace(uniqueNamespace ? Optional.of("namespace-" + i) : Optional.empty(),
+              uniqueStreamName ? Optional.of("stream-" + i) : Optional.empty()))
+          .config(generateBasicApiStreamConfig(String.valueOf(i))));
+    }
+    return new AirbyteCatalog().streams(streamAndConfigurations);
+  }
+
   public static AirbyteCatalog generateMultipleStreamsApiCatalog(final int streamsCount) {
     final List<AirbyteStreamAndConfiguration> streamAndConfigurations = new ArrayList<>();
     for (int i = 0; i < streamsCount; i++) {
@@ -401,6 +416,17 @@ public class ConnectionHelpers {
   private static AirbyteStream generateApiStreamWithTwoFields() {
     return new AirbyteStream()
         .name(STREAM_NAME)
+        .jsonSchema(generateJsonSchemaWithTwoFields())
+        .defaultCursorField(Lists.newArrayList(FIELD_NAME))
+        .sourceDefinedCursor(false)
+        .sourceDefinedPrimaryKey(Collections.emptyList())
+        .supportedSyncModes(List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL));
+  }
+
+  private static AirbyteStream generateApiStreamWithNamespace(final Optional<String> namespace, final Optional<String> name) {
+    return new AirbyteStream()
+        .namespace(namespace.orElse(STREAM_NAMESPACE))
+        .name(name.orElse(STREAM_NAME))
         .jsonSchema(generateJsonSchemaWithTwoFields())
         .defaultCursorField(Lists.newArrayList(FIELD_NAME))
         .sourceDefinedCursor(false)
