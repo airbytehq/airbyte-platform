@@ -596,6 +596,17 @@ class ConnectionsHandlerTest {
       }
 
       @Test
+      void testCreateConnectionWithDuplicateStreamsShouldThrowException() {
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateMultipleStreamsApiCatalog(false, false, 2);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.createConnection(connectionCreate));
+
+      }
+
+      @Test
       void testCreateConnectionUsesDefaultGeographyFromWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
 
         when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
@@ -835,6 +846,17 @@ class ConnectionsHandlerTest {
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionWithDuplicateStreamsShouldThrowException() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateMultipleStreamsApiCatalog(false, false, 2);
+
+        final ConnectionUpdate connectionCreate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate));
       }
 
       @Test

@@ -301,6 +301,17 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       data={tableData}
       className={styles.customTableStyle}
       sorting={false}
+      virtualized
+      virtualizedProps={{
+        /**
+         * improve performance: since all rows have the same height - there is no need to recalculate the height
+         */
+        fixedItemHeight: 28,
+        /**
+         * reduce the number of rendered rows to improve performance
+         */
+        increaseViewportBy: 50,
+      }}
     />
   );
 };

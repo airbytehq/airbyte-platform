@@ -24,6 +24,8 @@ import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamS
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +57,18 @@ public class AirbyteMessageUtils {
   public static AirbyteMessage createRecordMessage(final String tableName,
                                                    final String key,
                                                    final Integer value) {
+    return createRecordMessage(tableName, ImmutableMap.of(key, value));
+  }
+
+  public static AirbyteMessage createRecordMessage(final String tableName,
+                                                   final String key,
+                                                   final BigInteger value) {
+    return createRecordMessage(tableName, ImmutableMap.of(key, value));
+  }
+
+  public static AirbyteMessage createRecordMessage(final String tableName,
+                                                   final String key,
+                                                   final BigDecimal value) {
     return createRecordMessage(tableName, ImmutableMap.of(key, value));
   }
 

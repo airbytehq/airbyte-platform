@@ -30,6 +30,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -123,7 +124,8 @@ class NormalizationActivityImplTest {
         mAirbyteConfigValidator,
         mTemporalUtils,
         mAirbyteApiClient,
-        mFeatureFlagClient);
+        mFeatureFlagClient,
+        mock(MetricClient.class));
     testEnv.registerActivitiesImplementations(normalizationActivityImpl);
     normalizationActivity = testEnv.newActivityStub(NormalizationActivity.class);
   }

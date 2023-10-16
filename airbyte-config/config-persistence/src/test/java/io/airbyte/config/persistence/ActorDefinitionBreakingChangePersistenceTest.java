@@ -15,6 +15,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -99,7 +100,8 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
             mock(StandardSyncPersistence.class),
             MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
             new WorkspaceServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database)));
+            new OrganizationServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database)));
 
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

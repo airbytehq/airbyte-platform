@@ -35,6 +35,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.Database;
@@ -82,7 +83,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         database,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         new WorkspaceServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database)));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database)));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }

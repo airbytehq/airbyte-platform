@@ -31,6 +31,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -73,6 +75,28 @@ class VersionedAirbyteStreamFactoryTest {
 
       assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
       verify(logger).info("Reading messages from protocol version {}{}", "0.2.0", "");
+    }
+
+    @Test
+    void testValidBigInteger() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
+    }
+
+    @Test
+    void testValidBigDecimal() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          new BigDecimal("1234567890.1234567890"));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
     }
 
     @Test

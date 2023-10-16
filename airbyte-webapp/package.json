@@ -117,6 +117,7 @@
     "react-select": "^5.4.0",
     "react-use": "^17.4.0",
     "react-virtualized-auto-sizer": "^1.0.17",
+    "react-virtuoso": "^4.6.0",
     "react-widgets": "^4.6.1",
     "react-window": "^1.8.9",
     "recharts": "^2.1.13",

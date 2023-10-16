@@ -6,6 +6,7 @@ package io.airbyte.workers.process;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
@@ -14,6 +15,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.config.storage.MinioS3ClientFactory;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.S3DocumentStoreClient;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
@@ -120,7 +122,9 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         Map.of("k8s.io/example", "true"),
         serverPort,
         "airbyte-admin",
-        null);
+        null,
+        mock(MetricClient.class),
+        "test");
 
     final Map<Integer, Integer> portMap = Map.of(
         serverPort, serverPort,

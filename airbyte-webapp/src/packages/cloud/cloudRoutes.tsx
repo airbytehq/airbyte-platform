@@ -1,5 +1,6 @@
 import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -10,6 +11,7 @@ import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -164,6 +166,10 @@ export const Routing: React.FC = () => {
     () => (user ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email) } : {}),
     [providers, user]
   );
+
+  useEffectOnce(() => {
+    storeUtmFromQuery(search);
+  });
 
   useAnalyticsRegisterValues(analyticsContext);
   useAnalyticsIdentifyUser(user?.userId, userTraits);

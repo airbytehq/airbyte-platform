@@ -40,6 +40,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -86,6 +87,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
 
@@ -101,7 +103,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final TemporalUtils temporalUtils,
                                    final AirbyteApiClient airbyteApiClient,
-                                   final FeatureFlagClient featureFlagClient) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -115,6 +118,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -290,7 +294,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         workerConfigs,
         containerOrchestratorConfig.get(),
         serverPort,
-        featureFlagClient);
+        featureFlagClient,
+        metricClient);
   }
 
   private ConfiguredAirbyteCatalog retrieveCatalog(UUID connectionId) throws Exception {

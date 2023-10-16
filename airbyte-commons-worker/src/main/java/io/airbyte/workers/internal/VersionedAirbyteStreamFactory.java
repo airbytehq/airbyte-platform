@@ -344,7 +344,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
     // put back the deserializer.
-    Optional<AirbyteMessage> m = deserializer.deserialize(line);
+    Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
       m = BasicAirbyteMessageValidator.validate(m.get());

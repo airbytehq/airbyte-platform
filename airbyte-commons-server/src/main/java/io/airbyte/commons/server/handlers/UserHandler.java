@@ -43,7 +43,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,9 +93,7 @@ public class UserHandler {
    */
   public UserRead createUser(final UserCreate userCreate) throws IOException, ConfigNotFoundException, JsonValidationException {
 
-    final UserAuthIdRequestBody userAuthIdRequestBody = new UserAuthIdRequestBody()
-        .authUserId(userCreate.getAuthUserId())
-        .authProvider(userCreate.getAuthProvider());
+    final UserAuthIdRequestBody userAuthIdRequestBody = new UserAuthIdRequestBody().authUserId(userCreate.getAuthUserId());
     assertAuthIdHasNotBeenUsed(userAuthIdRequestBody);
 
     final UUID userId = userCreate.getUserId() != null ? userCreate.getUserId() : uuidGenerator.get();
@@ -117,10 +114,9 @@ public class UserHandler {
     UserRead userRead = null;
     try {
       userRead = getUserByAuthId(userAuthIdRequestBody);
-    } catch (final NotFoundException e) {
+    } catch (final ConfigNotFoundException e) {
       // This is "expected" if we want to create a new user.
-      LOGGER.debug("Unable to find user with auth ID {} and auth provider {}.", userAuthIdRequestBody.getAuthUserId(),
-          userAuthIdRequestBody.getAuthProvider());
+      LOGGER.debug("Unable to find user with auth ID {}.", userAuthIdRequestBody.getAuthUserId());
     } catch (final IOException | JsonValidationException e) {
       LOGGER.error("Error checking if auth id in unique: {}.", e.toString());
       throw new InternalServerKnownException("Error performing auth id checks..", e);
@@ -152,14 +148,13 @@ public class UserHandler {
    * @throws IOException if unable to retrieve the user.
    * @throws JsonValidationException if unable to retrieve the user.
    */
-  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) throws IOException, JsonValidationException {
-    final User.AuthProvider authProvider =
-        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+  public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
       return buildUserRead(user.get());
     } else {
-      throw new NotFoundException(String.format("User not found %s", userAuthIdRequestBody));
+      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
     }
   }
 
@@ -280,14 +275,13 @@ public class UserHandler {
     updateUser(userUpdate);
   }
 
-  public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody)
-      throws ConfigNotFoundException, IOException {
+  public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody) throws IOException {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(organizationId);
     return buildOrganizationUserReadList(userPermissions, organizationId);
   }
 
-  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws ConfigNotFoundException, IOException {
+  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(workspaceId);
     return buildWorkspaceUserReadList(userPermissions, workspaceId);
@@ -306,9 +300,7 @@ public class UserHandler {
 
   public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final User.AuthProvider authProvider =
-        Enums.convertTo(userAuthIdRequestBody.getAuthProvider(), User.AuthProvider.class);
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId(), authProvider);
+    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
       return buildUserRead(user.get());
     }
@@ -318,21 +310,18 @@ public class UserHandler {
     }
     final User incomingUser = jwtUserResolver.get().resolveUser();
 
-    // Verify JWT token and request value are the same. Otherwise, throw errors.
-    if (!incomingUser.getAuthProvider().value().equals(userAuthIdRequestBody.getAuthProvider().toString())) {
-      throw new IllegalArgumentException("JWT token issuer doesn't match the auth provider from the request body.");
-    }
-
     if (!incomingUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
 
-    LOGGER.debug("Creating User: " + incomingUser);
-    final UserRead createdUser = createUser(new UserCreate()
+    final UserCreate userCreate = new UserCreate()
         .name(incomingUser.getName())
         .authUserId(userAuthIdRequestBody.getAuthUserId())
-        .authProvider(userAuthIdRequestBody.getAuthProvider())
-        .email(incomingUser.getEmail()));
+        .authProvider(Enums.convertTo(incomingUser.getAuthProvider(), AuthProvider.class))
+        .email(incomingUser.getEmail());
+
+    LOGGER.debug("Creating User: " + userCreate);
+    final UserRead createdUser = createUser(userCreate);
 
     // If new user's email matches the initial user config email, create instance_admin permission for
     // them.

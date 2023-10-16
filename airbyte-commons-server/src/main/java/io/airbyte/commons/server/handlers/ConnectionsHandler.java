@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_NOTIFICATION;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_WARNING_NOTIFICATION;
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
@@ -366,6 +367,7 @@ public class ConnectionsHandler {
 
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
@@ -531,6 +533,7 @@ public class ConnectionsHandler {
     // in the patch. Otherwise, leave the field unchanged.
 
     if (patch.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }

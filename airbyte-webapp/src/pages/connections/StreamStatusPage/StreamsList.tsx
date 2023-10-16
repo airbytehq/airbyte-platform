@@ -10,7 +10,6 @@ import { TimeIcon } from "components/icons/TimeIcon";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
-import { Message } from "components/ui/Message";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -101,7 +100,9 @@ export const StreamsList = () => {
     [columnHelper, setShowRelativeTime, showRelativeTime]
   );
 
-  const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
+  const { connection } = useConnectionEditService();
+
+  const showTable = connection.status !== ConnectionStatus.inactive;
 
   return (
     <Card
@@ -114,30 +115,22 @@ export const StreamsList = () => {
     >
       <FlexContainer direction="column" gap="sm">
         <div className={styles.tableContainer} data-survey="streamcentric">
-          <Table
-            columns={columns}
-            data={streamEntries}
-            variant="inBlock"
-            className={styles.table}
-            getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
-            sorting={false}
-          />
+          {showTable && (
+            <Table
+              columns={columns}
+              data={streamEntries}
+              variant="inBlock"
+              className={styles.table}
+              getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
+              sorting={false}
+            />
+          )}
 
-          {/* if there are no entries and the connection is disabled we can easily resolve by enabling the connection */}
-          {streamEntries.length === 0 && connection.status === ConnectionStatus.inactive && (
-            <Box m="lg">
-              <Message
-                text={<FormattedMessage id="connection.stream.status.table.emptyTable.message" />}
-                actionBtnText={<FormattedMessage id="connection.stream.status.table.emptyTable.callToAction" />}
-                type="info"
-                onAction={() => {
-                  updateConnection({
-                    connectionId: connection.connectionId,
-                    status: ConnectionStatus.active,
-                  });
-                }}
-                actionBtnProps={connectionUpdating ? { disabled: true } : {}}
-              />
+          {!showTable && (
+            <Box p="xl">
+              <Text size="sm" color="grey" italicized>
+                <FormattedMessage id="connection.stream.status.table.emptyTable.message" />
+              </Text>
             </Box>
           )}
         </div>

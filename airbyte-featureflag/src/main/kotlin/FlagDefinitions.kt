@@ -113,6 +113,8 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
+object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
+
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
  * the sync input.

@@ -93,7 +93,8 @@ class ReplicationActivityTest {
             "name":"test-stream-name",
             "namespace":"test-stream-namespace"
           },
-          "stream_state":{"cursor":"6","stream_name":"test-stream-name","cursor_field":["id"],"stream_namespace":"test-stream-namespace","cursor_record_count":1}
+          "stream_state":{"cursor":"6","stream_name":"test-stream-name","cursor_field":["id"],
+          "stream_namespace":"test-stream-namespace","cursor_record_count":1}
         }
       }]
       """));

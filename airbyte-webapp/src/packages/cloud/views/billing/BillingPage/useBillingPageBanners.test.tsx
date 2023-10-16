@@ -34,16 +34,14 @@ const mockHooks = (workspaceTrialStatus: WorkspaceTrialStatus, remainingCredits:
 describe("useBillingPageBanners", () => {
   describe("pre-trial", () => {
     // because the pre-trial state can only exist with the flag enabled, we need to mock the flag as true!
-    mockUseExperiment.mockImplementation(() => {
-      return {
-        useExperiment: (id: string) => {
-          if (id === "billing.newTrialPolicy") {
-            return true;
-          }
-          return undefined;
-        },
-        ExperimentProvider: ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>,
-      };
+    mockUseExperiment.mockImplementation((id) => {
+      if (id === "billing.newTrialPolicy") {
+        return true;
+      }
+      if (id === "billing.autoRecharge") {
+        return false;
+      }
+      throw new Error(`experiment ${id} is not mocked.`);
     });
     it("should show an info variant banner", () => {
       mockHooks(WorkspaceTrialStatus.pre_trial, 0);
@@ -174,5 +172,13 @@ describe("useBillingPageBanners", () => {
       const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
       expect(result.current.bannerVariant).toEqual("error");
     });
+  });
+
+  it("should always return info variant when auto recharge is on", () => {
+    mockHooks(WorkspaceTrialStatus.out_of_trial, 0);
+    mockUseExperiment.mockReturnValue(true);
+
+    const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+    expect(result.current.bannerVariant).toEqual("info");
   });
 });

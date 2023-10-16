@@ -11,6 +11,7 @@ import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
@@ -93,12 +94,14 @@ public class DatabaseBeanFactory {
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
                                            final FeatureFlagClient featureFlagClient,
                                            final WorkspaceService workspaceService,
-                                           final OrganizationService organizationService) {
+                                           final OrganizationService organizationService,
+                                           final OAuthService oauthService) {
     return new ConfigRepository(
         configDatabase,
         ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
         workspaceService,
-        organizationService);
+        organizationService,
+        oauthService);
   }
 
   @Singleton

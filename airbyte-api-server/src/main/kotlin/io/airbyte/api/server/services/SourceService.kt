@@ -213,7 +213,9 @@ open class SourceServiceImpl(
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     if (response.body() == null || response.body()?.jobInfo?.succeeded == false) {
       var errorMessage = "Something went wrong in the connector."
-      if (response.body() != null && response.body()?.jobInfo?.failureReason!!.internalMessage != null) {
+      if (response.body() != null && response.body()?.jobInfo?.failureReason!!.externalMessage != null) {
+        errorMessage += " logs:" + response.body()?.jobInfo!!.failureReason!!.externalMessage
+      } else if (response.body() != null && response.body()?.jobInfo?.failureReason!!.internalMessage != null) {
         errorMessage += " logs:" + response.body()?.jobInfo!!.failureReason!!.internalMessage
       }
       throw UnexpectedProblem(HttpStatus.BAD_REQUEST, errorMessage)

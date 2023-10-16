@@ -8,22 +8,16 @@ jest.mock("core/api", () => ({
   useConnectionList: jest.fn(() => ({
     connections: [],
   })),
-  useEnableConnection: jest.fn(() => ({
-    mutateAsync: jest.fn(),
-  })),
   useSyncConnection: jest.fn(() => ({
     mutateAsync: jest.fn(),
+  })),
+  useUpdateConnection: jest.fn(() => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
   })),
 }));
 
 const mockId = "mock-id";
-
-jest.doMock("core/api", () => ({
-  useEnableConnection: () => ({
-    mutateAsync: jest.fn(),
-    isLoading: false,
-  }),
-}));
 
 describe("<StatusCell />", () => {
   it("renders switch when connection has schedule", () => {

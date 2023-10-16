@@ -21,6 +21,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -94,7 +95,8 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         database,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         new WorkspaceServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database));
 
     final UUID defId = UUID.randomUUID();
     final ActorDefinitionVersion initialADV = initialActorDefinitionVersion(defId);

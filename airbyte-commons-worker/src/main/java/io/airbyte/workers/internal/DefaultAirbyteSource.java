@@ -5,7 +5,10 @@
 package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
+import static io.airbyte.protocol.models.AirbyteMessage.Type.RECORD;
+import static io.airbyte.protocol.models.AirbyteMessage.Type.STATE;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
@@ -90,11 +93,20 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
     logInitialStateAsJSON(sourceConfig);
 
-    final List<Type> acceptedMessageTypes = List.of(Type.RECORD, Type.STATE, Type.TRACE, Type.CONTROL);
+    final List<Type> acceptedMessageTypes = List.of(Type.RECORD, STATE, Type.TRACE, Type.CONTROL);
     messageIterator = streamFactory.create(IOs.newBufferedReader(sourceProcess.getInputStream()))
-        .peek(message -> heartbeatMonitor.beat())
+        .peek(message -> {
+          if (shouldBeat(message.getType())) {
+            heartbeatMonitor.beat();
+          }
+        })
         .filter(message -> acceptedMessageTypes.contains(message.getType()))
         .iterator();
+  }
+
+  @VisibleForTesting
+  static boolean shouldBeat(final AirbyteMessage.Type airbyteMessageType) {
+    return airbyteMessageType == STATE || airbyteMessageType == RECORD;
   }
 
   @Override

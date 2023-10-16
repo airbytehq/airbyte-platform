@@ -57,6 +57,7 @@ dependencies {
     implementation project(':airbyte-persistence:job-persistence')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-worker-models')
+    implementation libs.jakarta.validation.api
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor

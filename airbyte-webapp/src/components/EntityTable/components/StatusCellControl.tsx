@@ -4,8 +4,9 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Switch } from "components/ui/Switch";
 
-import { useEnableConnection, useSyncConnection } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useSyncConnection, useUpdateConnection } from "core/api";
+import { ConnectionStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { Action, Namespace, getFrequencyFromScheduleData, useAnalyticsService } from "core/services/analytics";
 
 import styles from "./StatusCellControl.module.scss";
 
@@ -26,7 +27,8 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
   hasBreakingChange,
   connection,
 }) => {
-  const { mutateAsync: enableConnection, isLoading } = useEnableConnection();
+  const analyticsService = useAnalyticsService();
+  const { mutateAsync: updateConnection, isLoading } = useUpdateConnection();
   const { mutateAsync: syncConnection, isLoading: isSyncStarting } = useSyncConnection();
 
   const onRunManualSync = (event: React.SyntheticEvent) => {
@@ -40,9 +42,19 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
   if (!isManual) {
     const onSwitchChange = async (event: React.SyntheticEvent) => {
       event.stopPropagation();
-      await enableConnection({
+      await updateConnection({
         connectionId: id,
-        enable: !enabled,
+        status: enabled ? ConnectionStatus.inactive : ConnectionStatus.active,
+      }).then((updatedConnection) => {
+        const action = updatedConnection.status === ConnectionStatus.active ? Action.REENABLE : Action.DISABLE;
+
+        analyticsService.track(Namespace.CONNECTION, action, {
+          frequency: getFrequencyFromScheduleData(connection.scheduleData),
+          connector_source: connection.source?.sourceName,
+          connector_source_definition_id: connection.source?.sourceDefinitionId,
+          connector_destination: connection.destination?.destinationName,
+          connector_destination_definition_id: connection.destination?.destinationDefinitionId,
+        });
       });
     };
 

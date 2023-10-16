@@ -12,6 +12,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -40,7 +41,8 @@ public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, 
                                    final ResourceRequirements resourceRequirements,
                                    final Integer serverPort,
                                    final WorkerConfigs workerConfigs,
-                                   final FeatureFlagClient featureFlagClient) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final MetricClient metricClient) {
     super(
         connectionId,
         workspaceId,
@@ -56,12 +58,18 @@ public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, 
         serverPort,
         workerConfigs,
         featureFlagClient,
-        sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());
+        sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector(),
+        metricClient);
   }
 
   @Override
   protected Map<String, String> generateCustomMetadataLabels() {
     return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_REPLICATION_STEP);
+  }
+
+  @Override
+  protected String getLauncherType() {
+    return "Replication";
   }
 
 }

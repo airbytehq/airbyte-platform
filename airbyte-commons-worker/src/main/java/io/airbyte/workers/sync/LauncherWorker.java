@@ -20,6 +20,7 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
@@ -83,6 +84,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private AsyncOrchestratorPodProcess process;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   public LauncherWorker(final UUID connectionId,
                         final UUID workspaceId,
@@ -96,7 +98,8 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
                         final Integer serverPort,
                         final WorkerConfigs workerConfigs,
                         final FeatureFlagClient featureFlagClient,
-                        final boolean isCustomConnector) {
+                        final boolean isCustomConnector,
+                        final MetricClient metricClient) {
 
     this.connectionId = connectionId;
     this.workspaceId = workspaceId;
@@ -111,6 +114,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
     this.isCustomConnector = isCustomConnector;
+    this.metricClient = metricClient;
 
     // Generate a random UUID to unique identify the pod process
     processId = UUID.randomUUID();
@@ -181,7 +185,9 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
           workerConfigs.getWorkerKubeAnnotations(),
           serverPort,
           containerOrchestratorConfig.serviceAccount(),
-          schedulerName.isBlank() ? null : schedulerName);
+          schedulerName.isBlank() ? null : schedulerName,
+          metricClient,
+          getLauncherType());
 
       // only kill running pods and create process if it is not already running.
       if (process.getDocStoreStatus().equals(AsyncKubePodStatus.NOT_STARTED)) {
@@ -254,7 +260,15 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
     return metadataLabels;
   }
 
+  /**
+   * Return an implementation specific map of labels. Useful for identifying Kubernetes pods.
+   */
   protected abstract Map<String, String> generateCustomMetadataLabels();
+
+  /**
+   * Return the type of launcher. This is used for logging and tracing purposes.
+   */
+  protected abstract String getLauncherType();
 
   /**
    * It is imperative that we do not run multiple replications, normalizations, syncs, etc. at the

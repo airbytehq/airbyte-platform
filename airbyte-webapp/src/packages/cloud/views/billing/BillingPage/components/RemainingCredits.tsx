@@ -10,7 +10,8 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useStripeCheckout } from "core/api/cloud";
@@ -20,6 +21,7 @@ import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useExperiment } from "hooks/services/Experiment";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 import { EmailVerificationHint } from "./EmailVerificationHint";
@@ -47,6 +49,8 @@ export const RemainingCredits: React.FC = () => {
   const { isLoading, mutateAsync: createCheckout } = useStripeCheckout();
   const analytics = useAnalyticsService();
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
+
+  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
   const { bannerVariant } = useBillingPageBanners();
 
@@ -148,10 +152,26 @@ export const RemainingCredits: React.FC = () => {
           </FlexContainer>
         </FlexContainer>
         <FlexContainer direction="column">
+          {isAutoRechargeEnabled && (
+            <Message
+              text={
+                <FormattedMessage
+                  id="credits.autoRechargeEnabled"
+                  values={{
+                    contact: (node: React.ReactNode) => (
+                      <Link opensInNewTab to="mailto:natalie@airbyte.io" variant="primary">
+                        {node}
+                      </Link>
+                    ),
+                  }}
+                />
+              }
+            />
+          )}
           {!emailVerified && sendEmailVerification && (
             <EmailVerificationHint variant={bannerVariant} sendEmailVerification={sendEmailVerification} />
           )}
-          <LowCreditBalanceHint variant={bannerVariant} />
+          {!isAutoRechargeEnabled && <LowCreditBalanceHint variant={bannerVariant} />}
         </FlexContainer>
       </Box>
     </Card>

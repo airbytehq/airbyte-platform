@@ -133,6 +133,7 @@ public class MockData {
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_5 = UUID.randomUUID();
+  static final UUID CREATOR_USER_ID_6 = UUID.randomUUID();
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -143,10 +144,12 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
+  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_3 = UUID.randomUUID();
+  static final UUID ORGANIZATION_ID_4 = UUID.randomUUID();
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -259,13 +262,13 @@ public class MockData {
         .withPermissionId(PERMISSION_ID_2)
         .withUserId(CREATOR_USER_ID_2)
         .withWorkspaceId(WORKSPACE_ID_2)
-        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+        .withPermissionType(PermissionType.WORKSPACE_OWNER);
 
     final Permission permission3 = new Permission()
         .withPermissionId(PERMISSION_ID_3)
         .withUserId(CREATOR_USER_ID_3)
         .withWorkspaceId(null)
-        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+        .withPermissionType(PermissionType.WORKSPACE_OWNER);
 
     final Permission permission4 = new Permission()
         .withPermissionId(PERMISSION_ID_4)
@@ -293,6 +296,12 @@ public class MockData {
 
     return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
   }
+
+  public static final Permission permission8 = new Permission()
+      .withPermissionId(PERMISSION_ID_8)
+      .withUserId(CREATOR_USER_ID_6)
+      .withOrganizationId(ORGANIZATION_ID_4)
+      .withPermissionType(null);
 
   public static List<Organization> organizations() {
     final Organization organization1 =

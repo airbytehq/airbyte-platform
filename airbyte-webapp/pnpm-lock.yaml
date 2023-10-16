@@ -213,6 +213,9 @@ dependencies:
   react-virtualized-auto-sizer:
     specifier: ^1.0.17
     version: 1.0.17(react-dom@18.2.0)(react@18.2.0)
+  react-virtuoso:
+    specifier: ^4.6.0
+    version: 4.6.0(react-dom@18.2.0)(react@18.2.0)
   react-widgets:
     specifier: ^4.6.1
     version: 4.6.1(react-dom@18.2.0)(react@18.2.0)
@@ -17131,6 +17134,17 @@ packages:
       react-lifecycles-compat: 3.0.4
     dev: false
     patched: true
+
+  /react-virtuoso@4.6.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-paQbkLA8U6dRe9srltWgPeoFCtNKqUYIcOpUR01JyznzaXWVzgZQE0M9KGi9vMoq8vHvHkGzuxJ6jDCS6uzePg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=16 || >=17 || >= 18'
+      react-dom: '>=16 || >=17 || >= 18'
+    dependencies:
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    dev: false
 
   /react-widgets@4.6.1(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-x2n4EFQnk1ZG2rWsdekGK3js091k+b06e0CRI4pDEZ0uh/cft3NyGFKS5/x7CV/fN51kHMaM4r5IRGIbPfsLLw==}

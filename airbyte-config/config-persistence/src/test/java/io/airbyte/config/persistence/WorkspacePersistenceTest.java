@@ -29,6 +29,7 @@ import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
@@ -66,7 +67,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         null,
         MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
         workspaceService,
-        new OrganizationServiceJooqImpl(database)));
+        new OrganizationServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database)));
     workspacePersistence = new WorkspacePersistence(database);
     permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);

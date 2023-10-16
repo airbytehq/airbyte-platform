@@ -12,6 +12,7 @@ export interface Experiments {
   "authPage.signup.hideName": boolean;
   "autopropagation.enabled": boolean;
   "billing.newTrialPolicy": boolean;
+  "billing.autoRecharge": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
@@ -34,7 +35,6 @@ export interface Experiments {
   "settings.emailNotifications": boolean;
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
-  "workspaces.newWorkspacesUI": boolean;
   "settings.accessManagement": boolean;
   "form.createConnectionHookForm": boolean;
 }

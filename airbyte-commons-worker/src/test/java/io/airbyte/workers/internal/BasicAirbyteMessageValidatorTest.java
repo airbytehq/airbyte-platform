@@ -18,7 +18,7 @@ public class BasicAirbyteMessageValidatorTest {
 
   @Test
   void testObviousInvalid() {
-    final Optional<AirbyteMessage> bad = Jsons.tryDeserialize("{}", AirbyteMessage.class);
+    final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{}", AirbyteMessage.class);
 
     final var m = BasicAirbyteMessageValidator.validate(bad.get());
     assertTrue(m.isEmpty());
@@ -35,7 +35,7 @@ public class BasicAirbyteMessageValidatorTest {
 
   @Test
   void testSubtleInvalidRecord() {
-    final Optional<AirbyteMessage> bad = Jsons.tryDeserialize("{\"type\": \"RECORD\", \"record\": {}}", AirbyteMessage.class);
+    final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"RECORD\", \"record\": {}}", AirbyteMessage.class);
 
     final var m = BasicAirbyteMessageValidator.validate(bad.get());
     assertTrue(m.isEmpty());
@@ -52,7 +52,7 @@ public class BasicAirbyteMessageValidatorTest {
 
   @Test
   void testSubtleInvalidState() {
-    final Optional<AirbyteMessage> bad = Jsons.tryDeserialize("{\"type\": \"STATE\", \"control\": {}}", AirbyteMessage.class);
+    final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"STATE\", \"control\": {}}", AirbyteMessage.class);
 
     final var m = BasicAirbyteMessageValidator.validate(bad.get());
     assertTrue(m.isEmpty());
@@ -69,7 +69,7 @@ public class BasicAirbyteMessageValidatorTest {
 
   @Test
   void testSubtleInvalidControl() {
-    final Optional<AirbyteMessage> bad = Jsons.tryDeserialize("{\"type\": \"CONTROL\", \"state\": {}}", AirbyteMessage.class);
+    final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"CONTROL\", \"state\": {}}", AirbyteMessage.class);
 
     final var m = BasicAirbyteMessageValidator.validate(bad.get());
     assertTrue(m.isEmpty());

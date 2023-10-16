@@ -178,7 +178,14 @@ export const useUpdateWorkspace = () => {
 
   return useMutation((workspace: WorkspaceUpdate) => updateWorkspace(workspace, requestOptions), {
     onSuccess: (data) => {
-      queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
+      queryClient.setQueryData<WorkspaceRead>(workspaceKeys.detail(data.workspaceId), data);
+      queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => {
+        return {
+          workspaces: old?.workspaces.map((workspace) => {
+            return workspace.workspaceId === data.workspaceId ? data : workspace;
+          }) ?? [data],
+        };
+      });
     },
   });
 };
@@ -191,7 +198,21 @@ export const useUpdateWorkspaceName = () => {
     (workspaceUpdateNameBody: WorkspaceUpdateName) => updateWorkspaceName(workspaceUpdateNameBody, requestOptions),
     {
       onSuccess: (data) => {
-        queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
+        queryClient.setQueryData<WorkspaceRead>(workspaceKeys.detail(data.workspaceId), data);
+        queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => {
+          const list = old?.workspaces ?? [];
+          if (list.length === 0) {
+            return { workspaces: [data] };
+          }
+
+          const index = list.findIndex((item) => item.workspaceId === data.workspaceId);
+
+          if (index === -1) {
+            return { workspaces: list };
+          }
+
+          return { workspaces: [...list.slice(0, index), data, ...list.slice(index + 1)] };
+        });
       },
     }
   );
