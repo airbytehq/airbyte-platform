@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "checkstyle:AbbreviationAsWordInName", "checkstyle:MemberName"})
 class V0_50_24_004__AddAndEnforceUniqueConstraintInADVTableTest extends AbstractConfigsDatabaseTest {
 
   final Table<Record> ACTOR_DEFINITION_VERSION = DSL.table("actor_definition_version");
