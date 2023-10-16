@@ -8,6 +8,7 @@ export const permissionStringDictionary: Record<PermissionType, string> = {
   organization_admin: "role.admin",
   organization_editor: "role.editor",
   organization_reader: "role.reader",
+  organization_member: "role.member",
   workspace_admin: "role.admin",
   workspace_owner: "role.admin",
   workspace_editor: "role.editor",
@@ -24,6 +25,7 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   organization_admin: { id: "role.admin.description", values: { resourceType: "organization" } },
   organization_editor: { id: "role.editor.description", values: { resourceType: "organization" } },
   organization_reader: { id: "role.reader.description", values: { resourceType: "organization" } },
+  organization_member: { id: "role.member.description", values: { resourceType: "organization" } },
   workspace_admin: { id: "role.admin.description", values: { resourceType: "workspace" } },
   workspace_owner: { id: "role.admin.description", values: { resourceType: "workspace" } }, // is not and should not be referenced in code.  required by types but will be deprecated soon.
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },

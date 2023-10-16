@@ -62,7 +62,8 @@ public class KeycloakTokenValidator implements TokenValidator {
       PermissionType.WORKSPACE_EDITOR, AuthRole.EDITOR, PermissionType.WORKSPACE_READER, AuthRole.READER);
   private static final Map<PermissionType, OrganizationAuthRole> ORGANIZATION_PERMISSION_TYPE_TO_AUTH_ROLE =
       Map.of(PermissionType.ORGANIZATION_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN, PermissionType.ORGANIZATION_EDITOR,
-          OrganizationAuthRole.ORGANIZATION_EDITOR, PermissionType.ORGANIZATION_READER, OrganizationAuthRole.ORGANIZATION_READER);
+          OrganizationAuthRole.ORGANIZATION_EDITOR, PermissionType.ORGANIZATION_READER, OrganizationAuthRole.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER, OrganizationAuthRole.ORGANIZATION_MEMBER);
 
   public KeycloakTokenValidator(final HttpClient httpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,

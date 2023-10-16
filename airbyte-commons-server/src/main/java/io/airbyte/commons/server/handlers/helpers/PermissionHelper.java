@@ -23,6 +23,7 @@ public class PermissionHelper {
           PermissionType.ORGANIZATION_ADMIN,
           PermissionType.ORGANIZATION_EDITOR,
           PermissionType.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER,
           PermissionType.WORKSPACE_OWNER,
           PermissionType.WORKSPACE_ADMIN,
           PermissionType.WORKSPACE_EDITOR,
@@ -34,15 +35,23 @@ public class PermissionHelper {
       PermissionType.ORGANIZATION_EDITOR, Set.of(
           PermissionType.ORGANIZATION_EDITOR,
           PermissionType.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER,
           PermissionType.WORKSPACE_EDITOR,
           PermissionType.WORKSPACE_READER),
 
-      // Organization reader grants access to just the organization reader permission, and also
+      // Organization reader grants access to all organization-reader-and-lower permissions, and also
       // workspace-reader permissions
       // for workspaces within the organization.
       PermissionType.ORGANIZATION_READER, Set.of(
           PermissionType.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER,
           PermissionType.WORKSPACE_READER),
+
+      // Organization member grants access to organization member permissions only,
+      // but does not have permissions to access any workspaces and cannot grant access to workspace level
+      // permission.
+      PermissionType.ORGANIZATION_MEMBER, Set.of(
+          PermissionType.ORGANIZATION_MEMBER),
 
       // Workspace owner (deprecated) is equivalent to workspace admin, and grants access to all
       // workspace-admin-and-lower permissions.

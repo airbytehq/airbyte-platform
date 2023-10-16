@@ -246,6 +246,8 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.FAILED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
 
       if (userPermissionType == PermissionType.WORKSPACE_ADMIN) {
@@ -264,6 +266,8 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.FAILED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
 
       if (userPermissionType == PermissionType.WORKSPACE_EDITOR) {
@@ -280,6 +284,8 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.FAILED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
 
       if (userPermissionType == PermissionType.WORKSPACE_READER) {
@@ -295,12 +301,14 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.FAILED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
     }
 
     @ParameterizedTest
     @EnumSource(value = PermissionType.class,
-                names = {"ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER"})
+                names = {"ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER"})
     void organizationLevelPermissions(final PermissionType userPermissionType) throws IOException, JsonValidationException, ConfigNotFoundException {
       when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(userPermissionType)
@@ -327,6 +335,8 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.SUCCEEDED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
 
       if (userPermissionType == PermissionType.ORGANIZATION_EDITOR) {
@@ -343,6 +353,8 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.SUCCEEDED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
 
       if (userPermissionType == PermissionType.ORGANIZATION_READER) {
@@ -358,6 +370,25 @@ class PermissionHandlerTest {
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
         assertEquals(StatusEnum.SUCCEEDED,
             permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.SUCCEEDED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
+      }
+
+      if (userPermissionType == PermissionType.ORGANIZATION_MEMBER) {
+        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_OWNER)).getStatus());
+        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_ADMIN)).getStatus());
+        assertEquals(StatusEnum.FAILED, permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_EDITOR)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getWorkspacePermissionCheck(PermissionType.WORKSPACE_READER)).getStatus());
+
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_ADMIN)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
+        assertEquals(StatusEnum.FAILED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+        assertEquals(StatusEnum.SUCCEEDED,
+            permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
       }
     }
 
@@ -384,6 +415,8 @@ class PermissionHandlerTest {
           permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_EDITOR)).getStatus());
       assertEquals(StatusEnum.SUCCEEDED,
           permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_READER)).getStatus());
+      assertEquals(StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(PermissionType.ORGANIZATION_MEMBER)).getStatus());
     }
 
     @Test
@@ -396,7 +429,8 @@ class PermissionHandlerTest {
           PermissionType.WORKSPACE_READER,
           PermissionType.ORGANIZATION_ADMIN,
           PermissionType.ORGANIZATION_EDITOR,
-          PermissionType.ORGANIZATION_READER);
+          PermissionType.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER);
 
       // If this assertion fails, it means a new PermissionType was added! Please update either the
       // `organizationLevelPermissions` or `workspaceLeveLPermissions` tests above this one to

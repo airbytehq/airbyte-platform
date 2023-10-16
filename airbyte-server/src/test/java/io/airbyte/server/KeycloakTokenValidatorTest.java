@@ -118,7 +118,8 @@ class KeycloakTokenValidatorTest {
 
     // TODO: enable this once we are ready to enable getRoles function in KeycloakTokenValidator.
     // Set<String> expectedResult = Set.of("ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
-    Set<String> expectedResult = Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+    Set<String> expectedResult =
+        Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER", "ADMIN", "EDITOR", "READER");
 
     StepVerifier.create(responsePublisher)
         .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, expectedResult))
