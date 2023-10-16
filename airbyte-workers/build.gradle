@@ -20,7 +20,7 @@ configurations.all {
     resolutionStrategy {
         // Ensure that the versions defined in deps.toml are used
         // instead of versions from transitive dependencies
-        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.aws.java.sdk.sts
+        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts
     }
 }
 
@@ -45,6 +45,7 @@ dependencies {
     implementation libs.micronaut.cache.caffeine
     implementation libs.jooq
     implementation libs.s3
+    implementation libs.sts
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.4.0'
