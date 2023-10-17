@@ -29,8 +29,16 @@ import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -63,12 +71,17 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws Exception {
     workspaceService = spy(new WorkspaceServiceJooqImpl(database));
     configRepository = spy(new ConfigRepository(
-        database,
-        null,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-        workspaceService,
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database),
+        new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database)));
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database)));
     workspacePersistence = new WorkspacePersistence(database);
     permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);

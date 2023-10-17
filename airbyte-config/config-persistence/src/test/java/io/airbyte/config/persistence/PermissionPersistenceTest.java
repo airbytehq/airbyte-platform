@@ -11,8 +11,16 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -39,11 +47,17 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   private void setupTestData() throws IOException, JsonValidationException {
     final UserPersistence userPersistence = new UserPersistence(database);
     final ConfigRepository configRepository = new ConfigRepository(
-        database,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-        new WorkspaceServiceJooqImpl(database),
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database),
+        new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database));
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);

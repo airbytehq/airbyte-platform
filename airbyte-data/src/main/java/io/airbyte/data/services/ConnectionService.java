@@ -15,6 +15,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -54,13 +55,8 @@ public interface ConnectionService {
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
 
-  // TODO: This uses jooq stuff so we gotta rework it.
-  // List<StandardSync> getStandardSyncsFromResult(
-  // Result<Record> connectionAndOperationIdsResult,
-  // List<NotificationConfigurationRecord> allNeededNotificationConfigurations);
+  Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange) throws IOException;
 
-  // TODO: same as above
-  // Map<UUID, List<StandardSync>> getWorkspaceIdToStandardSyncsFromResult(
-  // Result<Record> connectionAndOperationIdsResult,
-  // List<NotificationConfigurationRecord> allNeededNotificationConfigurations)
+  void disableConnectionsById(final List<UUID> connectionIds) throws IOException;
+
 }

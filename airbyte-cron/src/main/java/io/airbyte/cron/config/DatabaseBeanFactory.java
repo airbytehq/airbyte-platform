@@ -7,13 +7,20 @@ package io.airbyte.cron.config;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.data.services.ActorDefinitionService;
+import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.HealthCheckService;
 import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.db.Database;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import io.airbyte.persistence.job.DefaultMetadataPersistence;
 import io.airbyte.persistence.job.JobPersistence;
@@ -81,17 +88,29 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Replaces(ConfigRepository.class)
-  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
-                                           final FeatureFlagClient featureFlagClient,
-                                           final WorkspaceService workspaceService,
+  public ConfigRepository configRepository(final ActorDefinitionService actorDefinitionService,
+                                           final CatalogService catalogService,
+                                           final ConnectionService connectionService,
+                                           final ConnectorBuilderService connectorBuilderService,
+                                           final DestinationService destinationService,
+                                           final HealthCheckService healthCheckService,
+                                           final OAuthService oauthService,
+                                           final OperationService operationService,
                                            final OrganizationService organizationService,
-                                           final OAuthService oauthService) {
+                                           final SourceService sourceService,
+                                           final WorkspaceService workspaceService) {
     return new ConfigRepository(
-        configDatabase,
-        ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient),
-        workspaceService,
+        actorDefinitionService,
+        catalogService,
+        connectionService,
+        connectorBuilderService,
+        destinationService,
+        healthCheckService,
+        oauthService,
+        operationService,
         organizationService,
-        oauthService);
+        sourceService,
+        workspaceService);
   }
 
   /**

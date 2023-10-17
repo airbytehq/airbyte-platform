@@ -34,8 +34,16 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
@@ -81,11 +89,17 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     // only used for creating records that sync depends on.
     configRepository = new ConfigRepository(
-        database,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER,
-        new WorkspaceServiceJooqImpl(database),
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database),
+        new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database));
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
   }
 
   @Test

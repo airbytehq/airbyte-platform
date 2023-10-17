@@ -34,6 +34,7 @@ import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -483,6 +484,45 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
         .fetchOneInto(Integer.class);
 
     return countResult > 0;
+  }
+
+  /**
+   * List connection IDs for active syncs based on the given query.
+   *
+   * @param standardSyncQuery query
+   * @return list of connection IDs
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  @Override
+  public List<UUID> listWorkspaceActiveSyncIds(StandardSyncQuery standardSyncQuery)
+      throws IOException {
+    return database.query(ctx -> ctx
+        .select(CONNECTION.ID)
+        .from(CONNECTION)
+        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(ACTOR.WORKSPACE_ID.eq(standardSyncQuery.workspaceId())
+            .and(standardSyncQuery.destinationId() == null || standardSyncQuery.destinationId().isEmpty() ? noCondition()
+                : CONNECTION.DESTINATION_ID.in(standardSyncQuery.destinationId()))
+            .and(standardSyncQuery.sourceId() == null || standardSyncQuery.sourceId().isEmpty() ? noCondition()
+                : CONNECTION.SOURCE_ID.in(standardSyncQuery.sourceId()))
+            // includeDeleted is not relevant here because it refers to connection status deprecated,
+            // and we are only retrieving active syncs anyway
+            .and(CONNECTION.STATUS.eq(StatusType.active)))
+        .groupBy(CONNECTION.ID)).fetchInto(UUID.class);
+  }
+
+  /**
+   * List workspaces with given ids.
+   *
+   * @param includeTombstone include tombstoned workspaces
+   * @return workspaces
+   * @throws IOException - you never know when you IO
+   */
+  @Override
+  public List<StandardWorkspace> listStandardWorkspacesWithIds(List<UUID> workspaceIds,
+                                                               boolean includeTombstone)
+      throws IOException {
+    return listWorkspaceQuery(Optional.of(workspaceIds), includeTombstone).toList();
   }
 
   /**
