@@ -13,7 +13,7 @@ import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
-import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Value;

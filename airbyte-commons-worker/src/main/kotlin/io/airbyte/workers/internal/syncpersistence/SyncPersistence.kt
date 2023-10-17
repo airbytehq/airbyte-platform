@@ -30,8 +30,8 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats
-import io.airbyte.workers.internal.state_aggregator.StateAggregator
-import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory
+import io.airbyte.workers.internal.stateaggregator.StateAggregator
+import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype

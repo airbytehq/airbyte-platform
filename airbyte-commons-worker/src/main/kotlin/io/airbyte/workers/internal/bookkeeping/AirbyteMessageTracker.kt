@@ -6,8 +6,8 @@ import io.airbyte.config.FailureReason
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
-import io.airbyte.workers.internal.state_aggregator.DefaultStateAggregator
-import io.airbyte.workers.internal.state_aggregator.StateAggregator
+import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
+import io.airbyte.workers.internal.stateaggregator.StateAggregator
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}

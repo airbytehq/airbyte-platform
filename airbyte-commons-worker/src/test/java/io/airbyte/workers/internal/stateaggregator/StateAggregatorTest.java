@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal.state_aggregator;
+package io.airbyte.workers.internal.stateaggregator;
 
 import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.GLOBAL;
 import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.LEGACY;
@@ -145,11 +145,11 @@ class StateAggregatorTest {
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state2), AirbyteStateMessage.class));
     Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state2NoData, state1NoData))));
+        .withState(Jsons.jsonNode(List.of(state1NoData, state2NoData))));
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state3), AirbyteStateMessage.class));
     Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state3NoData, state1NoData))));
+        .withState(Jsons.jsonNode(List.of(state1NoData, state3NoData))));
   }
 
   @Test
