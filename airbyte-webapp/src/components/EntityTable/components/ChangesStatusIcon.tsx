@@ -1,4 +1,4 @@
-import { faExclamationCircle, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import React from "react";
@@ -30,7 +30,7 @@ export const ChangesStatusIcon: React.FC<ChangesStatusIconProps> = ({ schemaChan
       control={
         <FontAwesomeIcon
           className={iconStyle}
-          icon={schemaChange === "breaking" ? faExclamationCircle : faInfoCircle}
+          icon={faExclamationCircle}
           size="2x"
           data-testid={`changesStatusIcon-${schemaChange}`}
         />
