@@ -333,7 +333,7 @@ public class WorkspacesHandler {
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByUserId(request.getUserId(), false, keyword)
+          .listWorkspacesByUserId(request.getUserId(), keyword)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());

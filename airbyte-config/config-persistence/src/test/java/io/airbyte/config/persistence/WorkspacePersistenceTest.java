@@ -42,8 +42,10 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -342,7 +344,11 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testListWorkspacesByUserIdWithKeywordWithPagination() throws Exception {
-    final UUID workspaceId = UUID.randomUUID();
+    final UUID workspaceId1 = UUID.randomUUID();
+    final UUID workspaceId2 = UUID.randomUUID();
+    final UUID workspaceId3 = UUID.randomUUID();
+    final UUID workspaceId4 = UUID.randomUUID();
+
     // create a user
     final UUID userId = UUID.randomUUID();
     userPersistence.writeUser(new User()
@@ -351,39 +357,75 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withAuthUserId("auth_id")
         .withEmail("email")
         .withAuthProvider(AuthProvider.AIRBYTE));
+
     // create a workspace in org_1, name contains search "keyword"
-    final StandardWorkspace orgWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(UUID.randomUUID())
+    final StandardWorkspace workspace1 = createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("workspace_with_keyword_1");
-    configRepository.writeStandardWorkspaceNoSecrets(orgWorkspace);
+    configRepository.writeStandardWorkspaceNoSecrets(workspace1);
+
     // create a workspace in org_2, name contains search "Keyword"
-    final StandardWorkspace userWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(workspaceId).withOrganizationId(MockData.ORGANIZATION_ID_2)
+    final StandardWorkspace workspace2 = createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName("workspace_with_Keyword_2");
-    configRepository.writeStandardWorkspaceNoSecrets(userWorkspace);
-    // create a workspace permission
+    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+
+    // create another workspace in org_2, name does NOT contain search "keyword"
+    createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_3");
+    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+
+    // create a workspace in org_3, name contains search "keyword"
+    createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId4)
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withName("workspace_4_with_keyword");
+    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+
+    // create a workspace permission for workspace 1
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
-        .withWorkspaceId(workspaceId)
+        .withWorkspaceId(workspaceId1)
         .withUserId(userId)
-        .withPermissionType(PermissionType.WORKSPACE_READER));
-    // create an org permission
+        .withPermissionType(PermissionType.WORKSPACE_OWNER));
+
+    // create an org permission that should grant access to workspace 2
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
-        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withUserId(userId)
         .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
+    // create an org permission that should grant access to workspace 3
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
+    // workspace 4 does not have any permissions associated with it
 
     final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByUserIdPaginated(
         new ResourcesByUserQueryPaginated(userId, false, 10, 0), Optional.of("keyWord"));
 
-    assertEquals(2, workspaces.size());
+    // workspace 3 excluded because of lacking keyword, and workspace 4 excluded because no permission
+    // despite keyword
+    final Set<StandardWorkspace> expectedWorkspaces = Set.of(workspace1, workspace2);
+    final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspaces);
+
+    assertEquals(expectedWorkspaces, actualWorkspaces);
   }
 
   @Test
   void testListWorkspacesByUserIdWithoutKeywordWithoutPagination() throws Exception {
-    final UUID workspaceId = UUID.randomUUID();
+    final UUID workspace1Id = UUID.randomUUID();
+    final UUID workspace2Id = UUID.randomUUID();
+    final UUID workspace3Id = UUID.randomUUID();
+
     // create a user
     final UUID userId = UUID.randomUUID();
     userPersistence.writeUser(new User()
@@ -392,34 +434,55 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withAuthUserId("auth_id")
         .withEmail("email")
         .withAuthProvider(AuthProvider.AIRBYTE));
+
     // create a workspace in org_1
-    final StandardWorkspace orgWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(UUID.randomUUID())
+    final StandardWorkspace workspace1 = createBaseStandardWorkspace()
+        .withWorkspaceId(workspace1Id)
         .withOrganizationId(MockData.ORGANIZATION_ID_1)
         .withName("workspace1");
-    configRepository.writeStandardWorkspaceNoSecrets(orgWorkspace);
+    configRepository.writeStandardWorkspaceNoSecrets(workspace1);
+
     // create a workspace in org_2
-    final StandardWorkspace userWorkspace = createBaseStandardWorkspace()
-        .withWorkspaceId(workspaceId).withOrganizationId(MockData.ORGANIZATION_ID_2)
+    final StandardWorkspace workspace2 = createBaseStandardWorkspace()
+        .withWorkspaceId(workspace2Id)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withName("workspace2");
-    configRepository.writeStandardWorkspaceNoSecrets(userWorkspace);
-    // create a workspace permission
+    configRepository.writeStandardWorkspaceNoSecrets(workspace2);
+
+    // create a workspace in org_3
+    final StandardWorkspace workspace3 = createBaseStandardWorkspace()
+        .withWorkspaceId(workspace3Id)
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withName("workspace3");
+    configRepository.writeStandardWorkspaceNoSecrets(workspace3);
+
+    // create a workspace-level permission for workspace 1
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
-        .withWorkspaceId(workspaceId)
+        .withWorkspaceId(workspace1Id)
         .withUserId(userId)
         .withPermissionType(PermissionType.WORKSPACE_READER));
-    // create an org permission
+
+    // create an org-level permission that should grant access to workspace 2
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
-        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
         .withUserId(userId)
-        .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+        .withPermissionType(PermissionType.ORGANIZATION_READER));
 
-    final List<StandardWorkspace> workspaces = workspacePersistence.listWorkspacesByUserId(
-        userId, false, Optional.empty());
+    // create an org-member permission that should NOT grant access to workspace 3, because
+    // org-member is too low of a permission to grant read-access to workspaces in the org.
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withUserId(userId)
+        .withPermissionType(PermissionType.ORGANIZATION_MEMBER));
 
-    assertEquals(2, workspaces.size());
+    final Set<StandardWorkspace> expectedWorkspaces = Set.of(workspace1, workspace2);
+
+    final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspacePersistence.listWorkspacesByUserId(userId, Optional.empty()));
+
+    assertEquals(expectedWorkspaces, actualWorkspaces);
   }
 
 }

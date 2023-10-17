@@ -2,10 +2,11 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.handlers.helpers;
+package io.airbyte.config.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.model.generated.PermissionType;
+import io.airbyte.config.Permission.PermissionType;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -79,6 +80,19 @@ public class PermissionHelper {
 
   public static boolean definedPermissionGrantsTargetPermission(final PermissionType definedPermission, final PermissionType targetPermission) {
     return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission).contains(targetPermission);
+  }
+
+  /**
+   * Returns the full set of all permission types that grant the target permission type.
+   */
+  public static Set<PermissionType> getPermissionTypesThatGrantTargetPermission(final PermissionType targetPermission) {
+    final Set<PermissionType> grantingPermissionTypes = new HashSet<>();
+    for (Map.Entry<PermissionType, Set<PermissionType>> entry : GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.entrySet()) {
+      if (entry.getValue().contains(targetPermission)) {
+        grantingPermissionTypes.add(entry.getKey());
+      }
+    }
+    return grantingPermissionTypes;
   }
 
 }

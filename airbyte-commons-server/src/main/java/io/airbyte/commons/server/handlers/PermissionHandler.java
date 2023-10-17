@@ -16,9 +16,9 @@ import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.server.handlers.helpers.PermissionHelper;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
+import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.data.services.WorkspaceService;
@@ -232,7 +232,9 @@ public class PermissionHandler {
 
     // by this point, we know we can directly compare the user permission's type to the requested
     // permission's type, because all underlying user/workspace/organization IDs are valid.
-    return PermissionHelper.definedPermissionGrantsTargetPermission(userPermission.getPermissionType(), permissionCheckRequest.getPermissionType());
+    return PermissionHelper.definedPermissionGrantsTargetPermission(
+        Enums.convertTo(userPermission.getPermissionType(), Permission.PermissionType.class),
+        Enums.convertTo(permissionCheckRequest.getPermissionType(), Permission.PermissionType.class));
   }
 
   // check if this permission request is for a user that doesn't match the user permission.
