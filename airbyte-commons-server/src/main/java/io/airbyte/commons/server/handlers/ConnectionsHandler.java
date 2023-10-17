@@ -47,6 +47,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
@@ -102,6 +103,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -975,7 +977,21 @@ public class ConnectionsHandler {
         featureFlagClient, workspaceId);
     updateObject.setSyncCatalog(propagateResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
+    trackSchemaChange(workspaceId, connectionId, propagateResult);
     return propagateResult.appliedDiff();
+  }
+
+  private void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
+    try {
+      final Map<String, Object> payload = new HashMap<>();
+      payload.put("workspace_id", workspaceId);
+      payload.put("connection_id", connectionId);
+      payload.put("event_date", Instant.now());
+      payload.put("changes", propagateResult.appliedDiff().getTransforms());
+      trackingClient.track(workspaceId, "schema-changes", payload);
+    } catch (final Exception e) {
+      LOGGER.error("Error while sending tracking event for schema change", e);
+    }
   }
 
 }
