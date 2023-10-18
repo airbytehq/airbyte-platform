@@ -1942,6 +1942,98 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/sync_progress:
+    post:
+      tags:
+        - connection
+      summary: Get progress information of the current sync of a connection
+      operationId: getConnectionSyncProgress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionSyncProgressRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/history/uptime:
+    post:
+      tags:
+        - connection
+      summary: Get the uptime history of a connection
+      operationId: getConnectionUptimeHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionUptimeHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionUptimeHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/history/data:
+    post:
+      tags:
+        - connection
+      summary: Get the data history of a connection
+      operationId: getConnectionDataHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionDataHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionDataHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/stream_history:
+    post:
+      tags:
+        - connection
+      summary: Get the history of a connection
+      operationId: getConnectionStreamHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStreamHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStreamHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/get:
     post:
       tags:
@@ -5438,6 +5530,36 @@ components:
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    ConnectionUptimeHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
+    ConnectionDataHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
+    ConnectionStreamHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
     ConnectionStream:
       type: object
       required:
@@ -5787,6 +5909,99 @@ components:
           type: boolean
         failureType:
           $ref: "#/components/schemas/FailureType"
+    ConnectionSyncProgressRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionSyncProgressReadItem"
+    ConnectionSyncProgressReadItem:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+        - recordsExtracted
+        - recordsLoaded
+        - syncTimeElapsed
+        - progressPercentage
+        - lastCommittedTimestamp
+        - lastCursorValue
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        recordsExtracted:
+          type: integer
+          format: int64
+        recordsLoaded:
+          type: integer
+          format: int64
+        syncTimeElapsed:
+          type: integer
+          format: int64
+        progressPercentage:
+          type: integer
+          format: int32
+        lastCommittedTimestamp:
+          type: integer
+          format: int64
+        lastCursorValue:
+          type: string
+    ConnectionUptimeHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionSyncResultRead"
+    ConnectionSyncResultRead:
+      type: object
+      required:
+        - timestamp
+        - status
+        - stream
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        stream:
+          type: string
+    ConnectionDataHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionDataHistoryReadItem"
+    ConnectionDataHistoryReadItem:
+      type: object
+      required:
+        - timestamp
+        - bytes
+      properties:
+        timestamp:
+          type: integer
+          format: int
+        bytes:
+          type: integer
+          format: int
+    ConnectionStreamHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionStreamHistoryReadItem"
+    ConnectionStreamHistoryReadItem:
+      type: object
+      required:
+        - timestamp
+        - stream
+        - namespace
+        - volume
+      properties:
+        timestamp:
+          type: integer
+          format: int
+        stream:
+          type: string
+        namespace:
+          type: string
+        volume:
+          type: integer
+          format: int
     SchemaChange:
       enum:
         - no_change
