@@ -205,14 +205,6 @@ airbyte:
           container:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
         tolerations: ${JOB_KUBE_TOLERATIONS:}
-      main:
-        container:
-          cpu:
-            limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
-            request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
-          memory:
-            limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-            request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
     spec:

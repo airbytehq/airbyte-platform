@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.workers.config;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
@@ -66,14 +67,11 @@ public class WorkerConfigs {
    * Constructs a job-type-agnostic WorkerConfigs. For WorkerConfigs customized for specific
    * job-types, use static `build*JOBTYPE*WorkerConfigs` method if one exists.
    */
+  @VisibleForTesting
   public WorkerConfigs(final Configs configs) {
     this(
         configs.getWorkerEnvironment(),
-        new ResourceRequirements()
-            .withCpuRequest(configs.getJobMainContainerCpuRequest())
-            .withCpuLimit(configs.getJobMainContainerCpuLimit())
-            .withMemoryRequest(configs.getJobMainContainerMemoryRequest())
-            .withMemoryLimit(configs.getJobMainContainerMemoryLimit()),
+        new ResourceRequirements(),
         configs.getJobKubeTolerations(),
         configs.getJobKubeNodeSelectors(),
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
