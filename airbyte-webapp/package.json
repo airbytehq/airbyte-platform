@@ -85,7 +85,7 @@
     "date-fns": "^2.29.3",
     "dayjs": "^1.11.3",
     "diff": "^5.1.0",
-    "firebase": "^9.8.2",
+    "firebase": "^10.5.0",
     "flat": "^5.0.2",
     "formik": "^2.2.9",
     "framer-motion": "^6.3.11",
