@@ -4,6 +4,7 @@ export type IconType =
   | "caretDown"
   | "certified"
   | "check"
+  | "checkCircle"
   | "chevronDown"
   | "chevronLeft"
   | "chevronRight"

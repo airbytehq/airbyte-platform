@@ -1226,6 +1226,8 @@ components:
         - workspaceId
         - successUrl
         - cancelUrl
+        - quantity
+        - stripeMode
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
