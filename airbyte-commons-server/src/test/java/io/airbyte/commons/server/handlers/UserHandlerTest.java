@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -19,6 +20,7 @@ import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
@@ -198,7 +200,7 @@ class UserHandlerTest {
 
       when(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(user));
 
-      final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId));
+      final UserRead userRead = userHandler.getOrCreateUserByAuthId(new UserAuthIdRequestBody().authUserId(authUserId)).getUserRead();
 
       assertEquals(userRead.getUserId(), USER_ID);
       assertEquals(userRead.getEmail(), USER_EMAIL);
@@ -273,9 +275,12 @@ class UserHandlerTest {
         final io.airbyte.api.model.generated.AuthProvider apiAuthProvider =
             Enums.convertTo(authProvider, io.airbyte.api.model.generated.AuthProvider.class);
 
-        final UserRead userRead = userHandler.getOrCreateUserByAuthId(
+        final UserGetOrCreateByAuthIdResponse response = userHandler.getOrCreateUserByAuthId(
             new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID));
+        final UserRead userRead = response.getUserRead();
+        final boolean newUserCreated = response.getNewUserCreated();
 
+        assertTrue(newUserCreated);
         verifyCreatedUser(authProvider);
         verifyUserRead(userRead, apiAuthProvider);
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);

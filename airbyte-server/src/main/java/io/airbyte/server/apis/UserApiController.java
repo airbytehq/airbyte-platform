@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
@@ -116,7 +117,7 @@ public class UserApiController implements UserApi {
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public UserRead getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
+  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getOrCreateUserByAuthId(userAuthIdRequestBody));
   }
 

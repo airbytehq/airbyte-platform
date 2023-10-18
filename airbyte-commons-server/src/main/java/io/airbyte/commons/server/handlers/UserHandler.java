@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserStatus;
@@ -298,11 +299,11 @@ public class UserHandler {
         .collect(Collectors.toList()));
   }
 
-  public UserRead getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
+  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
-      return buildUserRead(user.get());
+      return new UserGetOrCreateByAuthIdResponse().userRead(buildUserRead(user.get()));
     }
 
     if (jwtUserResolver.isEmpty()) {
@@ -337,11 +338,15 @@ public class UserHandler {
             .organizationId(attachedOrganization.get().getOrganizationId())
             .userId(createdUser.getUserId())
             .permissionType(PermissionType.ORGANIZATION_ADMIN));
-        return createdUser;
+        return new UserGetOrCreateByAuthIdResponse()
+            .userRead(createdUser)
+            .newUserCreated(true);
       }
     }
     // Otherwise, this indicates user is not associated with org (non-sso user signs up).
-    return createdUser;
+    return new UserGetOrCreateByAuthIdResponse()
+        .userRead(createdUser)
+        .newUserCreated(true);
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {

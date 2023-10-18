@@ -3270,7 +3270,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserRead"
+                $ref: "#/components/schemas/UserGetOrCreateByAuthIdResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -6474,6 +6474,17 @@ components:
           type: string
           format: email
         news:
+          type: boolean
+          default: false
+
+    UserGetOrCreateByAuthIdResponse:
+      type: object
+      required:
+        - userRead
+      properties:
+        userRead:
+          $ref: "#/components/schemas/UserRead"
+        newUserCreated:
           type: boolean
           default: false
 
