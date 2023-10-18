@@ -9,7 +9,6 @@ import static org.jooq.impl.DSL.noCondition;
 
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
@@ -110,32 +109,6 @@ public class WorkspacePersistence {
   }
 
   /**
-   * This query lists all workspaces that a particular user has the indicated permissions for. The
-   * query is parameterized by a user id, a permission type array, and a keyword search string.
-   * <p>
-   * Note: The permission type array should include the valid set of permission types that can be used
-   * to infer workspace access.
-   * <p>
-   * For instance, if the passed-in permission type array contains `organization_admin` and
-   * `workspace_admin`, then the query will return all workspaces that belong to an organization that
-   * the user has `organization_admin` permissions for, as well as all workspaces that the user has
-   * `workspace_admin` permissions for.
-   */
-  private final String listWorkspacesByUserIdAndPermissionTypeBasicQuery =
-      "WITH userOrgs AS (SELECT organization_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])),"
-          + " userWorkspaces AS ("
-          + " SELECT workspace.id AS workspace_id FROM userOrgs JOIN workspace"
-          + " ON workspace.organization_id = userOrgs.organization_id"
-          + " UNION"
-          + " SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])"
-          + " )"
-          + " SELECT * from workspace"
-          + " WHERE workspace.id IN (SELECT workspace_id from userWorkspaces)"
-          + " AND name ILIKE {2}"
-          + " AND tombstone = false"
-          + " ORDER BY name ASC";
-
-  /**
    * Get search keyword with flexible matching.
    */
   private String getSearchKeyword(Optional<String> keyword) {
@@ -147,36 +120,18 @@ public class WorkspacePersistence {
   }
 
   /**
-   * Get an array of the Jooq enum values for the permission types that grant the target permission
-   * type. Used for `ANY(?)` clauses in SQL queries.
+   * List all active workspaces readable by user id, returning result ordered by workspace name.
+   * Supports keyword search.
    */
-  private io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType[] getGrantingPermissionTypeArray(final PermissionType targetPermissionType) {
-    return PermissionHelper.getPermissionTypesThatGrantTargetPermission(targetPermissionType)
-        .stream()
-        .map(this::convertConfigPermissionTypeToJooqPermissionType)
-        .toList()
-        .toArray(new io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType[0]);
-  }
-
-  private io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType convertConfigPermissionTypeToJooqPermissionType(final PermissionType permissionType) {
-    // workspace owner is deprecated and doesn't exist in OSS jooq. it is equivalent to workspace admin.
-    if (permissionType.equals(PermissionType.WORKSPACE_OWNER)) {
-      return io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.workspace_admin;
-    }
-
-    return io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.valueOf(permissionType.value());
-  }
-
-  /**
-   * List all workspaces readable by user id, returning result ordered by workspace name. Supports
-   * keyword search.
-   */
-  public List<StandardWorkspace> listWorkspacesByUserId(UUID userId, Optional<String> keyword)
+  public List<StandardWorkspace> listActiveWorkspacesByUserId(UUID userId, Optional<String> keyword)
       throws IOException {
     final String searchKeyword = getSearchKeyword(keyword);
     return database
-        .query(ctx -> ctx.fetch(listWorkspacesByUserIdAndPermissionTypeBasicQuery, userId,
-            getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER), searchKeyword))
+        .query(ctx -> ctx.fetch(
+            PermissionPersistenceHelper.LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY,
+            userId,
+            PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER),
+            searchKeyword))
         .stream()
         .map(DbConverter::buildStandardWorkspace)
         .toList();
@@ -189,13 +144,18 @@ public class WorkspacePersistence {
   public List<StandardWorkspace> listWorkspacesByUserIdPaginated(final ResourcesByUserQueryPaginated query, Optional<String> keyword)
       throws IOException {
     final String searchKeyword = getSearchKeyword(keyword);
-    final String workspaceQuery = listWorkspacesByUserIdAndPermissionTypeBasicQuery
+    final String workspaceQuery = PermissionPersistenceHelper.LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY
         + " LIMIT {3}"
         + " OFFSET {4}";
 
     return database
-        .query(ctx -> ctx.fetch(workspaceQuery, query.userId(), getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER), searchKeyword,
-            query.pageSize(), query.rowOffset()))
+        .query(ctx -> ctx.fetch(
+            workspaceQuery,
+            query.userId(),
+            PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER),
+            searchKeyword,
+            query.pageSize(),
+            query.rowOffset()))
         .stream()
         .map(DbConverter::buildStandardWorkspace)
         .toList();

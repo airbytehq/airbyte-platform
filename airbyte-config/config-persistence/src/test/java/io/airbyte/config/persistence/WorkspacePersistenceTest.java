@@ -480,7 +480,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     final Set<StandardWorkspace> expectedWorkspaces = Set.of(workspace1, workspace2);
 
-    final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspacePersistence.listWorkspacesByUserId(userId, Optional.empty()));
+    final Set<StandardWorkspace> actualWorkspaces = new HashSet<>(workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty()));
 
     assertEquals(expectedWorkspaces, actualWorkspaces);
   }

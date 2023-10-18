@@ -1046,8 +1046,6 @@ components:
         - isDefaultWorkspace
         - status
         - email
-        - permissionId
-        - permissionType
         - workspaceId
       properties:
         name:
@@ -1063,6 +1061,7 @@ components:
           type: string
           format: email
         permissionId:
+          description: (Deprecated) Permission ID from the Cloud database.
           type: string
           format: uuid
         permissionType:
@@ -1680,7 +1679,10 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
     PermissionType:
       type: string
-      description: Describes what actions/endpoints the permission entitles to
+      description: |
+        (Deprecated) Describes what actions/endpoints the permission entitles to. In the process
+        of migration Permissions to Config API/DB, so these Cloud-specific permissions are
+        phasing out.
       enum:
         - instance_admin # Permission to do anything (all permissions below)
         - workspace_owner # Permission to own a workspace (and being billed for it)
