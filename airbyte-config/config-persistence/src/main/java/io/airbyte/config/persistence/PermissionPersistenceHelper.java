@@ -21,7 +21,10 @@ public class PermissionPersistenceHelper {
         .toArray(new io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType[0]);
   }
 
-  private static io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType convertConfigPermissionTypeToJooqPermissionType(final PermissionType permissionType) {
+  public static io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType convertConfigPermissionTypeToJooqPermissionType(final PermissionType permissionType) {
+    if (permissionType == null) {
+      return null;
+    }
     // workspace owner is deprecated and doesn't exist in OSS jooq. it is equivalent to workspace admin.
     if (permissionType.equals(PermissionType.WORKSPACE_OWNER)) {
       return io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.workspace_admin;

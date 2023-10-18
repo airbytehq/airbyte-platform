@@ -56,17 +56,8 @@ public class PermissionPersistence {
 
   public void writePermission(final Permission permission) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType permissionTypeAllowedInDB;
-    if (permission.getPermissionType() != null) {
-      if (permission.getPermissionType().equals(PermissionType.WORKSPACE_OWNER)) {
-        permissionTypeAllowedInDB = io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.workspace_admin;
-      } else {
-        permissionTypeAllowedInDB = Enums.toEnum(permission.getPermissionType().value(),
-            io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class).orElseThrow();
-      }
-    } else {
-      permissionTypeAllowedInDB = null;
-    }
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType permissionTypeAllowedInDB =
+        PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(permission.getPermissionType());
     database.transaction(ctx -> {
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(PERMISSION)
