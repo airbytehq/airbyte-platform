@@ -22,8 +22,8 @@ import styles from "./DestinationSettings.module.scss";
 
 export const DestinationSettingsPage: React.FC = () => {
   const destination = useGetDestinationFromParams();
-
-  const { connections: connectionsWithDestination } = useConnectionList({ destinationId: [destination.destinationId] });
+  const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
+  const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(

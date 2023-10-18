@@ -25,7 +25,7 @@ export const DESTINATION_ID_PARAM = "destinationId";
 
 export const SelectDestination: React.FC = () => {
   const { destinations } = useDestinationList();
-  const { connectionsByConnectorId } = useConnectionList();
+  const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
@@ -60,10 +60,10 @@ export const SelectDestination: React.FC = () => {
     return destinations
       .map((destination) => ({
         ...destination,
-        connectionCount: connectionsByConnectorId.get(destination.destinationId)?.length || 0,
+        connectionCount: connectionList?.connectionsByConnectorId.get(destination.destinationId)?.length || 0,
       }))
       .sort((a, b) => b.connectionCount - a.connectionCount || a.name.localeCompare(b.name));
-  }, [destinations, connectionsByConnectorId]);
+  }, [destinations, connectionList?.connectionsByConnectorId]);
 
   return (
     <Box py="xl">

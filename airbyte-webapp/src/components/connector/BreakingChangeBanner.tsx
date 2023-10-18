@@ -37,9 +37,10 @@ export const BreakingChangeBanner = ({
   connectorDefinitionId,
 }: BreakingChangeBannerProps) => {
   const [isConfirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
-  const { connections } = useConnectionList({
+  const connectionList = useConnectionList({
     [connectorType === "source" ? "sourceId" : "destinationId"]: [connectorId],
   });
+  const connections = connectionList?.connections ?? [];
   const connectorBreakingChangeDeadlines = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
   const supportState = actorDefinitionVersion.supportState;
