@@ -145,7 +145,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, replicationInput, sourceLauncherConfig);
-    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags);
+    final AirbyteMessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, replicationInput);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
@@ -223,8 +223,10 @@ public class ReplicationWorkerFactory {
    * Create MessageTracker.
    */
   private static AirbyteMessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                            final FeatureFlags featureFlags) {
-    return new AirbyteMessageTracker(syncPersistence, featureFlags);
+                                                            final FeatureFlags featureFlags,
+                                                            final ReplicationInput replicationInput) {
+    return new AirbyteMessageTracker(syncPersistence, featureFlags, replicationInput.getSourceLauncherConfig().getDockerImage(),
+        replicationInput.getDestinationLauncherConfig().getDockerImage());
   }
 
   /**

@@ -1,5 +1,5 @@
 [versions]
-airbyte-protocol = "0.4.1"
+airbyte-protocol = "0.4.2"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
 datadog-version = "1.14.0"

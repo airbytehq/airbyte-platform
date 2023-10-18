@@ -3,6 +3,7 @@ package io.airbyte.workers.internal.bookkeeping
 import io.airbyte.commons.features.FeatureFlags
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
+import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.AirbyteMessage
 import io.airbyte.protocol.models.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
@@ -21,6 +22,8 @@ private val logger = KotlinLogging.logger {}
 class AirbyteMessageTracker(
   val syncStatsTracker: SyncStatsTracker,
   featureFlags: FeatureFlags,
+  private val sourceDockerImage: String,
+  private val destinationDockerImage: String,
 ) {
   private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
@@ -85,6 +88,7 @@ class AirbyteMessageTracker(
   private fun handleEmittedTrace(msg: AirbyteTraceMessage, origin: AirbyteMessageOrigin): Unit = when (msg.type) {
     AirbyteTraceMessage.Type.ESTIMATE -> syncStatsTracker.updateEstimates(msg.estimate)
     AirbyteTraceMessage.Type.ERROR -> handleEmittedTraceError(msg, origin)
+    AirbyteTraceMessage.Type.ANALYTICS -> handleEmittedAnalyticsMessage(msg.analytics, origin)
     AirbyteTraceMessage.Type.STREAM_STATUS -> logger.debug { "Stream status trace message not handled by message tracker: $msg" }
     else -> logger.warn { "Invalid message type for trace message: $msg" }
   }
@@ -95,6 +99,15 @@ class AirbyteMessageTracker(
       AirbyteMessageOrigin.DESTINATION -> dstErrorTraceMsgs.add(msg)
       AirbyteMessageOrigin.INTERNAL -> logger.debug { "internal messages are not tracked. " }
     }
+  }
+
+  /**
+   * Log analytics message - logs can be searched for certain events to analyze.
+   * This will be replaced by logic to collect the messages and attach them to the attempt summary in a subsequent PR.
+   */
+  private fun handleEmittedAnalyticsMessage(msg: AirbyteAnalyticsTraceMessage, origin: AirbyteMessageOrigin) {
+    val dockerImage = if (origin == AirbyteMessageOrigin.SOURCE) sourceDockerImage else destinationDockerImage
+    logger.info { "$origin analytics [$dockerImage] | Type: ${msg.type} | Value: ${msg.value}" }
   }
 
   private fun logMsgAsJson(caller: String, msg: AirbyteMessage): Unit = when (logConnectorMsgs) {

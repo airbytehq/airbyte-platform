@@ -7,6 +7,7 @@ package io.airbyte.workers.test_utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
 import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
 import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
@@ -237,6 +238,21 @@ public class AirbyteMessageUtils {
         }
       }
     }
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
+  public static AirbyteMessage createAnalyticsTraceMessage(final String type, final String value) {
+    final AirbyteAnalyticsTraceMessage airbyteAnalyticsTraceMessage = new AirbyteAnalyticsTraceMessage()
+        .withType(type)
+        .withValue(value);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(AirbyteTraceMessage.Type.ANALYTICS)
+        .withAnalytics(airbyteAnalyticsTraceMessage);
 
     return new AirbyteMessage()
         .withType(Type.TRACE)
