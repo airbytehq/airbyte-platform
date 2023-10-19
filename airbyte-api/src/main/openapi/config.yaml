@@ -3581,10 +3581,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/permissions/delete:
     post:
       tags:
@@ -3600,6 +3603,8 @@ paths:
       responses:
         "204":
           description: The resource was deleted successfully.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -8699,6 +8704,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/InvalidInputExceptionInfo"
+    ForbiddenResponse:
+      description: Operation forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KnownExceptionInfo"
     ExceptionResponse:
       description: Exception occurred; see message for details.
       content:

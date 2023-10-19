@@ -329,24 +329,40 @@ public class UserHandler {
     createInstanceAdminPermissionIfInitialUser(createdUser);
 
     // If incoming SSO Config matches with existing org, find that org and add user to it;
-    final String ssoRealm = jwtUserResolver.get().resolveSsoRealm();
+    addUserToOrganizationIfSso(createdUser.getUserId());
+
+    return new UserGetOrCreateByAuthIdResponse().userRead(createdUser).newUserCreated(true);
+  }
+
+  private void addUserToOrganizationIfSso(final UUID userId) throws IOException {
+    final String ssoRealm = jwtUserResolver.orElseThrow().resolveSsoRealm();
     if (ssoRealm != null) {
       final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
       if (attachedOrganization.isPresent()) {
-        permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-            .workspaceId(null)
-            .organizationId(attachedOrganization.get().getOrganizationId())
-            .userId(createdUser.getUserId())
-            .permissionType(PermissionType.ORGANIZATION_ADMIN));
-        return new UserGetOrCreateByAuthIdResponse()
-            .userRead(createdUser)
-            .newUserCreated(true);
+        createPermissionForUserAndOrg(userId, attachedOrganization.get().getOrganizationId());
+      } else {
+        LOGGER.warn("New user with ID {} has an SSO realm {} but no Organization was found for it. No Organization permissions will be added.",
+            userId, ssoRealm);
       }
     }
-    // Otherwise, this indicates user is not associated with org (non-sso user signs up).
-    return new UserGetOrCreateByAuthIdResponse()
-        .userRead(createdUser)
-        .newUserCreated(true);
+  }
+
+  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId) throws IOException {
+    if (permissionPersistence.listPermissionsForOrganization(orgId).isEmpty()) {
+      LOGGER.debug("Organization {} does not have any users. Adding user {} with permission type {}",
+          orgId, userId, PermissionType.ORGANIZATION_ADMIN);
+      permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+          .organizationId(orgId)
+          .userId(userId)
+          .permissionType(PermissionType.ORGANIZATION_ADMIN));
+    } else {
+      LOGGER.debug("Organization {} already has existing users. Adding user {} with permission type {}",
+          orgId, userId, PermissionType.ORGANIZATION_MEMBER);
+      permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+          .organizationId(orgId)
+          .userId(userId)
+          .permissionType(PermissionType.ORGANIZATION_MEMBER));
+    }
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {

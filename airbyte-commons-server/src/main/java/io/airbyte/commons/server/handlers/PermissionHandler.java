@@ -16,11 +16,13 @@ import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.jooq.exception.DataAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -164,19 +167,25 @@ public class PermissionHandler {
    * @return The updated permission.
    * @throws IOException if unable to update the permissions.
    * @throws ConfigNotFoundException if unable to update the permissions.
-   * @throws JsonValidationException if unable to update the permissions.
+   * @throws OperationNotAllowedException if update is prevented by business logic.
    */
   public PermissionRead updatePermission(final PermissionUpdate permissionUpdate)
-      throws IOException, ConfigNotFoundException {
-    final Permission permission = new Permission()
+      throws IOException, ConfigNotFoundException, OperationNotAllowedException {
+    final Permission updatedPermission = new Permission()
         .withPermissionId(permissionUpdate.getPermissionId())
         .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class))
         .withUserId(permissionUpdate.getUserId())
         .withWorkspaceId(permissionUpdate.getWorkspaceId())
         .withOrganizationId(permissionUpdate.getOrganizationId());
-
-    permissionPersistence.writePermission(permission);
-
+    try {
+      permissionPersistence.writePermission(updatedPermission);
+    } catch (final DataAccessException e) {
+      if (e.getCause() instanceof SQLOperationNotAllowedException) {
+        throw new OperationNotAllowedException(e.getCause().getMessage());
+      } else {
+        throw new IOException(e);
+      }
+    }
     return buildPermissionRead(permissionUpdate.getPermissionId());
   }
 
@@ -345,10 +354,18 @@ public class PermissionHandler {
    *
    * @param permissionIdRequestBody The permission to be deleted.
    * @throws IOException if unable to delete the permission.
-   * @throws ConfigNotFoundException if unable to delete the permission.
+   * @throws OperationNotAllowedException if deletion is prevented by business logic.
    */
   public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) throws IOException {
-    permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
+    try {
+      permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
+    } catch (final DataAccessException e) {
+      if (e.getCause() instanceof SQLOperationNotAllowedException) {
+        throw new OperationNotAllowedException(e.getCause().getMessage());
+      } else {
+        throw new IOException(e);
+      }
+    }
   }
 
 }
