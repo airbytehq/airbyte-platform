@@ -1,6 +1,10 @@
 // The buildscript block defines dependencies in order for .gradle file evaluation.
 // This is separate from application dependencies.
 // See https://stackoverflow.com/questions/17773817/purpose-of-buildscript-block-in-gradle.
+
+
+
+
 buildscript {
     repositories {
         maven {
@@ -47,6 +51,22 @@ repositories {
         }
     }
 }
+
+if (System.getProperty("ciMode") != null) {
+    gradle.startParameter.logLevel = LogLevel.QUIET
+
+    def logFile = new FileOutputStream('gradle.log', true)
+    gradle.services.get(LoggingManager).addStandardOutputListener(logFile)
+    gradle.services.get(LoggingManager).addStandardErrorListener(logFile)
+
+    allprojects {
+        tasks.withType(JavaCompile) {
+            options.deprecation = false
+            options.warnings = false
+        }
+    }
+}
+
 
 reporting {
     reports {
