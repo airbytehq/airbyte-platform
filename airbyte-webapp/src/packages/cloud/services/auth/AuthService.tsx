@@ -193,36 +193,45 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         await authService.resetPassword(email);
       },
       async sendEmailVerification(): Promise<void> {
-        return authService.sendEmailVerifiedLink().catch((error) => {
-          switch (error.code) {
-            case AuthErrorCodes.NETWORK_REQUEST_FAILED:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.NetworkFailure,
-                }),
-                type: "error",
-              });
-              break;
-            case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.TooManyRequests,
-                }),
-                type: "warning",
-              });
-              break;
-            default:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.DefaultError,
-                }),
-                type: "error",
-              });
-          }
-        });
+        return authService
+          .sendEmailVerifiedLink()
+          .then(() => {
+            registerNotification({
+              id: "workspace.emailVerificationResendSuccess",
+              text: formatMessage({ id: "credits.emailVerification.resendConfirmation" }),
+              type: "success",
+            });
+          })
+          .catch((error) => {
+            switch (error.code) {
+              case AuthErrorCodes.NETWORK_REQUEST_FAILED:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.NetworkFailure,
+                  }),
+                  type: "error",
+                });
+                break;
+              case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.TooManyRequests,
+                  }),
+                  type: "warning",
+                });
+                break;
+              default:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.DefaultError,
+                  }),
+                  type: "error",
+                });
+            }
+          });
       },
       async verifyEmail(code: string): Promise<void> {
         await authService.confirmEmailVerify(code);
