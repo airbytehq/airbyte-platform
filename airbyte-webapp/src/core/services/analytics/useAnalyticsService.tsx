@@ -38,8 +38,7 @@ export const useAnalyticsIdentifyUser = (userId?: string, traits?: Record<string
     if (userId) {
       analyticsService.identify(userId, traits);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [analyticsService, traits, userId]);
 };
 
 export const useTrackPage = (page: string): void => {

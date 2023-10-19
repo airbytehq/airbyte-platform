@@ -159,8 +159,11 @@ export const Routing: React.FC = () => {
   );
 
   const userTraits = useMemo(
-    () => (user ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email) } : {}),
-    [providers, user]
+    () =>
+      user
+        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        : {},
+    [providers, user, workspaceId]
   );
 
   useEffectOnce(() => {
