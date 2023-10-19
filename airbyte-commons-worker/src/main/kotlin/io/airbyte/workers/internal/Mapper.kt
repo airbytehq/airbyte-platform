@@ -15,7 +15,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
  */
 interface AirbyteMapper {
   fun mapCatalog(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog
+
   fun mapMessage(message: AirbyteMessage): AirbyteMessage
+
   fun revertMap(message: AirbyteMessage): AirbyteMessage
 }
 
@@ -40,7 +42,6 @@ class NamespacingMapper
     private val streamPrefix: String?,
     private val destinationToSource: MutableMap<NamespaceStreamName, NamespaceStreamName> = mutableMapOf(),
   ) : AirbyteMapper {
-
     override fun mapCatalog(inputCatalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
       val catalog: ConfiguredAirbyteCatalog = Jsons.clone(inputCatalog)
       catalog.streams.forEach { configuredStream ->
@@ -66,26 +67,28 @@ class NamespacingMapper
 
     override fun mapMessage(message: AirbyteMessage): AirbyteMessage {
       when (message.type) {
-        Type.RECORD -> with(message.record) {
-          this.withNamespace(transformNamespace(message.record.namespace))
-          this.stream = transformStreamName(message.record.stream, streamPrefix)
-        }
-        Type.STATE -> with(message.state) {
-          if (this.type != AirbyteStateType.STREAM) {
-            return@with
+        Type.RECORD ->
+          with(message.record) {
+            this.withNamespace(transformNamespace(message.record.namespace))
+            this.stream = transformStreamName(message.record.stream, streamPrefix)
           }
-          val streamDescriptor = this.stream.streamDescriptor
-          val sourceNamespace = streamDescriptor.namespace
-          val sourceStreamName = streamDescriptor.name
-          val destinationNamespace = transformNamespace(sourceNamespace)
-          val destinationStreamName = transformStreamName(sourceStreamName, streamPrefix)
+        Type.STATE ->
+          with(message.state) {
+            if (this.type != AirbyteStateType.STREAM) {
+              return@with
+            }
+            val streamDescriptor = this.stream.streamDescriptor
+            val sourceNamespace = streamDescriptor.namespace
+            val sourceStreamName = streamDescriptor.name
+            val destinationNamespace = transformNamespace(sourceNamespace)
+            val destinationStreamName = transformStreamName(sourceStreamName, streamPrefix)
 
-          destinationToSource[NamespaceStreamName(namespace = destinationNamespace, streamName = destinationStreamName)] =
-            NamespaceStreamName(namespace = sourceNamespace, streamName = sourceStreamName)
+            destinationToSource[NamespaceStreamName(namespace = destinationNamespace, streamName = destinationStreamName)] =
+              NamespaceStreamName(namespace = sourceNamespace, streamName = sourceStreamName)
 
-          streamDescriptor.namespace = destinationNamespace
-          streamDescriptor.name = destinationStreamName
-        }
+            streamDescriptor.namespace = destinationNamespace
+            streamDescriptor.name = destinationStreamName
+          }
         else -> Unit
       }
 
@@ -100,36 +103,41 @@ class NamespacingMapper
      */
     override fun revertMap(message: AirbyteMessage): AirbyteMessage {
       when (message.type) {
-        Type.STATE -> with(message.state) {
-          if (this.type != AirbyteStateType.STREAM) {
-            return@with
-          }
-          val streamDescriptor = this.stream.streamDescriptor
-          destinationToSource[NamespaceStreamName(namespace = streamDescriptor.namespace, streamName = streamDescriptor.name)]
-            ?.let {
-              streamDescriptor.namespace = it.namespace
-              streamDescriptor.name = it.streamName
+        Type.STATE ->
+          with(message.state) {
+            if (this.type != AirbyteStateType.STREAM) {
+              return@with
             }
-          // TODO what should happen if the entry wasn't found in the map?
-        }
+            val streamDescriptor = this.stream.streamDescriptor
+            destinationToSource[NamespaceStreamName(namespace = streamDescriptor.namespace, streamName = streamDescriptor.name)]
+              ?.let {
+                streamDescriptor.namespace = it.namespace
+                streamDescriptor.name = it.streamName
+              }
+            // TODO what should happen if the entry wasn't found in the map?
+          }
         else -> Unit
       }
 
       return message
     }
 
-    private fun transformNamespace(sourceNamespace: String?): String? = when (namespaceDefinition) {
-      NamespaceDefinitionType.DESTINATION -> null
-      NamespaceDefinitionType.CUSTOMFORMAT -> formatNamespace(sourceNamespace, namespaceFormat)
-      // default behavior is to follow SOURCE
-      else -> sourceNamespace
-    }
+    private fun transformNamespace(sourceNamespace: String?): String? =
+      when (namespaceDefinition) {
+        NamespaceDefinitionType.DESTINATION -> null
+        NamespaceDefinitionType.CUSTOMFORMAT -> formatNamespace(sourceNamespace, namespaceFormat)
+        // default behavior is to follow SOURCE
+        else -> sourceNamespace
+      }
   }
 
 @VisibleForTesting
 data class NamespaceStreamName(val namespace: String?, val streamName: String)
 
-private fun formatNamespace(sourceNamespace: String?, namespaceFormat: String?): String? {
+private fun formatNamespace(
+  sourceNamespace: String?,
+  namespaceFormat: String?,
+): String? {
   var result: String? = ""
   namespaceFormat?.takeIf { it.isNotBlank() }
     ?.let { format ->
@@ -144,7 +152,10 @@ private fun formatNamespace(sourceNamespace: String?, namespaceFormat: String?):
   }
 }
 
-private fun transformStreamName(streamName: String, streamPrefix: String?): String =
+private fun transformStreamName(
+  streamName: String,
+  streamPrefix: String?,
+): String =
   if (streamPrefix.isNullOrBlank()) {
     streamName
   } else {

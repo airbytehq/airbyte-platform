@@ -39,8 +39,15 @@ import java.util.UUID
 import javax.ws.rs.core.Response
 
 interface WorkspaceService {
-  fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest, userInfo: String?): WorkspaceResponse
-  fun controllerCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest, userInfo: String?): Response
+  fun createWorkspace(
+    workspaceCreateRequest: WorkspaceCreateRequest,
+    userInfo: String?,
+  ): WorkspaceResponse
+
+  fun controllerCreateWorkspace(
+    workspaceCreateRequest: WorkspaceCreateRequest,
+    userInfo: String?,
+  ): Response
 
   fun updateWorkspace(
     workspaceId: UUID,
@@ -54,19 +61,31 @@ interface WorkspaceService {
     userInfo: String?,
   ): Response
 
-  fun getWorkspace(workspaceId: UUID, userInfo: String?): WorkspaceResponse
+  fun getWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): WorkspaceResponse
 
-  fun controllerGetWorkspace(workspaceId: UUID, userInfo: String?): Response
+  fun controllerGetWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): Response
 
-  fun deleteWorkspace(workspaceId: UUID, userInfo: String?)
-  fun controllerDeleteWorkspace(workspaceId: UUID, userInfo: String?): Response
+  fun deleteWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  )
+
+  fun controllerDeleteWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): Response
 
   fun listWorkspaces(
     workspaceIds: List<UUID>,
     includeDeleted: Boolean = false,
     limit: Int = 20,
     offset: Int = 0,
-
     userInfo: String?,
   ): WorkspacesResponse
 
@@ -75,7 +94,6 @@ interface WorkspaceService {
     includeDeleted: Boolean = false,
     limit: Int = 20,
     offset: Int = 0,
-
     userInfo: String?,
   ): Response
 
@@ -89,7 +107,6 @@ interface WorkspaceService {
 @Singleton
 @Secondary
 open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, private val userService: UserService) : WorkspaceService {
-
   @Value("\${airbyte.api.host}")
   var publicApiHost: String? = null
 
@@ -100,14 +117,18 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
   /**
    * Creates a workspace.
    */
-  override fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest, userInfo: String?): WorkspaceResponse {
+  override fun createWorkspace(
+    workspaceCreateRequest: WorkspaceCreateRequest,
+    userInfo: String?,
+  ): WorkspaceResponse {
     val workspaceCreate = WorkspaceCreate().name(workspaceCreateRequest.name)
-    val workspaceReadHttpResponse = try {
-      configApiClient.createWorkspace(workspaceCreate, System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE))
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for createWorkspace: ", e)
-      e.response as HttpResponse<WorkspaceRead>
-    }
+    val workspaceReadHttpResponse =
+      try {
+        configApiClient.createWorkspace(workspaceCreate, System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE))
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for createWorkspace: ", e)
+        e.response as HttpResponse<WorkspaceRead>
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + workspaceReadHttpResponse.body)
     ConfigClientErrorHandler.handleError(workspaceReadHttpResponse, workspaceReadHttpResponse.body()?.workspaceId.toString())
     return WorkspaceResponseMapper.from(
@@ -117,7 +138,10 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     )
   }
 
-  override fun controllerCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest, userInfo: String?): Response {
+  override fun controllerCreateWorkspace(
+    workspaceCreateRequest: WorkspaceCreateRequest,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val workspaceResponse: WorkspaceResponse =
@@ -142,46 +166,62 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
   /**
    * No-op in OSS.
    */
-  override fun updateWorkspace(workspaceId: UUID, workspaceUpdateRequest: WorkspaceUpdateRequest, userInfo: String?): WorkspaceResponse {
+  override fun updateWorkspace(
+    workspaceId: UUID,
+    workspaceUpdateRequest: WorkspaceUpdateRequest,
+    userInfo: String?,
+  ): WorkspaceResponse {
     // Update workspace in the cloud version of the airbyte API currently only supports name updates, but we don't have name updates in OSS.
     return WorkspaceResponse()
   }
 
-  override fun controllerUpdateWorkspace(workspaceId: UUID, workspaceUpdateRequest: WorkspaceUpdateRequest, userInfo: String?): Response {
+  override fun controllerUpdateWorkspace(
+    workspaceId: UUID,
+    workspaceUpdateRequest: WorkspaceUpdateRequest,
+    userInfo: String?,
+  ): Response {
     return Response.status(Response.Status.NOT_IMPLEMENTED).build()
   }
 
   /**
    * Fetches a workspace by ID.
    */
-  override fun getWorkspace(workspaceId: UUID, userInfo: String?): WorkspaceResponse {
+  override fun getWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): WorkspaceResponse {
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
-    val response = try {
-      configApiClient.getWorkspace(workspaceIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getWorkspace: ", e)
-      e.response as HttpResponse<WorkspaceRead>
-    }
+    val response =
+      try {
+        configApiClient.getWorkspace(workspaceIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getWorkspace: ", e)
+        e.response as HttpResponse<WorkspaceRead>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return WorkspaceResponseMapper.from(response.body()!!)
   }
 
-  override fun controllerGetWorkspace(workspaceId: UUID, userInfo: String?): Response {
+  override fun controllerGetWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val workspaceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        getWorkspace(
-          workspaceId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      WORKSPACES_WITH_ID_PATH,
-      GET,
-      userId,
-    )
+    val workspaceResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          getWorkspace(
+            workspaceId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        WORKSPACES_WITH_ID_PATH,
+        GET,
+        userId,
+      )
     TrackingHelper.trackSuccess(
       WORKSPACES_WITH_ID_PATH,
       GET,
@@ -196,33 +236,41 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
   /**
    * Deletes a workspace by ID.
    */
-  override fun deleteWorkspace(workspaceId: UUID, userInfo: String?) {
+  override fun deleteWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ) {
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
-    val response = try {
-      configApiClient.deleteWorkspace(workspaceIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for deleteWorkspace: ", e)
-      e.response as HttpResponse<Unit>
-    }
+    val response =
+      try {
+        configApiClient.deleteWorkspace(workspaceIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for deleteWorkspace: ", e)
+        e.response as HttpResponse<Unit>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body)
   }
 
-  override fun controllerDeleteWorkspace(workspaceId: UUID, userInfo: String?): Response {
+  override fun controllerDeleteWorkspace(
+    workspaceId: UUID,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val workspaceResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        deleteWorkspace(
-          workspaceId!!,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      WORKSPACES_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )
+    val workspaceResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          deleteWorkspace(
+            workspaceId!!,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        WORKSPACES_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )
     return Response
       .status(Response.Status.NO_CONTENT.statusCode)
       .entity(workspaceResponse)
@@ -247,12 +295,13 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
-    val response = try {
-      configApiClient.listWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for listWorkspaces: ", e)
-      e.response as HttpResponse<WorkspaceReadList>
-    }
+    val response =
+      try {
+        configApiClient.listWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for listWorkspaces: ", e)
+        e.response as HttpResponse<WorkspaceReadList>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceIds.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return WorkspacesResponseMapper.from(
@@ -276,20 +325,21 @@ open class WorkspaceServiceImpl(private val configApiClient: ConfigApiClient, pr
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
 
-    val workspaces: Any? = TrackingHelper.callWithTracker(
-      {
-        listWorkspaces(
-          safeWorkspaceIds,
-          includeDeleted,
-          limit,
-          offset,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      WORKSPACES_PATH,
-      GET,
-      userId,
-    )
+    val workspaces: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          listWorkspaces(
+            safeWorkspaceIds,
+            includeDeleted,
+            limit,
+            offset,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        WORKSPACES_PATH,
+        GET,
+        userId,
+      )
     TrackingHelper.trackSuccess(
       WORKSPACES_PATH,
       GET,

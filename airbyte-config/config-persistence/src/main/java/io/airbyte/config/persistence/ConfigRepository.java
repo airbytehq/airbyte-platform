@@ -60,6 +60,7 @@ import java.util.stream.Stream;
  * resource.
  */
 @Deprecated
+@SuppressWarnings("PMD.PreserveStackTrace")
 public class ConfigRepository {
 
   /**
@@ -142,17 +143,17 @@ public class ConfigRepository {
                                               int pageSize,
                                               int rowOffset) {}
 
-  final private ActorDefinitionService actorDefinitionService;
-  final private CatalogService catalogService;
-  final private ConnectionService connectionService;
-  final private ConnectorBuilderService connectorBuilderService;
-  final private DestinationService destinationService;
-  final private HealthCheckService healthCheckService;
-  final private OAuthService oAuthService;
-  final private OperationService operationService;
-  final private OrganizationService organizationService;
-  final private SourceService sourceService;
-  final private WorkspaceService workspaceService;
+  private final ActorDefinitionService actorDefinitionService;
+  private final CatalogService catalogService;
+  private final ConnectionService connectionService;
+  private final ConnectorBuilderService connectorBuilderService;
+  private final DestinationService destinationService;
+  private final HealthCheckService healthCheckService;
+  private final OAuthService oAuthService;
+  private final OperationService operationService;
+  private final OrganizationService organizationService;
+  private final SourceService sourceService;
+  private final WorkspaceService workspaceService;
 
   @SuppressWarnings("ParameterName")
   @VisibleForTesting
@@ -907,7 +908,7 @@ public class ConfigRepository {
   /**
    * Delete a source by id.
    *
-   * @param sourceId
+   * @param sourceId source id
    * @return true if a source was deleted, false otherwise.
    * @throws JsonValidationException - throws if returned sources are invalid
    * @throws io.airbyte.data.exceptions.ConfigNotFoundException - throws if no source with that id can

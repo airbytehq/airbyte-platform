@@ -19,7 +19,10 @@ fun removeSourceTypeNode(actor: ConfigurableActor) {
   removeConfigurationNode(actor, SOURCE_TYPE)
 }
 
-fun removeConfigurationNode(actor: ConfigurableActor, node: String) {
+fun removeConfigurationNode(
+  actor: ConfigurableActor,
+  node: String,
+) {
   val configuration = actor.configuration as ObjectNode
   configuration.remove(node)
 }

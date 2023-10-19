@@ -13,10 +13,15 @@ class LoggingNettyServerCustomizer() : BeanCreatedEventListener<NettyServerCusto
     registry.register(Customizer(null))
     return registry
   }
+
   private inner class Customizer(private val channel: Channel?) : NettyServerCustomizer {
-    override fun specializeForChannel(channel: Channel, role: NettyServerCustomizer.ChannelRole): NettyServerCustomizer {
+    override fun specializeForChannel(
+      channel: Channel,
+      role: NettyServerCustomizer.ChannelRole,
+    ): NettyServerCustomizer {
       return Customizer(channel)
     }
+
     override fun onStreamPipelineBuilt() {
       channel!!.pipeline().addBefore(
         ChannelPipelineCustomizer.HANDLER_HTTP_STREAM,

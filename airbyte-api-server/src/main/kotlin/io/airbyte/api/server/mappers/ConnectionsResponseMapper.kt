@@ -35,9 +35,10 @@ object ConnectionsResponseMapper {
     offset: Int,
     apiHost: String,
   ): ConnectionsResponse {
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, CONNECTIONS_PATH)
-      .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
-      .queryParam(INCLUDE_DELETED, includeDeleted)
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, CONNECTIONS_PATH)
+        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+        .queryParam(INCLUDE_DELETED, includeDeleted)
     val connectionsResponse = ConnectionsResponse()
     connectionsResponse.setNext(PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder))
     connectionsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))

@@ -17,10 +17,7 @@ import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface UserService {
-
-  fun getAllWorkspaceIdsForUser(
-    userInfo: String?,
-  ): List<UUID>
+  fun getAllWorkspaceIdsForUser(userInfo: String?): List<UUID>
 
   fun getUserIdFromUserInfoString(userInfo: String?): UUID
 }
@@ -28,7 +25,6 @@ interface UserService {
 @Singleton
 @Secondary
 open class UserServiceImpl(private val configApiClient: ConfigApiClient) : UserService {
-
   companion object {
     private val log = LoggerFactory.getLogger(UserServiceImpl::class.java)
   }
@@ -37,12 +33,13 @@ open class UserServiceImpl(private val configApiClient: ConfigApiClient) : UserS
    * Hits the listAllWorkspaces endpoint since OSS has only one user.
    */
   override fun getAllWorkspaceIdsForUser(userInfo: String?): List<UUID> {
-    val response = try {
-      configApiClient.listAllWorkspaces(System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE))
-    } catch (e: HttpClientResponseException) {
-      log.error("Cloud api response error for listWorkspacesByUser: ", e)
-      e.response as HttpResponse<WorkspaceReadList>
-    }
+    val response =
+      try {
+        configApiClient.listAllWorkspaces(System.getenv(AIRBYTE_API_AUTH_HEADER_VALUE))
+      } catch (e: HttpClientResponseException) {
+        log.error("Cloud api response error for listWorkspacesByUser: ", e)
+        e.response as HttpResponse<WorkspaceReadList>
+      }
 
     ConfigClientErrorHandler.handleError(response, "airbyte-user")
 

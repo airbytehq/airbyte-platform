@@ -15,13 +15,18 @@ class LoggingNettyChannelHandler : ChannelDuplexHandler() {
   companion object {
     private val log = LoggerFactory.getLogger(LoggingNettyChannelHandler::class.java)
   }
+
   private var request: NettyHttpRequest? = null
   private var response: NettyHttpResponse? = null
   private var writer: CaptureWriter? = null
   private var requestCaptured = false
   private var responseCaptured = false
   private var captured = false
-  override fun channelRead(context: ChannelHandlerContext, message: Any) {
+
+  override fun channelRead(
+    context: ChannelHandlerContext,
+    message: Any,
+  ) {
     if (HttpRequest::class.java.isInstance(message)) {
       captured = false
       requestCaptured = false
@@ -49,7 +54,11 @@ class LoggingNettyChannelHandler : ChannelDuplexHandler() {
     context.fireChannelRead(message)
   }
 
-  override fun write(context: ChannelHandlerContext, message: Any, promise: ChannelPromise?) {
+  override fun write(
+    context: ChannelHandlerContext,
+    message: Any,
+    promise: ChannelPromise?,
+  ) {
     if (HttpResponse::class.java.isInstance(message)) {
       val httpResponse: HttpResponse = message as HttpResponse
       response = NettyHttpResponse(httpResponse)

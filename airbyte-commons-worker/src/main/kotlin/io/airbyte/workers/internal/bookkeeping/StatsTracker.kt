@@ -250,20 +250,26 @@ class StreamStatsTracker(
   /**
    * Bookkeeping for when we see an estimate message.
    */
-  fun trackEstimates(msg: AirbyteEstimateTraceMessage): Unit = with(streamStats) {
-    estimatedBytesCount.set(msg.byteEstimate)
-    estimatedRecordsCount.set(msg.rowEstimate)
-  }
+  fun trackEstimates(msg: AirbyteEstimateTraceMessage): Unit =
+    with(streamStats) {
+      estimatedBytesCount.set(msg.byteEstimate)
+      estimatedRecordsCount.set(msg.rowEstimate)
+    }
 }
 
-private fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int = when (type) {
-  AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
-  AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
+private fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
+  when (type) {
+    AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
+    AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
 // state type is legacy
-  else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
-}
+    else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
+  }
 
-private fun updateMean(previousMean: Double, previousCount: Long, newDataPoint: Double): Double {
+private fun updateMean(
+  previousMean: Double,
+  previousCount: Long,
+  newDataPoint: Double,
+): Double {
   val newCount = previousCount + 1
   return ((previousMean * previousCount) + newDataPoint) / newCount
 }

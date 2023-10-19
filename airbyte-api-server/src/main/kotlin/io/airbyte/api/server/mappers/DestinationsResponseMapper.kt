@@ -37,9 +37,10 @@ object DestinationsResponseMapper {
     offset: Int,
     apiHost: String,
   ): DestinationsResponse {
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, DESTINATIONS_PATH)
-      .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
-      .queryParam(INCLUDE_DELETED, includeDeleted)
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, DESTINATIONS_PATH)
+        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+        .queryParam(INCLUDE_DELETED, includeDeleted)
     val destinationsResponse = DestinationsResponse()
     destinationsResponse.setNext(PaginationMapper.getNextUrl(destinationReadList.destinations, limit, offset, uriBuilder))
     destinationsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))

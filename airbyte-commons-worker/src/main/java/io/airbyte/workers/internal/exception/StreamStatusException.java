@@ -12,6 +12,7 @@ import java.io.Serial;
 /**
  * Custom exception that represents a failure to transition a stream to a new status.
  */
+@SuppressWarnings("PMD.NonSerializableClass")
 public class StreamStatusException extends Exception {
 
   @Serial

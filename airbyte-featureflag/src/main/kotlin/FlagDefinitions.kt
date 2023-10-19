@@ -2,11 +2,11 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.featureflag
-
 /**
  * Feature-Flag definitions are defined in this file.
  */
+
+package io.airbyte.featureflag
 
 /**
  * If enabled, all messages from the source to the destination will be logged in 1 second intervals.
@@ -122,16 +122,18 @@ object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-s
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
-    val enabledWorkspaceIds: List<String> = fetcher(key)
-      ?.takeIf { it.isNotEmpty() }
-      ?.split(",")
-      ?: listOf()
+    val enabledWorkspaceIds: List<String> =
+      fetcher(key)
+        ?.takeIf { it.isNotEmpty() }
+        ?.split(",")
+        ?: listOf()
 
-    val contextWorkspaceIds: List<String> = when (ctx) {
-      is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
-      is Workspace -> listOf(ctx.key)
-      else -> listOf()
-    }
+    val contextWorkspaceIds: List<String> =
+      when (ctx) {
+        is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
+        is Workspace -> listOf(ctx.key)
+        else -> listOf()
+      }
 
     return when (contextWorkspaceIds.any { it in enabledWorkspaceIds }) {
       true -> true

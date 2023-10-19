@@ -35,13 +35,14 @@ class NotificationHandlerTest {
 
   @Test
   fun testAllNotification() {
-    val notificationHandler = NotificationHandler(
-      webhookConfigFetcher,
-      customerIoConfigFetcher,
-      webhookNotificationSender,
-      customerIoNotificationSender,
-      workspaceNotificationConfigFetcher,
-    )
+    val notificationHandler =
+      NotificationHandler(
+        webhookConfigFetcher,
+        customerIoConfigFetcher,
+        webhookNotificationSender,
+        customerIoNotificationSender,
+        workspaceNotificationConfigFetcher,
+      )
 
     every {
       webhookConfigFetcher.fetchConfig(connectionId)
@@ -70,13 +71,14 @@ class NotificationHandlerTest {
 
   @Test
   fun testPartialNotification() {
-    val notificationHandler = NotificationHandler(
-      webhookConfigFetcher,
-      customerIoConfigFetcher,
-      webhookNotificationSender,
-      customerIoNotificationSender,
-      workspaceNotificationConfigFetcher,
-    )
+    val notificationHandler =
+      NotificationHandler(
+        webhookConfigFetcher,
+        customerIoConfigFetcher,
+        webhookNotificationSender,
+        customerIoNotificationSender,
+        workspaceNotificationConfigFetcher,
+      )
 
     notificationHandler.sendNotification(connectionId, subject, message, listOf())
 

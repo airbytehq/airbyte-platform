@@ -141,9 +141,14 @@ interface SyncStatsTracker {
   fun getTotalSourceStateMessagesEmitted(): Long
 
   fun getTotalDestinationStateMessagesEmitted(): Long
+
   fun getMaxSecondsToReceiveSourceStateMessage(): Long
+
   fun getMeanSecondsToReceiveSourceStateMessage(): Long
+
   fun getMaxSecondsBetweenStateMessageEmittedAndCommitted(): Long?
+
   fun getMeanSecondsBetweenStateMessageEmittedAndCommitted(): Long?
+
   fun getUnreliableStateTimingMetrics(): Boolean
 }

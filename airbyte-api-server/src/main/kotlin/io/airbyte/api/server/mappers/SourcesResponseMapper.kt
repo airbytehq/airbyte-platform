@@ -35,9 +35,10 @@ object SourcesResponseMapper {
     offset: Int,
     apiHost: String,
   ): SourcesResponse {
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, SOURCES_PATH)
-      .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
-      .queryParam(INCLUDE_DELETED, includeDeleted)
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, SOURCES_PATH)
+        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+        .queryParam(INCLUDE_DELETED, includeDeleted)
     val sourcesResponse = SourcesResponse()
     sourcesResponse.next = PaginationMapper.getNextUrl(sourceReadList.sources, limit, offset, uriBuilder)
     sourcesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)

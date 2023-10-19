@@ -17,7 +17,11 @@ import java.util.Optional
  * micronaut validation is improved. https://github.com/micronaut-projects/micronaut-core/pull/6808
  */
 class QueryValueBinder<T>(conversionService: ConversionService<*>?) : QueryValueArgumentBinder<T>(conversionService) {
-  override fun doConvert(value: Any?, context: ArgumentConversionContext<T>, defaultResult: BindingResult<T>): BindingResult<T> {
+  override fun doConvert(
+    value: Any?,
+    context: ArgumentConversionContext<T>,
+    defaultResult: BindingResult<T>,
+  ): BindingResult<T> {
     return if (value == null && context.hasErrors()) {
       object : BindingResult<T> {
         override fun getValue(): Optional<T>? {

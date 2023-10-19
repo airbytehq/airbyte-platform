@@ -32,7 +32,10 @@ import javax.ws.rs.core.Response
 
 @Controller(DESTINATIONS_PATH)
 open class DestinationsController(private val destinationService: DestinationService, private val userService: UserService) : DestinationsApi {
-  override fun createDestination(destinationCreateRequest: DestinationCreateRequest, userInfo: String?): Response {
+  override fun createDestination(
+    destinationCreateRequest: DestinationCreateRequest,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val configurationJsonNode = destinationCreateRequest.configuration as ObjectNode
@@ -52,18 +55,19 @@ open class DestinationsController(private val destinationService: DestinationSer
 
     removeDestinationType(destinationCreateRequest)
 
-    val destinationResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        destinationService.createDestination(
-          destinationCreateRequest,
-          destinationDefinitionId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      DESTINATIONS_PATH,
-      POST,
-      userId,
-    )
+    val destinationResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          destinationService.createDestination(
+            destinationCreateRequest,
+            destinationDefinitionId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        DESTINATIONS_PATH,
+        POST,
+        userId,
+      )
     TrackingHelper.trackSuccess(
       DESTINATIONS_PATH,
       POST,
@@ -76,20 +80,24 @@ open class DestinationsController(private val destinationService: DestinationSer
       .build()
   }
 
-  override fun deleteDestination(destinationId: UUID, userInfo: String?): Response {
+  override fun deleteDestination(
+    destinationId: UUID,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val destinationResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        destinationService.deleteDestination(
-          destinationId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      DESTINATIONS_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )
+    val destinationResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          destinationService.deleteDestination(
+            destinationId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        DESTINATIONS_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )
     TrackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       DELETE,
@@ -101,20 +109,24 @@ open class DestinationsController(private val destinationService: DestinationSer
       .build()
   }
 
-  override fun getDestination(destinationId: UUID, userInfo: String?): Response {
+  override fun getDestination(
+    destinationId: UUID,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val destinationResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        destinationService.getDestination(
-          destinationId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      DESTINATIONS_WITH_ID_PATH,
-      GET,
-      userId,
-    )
+    val destinationResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          destinationService.getDestination(
+            destinationId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        DESTINATIONS_WITH_ID_PATH,
+        GET,
+        userId,
+      )
     TrackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
       GET,
@@ -131,21 +143,21 @@ open class DestinationsController(private val destinationService: DestinationSer
     includeDeleted: Boolean?,
     limit: Int?,
     offset: Int?,
-
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
-    val destinations: Any? = TrackingHelper.callWithTracker({
-      destinationService.listDestinationsForWorkspaces(
-        safeWorkspaceIds,
-        includeDeleted!!,
-        limit!!,
-        offset!!,
-        getLocalUserInfoIfNull(userInfo),
-      )
-    }, DESTINATIONS_PATH, GET, userId)
+    val destinations: Any? =
+      TrackingHelper.callWithTracker({
+        destinationService.listDestinationsForWorkspaces(
+          safeWorkspaceIds,
+          includeDeleted!!,
+          limit!!,
+          offset!!,
+          getLocalUserInfoIfNull(userInfo),
+        )
+      }, DESTINATIONS_PATH, GET, userId)
     TrackingHelper.trackSuccess(
       DESTINATIONS_PATH,
       GET,
@@ -161,25 +173,25 @@ open class DestinationsController(private val destinationService: DestinationSer
   override fun patchDestination(
     destinationId: UUID,
     destinationPatchRequest: DestinationPatchRequest,
-
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     removeDestinationType(destinationPatchRequest)
 
-    val destinationResponse: Any = TrackingHelper.callWithTracker(
-      {
-        destinationService.partialUpdateDestination(
-          destinationId,
-          destinationPatchRequest,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      DESTINATIONS_WITH_ID_PATH,
-      PATCH,
-      userId,
-    )!!
+    val destinationResponse: Any =
+      TrackingHelper.callWithTracker(
+        {
+          destinationService.partialUpdateDestination(
+            destinationId,
+            destinationPatchRequest,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        DESTINATIONS_WITH_ID_PATH,
+        PATCH,
+        userId,
+      )!!
 
     TrackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,
@@ -195,25 +207,25 @@ open class DestinationsController(private val destinationService: DestinationSer
   override fun putDestination(
     destinationId: UUID,
     destinationPutRequest: DestinationPutRequest,
-
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     removeDestinationType(destinationPutRequest)
 
-    val destinationResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        destinationService.updateDestination(
-          destinationId,
-          destinationPutRequest,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      DESTINATIONS_WITH_ID_PATH,
-      PUT,
-      userId,
-    )
+    val destinationResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          destinationService.updateDestination(
+            destinationId,
+            destinationPutRequest,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        DESTINATIONS_WITH_ID_PATH,
+        PUT,
+        userId,
+      )
 
     TrackingHelper.trackSuccess(
       DESTINATIONS_WITH_ID_PATH,

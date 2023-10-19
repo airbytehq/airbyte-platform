@@ -66,12 +66,13 @@ fun track(
   httpStatusCode: Int,
   workspaceId: Optional<UUID>,
 ) {
-  val payload = mutableMapOf(
-    Pair(USER_ID, userId),
-    Pair(ENDPOINT, endpointPath),
-    Pair(OPERATION, httpOperation),
-    Pair(STATUS_CODE, httpStatusCode),
-  )
+  val payload =
+    mutableMapOf(
+      Pair(USER_ID, userId),
+      Pair(ENDPOINT, endpointPath),
+      Pair(OPERATION, httpOperation),
+      Pair(STATUS_CODE, httpStatusCode),
+    )
   if (workspaceId.isPresent) {
     payload[WORKSPACE] = workspaceId.get().toString()
   }

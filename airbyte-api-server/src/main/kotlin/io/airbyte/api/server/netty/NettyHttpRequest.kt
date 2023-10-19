@@ -11,7 +11,6 @@ import java.util.Locale
 import java.util.UUID
 
 class NettyHttpRequest(private val request: HttpRequest) {
-
   val requestId: String = UUID.randomUUID().toString()
   private var writer: CaptureWriter? = null
 
@@ -29,11 +28,12 @@ class NettyHttpRequest(private val request: HttpRequest) {
   }
 
   val headers: Map<String, List<String>>?
-    get() = if (request.headers() != null) {
-      request.headers().entries().associate { entry -> entry.key.lowercase(Locale.getDefault()) to listOf(entry.value) }
-    } else {
-      null
-    }
+    get() =
+      if (request.headers() != null) {
+        request.headers().entries().associate { entry -> entry.key.lowercase(Locale.getDefault()) to listOf(entry.value) }
+      } else {
+        null
+      }
 
   val contentType: String?
     get() {
@@ -67,13 +67,14 @@ class NettyHttpRequest(private val request: HttpRequest) {
     get() = request.uri()
 
   fun getLogString(): String {
-    val logMap = mapOf(
-      Pair("queryString", queryString),
-      Pair("method", method),
-      Pair("requestURI", requestURI),
-      Pair("bodyText", maskBody(getBodyText("...dropped..."), contentType)),
-      Pair("headers", maskHeaders(headers)),
-    )
+    val logMap =
+      mapOf(
+        Pair("queryString", queryString),
+        Pair("method", method),
+        Pair("requestURI", requestURI),
+        Pair("bodyText", maskBody(getBodyText("...dropped..."), contentType)),
+        Pair("headers", maskHeaders(headers)),
+      )
     return JSONObject(logMap as MutableMap<String, JsonNode>?).toString()
   }
 }

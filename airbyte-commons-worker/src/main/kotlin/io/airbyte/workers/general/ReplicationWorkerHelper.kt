@@ -75,12 +75,18 @@ class ReplicationWorkerHelper(
   private var replicationFeatureFlags: ReplicationFeatureFlags? = null
 
   fun markCancelled(): Unit = cancelled.set(true)
+
   fun markFailed(): Unit = hasFailed.set(true)
+
   fun markReplicationRunning() {
     onReplicationRunning.call()
   }
 
-  fun initialize(ctx: ReplicationContext, replicationFeatureFlags: ReplicationFeatureFlags, jobRoot: Path) {
+  fun initialize(
+    ctx: ReplicationContext,
+    replicationFeatureFlags: ReplicationFeatureFlags,
+    jobRoot: Path,
+  ) {
     timeTracker.trackReplicationStartTime()
 
     this.ctx = ctx
@@ -94,10 +100,15 @@ class ReplicationWorkerHelper(
     ApmTraceUtils.addTagsToTrace(ctx.connectionId, ctx.attempt.toLong(), ctx.jobId.toString(), jobRoot)
   }
 
-  fun startDestination(destination: AirbyteDestination, replicaitonInput: ReplicationInput, jobRoot: Path) {
+  fun startDestination(
+    destination: AirbyteDestination,
+    replicaitonInput: ReplicationInput,
+    jobRoot: Path,
+  ) {
     timeTracker.trackDestinationWriteStartTime()
-    destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(replicaitonInput)
-      .apply { catalog = mapper.mapCatalog(catalog) }
+    destinationConfig =
+      WorkerUtils.syncToWorkerDestinationConfig(replicaitonInput)
+        .apply { catalog = mapper.mapCatalog(catalog) }
 
     try {
       destination.start(destinationConfig, jobRoot)
@@ -106,11 +117,16 @@ class ReplicationWorkerHelper(
     }
   }
 
-  fun startSource(source: AirbyteSource, replicationInput: ReplicationInput, jobRoot: Path) {
+  fun startSource(
+    source: AirbyteSource,
+    replicationInput: ReplicationInput,
+    jobRoot: Path,
+  ) {
     timeTracker.trackSourceReadStartTime()
 
-    val sourceConfig = WorkerUtils.syncToWorkerSourceConfig(replicationInput)
-      .also { fieldSelector.populateFields(it.catalog) }
+    val sourceConfig =
+      WorkerUtils.syncToWorkerSourceConfig(replicationInput)
+        .also { fieldSelector.populateFields(it.catalog) }
 
     try {
       source.start(sourceConfig, jobRoot)
@@ -189,11 +205,12 @@ class ReplicationWorkerHelper(
   @JvmOverloads
   @Throws(JsonProcessingException::class)
   fun getReplicationOutput(performanceMetrics: PerformanceMetrics? = null): ReplicationOutput {
-    val outputStatus: ReplicationStatus = when {
-      cancelled.get() -> ReplicationStatus.CANCELLED
-      hasFailed.get() -> ReplicationStatus.FAILED
-      else -> ReplicationStatus.COMPLETED
-    }
+    val outputStatus: ReplicationStatus =
+      when {
+        cancelled.get() -> ReplicationStatus.CANCELLED
+        hasFailed.get() -> ReplicationStatus.FAILED
+        else -> ReplicationStatus.COMPLETED
+      }
 
     val hasReplicationCompleted = outputStatus == ReplicationStatus.COMPLETED
     val totalSyncStats = getTotalStats(timeTracker, hasReplicationCompleted)
@@ -203,20 +220,22 @@ class ReplicationWorkerHelper(
       logger.warn { "Could not reliably determine committed record counts, committed record stats will be set to null" }
     }
 
-    val summary = ReplicationAttemptSummary()
-      .withStatus(outputStatus)
-      // TODO records and bytes synced should no longer be used as we are consuming total stats, we should make a pass to remove them.
-      .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsEmitted())
-      .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-      .withTotalStats(totalSyncStats)
-      .withStreamStats(streamSyncStats)
-      .withStartTime(timeTracker.getReplicationStartTime())
-      .withEndTime(System.currentTimeMillis())
-      .withPerformanceMetrics(performanceMetrics)
+    val summary =
+      ReplicationAttemptSummary()
+        .withStatus(outputStatus)
+        // TODO records and bytes synced should no longer be used as we are consuming total stats, we should make a pass to remove them.
+        .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsEmitted())
+        .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        .withTotalStats(totalSyncStats)
+        .withStreamStats(streamSyncStats)
+        .withStartTime(timeTracker.getReplicationStartTime())
+        .withEndTime(System.currentTimeMillis())
+        .withPerformanceMetrics(performanceMetrics)
 
-    val output = ReplicationOutput()
-      .withReplicationAttemptSummary(summary)
-      .withOutputCatalog(requireNotNull(destinationConfig).catalog)
+    val output =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(summary)
+        .withOutputCatalog(requireNotNull(destinationConfig).catalog)
 
     val failures: List<FailureReason> = getFailureReasons(replicationFailures, output)
 
@@ -264,18 +283,19 @@ class ReplicationWorkerHelper(
 
     val previousStream = currentDestinationStream
 
-    currentDestinationStream = airbyteMessageDataExtractor.extractStreamDescriptor(destinationRawMessage, previousStream)
-      ?.also {
-        logger.debug { "DESTINATION > The current stream is ${it.namespace}:${it.name}" }
+    currentDestinationStream =
+      airbyteMessageDataExtractor.extractStreamDescriptor(destinationRawMessage, previousStream)
+        ?.also {
+          logger.debug { "DESTINATION > The current stream is ${it.namespace}:${it.name}" }
 
-        if (previousStream != null && previousStream != it) {
-          replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(
-            it,
-            context,
-            AirbyteMessageOrigin.DESTINATION,
-          )
+          if (previousStream != null && previousStream != it) {
+            replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(
+              it,
+              context,
+              AirbyteMessageOrigin.DESTINATION,
+            )
+          }
         }
-      }
 
     messageTracker.acceptFromDestination(destinationRawMessage)
 
@@ -305,7 +325,10 @@ class ReplicationWorkerHelper(
       .let { Optional.of(it) }
   }
 
-  private fun getTotalStats(timeTracker: ThreadedTimeTracker, hasReplicationCompleted: Boolean): SyncStats {
+  private fun getTotalStats(
+    timeTracker: ThreadedTimeTracker,
+    hasReplicationCompleted: Boolean,
+  ): SyncStats {
     return messageTracker.syncStatsTracker.getTotalStats(hasReplicationCompleted).apply {
       replicationStartTime = timeTracker.replicationStartTime
       replicationEndTime = timeTracker.replicationEndTime
@@ -316,7 +339,10 @@ class ReplicationWorkerHelper(
     }
   }
 
-  private fun getFailureReasons(replicationFailures: List<FailureReason>, output: ReplicationOutput): List<FailureReason> {
+  private fun getFailureReasons(
+    replicationFailures: List<FailureReason>,
+    output: ReplicationOutput,
+  ): List<FailureReason> {
     val context = requireNotNull(ctx)
 
     val failures = mutableListOf<FailureReason>()
@@ -336,12 +362,17 @@ class ReplicationWorkerHelper(
   companion object {
     @JvmStatic
     @VisibleForTesting
-    fun getFailureReason(ex: Throwable, jobId: Long?, attempt: Int?): FailureReason = when (ex) {
-      is SourceException -> FailureHelper.sourceFailure(ex, jobId, attempt)
-      is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
-      is HeartbeatTimeoutChaperone.HeartbeatTimeoutException -> FailureHelper.sourceHeartbeatFailure(ex, jobId, attempt)
-      else -> FailureHelper.replicationFailure(ex, jobId, attempt)
-    }
+    fun getFailureReason(
+      ex: Throwable,
+      jobId: Long?,
+      attempt: Int?,
+    ): FailureReason =
+      when (ex) {
+        is SourceException -> FailureHelper.sourceFailure(ex, jobId, attempt)
+        is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
+        is HeartbeatTimeoutChaperone.HeartbeatTimeoutException -> FailureHelper.sourceHeartbeatFailure(ex, jobId, attempt)
+        else -> FailureHelper.replicationFailure(ex, jobId, attempt)
+      }
   }
 }
 
@@ -351,11 +382,12 @@ class ReplicationWorkerHelper(
  * @param msg The [AirbyteMessage] to be considered for event publishing.
  * @return true if the message should be published, false otherwise.
  */
-private fun shouldPublishMessage(msg: AirbyteMessage): Boolean = when {
-  msg.type == Type.CONTROL -> true
-  msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS -> true
-  else -> false
-}
+private fun shouldPublishMessage(msg: AirbyteMessage): Boolean =
+  when {
+    msg.type == Type.CONTROL -> true
+    msg.type == Type.TRACE && msg.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS -> true
+    else -> false
+  }
 
 private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
   if (ctx == null) {

@@ -36,14 +36,16 @@ import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface DestinationService {
-
   fun createDestination(
     destinationCreateRequest: DestinationCreateRequest,
     destinationDefinitionId: UUID,
     userInfo: String?,
   ): DestinationResponse
 
-  fun getDestination(destinationId: UUID, userInfo: String?): DestinationResponse
+  fun getDestination(
+    destinationId: UUID,
+    userInfo: String?,
+  ): DestinationResponse
 
   fun updateDestination(
     destinationId: UUID,
@@ -57,25 +59,33 @@ interface DestinationService {
     userInfo: String?,
   ): DestinationResponse
 
-  fun deleteDestination(connectionId: UUID, userInfo: String?)
+  fun deleteDestination(
+    connectionId: UUID,
+    userInfo: String?,
+  )
 
   fun listDestinationsForWorkspaces(
     workspaceIds: List<UUID>,
     includeDeleted: Boolean = false,
     limit: Int = 20,
     offset: Int = 0,
-
     userInfo: String?,
   ): DestinationsResponse?
 
-  fun getDestinationSyncModes(destinationId: UUID, userInfo: String?): List<DestinationSyncMode>
-  fun getDestinationSyncModes(destinationResponse: DestinationResponse, userInfo: String?): List<DestinationSyncMode>
+  fun getDestinationSyncModes(
+    destinationId: UUID,
+    userInfo: String?,
+  ): List<DestinationSyncMode>
+
+  fun getDestinationSyncModes(
+    destinationResponse: DestinationResponse,
+    userInfo: String?,
+  ): List<DestinationSyncMode>
 }
 
 @Singleton
 @Secondary
 class DestinationServiceImpl(private val configApiClient: ConfigApiClient, private val userService: UserService) : DestinationService {
-
   companion object {
     private val log = LoggerFactory.getLogger(DestinationServiceImpl::class.java)
   }
@@ -97,12 +107,13 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     destinationCreateOss.workspaceId = destinationCreateRequest.workspaceId
     destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
 
-    val response = try {
-      configApiClient.createDestination(destinationCreateOss, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for createDestination: ", e)
-      e.response as HttpResponse<DestinationRead>
-    }
+    val response =
+      try {
+        configApiClient.createDestination(destinationCreateOss, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for createDestination: ", e)
+        e.response as HttpResponse<DestinationRead>
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     ConfigClientErrorHandler.handleError(response, destinationCreateRequest.workspaceId.toString())
     return DestinationReadMapper.from(response.body()!!)
@@ -111,17 +122,21 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
   /**
    * Gets a destination by ID.
    */
-  override fun getDestination(destinationId: UUID, userInfo: String?): DestinationResponse {
+  override fun getDestination(
+    destinationId: UUID,
+    userInfo: String?,
+  ): DestinationResponse {
     val destinationIdRequestBody = DestinationIdRequestBody()
     destinationIdRequestBody.destinationId = destinationId
 
     log.info("getDestination request: $destinationIdRequestBody")
-    val response = try {
-      configApiClient.getDestination(destinationIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getDestination: ", e)
-      e.response as HttpResponse<DestinationRead>
-    }
+    val response =
+      try {
+        configApiClient.getDestination(destinationIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getDestination: ", e)
+        e.response as HttpResponse<DestinationRead>
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     ConfigClientErrorHandler.handleError(response, destinationId.toString())
     return DestinationReadMapper.from(response.body()!!)
@@ -130,18 +145,24 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
   /**
    * Updates a destination by ID.
    */
-  override fun updateDestination(destinationId: UUID, destinationPutRequest: DestinationPutRequest, userInfo: String?): DestinationResponse {
-    val destinationUpdate = DestinationUpdate()
-      .destinationId(destinationId)
-      .connectionConfiguration(destinationPutRequest.configuration)
-      .name(destinationPutRequest.name)
+  override fun updateDestination(
+    destinationId: UUID,
+    destinationPutRequest: DestinationPutRequest,
+    userInfo: String?,
+  ): DestinationResponse {
+    val destinationUpdate =
+      DestinationUpdate()
+        .destinationId(destinationId)
+        .connectionConfiguration(destinationPutRequest.configuration)
+        .name(destinationPutRequest.name)
 
-    val response = try {
-      configApiClient.updateDestination(destinationUpdate, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for updateDestination: ", e)
-      e.response as HttpResponse<DestinationRead>
-    }
+    val response =
+      try {
+        configApiClient.updateDestination(destinationUpdate, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for updateDestination: ", e)
+        e.response as HttpResponse<DestinationRead>
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     ConfigClientErrorHandler.handleError(response, destinationId.toString())
     return DestinationReadMapper.from(response.body()!!)
@@ -155,17 +176,19 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     destinationPatchRequest: DestinationPatchRequest,
     userInfo: String?,
   ): DestinationResponse {
-    val partialDestinationUpdate = PartialDestinationUpdate()
-      .destinationId(destinationId)
-      .connectionConfiguration(destinationPatchRequest.configuration)
-      .name(destinationPatchRequest.name)
+    val partialDestinationUpdate =
+      PartialDestinationUpdate()
+        .destinationId(destinationId)
+        .connectionConfiguration(destinationPatchRequest.configuration)
+        .name(destinationPatchRequest.name)
 
-    val response = try {
-      configApiClient.partialUpdateDestination(partialDestinationUpdate, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for partialUpdateDestination: ", e)
-      e.response as HttpResponse<DestinationRead>
-    }
+    val response =
+      try {
+        configApiClient.partialUpdateDestination(partialDestinationUpdate, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for partialUpdateDestination: ", e)
+        e.response as HttpResponse<DestinationRead>
+      }
     ConfigClientErrorHandler.handleError(response, destinationId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return DestinationReadMapper.from(response.body()!!)
@@ -174,14 +197,18 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
   /**
    * Deletes updates a destination by ID.
    */
-  override fun deleteDestination(connectionId: UUID, userInfo: String?) {
+  override fun deleteDestination(
+    connectionId: UUID,
+    userInfo: String?,
+  ) {
     val destinationIdRequestBody = DestinationIdRequestBody().destinationId(connectionId)
-    val response = try {
-      configApiClient.deleteDestination(destinationIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for destination delete: ", e)
-      e.response as HttpResponse<String>
-    }
+    val response =
+      try {
+        configApiClient.deleteDestination(destinationIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for destination delete: ", e)
+        e.response as HttpResponse<String>
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
   }
@@ -203,12 +230,13 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     listResourcesForWorkspacesRequestBody.pagination = pagination
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
 
-    val response = try {
-      configApiClient.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for listWorkspaces: ", e)
-      e.response as HttpResponse<DestinationReadList>
-    }
+    val response =
+      try {
+        configApiClient.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for listWorkspaces: ", e)
+        e.response as HttpResponse<DestinationReadList>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceIds.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return DestinationsResponseMapper.from(
@@ -221,7 +249,10 @@ class DestinationServiceImpl(private val configApiClient: ConfigApiClient, priva
     )
   }
 
-  override fun getDestinationSyncModes(destinationId: UUID, userInfo: String?): List<DestinationSyncMode> {
+  override fun getDestinationSyncModes(
+    destinationId: UUID,
+    userInfo: String?,
+  ): List<DestinationSyncMode> {
     val destinationResponse: DestinationResponse = getDestination(destinationId, userInfo)
     return getDestinationSyncModes(destinationResponse, userInfo)
   }

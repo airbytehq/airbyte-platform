@@ -39,16 +39,18 @@ object JobsResponseMapper {
     offset: Int,
     apiHost: String,
   ): JobsResponse {
-    val jobs: List<JobResponse> = jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
-      ALLOWED_CONFIG_TYPES.contains(
-        j.job!!.configType,
-      )
-    }.map<JobResponse>(
-      Function<JobWithAttemptsRead, JobResponse> { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) },
-    ).toList()
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, JOBS_PATH)
-      .queryParam("jobType", jobType)
-      .queryParam("connectionId", connectionId)
+    val jobs: List<JobResponse> =
+      jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
+        ALLOWED_CONFIG_TYPES.contains(
+          j.job!!.configType,
+        )
+      }.map<JobResponse>(
+        Function<JobWithAttemptsRead, JobResponse> { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) },
+      ).toList()
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, JOBS_PATH)
+        .queryParam("jobType", jobType)
+        .queryParam("connectionId", connectionId)
     val jobsResponse = JobsResponse()
     jobsResponse.setNext(PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder))
     jobsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))
@@ -75,16 +77,18 @@ object JobsResponseMapper {
     offset: Int,
     apiHost: String,
   ): JobsResponse {
-    val jobs: List<JobResponse> = jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
-      ALLOWED_CONFIG_TYPES.contains(
-        j.job!!.configType,
-      )
-    }.map<JobResponse>(
-      Function<JobWithAttemptsRead, JobResponse> { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) },
-    ).toList()
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, JOBS_PATH)
-      .queryParam("jobType", jobType)
-      .queryParam("workspaceIds", workspaceIds)
+    val jobs: List<JobResponse> =
+      jobsList.jobs.stream().filter { j: JobWithAttemptsRead ->
+        ALLOWED_CONFIG_TYPES.contains(
+          j.job!!.configType,
+        )
+      }.map<JobResponse>(
+        Function<JobWithAttemptsRead, JobResponse> { obj: JobWithAttemptsRead? -> JobResponseMapper.from(obj!!) },
+      ).toList()
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, JOBS_PATH)
+        .queryParam("jobType", jobType)
+        .queryParam("workspaceIds", workspaceIds)
     val jobsResponse = JobsResponse()
     jobsResponse.setNext(PaginationMapper.getNextUrl(jobs, limit, offset, uriBuilder))
     jobsResponse.setPrevious(PaginationMapper.getPreviousUrl(limit, offset, uriBuilder))

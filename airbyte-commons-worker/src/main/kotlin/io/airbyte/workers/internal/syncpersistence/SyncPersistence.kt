@@ -51,12 +51,15 @@ interface SyncPersistence : SyncStatsTracker, AutoCloseable {
    * @param connectionId the connection
    * @param stateMessage stateMessage to persist
    */
-  fun persist(connectionId: UUID, stateMessage: AirbyteStateMessage)
+  fun persist(
+    connectionId: UUID,
+    stateMessage: AirbyteStateMessage,
+  )
 }
 
 private val logger = KotlinLogging.logger {}
-private const val runImmediately: Long = 0
-private const val flushTerminationTimeoutInSeconds: Long = 60
+private const val RUN_IMMEDIATELY: Long = 0
+private const val FLUSH_TERMINATION_TIMEOUT_IN_SECONDS: Long = 60
 
 // For overriding the jitter config when testing
 data class RetryWithJitterConfig(val jitterMaxIntervalSecs: Int, val finalIntervalSecs: Int, val maxTries: Int)
@@ -114,7 +117,10 @@ class SyncPersistenceImpl
     }
 
     @Trace
-    override fun persist(connectionId: UUID, stateMessage: AirbyteStateMessage) {
+    override fun persist(
+      connectionId: UUID,
+      stateMessage: AirbyteStateMessage,
+    ) {
       require(this.connectionId == connectionId) {
         "Invalid connectionId $connectionId, expected ${this.connectionId}"
       }
@@ -124,7 +130,10 @@ class SyncPersistenceImpl
       startBackgroundFlushStateTask(connectionId, stateMessage)
     }
 
-    private fun startBackgroundFlushStateTask(connectionId: UUID, stateMessage: AirbyteStateMessage) {
+    private fun startBackgroundFlushStateTask(
+      connectionId: UUID,
+      stateMessage: AirbyteStateMessage,
+    ) {
       if (stateFlushFuture != null || onlyFlushAtTheEnd) {
         return
       }
@@ -132,12 +141,13 @@ class SyncPersistenceImpl
       // Fetch the current persisted state to see if it is a state migration.
       // In case of a state migration, we only flush at the end of the sync to avoid dropping states in
       // case of a sync failure
-      val currentPersistedState: ConnectionState? = try {
-        stateApi.getState(ConnectionIdRequestBody().connectionId(connectionId))
-      } catch (e: ApiException) {
-        logger.warn(e) { "Failed to check current state for connectionId $connectionId, it will be retried next time we see a state" }
-        return
-      }
+      val currentPersistedState: ConnectionState? =
+        try {
+          stateApi.getState(ConnectionIdRequestBody().connectionId(connectionId))
+        } catch (e: ApiException) {
+          logger.warn(e) { "Failed to check current state for connectionId $connectionId, it will be retried next time we see a state" }
+          return
+        }
       if (isMigration(currentPersistedState, stateMessage) && stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM) {
         logger.info { "State type migration from LEGACY to STREAM detected, all states will be persisted at the end of the sync" }
         onlyFlushAtTheEnd = true
@@ -148,12 +158,13 @@ class SyncPersistenceImpl
       synchronized(this) {
         if (stateFlushFuture == null) {
           logger.info { "starting state flush thread for connectionId $connectionId" }
-          stateFlushFuture = stateFlushExecutorService.scheduleAtFixedRate(
-            { this.flush() },
-            runImmediately,
-            stateFlushPeriodInSeconds,
-            TimeUnit.SECONDS,
-          )
+          stateFlushFuture =
+            stateFlushExecutorService.scheduleAtFixedRate(
+              { this.flush() },
+              RUN_IMMEDIATELY,
+              stateFlushPeriodInSeconds,
+              TimeUnit.SECONDS,
+            )
         }
       }
     }
@@ -176,7 +187,7 @@ class SyncPersistenceImpl
 
       // Wait for previous running task to terminate
       try {
-        val terminated = stateFlushExecutorService.awaitTermination(flushTerminationTimeoutInSeconds, TimeUnit.SECONDS)
+        val terminated = stateFlushExecutorService.awaitTermination(FLUSH_TERMINATION_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS)
         if (!terminated) {
           if (stateToFlush != null && !stateToFlush!!.isEmpty()) {
             metricClient.emitFailedStateCloseMetrics(connectionId)
@@ -302,9 +313,10 @@ class SyncPersistenceImpl
 
       metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT, 1)
 
-      val stateApiRequest = ConnectionStateCreateOrUpdate()
-        .connectionId(connectionId)
-        .connectionState(StateConverter.toClient(connectionId, maybeStateWrapper))
+      val stateApiRequest =
+        ConnectionStateCreateOrUpdate()
+          .connectionId(connectionId)
+          .connectionState(StateConverter.toClient(connectionId, maybeStateWrapper))
 
       try {
         stateApi.createOrUpdateState(stateApiRequest)
@@ -318,11 +330,14 @@ class SyncPersistenceImpl
       metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL, 1)
     }
 
-    private fun isMigration(currentPersistedState: ConnectionState?, stateMessage: AirbyteStateMessage): Boolean {
+    private fun isMigration(
+      currentPersistedState: ConnectionState?,
+      stateMessage: AirbyteStateMessage,
+    ): Boolean {
       return (
         !isStateEmpty(currentPersistedState) && currentPersistedState?.stateType == ConnectionStateType.LEGACY &&
           stateMessage.type != AirbyteStateMessage.AirbyteStateType.LEGACY
-        )
+      )
     }
 
     private fun doFlushStats() {
@@ -364,7 +379,10 @@ class SyncPersistenceImpl
      * This is because retryWithJitterThrows is a static method, in order to avoid waiting 10min to test
      * failures, we can override the config with some values more appropriate for testing.
      */
-    private fun retryWithJitterThrows(desc: String, call: () -> Unit) {
+    private fun retryWithJitterThrows(
+      desc: String,
+      call: () -> Unit,
+    ) {
       retryWithJitterConfig?.let {
         AirbyteApiClient.retryWithJitterThrows(call, desc, it.jitterMaxIntervalSecs, it.finalIntervalSecs, it.maxTries)
       } ?: AirbyteApiClient.retryWithJitterThrows(call, desc)
@@ -393,7 +411,11 @@ class SyncPersistenceImpl
 
 private fun isStateEmpty(connectionState: ConnectionState?) = connectionState?.state?.isEmpty ?: false
 
-private fun buildSaveStatsRequest(syncStatsTracker: SyncStatsTracker, jobId: Long, attemptNumber: Int): SaveStatsRequestBody {
+private fun buildSaveStatsRequest(
+  syncStatsTracker: SyncStatsTracker,
+  jobId: Long,
+  attemptNumber: Int,
+): SaveStatsRequestBody {
   val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
 
@@ -411,13 +433,14 @@ private fun buildSaveStatsRequest(syncStatsTracker: SyncStatsTracker, jobId: Lon
     )
 }
 
-private fun SyncStats.toAttemptStats(): AttemptStats = AttemptStats()
-  .bytesEmitted(bytesEmitted)
-  .recordsEmitted(recordsEmitted)
-  .estimatedBytes(estimatedBytes)
-  .estimatedRecords(estimatedRecords)
-  .bytesCommitted(bytesCommitted)
-  .recordsCommitted(recordsCommitted)
+private fun SyncStats.toAttemptStats(): AttemptStats =
+  AttemptStats()
+    .bytesEmitted(bytesEmitted)
+    .recordsEmitted(recordsEmitted)
+    .estimatedBytes(estimatedBytes)
+    .estimatedRecords(estimatedRecords)
+    .bytesCommitted(bytesCommitted)
+    .recordsCommitted(recordsCommitted)
 
 private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
   val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
@@ -439,7 +462,10 @@ private fun MetricClient.emitFailedStatsCloseMetrics(connectionId: UUID?) {
  * @param state the new state we want to persist
  * @param configuredCatalog the configured catalog of the connection of state
  */
-fun validateStreamStates(state: StateWrapper, configuredCatalog: ConfiguredAirbyteCatalog) {
+fun validateStreamStates(
+  state: StateWrapper,
+  configuredCatalog: ConfiguredAirbyteCatalog,
+) {
   val stateStreamDescriptors = state.stateMessages.map { it.stream.streamDescriptor }.toList()
 
   CatalogHelpers.extractIncrementalStreamDescriptors(configuredCatalog)

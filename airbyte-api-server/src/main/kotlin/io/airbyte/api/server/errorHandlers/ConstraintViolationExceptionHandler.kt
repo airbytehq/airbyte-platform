@@ -25,7 +25,6 @@ import javax.validation.ConstraintViolationException
 )
 class ConstraintViolationExceptionHandler :
   ExceptionHandler<ConstraintViolationException?, HttpResponse<*>> {
-
   companion object {
     val log = LoggerFactory.getLogger(ConstraintViolationExceptionHandler::class.java)
   }
@@ -33,7 +32,10 @@ class ConstraintViolationExceptionHandler :
   /**
    * Re-route the invalid input to a meaningful HttpStatus.
    */
-  override fun handle(request: HttpRequest<*>?, exception: ConstraintViolationException?): HttpResponse<*> {
+  override fun handle(
+    request: HttpRequest<*>?,
+    exception: ConstraintViolationException?,
+  ): HttpResponse<*> {
     log.debug("ConstraintViolationException: {}", exception)
     return HttpResponse.status<Any>(HttpStatus.BAD_REQUEST)
       .body(exception!!.stackTraceToString())

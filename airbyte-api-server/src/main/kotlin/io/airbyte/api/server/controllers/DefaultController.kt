@@ -9,7 +9,6 @@ import javax.ws.rs.core.Response
 
 @Controller(ROOT_PATH)
 open class DefaultController() : DefaultApi {
-
   @Value("\${airbyte.internal.documentation.host}")
   var documentationHost: String? = null
 

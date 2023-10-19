@@ -10,8 +10,11 @@ import io.airbyte.protocol.models.StreamDescriptor
 
 interface StateAggregator {
   fun ingest(stateMessage: AirbyteStateMessage)
+
   fun ingest(stateAggregator: StateAggregator)
+
   fun getAggregated(): State
+
   fun isEmpty(): Boolean
 }
 

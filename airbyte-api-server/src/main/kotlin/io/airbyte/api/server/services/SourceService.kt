@@ -38,29 +38,45 @@ import java.util.UUID
 import javax.ws.rs.core.Response
 
 interface SourceService {
-
   fun createSource(
     sourceCreateRequest: SourceCreateRequest,
     sourceDefinitionId: UUID,
     userInfo: String?,
   ): SourceResponse
 
-  fun updateSource(sourceId: UUID, sourcePutRequest: SourcePutRequest, userInfo: String?): SourceResponse
+  fun updateSource(
+    sourceId: UUID,
+    sourcePutRequest: SourcePutRequest,
+    userInfo: String?,
+  ): SourceResponse
 
-  fun partialUpdateSource(sourceId: UUID, sourcePatchRequest: SourcePatchRequest, userInfo: String?): SourceResponse
+  fun partialUpdateSource(
+    sourceId: UUID,
+    sourcePatchRequest: SourcePatchRequest,
+    userInfo: String?,
+  ): SourceResponse
 
-  fun deleteSource(sourceId: UUID, userInfo: String?)
+  fun deleteSource(
+    sourceId: UUID,
+    userInfo: String?,
+  )
 
-  fun getSource(sourceId: UUID, userInfo: String?): SourceResponse
+  fun getSource(
+    sourceId: UUID,
+    userInfo: String?,
+  ): SourceResponse
 
-  fun getSourceSchema(sourceId: UUID, disableCache: Boolean, userInfo: String?): SourceDiscoverSchemaRead
+  fun getSourceSchema(
+    sourceId: UUID,
+    disableCache: Boolean,
+    userInfo: String?,
+  ): SourceDiscoverSchemaRead
 
   fun listSourcesForWorkspaces(
     workspaceIds: List<UUID>,
     includeDeleted: Boolean = false,
     limit: Int = 20,
     offset: Int = 0,
-
     userInfo: String?,
   ): SourcesResponse
 
@@ -76,7 +92,6 @@ open class SourceServiceImpl(
   private val configApiClient: ConfigApiClient,
   private val userService: UserServiceImpl,
 ) : SourceService {
-
   companion object {
     private val log = LoggerFactory.getLogger(SourceServiceImpl::class.java)
   }
@@ -87,7 +102,11 @@ open class SourceServiceImpl(
   /**
    * Creates a source.
    */
-  override fun createSource(sourceCreateRequest: SourceCreateRequest, sourceDefinitionId: UUID, userInfo: String?): SourceResponse {
+  override fun createSource(
+    sourceCreateRequest: SourceCreateRequest,
+    sourceDefinitionId: UUID,
+    userInfo: String?,
+  ): SourceResponse {
     val sourceCreateOss = SourceCreate()
     sourceCreateOss.name = sourceCreateRequest.name
     sourceCreateOss.sourceDefinitionId = sourceDefinitionId
@@ -95,12 +114,13 @@ open class SourceServiceImpl(
     sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
     sourceCreateOss.secretId = sourceCreateRequest.secretId
 
-    val response = try {
-      configApiClient.createSource(sourceCreateOss, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for createSource: ", e)
-      e.response as HttpResponse<SourceRead>
-    }
+    val response =
+      try {
+        configApiClient.createSource(sourceCreateOss, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for createSource: ", e)
+        e.response as HttpResponse<SourceRead>
+      }
 
     ConfigClientErrorHandler.handleError(response, sourceCreateRequest.workspaceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -110,18 +130,24 @@ open class SourceServiceImpl(
   /**
    * Updates a source fully with full replacement of configuration.
    */
-  override fun updateSource(sourceId: UUID, sourcePutRequest: SourcePutRequest, userInfo: String?): SourceResponse {
-    val sourceUpdate = SourceUpdate()
-      .sourceId(sourceId)
-      .connectionConfiguration(sourcePutRequest.configuration)
-      .name(sourcePutRequest.name)
+  override fun updateSource(
+    sourceId: UUID,
+    sourcePutRequest: SourcePutRequest,
+    userInfo: String?,
+  ): SourceResponse {
+    val sourceUpdate =
+      SourceUpdate()
+        .sourceId(sourceId)
+        .connectionConfiguration(sourcePutRequest.configuration)
+        .name(sourcePutRequest.name)
 
-    val response = try {
-      configApiClient.updateSource(sourceUpdate, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for updateSource: ", e)
-      e.response as HttpResponse<SourceRead>
-    }
+    val response =
+      try {
+        configApiClient.updateSource(sourceUpdate, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for updateSource: ", e)
+        e.response as HttpResponse<SourceRead>
+      }
 
     ConfigClientErrorHandler.handleError(response, sourceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -131,19 +157,25 @@ open class SourceServiceImpl(
   /**
    * Updates a source allowing patch semantics including within the configuration.
    */
-  override fun partialUpdateSource(sourceId: UUID, sourcePatchRequest: SourcePatchRequest, userInfo: String?): SourceResponse {
-    val sourceUpdate = PartialSourceUpdate()
-      .sourceId(sourceId)
-      .connectionConfiguration(sourcePatchRequest.configuration)
-      .name(sourcePatchRequest.name)
-      .secretId(sourcePatchRequest.secretId)
+  override fun partialUpdateSource(
+    sourceId: UUID,
+    sourcePatchRequest: SourcePatchRequest,
+    userInfo: String?,
+  ): SourceResponse {
+    val sourceUpdate =
+      PartialSourceUpdate()
+        .sourceId(sourceId)
+        .connectionConfiguration(sourcePatchRequest.configuration)
+        .name(sourcePatchRequest.name)
+        .secretId(sourcePatchRequest.secretId)
 
-    val response = try {
-      configApiClient.partialUpdateSource(sourceUpdate, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for partialUpdateSource: ", e)
-      e.response as HttpResponse<SourceRead>
-    }
+    val response =
+      try {
+        configApiClient.partialUpdateSource(sourceUpdate, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for partialUpdateSource: ", e)
+        e.response as HttpResponse<SourceRead>
+      }
 
     ConfigClientErrorHandler.handleError(response, sourceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -153,14 +185,18 @@ open class SourceServiceImpl(
   /**
    * Deletes a source by ID.
    */
-  override fun deleteSource(sourceId: UUID, userInfo: String?) {
+  override fun deleteSource(
+    sourceId: UUID,
+    userInfo: String?,
+  ) {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
-    val response = try {
-      configApiClient.deleteSource(sourceIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for source delete: ", e)
-      e.response as HttpResponse<String>
-    }
+    val response =
+      try {
+        configApiClient.deleteSource(sourceIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for source delete: ", e)
+        e.response as HttpResponse<String>
+      }
     ConfigClientErrorHandler.handleError(response, sourceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
   }
@@ -168,15 +204,19 @@ open class SourceServiceImpl(
   /**
    * Gets a source by ID.
    */
-  override fun getSource(sourceId: UUID, userInfo: String?): SourceResponse {
+  override fun getSource(
+    sourceId: UUID,
+    userInfo: String?,
+  ): SourceResponse {
     val sourceIdRequestBody = SourceIdRequestBody()
     sourceIdRequestBody.sourceId = sourceId
-    val response = try {
-      configApiClient.getSource(sourceIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getSource: ", e)
-      e.response as HttpResponse<SourceRead>
-    }
+    val response =
+      try {
+        configApiClient.getSource(sourceIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getSource: ", e)
+        e.response as HttpResponse<SourceRead>
+      }
     ConfigClientErrorHandler.handleError(response, sourceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return SourceReadMapper.from(response.body()!!)
@@ -192,23 +232,24 @@ open class SourceServiceImpl(
   ): SourceDiscoverSchemaRead {
     val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
 
-    val response: HttpResponse<SourceDiscoverSchemaRead> = try {
-      configApiClient.getSourceSchema(sourceDiscoverSchemaRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getSourceSchema: ", e)
-      e.response as HttpResponse<SourceDiscoverSchemaRead>
-    } catch (e: ReadTimeoutException) {
-      log.error("Config api read timeout error for getSourceSchema: ", e)
-      if (disableCache) {
-        throw UnexpectedProblem(
-          "try-again",
-          HttpStatus.REQUEST_TIMEOUT,
-          "Updating cache latest source schema in progress. Please try again with cache on.",
-        )
-      } else {
-        throw UnexpectedProblem(HttpStatus.REQUEST_TIMEOUT)
+    val response: HttpResponse<SourceDiscoverSchemaRead> =
+      try {
+        configApiClient.getSourceSchema(sourceDiscoverSchemaRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getSourceSchema: ", e)
+        e.response as HttpResponse<SourceDiscoverSchemaRead>
+      } catch (e: ReadTimeoutException) {
+        log.error("Config api read timeout error for getSourceSchema: ", e)
+        if (disableCache) {
+          throw UnexpectedProblem(
+            "try-again",
+            HttpStatus.REQUEST_TIMEOUT,
+            "Updating cache latest source schema in progress. Please try again with cache on.",
+          )
+        } else {
+          throw UnexpectedProblem(HttpStatus.REQUEST_TIMEOUT)
+        }
       }
-    }
     ConfigClientErrorHandler.handleError(response, sourceId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     if (response.body() == null || response.body()?.jobInfo?.succeeded == false) {
@@ -240,12 +281,13 @@ open class SourceServiceImpl(
     listResourcesForWorkspacesRequestBody.pagination = pagination
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
 
-    val response = try {
-      configApiClient.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for listWorkspaces: ", e)
-      e.response as HttpResponse<SourceReadList>
-    }
+    val response =
+      try {
+        configApiClient.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for listWorkspaces: ", e)
+        e.response as HttpResponse<SourceReadList>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceIds.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return SourcesResponseMapper.from(
@@ -258,7 +300,10 @@ open class SourceServiceImpl(
     )
   }
 
-  override fun controllerInitiateOAuth(initiateOauthRequest: InitiateOauthRequest?, userInfo: String?): Response {
+  override fun controllerInitiateOAuth(
+    initiateOauthRequest: InitiateOauthRequest?,
+    userInfo: String?,
+  ): Response {
     return Response.status(Response.Status.NOT_IMPLEMENTED).build()
   }
 }

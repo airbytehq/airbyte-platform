@@ -13,8 +13,8 @@ import java.util.UUID
  * Pagination mapper for easily creating pagination previous/next strings.
  */
 object PaginationMapper {
-  var LIMIT = "limit"
-  var OFFSET = "offset"
+  const val LIMIT = "limit"
+  const val OFFSET = "offset"
 
   /**
    * Base URI builder we need to create.
@@ -23,7 +23,10 @@ object PaginationMapper {
    * @param path path of the endpoint for which you want to build pagination URLs
    * @return URL builder for the base URL
    */
-  fun getBuilder(publicApiHost: String, path: String): UriBuilder {
+  fun getBuilder(
+    publicApiHost: String,
+    path: String,
+  ): UriBuilder {
     return UriBuilder.of(publicApiHost).path(path)
   }
 
@@ -35,11 +38,17 @@ object PaginationMapper {
    * @param offset current offset
    * @return offset or null which indicates we have no next offset to provide
    */
-  fun getNextOffset(collection: Collection<*>, limit: Int, offset: Int): Optional<Int> {
+  fun getNextOffset(
+    collection: Collection<*>,
+    limit: Int,
+    offset: Int,
+  ): Optional<Int> {
     // If we have no more entries or we had no entries this page, just return empty - no next URL
     return if (CollectionUtils.isEmpty(collection) || collection.size < limit) {
       Optional.empty()
-    } else Optional.of(offset + limit)
+    } else {
+      Optional.of(offset + limit)
+    }
   }
 
   /**
@@ -49,7 +58,10 @@ object PaginationMapper {
    * @param offset current offset
    * @return new "previous" offset
    */
-  fun getPreviousOffset(limit: Int, offset: Int): Int {
+  fun getPreviousOffset(
+    limit: Int,
+    offset: Int,
+  ): Int {
     val previousOffset = offset - limit
     return Math.max(previousOffset, 0)
   }
@@ -63,7 +75,12 @@ object PaginationMapper {
    * @param uriBuilder the URL builder created from getBuilder
    * @return a String URL that can be put into the response.
    */
-  fun getNextUrl(collection: Collection<*>, limit: Int, offset: Int, uriBuilder: UriBuilder): String {
+  fun getNextUrl(
+    collection: Collection<*>,
+    limit: Int,
+    offset: Int,
+    uriBuilder: UriBuilder,
+  ): String {
     val nextOffset = getNextOffset(collection, limit, offset)
     return if (nextOffset.isPresent) {
       uriBuilder.queryParam(LIMIT, limit)
@@ -81,7 +98,11 @@ object PaginationMapper {
    * @param uriBuilder the URL builder created from getBuilder
    * @return a String URL that can be put into the response.
    */
-  fun getPreviousUrl(limit: Int, offset: Int, uriBuilder: UriBuilder): String {
+  fun getPreviousUrl(
+    limit: Int,
+    offset: Int,
+    uriBuilder: UriBuilder,
+  ): String {
     return if (offset != 0) {
       uriBuilder.queryParam(LIMIT, limit).replaceQueryParam(
         OFFSET,

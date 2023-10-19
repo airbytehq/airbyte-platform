@@ -3,8 +3,9 @@ package io.airbyte.api.server.netty
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 
+private const val MAX_BUFFER_SIZE = 1 * 1024 * 1024
+
 class CaptureWriter {
-  private val MAX_BUFFER_SIZE = 1 * 1024 * 1024
   private val reqBuffer = Unpooled.buffer()
   private val resBuffer = Unpooled.buffer()
   var isReqValid = true

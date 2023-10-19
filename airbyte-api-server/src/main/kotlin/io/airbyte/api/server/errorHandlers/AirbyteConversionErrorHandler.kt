@@ -39,7 +39,10 @@ class AirbyteConversionErrorHandler
       this.responseProcessor = responseProcessor
     }
 
-    override fun handle(request: HttpRequest<*>?, exception: ConversionErrorException): HttpResponse<*> {
+    override fun handle(
+      request: HttpRequest<*>?,
+      exception: ConversionErrorException,
+    ): HttpResponse<*> {
       var message: String
       if (exception.cause is ValueInstantiationException) {
         val exceptionCast = exception.cause as ValueInstantiationException
@@ -81,15 +84,17 @@ class AirbyteConversionErrorHandler
       return responseProcessor.processResponse(
         ErrorContext.builder(request!!)
           .cause(BadRequestProblem(message))
-          .error(object : Error {
-            override fun getPath(): Optional<String> {
-              return Optional.of('/'.toString() + exception.argument.name)
-            }
+          .error(
+            object : Error {
+              override fun getPath(): Optional<String> {
+                return Optional.of('/'.toString() + exception.argument.name)
+              }
 
-            override fun getMessage(): String {
-              return exception.message!!
-            }
-          })
+              override fun getMessage(): String {
+                return exception.message!!
+              }
+            },
+          )
           .build(),
         HttpResponse.badRequest<Any>(),
       )
