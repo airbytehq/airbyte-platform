@@ -5,6 +5,7 @@ import { render as tlr, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
 import selectEvent from "react-select-event";
+import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
@@ -67,7 +68,9 @@ describe("ConnectionReplicationPage", () => {
     <Suspense fallback={<div>I should not show up in a snapshot</div>}>
       <TestWrapper>
         <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
-          {children}
+          <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
+            {children}
+          </VirtuosoMockContext.Provider>
         </ConnectionEditServiceProvider>
       </TestWrapper>
     </Suspense>

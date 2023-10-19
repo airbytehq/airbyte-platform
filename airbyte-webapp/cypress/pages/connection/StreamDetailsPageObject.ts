@@ -83,11 +83,15 @@ export class StreamDetailsPageObject {
   }
 
   scrollToBottom() {
-    return cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+    });
   }
 
   scrollToTop() {
-    return cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+    });
   }
 
   enableSyncStream() {

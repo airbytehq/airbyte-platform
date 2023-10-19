@@ -3,6 +3,7 @@ import { act, render as tlr } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
+import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
@@ -58,7 +59,13 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
 jest.setTimeout(40000);
 
 describe("CreateConnectionForm", () => {
-  const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => <TestWrapper>{children}</TestWrapper>;
+  const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
+    <TestWrapper>
+      <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
+        {children}
+      </VirtuosoMockContext.Provider>
+    </TestWrapper>
+  );
   const render = async () => {
     let renderResult: ReturnType<typeof tlr>;
 
