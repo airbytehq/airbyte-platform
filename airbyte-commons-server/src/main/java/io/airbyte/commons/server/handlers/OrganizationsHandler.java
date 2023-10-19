@@ -106,7 +106,7 @@ public class OrganizationsHandler {
 
   public OrganizationRead getOrganization(final OrganizationIdRequestBody organizationIdRequestBody) throws IOException, ConfigNotFoundException {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
-    Optional<Organization> organization = organizationPersistence.getOrganization(organizationId);
+    final Optional<Organization> organization = organizationPersistence.getOrganization(organizationId);
     if (organization.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId);
     }
@@ -143,7 +143,8 @@ public class OrganizationsHandler {
         .organizationName(organization.getName())
         .email(organization.getEmail())
         .pba(organization.getPba())
-        .orgLevelBilling(organization.getOrgLevelBilling());
+        .orgLevelBilling(organization.getOrgLevelBilling())
+        .ssoRealm(organization.getSsoRealm());
   }
 
 }

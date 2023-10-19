@@ -37,6 +37,7 @@ class OrganizationsHandlerTest {
   private static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   private static final String ORGANIZATION_NAME = "org_name";
   private static final String ORGANIZATION_EMAIL = "email@email.com";
+  private static final String ORGANIZATION_SSO_REALM = "realm";
 
   private static final Organization ORGANIZATION =
       new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME);
@@ -69,12 +70,17 @@ class OrganizationsHandlerTest {
   @Test
   void testGetOrganization() throws Exception {
     when(organizationPersistence.getOrganization(ORGANIZATION_ID_1))
-        .thenReturn(Optional.of(new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME)));
+        .thenReturn(Optional.of(new Organization()
+            .withOrganizationId(ORGANIZATION_ID_1)
+            .withEmail(ORGANIZATION_EMAIL)
+            .withName(ORGANIZATION_NAME)
+            .withSsoRealm(ORGANIZATION_SSO_REALM)));
 
     OrganizationRead result = organizationsHandler.getOrganization(new OrganizationIdRequestBody().organizationId(ORGANIZATION_ID_1));
     assertEquals(ORGANIZATION_ID_1, result.getOrganizationId());
     assertEquals(ORGANIZATION_NAME, result.getOrganizationName());
     assertEquals(ORGANIZATION_EMAIL, result.getEmail());
+    assertEquals(ORGANIZATION_SSO_REALM, result.getSsoRealm());
   }
 
   @Test
@@ -100,9 +106,18 @@ class OrganizationsHandlerTest {
         .userId(userId)
         .keyword("keyword");
     when(organizationPersistence.listOrganizationsByUserId(any(), any())).thenReturn(
-        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName("org name").withEmail(ORGANIZATION_EMAIL)));
+        List.of(new Organization()
+            .withOrganizationId(orgId)
+            .withUserId(userId)
+            .withName("org name")
+            .withEmail(ORGANIZATION_EMAIL)
+            .withSsoRealm(ORGANIZATION_SSO_REALM)));
     final OrganizationReadList expectedList = new OrganizationReadList()
-        .organizations(List.of(new OrganizationRead().organizationName("org name").organizationId(orgId).email(ORGANIZATION_EMAIL)));
+        .organizations(List.of(new OrganizationRead()
+            .organizationName("org name")
+            .organizationId(orgId)
+            .email(ORGANIZATION_EMAIL)
+            .ssoRealm(ORGANIZATION_SSO_REALM)));
     assertEquals(expectedList, organizationsHandler.listOrganizationsByUser(request));
 
   }
@@ -116,9 +131,18 @@ class OrganizationsHandlerTest {
         .keyword("keyword")
         .pagination(new Pagination().pageSize(10).rowOffset(1));
     when(organizationPersistence.listOrganizationsByUserIdPaginated(any(), any())).thenReturn(
-        List.of(new Organization().withOrganizationId(orgId).withUserId(userId).withName(ORGANIZATION_NAME).withEmail(ORGANIZATION_EMAIL)));
+        List.of(new Organization()
+            .withOrganizationId(orgId)
+            .withUserId(userId)
+            .withName(ORGANIZATION_NAME)
+            .withEmail(ORGANIZATION_EMAIL)
+            .withSsoRealm(ORGANIZATION_SSO_REALM)));
     final OrganizationReadList expectedList = new OrganizationReadList()
-        .organizations(List.of(new OrganizationRead().organizationName(ORGANIZATION_NAME).organizationId(orgId).email(ORGANIZATION_EMAIL)));
+        .organizations(List.of(new OrganizationRead()
+            .organizationName(ORGANIZATION_NAME)
+            .organizationId(orgId)
+            .email(ORGANIZATION_EMAIL)
+            .ssoRealm(ORGANIZATION_SSO_REALM)));
     assertEquals(expectedList, organizationsHandler.listOrganizationsByUser(request));
 
   }

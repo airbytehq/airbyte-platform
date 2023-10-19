@@ -6383,6 +6383,8 @@ components:
           type: boolean
         orgLevelBilling:
           type: boolean
+        ssoRealm:
+          type: string
     OrganizationReadList:
       type: object
       required:

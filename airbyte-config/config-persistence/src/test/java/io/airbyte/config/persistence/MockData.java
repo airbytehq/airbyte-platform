@@ -38,6 +38,7 @@ import io.airbyte.config.Schedule.TimeUnit;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
+import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
@@ -150,6 +151,9 @@ public class MockData {
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_3 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_4 = UUID.randomUUID();
+
+  static final UUID SSO_CONFIG_ID_1 = UUID.randomUUID();
+  static final UUID SSO_CONFIG_ID_2 = UUID.randomUUID();
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -311,6 +315,18 @@ public class MockData {
     final Organization organization3 =
         new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com");
     return Arrays.asList(organization1, organization2, organization3);
+  }
+
+  public static List<SsoConfig> ssoConfigs() {
+    final SsoConfig ssoConfig1 = new SsoConfig()
+        .withSsoConfigId(SSO_CONFIG_ID_1)
+        .withOrganizationId(ORGANIZATION_ID_1)
+        .withKeycloakRealm("realm-1");
+    final SsoConfig ssoConfig2 = new SsoConfig()
+        .withSsoConfigId(SSO_CONFIG_ID_2)
+        .withOrganizationId(ORGANIZATION_ID_2)
+        .withKeycloakRealm("realm-2");
+    return Arrays.asList(ssoConfig1, ssoConfig2);
   }
 
   public static List<StandardWorkspace> standardWorkspaces() {

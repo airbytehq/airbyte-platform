@@ -28,3 +28,6 @@ properties:
     type: boolean
   orgLevelBilling:
     type: boolean
+  ssoRealm:
+    description: This organization's SSO realm, if set via an SsoConfig
+    type: string
