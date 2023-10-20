@@ -4,8 +4,8 @@
 
 package io.airbyte.config.persistence;
 
-import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.helpers.PermissionHelper;
+import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType;
 
 public class PermissionPersistenceHelper {
 
@@ -13,7 +13,7 @@ public class PermissionPersistenceHelper {
    * Get an array of the Jooq enum values for the permission types that grant the target permission
    * type. Used for `ANY(?)` clauses in SQL queries.
    */
-  public static io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType[] getGrantingPermissionTypeArray(final PermissionType targetPermissionType) {
+  public static PermissionType[] getGrantingPermissionTypeArray(final io.airbyte.config.Permission.PermissionType targetPermissionType) {
     return PermissionHelper.getPermissionTypesThatGrantTargetPermission(targetPermissionType)
         .stream()
         .map(PermissionPersistenceHelper::convertConfigPermissionTypeToJooqPermissionType)
@@ -21,12 +21,12 @@ public class PermissionPersistenceHelper {
         .toArray(new io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType[0]);
   }
 
-  public static io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType convertConfigPermissionTypeToJooqPermissionType(final PermissionType permissionType) {
+  public static PermissionType convertConfigPermissionTypeToJooqPermissionType(final io.airbyte.config.Permission.PermissionType permissionType) {
     if (permissionType == null) {
       return null;
     }
     // workspace owner is deprecated and doesn't exist in OSS jooq. it is equivalent to workspace admin.
-    if (permissionType.equals(PermissionType.WORKSPACE_OWNER)) {
+    if (permissionType.equals(io.airbyte.config.Permission.PermissionType.WORKSPACE_OWNER)) {
       return io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.workspace_admin;
     }
 
@@ -45,7 +45,7 @@ public class PermissionPersistenceHelper {
    * the user has `organization_admin` permissions for, as well as all workspaces that the user has
    * `workspace_admin` permissions for.
    */
-  public final static String LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY =
+  public static final String LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY =
       "WITH "
           + " userOrgs AS ("
           + "   SELECT organization_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])"
@@ -73,7 +73,7 @@ public class PermissionPersistenceHelper {
    * `workspace_admin`, then the query will return all users that can access the indicated workspace
    * through possession of either of those two permission_types.
    */
-  public final static String LIST_USERS_BY_WORKSPACE_ID_AND_PERMISSION_TYPES_QUERY =
+  public static final String LIST_USERS_BY_WORKSPACE_ID_AND_PERMISSION_TYPES_QUERY =
       "WITH "
           + " orgWorkspaces AS ("
           + "  SELECT organization_id FROM workspace WHERE workspace.id = {0}"
