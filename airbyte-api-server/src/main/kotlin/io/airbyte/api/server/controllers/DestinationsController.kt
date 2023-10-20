@@ -38,20 +38,23 @@ open class DestinationsController(private val destinationService: DestinationSer
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val configurationJsonNode = destinationCreateRequest.configuration as ObjectNode
-    if (configurationJsonNode.findValue(DESTINATION_TYPE) == null) {
-      val unprocessableEntityProblem = UnprocessableEntityProblem()
-      TrackingHelper.trackFailuresIfAny(
-        DESTINATIONS_PATH,
-        POST,
-        userId,
-        unprocessableEntityProblem,
-      )
-      throw unprocessableEntityProblem
-    }
-    val destinationName =
-      configurationJsonNode.findValue(DESTINATION_TYPE).toString().replace("\"", "")
-    val destinationDefinitionId: UUID = getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationName)
+    val destinationDefinitionId: UUID =
+      destinationCreateRequest.definitionId
+        ?: run {
+          val configurationJsonNode = destinationCreateRequest.configuration as ObjectNode
+          if (configurationJsonNode.findValue(DESTINATION_TYPE) == null) {
+            val unprocessableEntityProblem = UnprocessableEntityProblem()
+            TrackingHelper.trackFailuresIfAny(
+              DESTINATIONS_PATH,
+              POST,
+              userId,
+              unprocessableEntityProblem,
+            )
+            throw unprocessableEntityProblem
+          }
+          val destinationName = configurationJsonNode.findValue(DESTINATION_TYPE).toString().replace("\"", "")
+          getActorDefinitionIdFromActorName(DESTINATION_NAME_TO_DEFINITION_ID, destinationName)
+        }
 
     removeDestinationType(destinationCreateRequest)
 

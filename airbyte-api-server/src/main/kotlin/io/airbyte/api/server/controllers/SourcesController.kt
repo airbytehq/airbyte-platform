@@ -38,17 +38,28 @@ open class SourcesController(
   private val userService: UserService,
 ) : SourcesApi {
   override fun createSource(
-    sourceCreateRequest: SourceCreateRequest?,
+    sourceCreateRequest: SourceCreateRequest,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val configurationJsonNode = sourceCreateRequest!!.configuration as ObjectNode
-    if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {
-      throw UnprocessableEntityProblem()
-    }
-    val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
-    val sourceDefinitionId: UUID = getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+    val sourceDefinitionId: UUID =
+      sourceCreateRequest.definitionId
+        ?: run {
+          val configurationJsonNode = sourceCreateRequest.configuration as ObjectNode
+          if (configurationJsonNode.findValue(SOURCE_TYPE) == null) {
+            val unprocessableEntityProblem = UnprocessableEntityProblem()
+            TrackingHelper.trackFailuresIfAny(
+              SOURCES_PATH,
+              POST,
+              userId,
+              unprocessableEntityProblem,
+            )
+            throw unprocessableEntityProblem
+          }
+          val sourceName = configurationJsonNode.findValue(SOURCE_TYPE).toString().replace("\"", "")
+          getActorDefinitionIdFromActorName(SOURCE_NAME_TO_DEFINITION_ID, sourceName)
+        }
 
     removeSourceTypeNode(sourceCreateRequest)
 
@@ -79,7 +90,7 @@ open class SourcesController(
   }
 
   override fun deleteSource(
-    sourceId: UUID?,
+    sourceId: UUID,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -88,7 +99,7 @@ open class SourcesController(
       TrackingHelper.callWithTracker(
         {
           sourceService.deleteSource(
-            sourceId!!,
+            sourceId,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -109,7 +120,7 @@ open class SourcesController(
   }
 
   override fun getSource(
-    sourceId: UUID?,
+    sourceId: UUID,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
@@ -118,7 +129,7 @@ open class SourcesController(
       TrackingHelper.callWithTracker(
         {
           sourceService.getSource(
-            sourceId!!,
+            sourceId,
             getLocalUserInfoIfNull(userInfo),
           )
         },
@@ -139,7 +150,7 @@ open class SourcesController(
   }
 
   override fun initiateOAuth(
-    initiateOauthRequest: InitiateOauthRequest?,
+    initiateOauthRequest: InitiateOauthRequest,
     userInfo: String?,
   ): Response {
     return sourceService.controllerInitiateOAuth(initiateOauthRequest, userInfo)
@@ -179,19 +190,19 @@ open class SourcesController(
 
   @Patch
   override fun patchSource(
-    sourceId: UUID?,
-    sourcePatchRequest: SourcePatchRequest?,
+    sourceId: UUID,
+    sourcePatchRequest: SourcePatchRequest,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    removeSourceTypeNode(sourcePatchRequest!!)
+    removeSourceTypeNode(sourcePatchRequest)
 
     val sourceResponse: Any? =
       TrackingHelper.callWithTracker(
         {
           sourceService.partialUpdateSource(
-            sourceId!!,
+            sourceId,
             sourcePatchRequest,
             getLocalUserInfoIfNull(userInfo),
           )
@@ -213,19 +224,19 @@ open class SourcesController(
   }
 
   override fun putSource(
-    sourceId: UUID?,
-    sourcePutRequest: SourcePutRequest?,
+    sourceId: UUID,
+    sourcePutRequest: SourcePutRequest,
     userInfo: String?,
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    removeSourceTypeNode(sourcePutRequest!!)
+    removeSourceTypeNode(sourcePutRequest)
 
     val sourceResponse: Any? =
       TrackingHelper.callWithTracker(
         {
           sourceService.updateSource(
-            sourceId!!,
+            sourceId,
             sourcePutRequest,
             getLocalUserInfoIfNull(userInfo),
           )
