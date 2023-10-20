@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_NOTIFICATION;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_WARNING_NOTIFICATION;
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
@@ -19,6 +20,8 @@ import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -26,20 +29,25 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
@@ -74,6 +82,10 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CheckWithCatalog;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -91,6 +103,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +120,6 @@ import org.slf4j.LoggerFactory;
 /**
  * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class ConnectionsHandler {
 
@@ -122,6 +134,7 @@ public class ConnectionsHandler {
   private final ConnectionHelper connectionHelper;
   private final FeatureFlagClient featureFlagClient;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final ConnectorDefinitionSpecificationHandler connectorSpecHandler;
   private final JobNotifier jobNotifier;
   private final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
@@ -138,6 +151,7 @@ public class ConnectionsHandler {
                             final ConnectionHelper connectionHelper,
                             final FeatureFlagClient featureFlagClient,
                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                            final ConnectorDefinitionSpecificationHandler connectorSpecHandler,
                             final JobNotifier jobNotifier,
                             @Value("${airbyte.server.connection.disable.max-days}") final Integer maxDaysOfOnlyFailedJobsBeforeConnectionDisable,
                             @Value("${airbyte.server.connection.disable.max-jobs}") final Integer maxFailedJobsInARowBeforeConnectionDisable) {
@@ -150,6 +164,7 @@ public class ConnectionsHandler {
     this.connectionHelper = connectionHelper;
     this.featureFlagClient = featureFlagClient;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.connectorSpecHandler = connectorSpecHandler;
     this.jobNotifier = jobNotifier;
     this.maxDaysOfOnlyFailedJobsBeforeConnectionDisable = maxDaysOfOnlyFailedJobsBeforeConnectionDisable;
     this.maxFailedJobsInARowBeforeConnectionDisable = maxFailedJobsInARowBeforeConnectionDisable;
@@ -354,6 +369,7 @@ public class ConnectionsHandler {
 
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
@@ -519,6 +535,7 @@ public class ConnectionsHandler {
     // in the patch. Otherwise, leave the field unchanged.
 
     if (patch.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
@@ -901,6 +918,80 @@ public class ConnectionsHandler {
     }
 
     return result;
+  }
+
+  public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final ConnectionRead connection = buildConnectionRead(request.getConnectionId());
+    final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
+        getConnectionAirbyteCatalog(request.getConnectionId());
+    final io.airbyte.api.model.generated.AirbyteCatalog currentCatalog = connection.getSyncCatalog();
+    final CatalogDiff diffToApply = getDiff(
+        catalogUsedToMakeConfiguredCatalog.orElse(currentCatalog),
+        request.getCatalog(),
+        CatalogConverter.toConfiguredProtocol(currentCatalog));
+    final ConnectionUpdate updateObject =
+        new ConnectionUpdate().connectionId(connection.getConnectionId());
+    final UUID destinationDefinitionId =
+        configRepository.getDestinationDefinitionFromConnection(connection.getConnectionId()).getDestinationDefinitionId();
+    final var supportedDestinationSyncModes =
+        connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
+            .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
+    final CatalogDiff appliedDiff;
+    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, request.getWorkspaceId(), connection, featureFlagClient)) {
+      // NOTE: appliedDiff is the part of the diff that were actually applied.
+      appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
+          request.getWorkspaceId(),
+          updateObject,
+          currentCatalog,
+          request.getCatalog(),
+          diffToApply.getTransforms(),
+          request.getCatalogId(),
+          connection.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
+      updateConnection(updateObject);
+      LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+          connection.getConnectionId(), request.getCatalogId());
+    } else {
+      appliedDiff = null;
+    }
+    return new ConnectionAutoPropagateResult().propagatedDiff(appliedDiff);
+  }
+
+  private CatalogDiff applySchemaChangeInternal(final UUID connectionId,
+                                                final UUID workspaceId,
+                                                final ConnectionUpdate updateObject,
+                                                final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
+                                                final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
+                                                final List<StreamTransform> transformations,
+                                                final UUID sourceCatalogId,
+                                                final NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                final List<DestinationSyncMode> supportedDestinationSyncModes) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    final AutoPropagateSchemaChangeHelper.UpdateSchemaResult propagateResult = AutoPropagateSchemaChangeHelper.getUpdatedSchema(
+        currentSyncCatalog,
+        newCatalog,
+        transformations,
+        nonBreakingChangesPreference,
+        supportedDestinationSyncModes,
+        featureFlagClient, workspaceId);
+    updateObject.setSyncCatalog(propagateResult.catalog());
+    updateObject.setSourceCatalogId(sourceCatalogId);
+    trackSchemaChange(workspaceId, connectionId, propagateResult);
+    return propagateResult.appliedDiff();
+  }
+
+  private void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
+    try {
+      final Map<String, Object> payload = new HashMap<>();
+      payload.put("workspace_id", workspaceId);
+      payload.put("connection_id", connectionId);
+      payload.put("event_date", Instant.now());
+      payload.put("changes", propagateResult.appliedDiff().getTransforms());
+      trackingClient.track(workspaceId, "schema-changes", payload);
+    } catch (final Exception e) {
+      LOGGER.error("Error while sending tracking event for schema change", e);
+    }
   }
 
 }

@@ -1324,14 +1324,15 @@ components:
       x-implements: io.airbyte.api.common.ConfigurableActor
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
-      description: POST body for initiating OAuth via the public API
       required:
         - redirectUrl
         - workspaceId
-        - name
       type: object
       properties:
         name:
+          description: The name of the source to authenticate to. Deprecated - use sourceType instead.
+          type: string
+        sourceType:
           description: The name of the source to authenticate to
           type: string
         redirectUrl:

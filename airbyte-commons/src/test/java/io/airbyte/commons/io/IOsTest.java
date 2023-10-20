@@ -7,6 +7,7 @@ package io.airbyte.commons.io;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class IOsTest {
   void testWriteFileToRandomDir() throws IOException {
     final String contents = "something to remember";
     final String tmpFilePath = IOs.writeFileToRandomTmpDir("file.txt", contents);
-    assertEquals(contents, Files.readString(Path.of(tmpFilePath)));
+    assertEquals(contents, Files.readString(Path.of(tmpFilePath), StandardCharsets.UTF_8));
   }
 
 }

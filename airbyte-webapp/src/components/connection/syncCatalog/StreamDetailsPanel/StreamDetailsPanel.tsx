@@ -1,14 +1,14 @@
 import { Dialog } from "@headlessui/react";
 import React from "react";
 
-import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Overlay } from "components/ui/Overlay";
 
-import { AirbyteStream, DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
+import { AirbyteStream } from "core/request/AirbyteClient";
 
 import styles from "./StreamDetailsPanel.module.scss";
 import { StreamPanelHeader } from "./StreamPanelHeader";
 import { StreamFieldsTable, StreamFieldsTableProps } from "../StreamFieldsTable/StreamFieldsTable";
+import { SyncModeValue } from "../SyncModeSelect";
 
 interface StreamDetailsPanelProps extends StreamFieldsTableProps {
   disabled?: boolean;
@@ -17,13 +17,8 @@ interface StreamDetailsPanelProps extends StreamFieldsTableProps {
   stream?: AirbyteStream;
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   toggleAllFieldsSelected: () => void;
-  onSelectSyncMode: (data: DropDownOptionDataItem) => void;
-  availableSyncModes: Array<{
-    value: {
-      syncMode: SyncMode;
-      destinationSyncMode: DestinationSyncMode;
-    };
-  }>;
+  onSelectSyncMode: (data: SyncModeValue) => void;
+  availableSyncModes: SyncModeValue[];
 }
 
 export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({

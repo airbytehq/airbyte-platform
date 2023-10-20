@@ -41,7 +41,6 @@ open class JobsController(
   private val userService: UserService,
   private val connectionService: ConnectionService,
 ) : JobsApi {
-
   @DELETE
   @Path("/{jobId}")
   override fun cancelJob(
@@ -50,17 +49,18 @@ open class JobsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        jobService.cancelJob(
-          jobId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      JOBS_WITH_ID_PATH,
-      DELETE,
-      userId,
-    )
+    val jobResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          jobService.cancelJob(
+            jobId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        JOBS_WITH_ID_PATH,
+        DELETE,
+        userId,
+      )
 
     TrackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
@@ -73,7 +73,10 @@ open class JobsController(
       .build()
   }
 
-  override fun createJob(jobCreateRequest: JobCreateRequest, userInfo: String?): Response {
+  override fun createJob(
+    jobCreateRequest: JobCreateRequest,
+    userInfo: String?,
+  ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
     val connectionResponse: ConnectionResponse =
@@ -92,12 +95,13 @@ open class JobsController(
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
-        val jobResponse: Any = TrackingHelper.callWithTracker({
-          jobService.sync(
-            jobCreateRequest.connectionId,
-            getLocalUserInfoIfNull(userInfo),
-          )
-        }, JOBS_PATH, POST, userId)!!
+        val jobResponse: Any =
+          TrackingHelper.callWithTracker({
+            jobService.sync(
+              jobCreateRequest.connectionId,
+              getLocalUserInfoIfNull(userInfo),
+            )
+          }, JOBS_PATH, POST, userId)!!
         TrackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
@@ -111,12 +115,13 @@ open class JobsController(
       }
 
       JobTypeEnum.RESET -> {
-        val jobResponse: Any = TrackingHelper.callWithTracker({
-          jobService.reset(
-            jobCreateRequest.connectionId,
-            getLocalUserInfoIfNull(userInfo),
-          )
-        }, JOBS_PATH, POST, userId)!!
+        val jobResponse: Any =
+          TrackingHelper.callWithTracker({
+            jobService.reset(
+              jobCreateRequest.connectionId,
+              getLocalUserInfoIfNull(userInfo),
+            )
+          }, JOBS_PATH, POST, userId)!!
         TrackingHelper.trackSuccess(
           JOBS_PATH,
           POST,
@@ -150,17 +155,18 @@ open class JobsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
 
-    val jobResponse: Any? = TrackingHelper.callWithTracker(
-      {
-        jobService.getJobInfoWithoutLogs(
-          jobId,
-          getLocalUserInfoIfNull(userInfo),
-        )
-      },
-      JOBS_WITH_ID_PATH,
-      GET,
-      userId,
-    )
+    val jobResponse: Any? =
+      TrackingHelper.callWithTracker(
+        {
+          jobService.getJobInfoWithoutLogs(
+            jobId,
+            getLocalUserInfoIfNull(userInfo),
+          )
+        },
+        JOBS_WITH_ID_PATH,
+        GET,
+        userId,
+      )
 
     TrackingHelper.trackSuccess(
       JOBS_WITH_ID_PATH,
@@ -189,51 +195,53 @@ open class JobsController(
   ): Response {
     val userId: UUID = userService.getUserIdFromUserInfoString(userInfo)
     val jobsResponse: Any
-    val filter = JobsFilter(
-      createdAtStart,
-      createdAtEnd,
-      updatedAtStart,
-      updatedAtEnd,
-      limit,
-      offset,
-      jobType,
-      status,
-    )
+    val filter =
+      JobsFilter(
+        createdAtStart,
+        createdAtEnd,
+        updatedAtStart,
+        updatedAtEnd,
+        limit,
+        offset,
+        jobType,
+        status,
+      )
 
     val (orderByField, orderByMethod) = orderByToFieldAndMethod(orderBy)
 
-    jobsResponse = (
-      if (connectionId != null) {
-        TrackingHelper.callWithTracker(
-          {
-            jobService.getJobList(
-              connectionId,
-              filter,
-              orderByField,
-              orderByMethod,
-              getLocalUserInfoIfNull(userInfo),
-            )
-          },
-          JOBS_PATH,
-          GET,
-          userId,
-        )
-      } else {
-        TrackingHelper.callWithTracker(
-          {
-            jobService.getJobList(
-              workspaceIds ?: emptyList(),
-              filter,
-              orderByField,
-              orderByMethod,
-              getLocalUserInfoIfNull(userInfo),
-            )
-          },
-          JOBS_PATH,
-          GET,
-          userId,
-        )
-      }
+    jobsResponse =
+      (
+        if (connectionId != null) {
+          TrackingHelper.callWithTracker(
+            {
+              jobService.getJobList(
+                connectionId,
+                filter,
+                orderByField,
+                orderByMethod,
+                getLocalUserInfoIfNull(userInfo),
+              )
+            },
+            JOBS_PATH,
+            GET,
+            userId,
+          )
+        } else {
+          TrackingHelper.callWithTracker(
+            {
+              jobService.getJobList(
+                workspaceIds ?: emptyList(),
+                filter,
+                orderByField,
+                orderByMethod,
+                getLocalUserInfoIfNull(userInfo),
+              )
+            },
+            JOBS_PATH,
+            GET,
+            userId,
+          )
+        }
       )!!
 
     TrackingHelper.trackSuccess(

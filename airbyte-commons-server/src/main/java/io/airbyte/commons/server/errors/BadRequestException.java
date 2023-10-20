@@ -13,6 +13,10 @@ public class BadRequestException extends KnownException {
     super(msg);
   }
 
+  public BadRequestException(final String message, final Throwable cause) {
+    super(message, cause);
+  }
+
   @Override
   public int getHttpCode() {
     return 400;

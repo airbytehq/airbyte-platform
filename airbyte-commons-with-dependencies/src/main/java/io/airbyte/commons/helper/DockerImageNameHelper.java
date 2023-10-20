@@ -18,6 +18,9 @@ public class DockerImageNameHelper {
   static final String VERSION_DELIMITER = ":";
   static final String DOCKER_DELIMITER = "/";
 
+  private static final int NAME_PARTS_INDEX = 0;
+  private static final int VERSION_PART_INDEX = 1;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(DockerImageNameHelper.class);
 
   /**
@@ -30,10 +33,20 @@ public class DockerImageNameHelper {
    * @return the image name without the repo and version, ex. image-name
    */
   public static String extractShortImageName(final String fullImagePath) {
-    final var noVersion = fullImagePath.split(VERSION_DELIMITER)[0];
+    final var noVersion = extractImageNameWithoutVersion(fullImagePath);
 
     final var nameParts = noVersion.split(DOCKER_DELIMITER);
     return nameParts[nameParts.length - 1];
+  }
+
+  /**
+   * Extracts the image name without the version tag.
+   *
+   * @param fullImagePath the docker image name
+   * @return anything before ":"
+   */
+  public static String extractImageNameWithoutVersion(final String fullImagePath) {
+    return extractPartFromFullPath(fullImagePath, NAME_PARTS_INDEX);
   }
 
   /**
@@ -43,8 +56,7 @@ public class DockerImageNameHelper {
    * @return anything after ":"
    */
   public static String extractImageVersionString(final String fullImagePath) {
-    final String[] parts = fullImagePath.split(VERSION_DELIMITER);
-    return parts.length == 2 ? parts[1] : null;
+    return extractPartFromFullPath(fullImagePath, VERSION_PART_INDEX);
   }
 
   /**
@@ -63,6 +75,11 @@ public class DockerImageNameHelper {
       }
     }
     return Optional.empty();
+  }
+
+  private static String extractPartFromFullPath(final String fullImagePath, final int partIndex) {
+    final String[] parts = fullImagePath.split(VERSION_DELIMITER);
+    return parts.length > partIndex ? parts[partIndex] : null;
   }
 
 }

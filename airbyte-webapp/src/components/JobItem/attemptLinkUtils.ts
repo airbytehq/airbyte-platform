@@ -19,13 +19,13 @@ export const buildAttemptLink = (jobId: number | string, attemptId?: AttemptRead
  * Parses a hash part of the URL into a jobId and attemptId.
  * This is the reverse function of {@link buildAttemptLink}.
  */
-export const parseAttemptLink = (link: string): { jobId?: string; attemptId?: string } => {
+export const parseAttemptLink = (link: string): { jobId?: string; attemptId?: AttemptRead["id"] } => {
   const match = link.match(PARSE_REGEXP);
   const newMatch = link.match(NEW_PARSE_REGEXP);
   if (match) {
     return {
       jobId: match.groups?.jobId,
-      attemptId: match.groups?.attemptId,
+      attemptId: match.groups?.attemptId ? Number(match.groups.attemptId) : undefined,
     };
   }
   if (newMatch) {

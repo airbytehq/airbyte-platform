@@ -31,6 +31,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -72,6 +75,28 @@ class VersionedAirbyteStreamFactoryTest {
 
       assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
       verify(logger).info("Reading messages from protocol version {}{}", "0.2.0", "");
+    }
+
+    @Test
+    void testValidBigInteger() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
+    }
+
+    @Test
+    void testValidBigDecimal() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          new BigDecimal("1234567890.1234567890"));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
     }
 
     @Test
@@ -134,17 +159,65 @@ class VersionedAirbyteStreamFactoryTest {
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
 
       final Stream<AirbyteMessage> messageStream =
-          VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L)
+          VersionedAirbyteStreamFactory
+              .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L, false)
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
+    }
+
+    private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {
+      return VersionedAirbyteStreamFactory
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, failTooLongMessage);
+    }
+
+    private static final String VALID_MESSAGE_TEMPLATE =
+        """
+        {"type":"RECORD","record":{"namespace":"public","stream":"documents","data":{"value":"%s"},"emitted_at":1695224525688}}
+        """;
+
+    @Test
+    void testToAirbyteMessageValid() {
+      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, "hello");
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).hasSize(1);
+    }
+
+    @Test
+    void testToAirbyteMessageRandomLog() {
+      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages")).isEmpty();
+    }
+
+    @Test
+    void testToAirbyteMessageMixedUpRecord() {
+      final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
+      assertThrows(IllegalStateException.class, () -> getFactory(false).toAirbyteMessage(messageLine));
+    }
+
+    @Test
+    void testToAirbyteMessageVeryLongMessageFail() {
+      final StringBuilder longStringBuilder = new StringBuilder(5_000_000);
+      for (int i = 0; i < 25_000_000; i++) {
+        longStringBuilder.append("a");
+      }
+      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
+      assertThrows(RuntimeException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
+    }
+
+    @Test
+    void testToAirbyteMessageVeryLongMessageDontFail() {
+      final StringBuilder longStringBuilder = new StringBuilder(5_000_000);
+      for (int i = 0; i < 25_000_000; i++) {
+        longStringBuilder.append("a");
+      }
+      final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
       final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L)
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, false)
           .create(bufferedReader);
     }
 
@@ -176,7 +249,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreate() {
       final Version initialVersion = new Version("0.1.2");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty());
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false);
 
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
       streamFactory.create(bufferedReader);
@@ -188,14 +261,14 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetection() {
       final Version initialVersion = new Version("0.0.0");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty())
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
           getBuffereredReader("version-detection/logs-with-version.jsonl");
       final Stream<AirbyteMessage> stream = streamFactory.create(bufferedReader);
 
-      long messageCount = stream.toList().size();
+      final long messageCount = stream.toList().size();
       assertEquals(1, messageCount);
     }
 
@@ -203,7 +276,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionFallback() {
       final Version initialVersion = new Version("0.0.6");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty())
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
@@ -218,7 +291,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionWithoutSpecMessage() {
       final Version initialVersion = new Version("0.0.1");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty())
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =

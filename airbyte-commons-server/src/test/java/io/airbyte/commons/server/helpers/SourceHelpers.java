@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class SourceHelpers {
 
   public static SourceConnection generateSource(final UUID sourceDefinitionId) throws IOException {

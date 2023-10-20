@@ -9,7 +9,6 @@ import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
 import java.util.Map;
 
-@SuppressWarnings("MissingJavadocType")
 public class MailchimpOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

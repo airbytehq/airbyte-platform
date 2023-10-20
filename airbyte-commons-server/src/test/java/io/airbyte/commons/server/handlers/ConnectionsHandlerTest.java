@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,6 +29,8 @@ import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -42,14 +45,19 @@ import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
+import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSyncMode;
+import io.airbyte.api.model.generated.FieldAdd;
+import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SelectedFieldInfo;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -59,6 +67,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.BasicSchedule;
@@ -84,7 +93,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
@@ -93,7 +104,11 @@ import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConfiguredAirbyteStream;
+import io.airbyte.protocol.models.Field;
+import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -112,6 +127,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -143,6 +159,7 @@ class ConnectionsHandlerTest {
   private ConnectionHelper connectionHelper;
   private TestClient featureFlagClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private JobNotifier jobNotifier;
   private Job job;
 
@@ -263,6 +280,7 @@ class ConnectionsHandlerTest {
     eventRunner = mock(EventRunner.class);
     connectionHelper = mock(ConnectionHelper.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    connectorDefinitionSpecificationHandler = mock(ConnectorDefinitionSpecificationHandler.class);
     jobNotifier = mock(JobNotifier.class);
     featureFlagClient = mock(TestClient.class);
     job = mock(Job.class);
@@ -287,6 +305,7 @@ class ConnectionsHandlerTest {
           connectionHelper,
           featureFlagClient,
           actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW);
@@ -324,36 +343,36 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW / 2, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
       }
 
       @SuppressWarnings("LineLength")
       @Test
       @DisplayName("Test that the connection is __not__ disabled and warning is sent after only failed jobs in last `MAX_DAYS_OF_STRAIGHT_FAILURE / 2` days")
       void testWarningNotificationsForAutoDisablingMaxDaysOfFailure() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.times(1)).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, times(1)).autoDisableConnectionWarning(any());
       }
 
       @Test
@@ -363,19 +382,19 @@ class ConnectionsHandlerTest {
         final long jobCreateOrUpdatedInSeconds =
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
-        Mockito.when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @Test
@@ -385,38 +404,38 @@ class ConnectionsHandlerTest {
         final long jobCreateOrUpdatedInSeconds =
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_WARNING);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
-        Mockito.when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getCreatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
+        when(job.getUpdatedAtInSecond()).thenReturn(jobCreateOrUpdatedInSeconds);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @SuppressWarnings("LineLength")
       @Test
       @DisplayName("Test that the connection is _not_ disabled and no warning is sent after only failed jobs and oldest job is less than `MAX_DAYS_OF_STRAIGHT_FAILURE / 2 `days old")
       void testOnlyFailuresButFirstJobYoungerThanMaxDaysWarning() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(CURRENT_INSTANT.getEpochSecond());
+        when(job.getCreatedAtInSecond()).thenReturn(CURRENT_INSTANT.getEpochSecond());
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       // test should disable / shouldn't disable cases
@@ -428,11 +447,11 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
-        Mockito.when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
+        when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertTrue(internalOperationResult.getSucceeded());
         verifyDisabled();
@@ -445,48 +464,48 @@ class ConnectionsHandlerTest {
         final List<JobWithStatusAndTimestamp> jobs = new ArrayList<>(Collections.nCopies(MAX_FAILURE_JOBS_IN_A_ROW - 1, FAILED_JOB));
         jobs.add(SUCCEEDED_JOB);
 
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(jobs);
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
 
       }
 
       @Test
       @DisplayName("Test that the connection is _not_ disabled after 0 jobs in last MAX_DAYS_OF_STRAIGHT_FAILURE days")
       void testNoRuns() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS))).thenReturn(Collections.emptyList());
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
       @Test
       @DisplayName("Test that the connection is disabled after only failed jobs in last MAX_DAYS_OF_STRAIGHT_FAILURE days")
       void testOnlyFailuresInMaxDays() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(FAILED_JOB));
+                .thenReturn(Collections.singletonList(FAILED_JOB));
 
-        Mockito.when(job.getCreatedAtInSecond()).thenReturn(
+        when(job.getCreatedAtInSecond()).thenReturn(
             CURRENT_INSTANT.getEpochSecond() - java.util.concurrent.TimeUnit.DAYS.toSeconds(MAX_DAYS_OF_ONLY_FAILED_JOBS));
-        Mockito.when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
+        when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertTrue(internalOperationResult.getSucceeded());
         verifyDisabled();
@@ -495,25 +514,25 @@ class ConnectionsHandlerTest {
       @Test
       @DisplayName("Test that the connection is _not_ disabled after only cancelled jobs")
       void testIgnoreOnlyCancelledRuns() throws IOException, JsonValidationException, ConfigNotFoundException {
-        Mockito.when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
+        when(jobPersistence.listJobStatusAndTimestampWithConnection(connectionId, REPLICATION_TYPES,
             CURRENT_INSTANT.minus(MAX_DAYS_OF_ONLY_FAILED_JOBS, ChronoUnit.DAYS)))
-            .thenReturn(Collections.singletonList(CANCELLED_JOB));
+                .thenReturn(Collections.singletonList(CANCELLED_JOB));
 
-        InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
+        final InternalOperationResult internalOperationResult = connectionsHandler.autoDisableConnection(connectionId, CURRENT_INSTANT);
 
         assertFalse(internalOperationResult.getSucceeded());
-        Mockito.verify(configRepository, Mockito.never()).writeStandardSync(any());
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
-        Mockito.verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
+        verify(configRepository, Mockito.never()).writeStandardSync(any());
+        verify(jobNotifier, Mockito.never()).autoDisableConnection(any());
+        verify(jobNotifier, Mockito.never()).notifyJobByEmail(any(), any(), any());
       }
 
       private void verifyDisabled() throws IOException {
-        Mockito.verify(configRepository, times(1)).writeStandardSync(
+        verify(configRepository, times(1)).writeStandardSync(
             argThat(standardSync -> (standardSync.getStatus().equals(Status.INACTIVE) && standardSync.getConnectionId().equals(connectionId))));
-        Mockito.verify(configRepository, times(1)).writeStandardSync(standardSync);
-        Mockito.verify(jobNotifier, times(1)).autoDisableConnection(job);
-        Mockito.verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), ArgumentMatchers.eq(job));
-        Mockito.verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
+        verify(configRepository, times(1)).writeStandardSync(standardSync);
+        verify(jobNotifier, times(1)).autoDisableConnection(job);
+        verify(jobNotifier, times(1)).notifyJobByEmail(any(), any(), ArgumentMatchers.eq(job));
+        verify(jobNotifier, Mockito.never()).autoDisableConnectionWarning(any());
       }
 
     }
@@ -574,6 +593,17 @@ class ConnectionsHandlerTest {
             .scheduleData(ConnectionHelpers.generateBasicConnectionScheduleData());
         assertEquals(expectedConnectionRead.notifySchemaChanges(null).notifySchemaChangesByEmail(null),
             connectionsHandler.createConnection(connectionCreate));
+      }
+
+      @Test
+      void testCreateConnectionWithDuplicateStreamsShouldThrowException() {
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateMultipleStreamsApiCatalog(false, false, 2);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.createConnection(connectionCreate));
+
       }
 
       @Test
@@ -816,6 +846,17 @@ class ConnectionsHandlerTest {
         assertEquals(expectedRead, actualConnectionRead);
         verify(configRepository).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionWithDuplicateStreamsShouldThrowException() {
+        final AirbyteCatalog catalog = ConnectionHelpers.generateMultipleStreamsApiCatalog(false, false, 2);
+
+        final ConnectionUpdate connectionCreate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalog);
+
+        assertThrows(IllegalArgumentException.class, () -> connectionsHandler.updateConnection(connectionCreate));
       }
 
       @Test
@@ -1371,6 +1412,7 @@ class ConnectionsHandlerTest {
           connectionHelper,
           featureFlagClient,
           actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
           jobNotifier,
           MAX_DAYS_OF_ONLY_FAILED_JOBS,
           MAX_FAILURE_JOBS_IN_A_ROW);
@@ -1755,21 +1797,21 @@ class ConnectionsHandlerTest {
     @Test
     void testConnectionStatus()
         throws JsonValidationException, ConfigNotFoundException, IOException {
-      UUID connectionId = UUID.randomUUID();
-      AttemptFailureSummary failureSummary = new AttemptFailureSummary();
+      final UUID connectionId = UUID.randomUUID();
+      final AttemptFailureSummary failureSummary = new AttemptFailureSummary();
       failureSummary.setFailures(List.of(new FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)));
-      Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
-      List<Job> jobs = List.of(
+      final Attempt failedAttempt = new Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
+      final List<Job> jobs = List.of(
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.RUNNING, 1001L, 1000L, 1002L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, List.of(failedAttempt), JobStatus.FAILED, 901L, 900L, 902L),
           new Job(0L, JobConfig.ConfigType.SYNC, connectionId.toString(), null, null, JobStatus.SUCCEEDED, 801L, 800L, 802L));
       when(jobPersistence.listJobs(Set.of(JobConfig.ConfigType.SYNC, JobConfig.ConfigType.RESET_CONNECTION), connectionId.toString(), 10))
           .thenReturn(jobs);
-      ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
-      List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
+      final ConnectionStatusesRequestBody req = new ConnectionStatusesRequestBody().connectionIds(List.of(connectionId));
+      final List<ConnectionStatusRead> status = connectionsHandler.getConnectionStatuses(req);
       assertEquals(1, status.size());
 
-      ConnectionStatusRead connectionStatus = status.get(0);
+      final ConnectionStatusRead connectionStatus = status.get(0);
       assertEquals(connectionId, connectionStatus.getConnectionId());
       assertEquals(Enums.convertTo(JobStatus.FAILED, io.airbyte.api.model.generated.JobStatus.class), connectionStatus.getLastSyncJobStatus());
       assertEquals(802L, connectionStatus.getLastSuccessfulSync());
@@ -1793,6 +1835,131 @@ class ConnectionsHandlerTest {
           .syncMode(syncMode)
           .destinationSyncMode(destinationSyncMode);
 
+    }
+
+  }
+
+  /**
+   * Tests for the applySchemaChanges endpoint. Note that most of the core auto-propagation logic is
+   * tested directly on AutoPropagateSchemaChangeHelper.getUpdatedSchema().
+   */
+  @Nested
+  class ApplySchemaChanges {
+
+    private static final String SOURCE_PROTOCOL_VERSION = "0.4.5";
+    private static final String SHOES = "shoes";
+    private static final String SKU = "sku";
+    private static final String A_DIFFERENT_STREAM = "a-different-stream";
+    private static final ActorDefinitionVersion SOURCE_VERSION = new ActorDefinitionVersion()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
+
+    private static final UUID SOURCE_CATALOG_ID = UUID.randomUUID();
+    private static final UUID CONNECTION_ID = UUID.randomUUID();
+    private static final UUID SOURCE_ID = UUID.randomUUID();
+    private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+    private static final UUID WORKSPACE_ID = UUID.randomUUID();
+    private static final UUID DESTINATION_ID = UUID.randomUUID();
+    private static final io.airbyte.protocol.models.AirbyteCatalog airbyteCatalog =
+        CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING));
+    private static final ConfiguredAirbyteCatalog configuredAirbyteCatalog =
+        CatalogHelpers.createConfiguredAirbyteCatalog(SHOES, null, Field.of(SKU, JsonSchemaType.STRING));
+    private static StandardSync standardSync;
+    private static final String A_DIFFERENT_NAMESPACE = "a-different-namespace";
+    private static final String A_DIFFERENT_COLUMN = "a-different-column";
+
+    @BeforeEach
+    void setup() throws IOException, JsonValidationException, ConfigNotFoundException {
+      airbyteCatalog.getStreams().get(0).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH));
+      standardSync = new StandardSync()
+          .withConnectionId(CONNECTION_ID)
+          .withSourceId(SOURCE_ID)
+          .withDestinationId(DESTINATION_ID)
+          .withCatalog(configuredAirbyteCatalog)
+          .withManual(true)
+          .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
+      when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
+      when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID)).thenReturn(
+          new StandardDestinationDefinition().withDestinationDefinitionId(DESTINATION_DEFINITION_ID));
+      when(connectorDefinitionSpecificationHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId()
+          .workspaceId(WORKSPACE_ID).destinationDefinitionId(DESTINATION_DEFINITION_ID)))
+              .thenReturn(new DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(List.of(DestinationSyncMode.OVERWRITE)));
+      when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
+      when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
+      when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+      connectionsHandler = new ConnectionsHandler(
+          jobPersistence,
+          configRepository,
+          uuidGenerator,
+          workspaceHelper,
+          trackingClient,
+          eventRunner,
+          connectionHelper,
+          featureFlagClient,
+          actorDefinitionVersionHelper,
+          connectorDefinitionSpecificationHandler,
+          jobNotifier,
+          MAX_DAYS_OF_ONLY_FAILED_JOBS,
+          MAX_FAILURE_JOBS_IN_A_ROW);
+    }
+
+    @Test
+    void testAutoPropagateSchemaChange() throws IOException, ConfigNotFoundException, JsonValidationException {
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
+          CatalogConverter.toApi(Jsons.clone(airbyteCatalog), SOURCE_VERSION);
+      catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name(A_DIFFERENT_STREAM).namespace(A_DIFFERENT_NAMESPACE).supportedSyncModes(List.of(SyncMode.FULL_REFRESH)))
+          .config(new AirbyteStreamConfiguration().selected(true)));
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      final ConnectionAutoPropagateResult actualResult = connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(A_DIFFERENT_NAMESPACE).name(A_DIFFERENT_STREAM)));
+      assertEquals(expectedDiff, actualResult.getPropagatedDiff());
+      final ConfiguredAirbyteCatalog expectedCatalog = Jsons.clone(configuredAirbyteCatalog);
+      expectedCatalog.getStreams()
+          .add(new ConfiguredAirbyteStream().withStream(new io.airbyte.protocol.models.AirbyteStream().withName(A_DIFFERENT_STREAM)
+              .withNamespace(A_DIFFERENT_NAMESPACE).withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.FULL_REFRESH))
+              .withDefaultCursorField(null)).withCursorField(null));
+      final ArgumentCaptor<StandardSync> standardSyncArgumentCaptor = ArgumentCaptor.forClass(StandardSync.class);
+      verify(configRepository).writeStandardSync(standardSyncArgumentCaptor.capture());
+      final StandardSync actualStandardSync = standardSyncArgumentCaptor.getValue();
+      assertEquals(Jsons.clone(standardSync).withCatalog(expectedCatalog), actualStandardSync);
+    }
+
+    @Test
+    void testAutoPropagateColumnsOnly() throws JsonValidationException, ConfigNotFoundException, IOException {
+      final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
+      final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(
+          CatalogHelpers.createAirbyteCatalog(SHOES,
+              Field.of(SKU, JsonSchemaType.STRING),
+              newField),
+          SOURCE_VERSION);
+
+      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+          .connectionId(CONNECTION_ID)
+          .workspaceId(WORKSPACE_ID)
+          .catalogId(SOURCE_CATALOG_ID)
+          .catalog(catalogWithDiff);
+
+      final ConnectionAutoPropagateResult actualResult = connectionsHandler.applySchemaChange(request);
+
+      final CatalogDiff expectedDiff =
+          new CatalogDiff().addTransformsItem(new StreamTransform()
+              .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+              .streamDescriptor(new StreamDescriptor().namespace(null).name(SHOES))
+              .addUpdateStreamItem(new FieldTransform()
+                  .addField(new FieldAdd().schema(Jsons.deserialize("{\"type\": \"string\"}")))
+                  .fieldName(List.of(newField.getName()))
+                  .breaking(false)
+                  .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
+      assertEquals(expectedDiff, actualResult.getPropagatedDiff());
     }
 
   }

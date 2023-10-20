@@ -10,24 +10,38 @@ import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateResult;
+import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange;
 import io.airbyte.api.model.generated.ConnectionCreate;
+import io.airbyte.api.model.generated.ConnectionDataHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionStatusRead;
 import io.airbyte.api.model.generated.ConnectionStatusesRequestBody;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem;
+import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
+import io.airbyte.api.model.generated.ConnectionSyncProgressReadItem;
+import io.airbyte.api.model.generated.ConnectionSyncResultRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
+import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody;
+import io.airbyte.api.model.generated.GetTaskQueueNameRequest;
 import io.airbyte.api.model.generated.InternalOperationResult;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.TaskQueueNameRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
+import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.commons.temporal.TemporalJobType;
+import io.airbyte.commons.temporal.scheduling.RouterService;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
@@ -39,7 +53,6 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.List;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -48,13 +61,16 @@ public class ConnectionApiController implements ConnectionApi {
   private final ConnectionsHandler connectionsHandler;
   private final OperationsHandler operationsHandler;
   private final SchedulerHandler schedulerHandler;
+  private final RouterService routerService;
 
   public ConnectionApiController(final ConnectionsHandler connectionsHandler,
                                  final OperationsHandler operationsHandler,
-                                 final SchedulerHandler schedulerHandler) {
+                                 final SchedulerHandler schedulerHandler,
+                                 final RouterService routerService) {
     this.connectionsHandler = connectionsHandler;
     this.operationsHandler = operationsHandler;
     this.schedulerHandler = schedulerHandler;
+    this.routerService = routerService;
   }
 
   @Override
@@ -137,12 +153,48 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
+  @Post(uri = "/history/data")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
+    return null;
+  }
+
+  @Override
   @Post(uri = "/connections/status")
   @Secured({READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStatusRead> getConnectionStatuses(@Body final ConnectionStatusesRequestBody connectionStatusesRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnectionStatuses(connectionStatusesRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/stream_history")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
+    return null;
+  }
+
+  @Override
+  @Post(uri = "/sync_progress")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(ConnectionIdRequestBody connectionIdRequestBody) {
+    return null;
+  }
+
+  @Override
+  @Post(uri = "/history/uptime")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public List<ConnectionSyncResultRead> getConnectionUptimeHistory(ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
+    return null;
   }
 
   @Override
@@ -184,6 +236,34 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/apply_schema_change")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionAutoPropagateResult applySchemaChangeForConnection(final ConnectionAutoPropagateSchemaChange request) {
+    return ApiHelper.execute(() -> connectionsHandler.applySchemaChange(request));
+  }
+
+  @Override
+  @Post(uri = "/get_task_queue_name")
+  @Secured({ADMIN})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public TaskQueueNameRead getTaskQueueName(final GetTaskQueueNameRequest request) {
+    final TemporalJobType jobType;
+    try {
+      jobType = TemporalJobType.valueOf(request.getTemporalJobType());
+    } catch (final IllegalArgumentException e) {
+      throw new BadRequestException("Unrecognized temporalJobType", e);
+    }
+
+    return ApiHelper.execute(() -> {
+      final var string = routerService.getTaskQueue(request.getConnectionId(), jobType);
+      return new TaskQueueNameRead().taskQueueName(string);
+    });
   }
 
 }

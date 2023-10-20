@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 @Slf4j
 @ToString
-@SuppressWarnings({"MissingJavadocMethod"})
 public class AirbyteKeycloakConfiguration {
 
   String protocol;

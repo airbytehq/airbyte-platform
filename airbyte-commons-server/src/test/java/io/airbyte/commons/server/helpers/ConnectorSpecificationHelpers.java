@@ -14,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class ConnectorSpecificationHelpers {
 
   static final Path oAuthSpecificationPath =

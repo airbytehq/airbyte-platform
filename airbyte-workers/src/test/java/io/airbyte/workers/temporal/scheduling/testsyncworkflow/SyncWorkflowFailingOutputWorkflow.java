@@ -11,7 +11,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import java.util.UUID;
 
-@SuppressWarnings("MissingJavadocType")
 public class SyncWorkflowFailingOutputWorkflow implements SyncWorkflow {
 
   /**

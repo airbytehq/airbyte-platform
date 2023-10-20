@@ -17,7 +17,7 @@ import java.time.Duration;
 /**
  * Workflow used for testing cancellations and heartbeats.
  */
-@SuppressWarnings("MissingJavadocType")
+
 @WorkflowInterface
 public interface TestWorkflow {
 

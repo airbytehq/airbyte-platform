@@ -82,6 +82,18 @@ export class StreamDetailsPageObject {
     cy.get(streamDetailsPanel).should("not.exist");
   }
 
+  scrollToBottom() {
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+    });
+  }
+
+  scrollToTop() {
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+    });
+  }
+
   enableSyncStream() {
     cy.get(syncStreamSwitch).check({ force: true });
   }
@@ -137,7 +149,7 @@ export class StreamDetailsPageObject {
     // todo: this is targeting every sync mode select, not just the one within the panel
     cy.get(streamDetailsPanel).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
-      cy.get(`.react-select__option`)
+      cy.get('li[role="option"]')
         .contains(`${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`)
         .click();
     });
@@ -145,7 +157,7 @@ export class StreamDetailsPageObject {
 
   selectCursor(fieldName: string) {
     getRowByFieldName(fieldName).within(() => {
-      cy.get(cursorRadioButton).parent().click();
+      cy.get(cursorRadioButton).parent().click({ scrollBehavior: false });
       cy.get(cursorRadioButton).should("be.checked");
     });
   }

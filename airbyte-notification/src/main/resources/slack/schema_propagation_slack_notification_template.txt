@@ -1,0 +1,4 @@
+Your source schema has changed for connection ID: %s and the following changes were automatically propagated:
+%s
+
+Visit your connection page here: %s

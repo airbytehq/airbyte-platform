@@ -11,7 +11,6 @@ import io.micronaut.data.repository.PageableRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface RetryStatesRepository extends PageableRepository<RetryState, UUID> {
 

@@ -26,6 +26,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -69,6 +70,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
@@ -82,7 +84,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        final AirbyteConfigValidator airbyteConfigValidator,
                                        final TemporalUtils temporalUtils,
                                        final AirbyteApiClient airbyteApiClient,
-                                       final FeatureFlagClient featureFlagClient) {
+                                       final FeatureFlagClient featureFlagClient,
+                                       final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -96,6 +99,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -147,7 +151,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
 
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   private CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> getLegacyWorkerFactory(final IntegrationLauncherConfig destinationLauncherConfig,
@@ -181,7 +185,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         workerConfigs,
         containerOrchestratorConfig.get(),
         serverPort,
-        featureFlagClient);
+        featureFlagClient,
+        metricClient);
   }
 
 }

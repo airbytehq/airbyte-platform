@@ -5,9 +5,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
+import { useGetOutOfDateConnectorsCount } from "core/api";
+import { CheckConnectionRead } from "core/api/types/AirbyteClient";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { SourceService } from "core/domain/connector/SourceService";
-import { useGetOutOfDateConnectorsCount } from "services/connector/ConnectorDefinitions";
 import {
   useDestinationDefinitionList,
   useLatestDestinationDefinitionList,
@@ -23,7 +24,6 @@ import { useInitService } from "services/useInitService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
-import { CheckConnectionRead } from "../../core/request/AirbyteClient";
 
 export const useUpdateAllConnectors = (connectorType: "sources" | "destinations") => {
   const { formatMessage } = useIntl();
@@ -37,10 +37,15 @@ export const useUpdateAllConnectors = (connectorType: "sources" | "destinations"
     ["updateAllConnectors", workspaceId],
     async () => (connectorType === "sources" ? updateAllSourceVersions() : updateAllDestinationVersions()),
     {
-      onSuccess: () => {
+      onSuccess: (numberUpdated: number) => {
         registerNotification({
           id: `workspace.connectorUpdateSuccess.${connectorType}.${workspaceId}`,
-          text: <FormattedMessage id="admin.upgradeAll.success" values={{ type: connectorType }} />,
+          text: (
+            <FormattedMessage
+              id="admin.upgradeAll.success"
+              values={{ count: numberUpdated, type: connectorType === "sources" ? "source" : "destination" }}
+            />
+          ),
           type: "success",
         });
       },
@@ -77,7 +82,11 @@ export const useUpdateSourceDefinitions = () => {
     [sourceDefinitions, latestSourceDefinitions]
   );
 
-  const updateAllSourceVersions = async () => {
+  const updateAllSourceVersions = async (): Promise<number> => {
+    if (!sourceDefinitionsWithUpdates) {
+      return 0;
+    }
+
     await Promise.all(
       sourceDefinitionsWithUpdates?.map((item) =>
         updateSourceDefinition({
@@ -86,6 +95,7 @@ export const useUpdateSourceDefinitions = () => {
         })
       )
     );
+    return sourceDefinitionsWithUpdates.length;
   };
 
   return { updateAllSourceVersions };
@@ -110,7 +120,10 @@ export const useUpdateDestinationDefinitions = () => {
     [destinationDefinitions, latestDestinationDefinitions]
   );
 
-  const updateAllDestinationVersions = async () => {
+  const updateAllDestinationVersions = async (): Promise<number> => {
+    if (!newDestinationDefinitionsWithUpdates) {
+      return 0;
+    }
     await Promise.all(
       newDestinationDefinitionsWithUpdates?.map((item) =>
         updateDestinationDefinition({
@@ -119,6 +132,7 @@ export const useUpdateDestinationDefinitions = () => {
         })
       )
     );
+    return newDestinationDefinitionsWithUpdates.length;
   };
 
   return { updateAllDestinationVersions };

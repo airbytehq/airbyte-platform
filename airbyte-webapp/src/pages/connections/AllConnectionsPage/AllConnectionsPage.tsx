@@ -21,7 +21,8 @@ export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
-  const { connections } = useConnectionList();
+  const connectionList = useConnectionList();
+  const connections = connectionList?.connections ?? [];
 
   const onCreateClick = (sourceDefinitionId?: string) =>
     navigate(`${ConnectionRoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });

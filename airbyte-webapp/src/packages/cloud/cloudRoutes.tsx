@@ -1,5 +1,6 @@
 import React, { PropsWithChildren, Suspense, useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -10,6 +11,7 @@ import { usePrefetchCloudWorkspaceData } from "core/api/cloud";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -48,9 +50,8 @@ const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
-
-const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
 const DefaultView = React.lazy(() => import("./views/DefaultView"));
+const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
 
 const MainRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
@@ -131,7 +132,16 @@ export const Routing: React.FC = () => {
   const { login, requirePasswordReset } = useAuthService();
   const { user, inited, providers, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
-  const { pathname } = useLocation();
+  const { pathname: originalPathname, search, hash } = useLocation();
+
+  const loginRedirectSearchParam = `${createSearchParams({
+    loginRedirect: `${originalPathname}${search}${hash}`,
+  })}`;
+
+  const loginRedirectTo =
+    loggedOut && (originalPathname === "/" || originalPathname.includes("/settings/account"))
+      ? { pathname: CloudRoutes.Login }
+      : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
 
   useBuildUpdateCheck();
 
@@ -149,9 +159,16 @@ export const Routing: React.FC = () => {
   );
 
   const userTraits = useMemo(
-    () => (user ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email) } : {}),
-    [providers, user]
+    () =>
+      user
+        ? { providers, email: user.email, isCorporate: isCorporateEmail(user.email), currentWorkspaceId: workspaceId }
+        : {},
+    [providers, user, workspaceId]
   );
+
+  useEffectOnce(() => {
+    storeUtmFromQuery(search);
+  });
 
   useAnalyticsRegisterValues(analyticsContext);
   useAnalyticsIdentifyUser(user?.userId, userTraits);
@@ -159,7 +176,6 @@ export const Routing: React.FC = () => {
   if (!inited) {
     return <LoadingPage />;
   }
-
   return (
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
@@ -191,16 +207,7 @@ export const Routing: React.FC = () => {
                           />
                         )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
-                        <Route
-                          path="*"
-                          element={
-                            <Navigate
-                              to={`${CloudRoutes.Login}${
-                                loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                              }`}
-                            />
-                          }
-                        />
+                        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>
                     </Suspense>
                   </AuthLayout>

@@ -4,20 +4,20 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
-import static io.airbyte.persistence.job.models.AttemptStatus.FAILED;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.JobStatus;
-import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalLong;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -52,7 +52,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-@SuppressWarnings("MissingJavadocMethod")
 public class JobCreationAndStatusUpdateHelper {
 
   private static final String JOB_ID_METADATA_KEY = "jobId";
@@ -65,6 +64,7 @@ public class JobCreationAndStatusUpdateHelper {
       ReleaseStage.BETA, 3,
       ReleaseStage.GENERALLY_AVAILABLE, 4);
   private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
+  public static final Set<ConfigType> SYNC_CONFIG_SET = Set.of(SYNC);
 
   private final JobPersistence jobPersistence;
   private final ConfigRepository configRepository;
@@ -104,53 +104,53 @@ public class JobCreationAndStatusUpdateHelper {
     }
   }
 
-  public OptionalLong getPreviousJobId(final Long activeJobId, final List<Long> jobIdsList) {
-    return jobIdsList.stream()
-        .filter(jobId -> !Objects.equals(jobId, activeJobId))
-        .mapToLong(jobId -> jobId).max();
-  }
+  public Optional<Job> findPreviousJob(final List<Job> jobs, final long targetJobId) {
+    final Optional<Job> targetJob = jobs.stream()
+        .filter(j -> j.getId() == targetJobId)
+        .findFirst();
 
-  public boolean checkActiveJobPreviousAttempt(final Job activeJob, final int attemptId) {
-    final int minAttemptSize = 1;
-    boolean result = false;
-
-    if (activeJob.getAttempts().size() > minAttemptSize) {
-      final Optional<Attempt> optionalAttempt = activeJob.getAttempts().stream()
-          .filter(attempt -> attempt.getAttemptNumber() == (attemptId - 1)).findFirst();
-      result = optionalAttempt.isPresent() && optionalAttempt.get().getStatus().equals(FAILED);
+    // Target job not found or list is empty.
+    if (targetJob.isEmpty()) {
+      return Optional.empty();
     }
 
-    return result;
+    return jobs.stream()
+        .filter(job -> !Objects.equals(job.getId(), targetJobId)) // Not our target job.
+        .filter(job -> job.getCreatedAtInSecond() < targetJob.get().getCreatedAtInSecond()) // Precedes target job.
+        .reduce((a, b) -> a.getCreatedAtInSecond() > b.getCreatedAtInSecond() ? a : b); // Get latest.
   }
 
-  public void failNonTerminalJobs(final UUID connectionId) {
-    try {
-      final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(connectionId, Job.REPLICATION_TYPES,
-          io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
-      for (final Job job : jobs) {
-        final long jobId = job.getId();
+  public boolean didJobSucceed(final Job job) {
+    return job.getStatus().equals(io.airbyte.persistence.job.models.JobStatus.SUCCEEDED);
+  }
 
-        // fail all non-terminal attempts
-        for (final Attempt attempt : job.getAttempts()) {
-          if (Attempt.isAttemptInTerminalState(attempt)) {
-            continue;
-          }
+  public void failNonTerminalJobs(final UUID connectionId) throws IOException {
+    final List<Job> jobs = jobPersistence.listJobsForConnectionWithStatuses(
+        connectionId,
+        Job.REPLICATION_TYPES,
+        io.airbyte.persistence.job.models.JobStatus.NON_TERMINAL_STATUSES);
 
-          final int attemptNumber = attempt.getAttemptNumber();
-          log.info("Failing non-terminal attempt {} for non-terminal job {}", attemptNumber, jobId);
-          jobPersistence.failAttempt(jobId, attemptNumber);
-          jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber));
+    for (final Job job : jobs) {
+      final long jobId = job.getId();
+
+      // fail all non-terminal attempts
+      for (final Attempt attempt : job.getAttempts()) {
+        if (Attempt.isAttemptInTerminalState(attempt)) {
+          continue;
         }
 
-        log.info("Failing non-terminal job {}", jobId);
-        jobPersistence.failJob(jobId);
-
-        final Job failedJob = jobPersistence.getJob(jobId);
-        jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob);
-        trackCompletion(failedJob, JobStatus.FAILED);
+        final int attemptNumber = attempt.getAttemptNumber();
+        log.info("Failing non-terminal attempt {} for non-terminal job {}", attemptNumber, jobId);
+        jobPersistence.failAttempt(jobId, attemptNumber);
+        jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber));
       }
-    } catch (final IOException e) {
-      throw new RetryableException(e);
+
+      log.info("Failing non-terminal job {}", jobId);
+      jobPersistence.failJob(jobId);
+
+      final Job failedJob = jobPersistence.getJob(jobId);
+      jobNotifier.failJob("Failing job in order to start from clean job state for new temporal workflow run.", failedJob);
+      trackCompletion(failedJob, JobStatus.FAILED);
     }
   }
 
@@ -361,6 +361,14 @@ public class JobCreationAndStatusUpdateHelper {
     return new Metadata()
         .withAdditionalProperty(JOB_ID_METADATA_KEY, jobId)
         .withAdditionalProperty(ATTEMPT_NUMBER_METADATA_KEY, attemptNumber);
+  }
+
+  /**
+   * Report a job as started.
+   */
+  public void reportJobStart(final Long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+    jobTracker.trackSync(job, JobState.STARTED);
   }
 
 }

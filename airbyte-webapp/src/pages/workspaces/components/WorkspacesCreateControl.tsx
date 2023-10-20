@@ -1,3 +1,16 @@
+/**
+ * As written, this workspace create control can ONLY be used in environments
+ * where the configdb Permissions table is in use.
+ *
+ * That is to say -- it should currently only be used in OSS/Enterprise.
+ *
+ * May be migrated to Cloud when:
+ * - Cloud leverages the configdb Permissions table
+ * - Cloud has a concept of organizations
+ * - CloudWorkspaceCreate accepts an organizationId
+ *
+ */
+
 import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -11,27 +24,33 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
-import { CloudWorkspaceRead } from "core/api/types/CloudApi";
-import { WorkspaceRead } from "core/request/AirbyteClient";
+import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/request/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 import styles from "./WorkspacesCreateControl.module.scss";
+
 interface CreateWorkspaceFormValues {
   name: string;
+  organizationId: string;
 }
 
-const CreateWorkspaceFormValidationSchema = yup.object().shape({
+const OrganizationCreateWorkspaceFormValidationSchema = yup.object().shape({
   name: yup.string().trim().required("form.empty.error"),
+  organizationId: yup.string().trim().required("form.empty.error"),
 });
 
-interface WorkspacesCreateControlProps {
-  createWorkspace: UseMutateAsyncFunction<WorkspaceRead | CloudWorkspaceRead, unknown, string, unknown>;
+interface OrganizationWorkspacesCreateControlProps {
+  createWorkspace: UseMutateAsyncFunction<WorkspaceRead, unknown, WorkspaceCreate, unknown>;
 }
 
-export const WorkspacesCreateControl: React.FC<WorkspacesCreateControlProps> = ({ createWorkspace }) => {
+export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateControlProps> = ({ createWorkspace }) => {
+  const organizations = useOrganizationsToCreateWorkspaces();
+
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
@@ -39,10 +58,15 @@ export const WorkspacesCreateControl: React.FC<WorkspacesCreateControlProps> = (
   const { workspaces } = useListWorkspaces();
   const isFirstWorkspace = workspaces.length === 0;
 
-  const onSubmit = async ({ name }: CreateWorkspaceFormValues) => {
-    const newWorkspace = await createWorkspace(name);
+  // if the user does not have create permissions in any organizations, do not show the control at all
+  if (organizations.length === 0) {
+    return null;
+  }
+
+  const onSubmit = async (values: CreateWorkspaceFormValues) => {
+    const newWorkspace = await createWorkspace(values);
     toggleMode();
-    newWorkspace && navigate(`/workspaces/${newWorkspace.workspaceId}`);
+    navigate(`/workspaces/${newWorkspace.workspaceId}`);
   };
 
   const onSuccess = () => {
@@ -69,18 +93,14 @@ export const WorkspacesCreateControl: React.FC<WorkspacesCreateControlProps> = (
           <Form<CreateWorkspaceFormValues>
             defaultValues={{
               name: "",
+              organizationId: organizations[0].organizationId,
             }}
-            schema={CreateWorkspaceFormValidationSchema}
+            schema={OrganizationCreateWorkspaceFormValidationSchema}
             onSubmit={onSubmit}
             onSuccess={onSuccess}
             onError={onError}
           >
-            <FormControl<CreateWorkspaceFormValues> label="Workspace name" name="name" fieldType="input" type="text" />
-            <FormSubmissionButtons
-              submitKey="form.saveChanges"
-              onCancelClickCallback={toggleMode}
-              allowNonDirtyCancel
-            />
+            <WorkspaceCreateControlFormContent organizations={organizations} toggleMode={toggleMode} />
           </Form>
         </Card>
       ) : (
@@ -97,6 +117,50 @@ export const WorkspacesCreateControl: React.FC<WorkspacesCreateControlProps> = (
           </Button>
         </Box>
       )}
+    </>
+  );
+};
+
+const WorkspaceCreateControlFormContent: React.FC<{ organizations: OrganizationRead[]; toggleMode: () => void }> = ({
+  organizations,
+  toggleMode,
+}) => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <>
+      {organizations.length > 1 && (
+        <FormControl<CreateWorkspaceFormValues>
+          label={formatMessage({ id: "form.organizationName" })}
+          name="organizationId"
+          fieldType="dropdown"
+          options={organizations.map((organization) => {
+            return {
+              value: organization.organizationId,
+              label: organization.organizationName,
+            };
+          })}
+        />
+      )}
+      <>
+        <FormControl<CreateWorkspaceFormValues>
+          label={formatMessage({ id: "form.workspaceName" })}
+          name="name"
+          fieldType="input"
+          type="text"
+        />
+        {organizations.length === 1 && (
+          <Box pb="md">
+            <Text>
+              <FormattedMessage
+                id="workspaces.create.organizationDescription"
+                values={{ organizationName: organizations[0].organizationName }}
+              />
+            </Text>
+          </Box>
+        )}
+        <FormSubmissionButtons submitKey="form.saveChanges" onCancelClickCallback={toggleMode} allowNonDirtyCancel />
+      </>
     </>
   );
 };

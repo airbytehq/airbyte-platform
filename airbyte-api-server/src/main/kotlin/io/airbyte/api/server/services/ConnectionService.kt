@@ -38,7 +38,6 @@ import java.util.Objects
 import java.util.UUID
 
 interface ConnectionService {
-
   fun createConnection(
     connectionCreateRequest: ConnectionCreateRequest,
     catalogId: UUID,
@@ -61,7 +60,7 @@ interface ConnectionService {
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID,
-    configuredCatalog: AirbyteCatalog,
+    configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
     userInfo: String?,
   ): ConnectionResponse
@@ -71,7 +70,6 @@ interface ConnectionService {
     limit: Int = 20,
     offset: Int = 0,
     includeDeleted: Boolean = false,
-
     userInfo: String?,
   ): ConnectionsResponse
 }
@@ -83,7 +81,6 @@ class ConnectionServiceImpl(
   private val userService: UserService,
   private val sourceService: SourceService,
 ) : ConnectionService {
-
   companion object {
     private val log = LoggerFactory.getLogger(ConnectionServiceImpl::class.java)
   }
@@ -104,14 +101,15 @@ class ConnectionServiceImpl(
     val connectionCreateOss: ConnectionCreate =
       ConnectionCreateMapper.from(connectionCreateRequest, catalogId, configuredCatalog)
 
-    val response = try {
-      configApiClient.createConnection(connectionCreateOss, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for createConnection: ", e)
-      // this is kept as a string to easily parse the error response to determine if a source or a
-      // destination id is invalid
-      e.response as HttpResponse<String>
-    }
+    val response =
+      try {
+        configApiClient.createConnection(connectionCreateOss, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for createConnection: ", e)
+        // this is kept as a string to easily parse the error response to determine if a source or a
+        // destination id is invalid
+        e.response as HttpResponse<String>
+      }
 
     ConfigClientErrorHandler.handleCreateConnectionError(response, connectionCreateRequest)
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -134,14 +132,18 @@ class ConnectionServiceImpl(
   /**
    * Deletes a connection by ID.
    */
-  override fun deleteConnection(connectionId: UUID, userInfo: String?) {
+  override fun deleteConnection(
+    connectionId: UUID,
+    userInfo: String?,
+  ) {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-    val response = try {
-      configApiClient.deleteConnection(connectionIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for connection delete: ", e)
-      e.response as HttpResponse<String>
-    }
+    val response =
+      try {
+        configApiClient.deleteConnection(connectionIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for connection delete: ", e)
+        e.response as HttpResponse<String>
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
   }
@@ -149,16 +151,20 @@ class ConnectionServiceImpl(
   /**
    * Gets a connection by ID.
    */
-  override fun getConnection(connectionId: UUID, userInfo: String?): ConnectionResponse {
+  override fun getConnection(
+    connectionId: UUID,
+    userInfo: String?,
+  ): ConnectionResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody()
     connectionIdRequestBody.connectionId = connectionId
 
-    val response = try {
-      configApiClient.getConnection(connectionIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getConnection: ", e)
-      e.response as HttpResponse<ConnectionRead>
-    }
+    val response =
+      try {
+        configApiClient.getConnection(connectionIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getConnection: ", e)
+        e.response as HttpResponse<ConnectionRead>
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
 
@@ -178,7 +184,7 @@ class ConnectionServiceImpl(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID,
-    configuredCatalog: AirbyteCatalog,
+    configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
     userInfo: String?,
   ): ConnectionResponse {
@@ -192,12 +198,13 @@ class ConnectionServiceImpl(
 
     // this is kept as a string to easily parse the error response to determine if a source or a
     // destination id is invalid
-    val response = try {
-      configApiClient.updateConnection(connectionUpdate, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for updateConnection: ", e)
-      e.response as HttpResponse<String>
-    }
+    val response =
+      try {
+        configApiClient.updateConnection(connectionUpdate, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for updateConnection: ", e)
+        e.response as HttpResponse<String>
+      }
 
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -228,19 +235,21 @@ class ConnectionServiceImpl(
     userInfo: String?,
   ): ConnectionsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
 
-    val listConnectionsForWorkspacesRequestBody = ListConnectionsForWorkspacesRequestBody()
-      .workspaceIds(workspaceIdsToQuery)
-      .includeDeleted(includeDeleted)
-      .pagination(pagination)
+    val listConnectionsForWorkspacesRequestBody =
+      ListConnectionsForWorkspacesRequestBody()
+        .workspaceIds(workspaceIdsToQuery)
+        .includeDeleted(includeDeleted)
+        .pagination(pagination)
 
-    val response = try {
-      configApiClient.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for listConnectionsForWorkspaces: ", e)
-      e.response as HttpResponse<ConnectionReadList>
-    }
+    val response =
+      try {
+        configApiClient.listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for listConnectionsForWorkspaces: ", e)
+        e.response as HttpResponse<ConnectionReadList>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceIds.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return ConnectionsResponseMapper.from(

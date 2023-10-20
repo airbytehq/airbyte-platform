@@ -9,6 +9,7 @@ button.tabContainer {
   padding: variables.$spacing-md variables.$spacing-sm;
   border-bottom: variables.$border-thick solid transparent;
   white-space: nowrap;
+  cursor: pointer;
 
   &--active {
     border-bottom-color: colors.$dark-blue-900;

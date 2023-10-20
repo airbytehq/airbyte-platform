@@ -4,51 +4,28 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionJobRequestBody;
+import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.FailAttemptRequest;
 import io.airbyte.api.client.model.generated.JobCreate;
+import io.airbyte.api.client.model.generated.JobFailureRequest;
 import io.airbyte.api.client.model.generated.JobInfoRead;
-import io.airbyte.commons.server.JobStatus;
-import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest;
+import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody;
+import io.airbyte.api.client.model.generated.ReportJobStartRequest;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.Configs.WorkerEnvironment;
-import io.airbyte.config.JobConfig;
-import io.airbyte.config.JobOutput;
-import io.airbyte.config.JobResetConnectionConfig;
-import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.ReleaseStage;
-import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.JobNotifier;
-import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
-import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
-import io.airbyte.persistence.job.models.Attempt;
-import io.airbyte.persistence.job.models.Job;
-import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.persistence.job.tracker.JobTracker.JobState;
+import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.workers.context.AttemptContext;
 import io.micronaut.context.annotation.Requires;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalLong;
-import java.util.Set;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -59,38 +36,13 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
-  private final JobPersistence jobPersistence;
-  private final Path workspaceRoot;
-  private final WorkerEnvironment workerEnvironment;
-  private final LogConfigs logConfigs;
-  private final JobNotifier jobNotifier;
-  private final JobTracker jobTracker;
-  private final JobErrorReporter jobErrorReporter;
-  private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final JobsApi jobsApi;
+  private final AttemptApi attemptApi;
 
-  public JobCreationAndStatusUpdateActivityImpl(final JobPersistence jobPersistence,
-                                                @Named("workspaceRoot") final Path workspaceRoot,
-                                                final WorkerEnvironment workerEnvironment,
-                                                final LogConfigs logConfigs,
-                                                final JobNotifier jobNotifier,
-                                                final JobTracker jobTracker,
-                                                final ConfigRepository configRepository,
-                                                final JobErrorReporter jobErrorReporter,
-                                                final JobsApi jobsApi) {
-    this.jobPersistence = jobPersistence;
-    this.workspaceRoot = workspaceRoot;
-    this.workerEnvironment = workerEnvironment;
-    this.logConfigs = logConfigs;
-    this.jobNotifier = jobNotifier;
-    this.jobTracker = jobTracker;
-    this.jobErrorReporter = jobErrorReporter;
+  public JobCreationAndStatusUpdateActivityImpl(final JobsApi jobsApi,
+                                                final AttemptApi attemptApi) {
     this.jobsApi = jobsApi;
-    this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
-        jobPersistence,
-        configRepository,
-        jobNotifier,
-        jobTracker);
+    this.attemptApi = attemptApi;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -101,6 +53,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       final JobInfoRead jobInfoRead = jobsApi.createJob(new JobCreate().connectionId(input.getConnectionId()));
       return new JobCreationOutput(jobInfoRead.getJob().getId());
     } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
       log.error("Unable to create job for connection {}", input.getConnectionId(), e);
       throw new RetryableException(e);
     }
@@ -113,21 +66,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
     try {
       final long jobId = input.getJobId();
-      final Job job = jobPersistence.getJob(jobId);
-
-      final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
-      final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
-      final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job);
-      jobCreationAndStatusUpdateHelper.emitAttemptCreatedEvent(job, persistedAttemptNumber);
-
-      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, jobRoot);
-      return new AttemptNumberCreationOutput(persistedAttemptNumber);
-    } catch (final IOException e) {
+      final var response = attemptApi.createNewAttemptNumber(new CreateNewAttemptNumberRequest().jobId(jobId));
+      return new AttemptNumberCreationOutput(response.getAttemptNumber());
+    } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
-    } finally {
-      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, null);
     }
   }
 
@@ -137,25 +81,15 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final long jobId = input.getJobId();
-      final int attemptNumber = input.getAttemptNumber();
-
-      if (input.getStandardSyncOutput() != null) {
-        final JobOutput jobOutput = new JobOutput().withSync(input.getStandardSyncOutput());
-        jobPersistence.writeOutput(jobId, attemptNumber, jobOutput);
-      } else {
-        log.warn("The job {} doesn't have any output for the attempt {}", jobId, attemptNumber);
-      }
-      jobPersistence.succeedAttempt(jobId, attemptNumber);
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_SUCCEEDED_BY_RELEASE_STAGE, job);
-
-      jobNotifier.successJob(job);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job);
-      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED);
-    } catch (final IOException e) {
-      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
-          JobStatus.SUCCEEDED, e);
+      final var request = new JobSuccessWithAttemptNumberRequest()
+          .jobId(input.getJobId())
+          .attemptNumber(input.getAttemptNumber())
+          .connectionId(input.getConnectionId())
+          .standardSyncOutput(input.getStandardSyncOutput());
+      jobsApi.jobSuccessWithAttemptNumber(request);
+    } catch (final ApiException e) {
+      ApmTraceUtils.addExceptionToTrace(e);
+      log.error("jobSuccessWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }
@@ -166,38 +100,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final long jobId = input.getJobId();
-      jobPersistence.failJob(jobId);
-      final Job job = jobPersistence.getJob(jobId);
-
-      jobNotifier.failJob(input.getReason(), job);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job);
-
-      final UUID connectionId = UUID.fromString(job.getScope());
-      if (!connectionId.equals(input.getConnectionId())) {
-        log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.getConnectionId(), connectionId);
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT, 1);
-      }
-
-      final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
-      final UUID destinationDefinitionVersionId;
-      final UUID sourceDefinitionVersionId;
-      if (jobSyncConfig == null) {
-        final JobResetConnectionConfig resetConfig = job.getConfig().getResetConnection();
-        // In a reset, we run a fake source
-        sourceDefinitionVersionId = null;
-        destinationDefinitionVersionId = resetConfig != null ? resetConfig.getDestinationDefinitionVersionId() : null;
-      } else {
-        sourceDefinitionVersionId = jobSyncConfig.getSourceDefinitionVersionId();
-        destinationDefinitionVersionId = jobSyncConfig.getDestinationDefinitionVersionId();
-      }
-      final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDefinitionVersionId, destinationDefinitionVersionId);
-      job.getLastFailedAttempt().flatMap(Attempt::getFailureSummary)
-          .ifPresent(failureSummary -> jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext));
-      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
-    } catch (final IOException e) {
-      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
-          JobStatus.FAILED, e);
+      final var request = new JobFailureRequest()
+          .attemptNumber(input.getAttemptNumber())
+          .connectionId(input.getConnectionId())
+          .jobId(input.getJobId())
+          .reason(input.getReason());
+      jobsApi.jobFailure(request);
+    } catch (final ApiException e) {
+      log.error("jobFailure for job {} attempt {} failed with exception: {}", input.getJobId(), input.getAttemptNumber(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }
@@ -208,24 +118,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final int attemptNumber = input.getAttemptNumber();
-      final long jobId = input.getJobId();
-      final AttemptFailureSummary failureSummary = input.getAttemptFailureSummary();
+      final var req = new FailAttemptRequest()
+          .attemptNumber(input.getAttemptNumber())
+          .jobId(input.getJobId())
+          .failureSummary(input.getAttemptFailureSummary())
+          .standardSyncOutput(input.getStandardSyncOutput());
 
-      jobCreationAndStatusUpdateHelper.traceFailures(failureSummary);
-
-      jobPersistence.failAttempt(jobId, attemptNumber);
-      jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
-
-      if (input.getStandardSyncOutput() != null) {
-        final JobOutput jobOutput = new JobOutput().withSync(input.getStandardSyncOutput());
-        jobPersistence.writeOutput(jobId, attemptNumber, jobOutput);
-      }
-
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job);
-      jobCreationAndStatusUpdateHelper.trackFailures(failureSummary);
-    } catch (final IOException e) {
+      attemptApi.failAttempt(req);
+    } catch (final ApiException e) {
       log.error("attemptFailureWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
@@ -237,19 +137,14 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
-      final long jobId = input.getJobId();
-      final int attemptNumber = input.getAttemptNumber();
-      jobPersistence.failAttempt(jobId, attemptNumber);
-      jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, input.getAttemptFailureSummary());
-      jobPersistence.cancelJob(jobId);
+      final var req = new PersistCancelJobRequestBody()
+          .connectionId(input.getConnectionId())
+          .jobId(input.getJobId())
+          .attemptNumber(input.getAttemptNumber())
+          .attemptFailureSummary(input.getAttemptFailureSummary());
 
-      final Job job = jobPersistence.getJob(jobId);
-      jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);
-      jobNotifier.failJob("Job was cancelled", job);
-      jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED);
-    } catch (final IOException e) {
-      jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(input.getJobId(), input.getConnectionId(), input.getAttemptNumber(),
-          JobStatus.FAILED, e);
+      jobsApi.persistJobCancellation(req);
+    } catch (final ApiException e) {
       throw new RetryableException(e);
     }
   }
@@ -260,9 +155,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     new AttemptContext(input.getConnectionId(), input.getJobId(), null).addTagsToTrace();
 
     try {
-      final Job job = jobPersistence.getJob(input.getJobId());
-      jobTracker.trackSync(job, JobState.STARTED);
-    } catch (final IOException e) {
+      jobsApi.reportJobStart(new ReportJobStartRequest().connectionId(input.getConnectionId()).jobId(input.getJobId()));
+    } catch (final ApiException e) {
       throw new RetryableException(e);
     }
   }
@@ -271,48 +165,39 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Override
   public void ensureCleanJobState(final EnsureCleanJobStateInput input) {
     new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
-    jobCreationAndStatusUpdateHelper.failNonTerminalJobs(input.getConnectionId());
-  }
-
-  @Override
-  public boolean isLastJobOrAttemptFailure(final JobCheckFailureInput input) {
-    final int limit = 2;
-    boolean lastAttemptCheck = false;
-    boolean lastJobCheck = false;
-
-    final Set<JobConfig.ConfigType> configTypes = new HashSet<>();
-    configTypes.add(SYNC);
-
     try {
-      final List<Job> jobList = jobPersistence.listJobsIncludingId(configTypes, input.getConnectionId().toString(), input.getJobId(), limit);
-      final Optional<Job> optionalActiveJob = jobList.stream().filter(job -> job.getId() == input.getJobId()).findFirst();
-      if (optionalActiveJob.isPresent()) {
-        lastAttemptCheck = jobCreationAndStatusUpdateHelper.checkActiveJobPreviousAttempt(optionalActiveJob.get(), input.getAttemptId());
-      }
-
-      final OptionalLong previousJobId =
-          jobCreationAndStatusUpdateHelper.getPreviousJobId(input.getJobId(), jobList.stream().map(Job::getId).toList());
-      if (previousJobId.isPresent()) {
-        final Optional<Job> optionalPreviousJob = jobList.stream().filter(job -> job.getId() == previousJobId.getAsLong()).findFirst();
-        if (optionalPreviousJob.isPresent()) {
-          lastJobCheck = optionalPreviousJob.get().getStatus().equals(io.airbyte.persistence.job.models.JobStatus.FAILED);
-        }
-      }
-
-      return lastJobCheck || lastAttemptCheck;
-    } catch (final IOException e) {
+      jobsApi.failNonTerminalJobs(new ConnectionIdRequestBody().connectionId(input.getConnectionId()));
+    } catch (final ApiException e) {
       throw new RetryableException(e);
     }
   }
 
-  @VisibleForTesting
-  List<ReleaseStage> getJobToReleaseStages(final Job job) throws IOException {
-    return jobCreationAndStatusUpdateHelper.getJobToReleaseStages(job);
-  }
+  /**
+   * This method is used to determine if the current job is the last job or attempt failure.
+   *
+   * @param input - JobCheckFailureInput.
+   * @return - boolean.
+   */
+  @Override
+  public boolean isLastJobOrAttemptFailure(final JobCheckFailureInput input) {
+    // If there has been a previous attempt, that means it failed. We don't create subsequent attempts
+    // on success.
+    final var isNotFirstAttempt = input.getAttemptId() > 0;
+    if (isNotFirstAttempt) {
+      return true;
+    }
 
-  @VisibleForTesting
-  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
-    return JobCreationAndStatusUpdateHelper.orderByReleaseStageAsc(releaseStages);
+    try {
+      final var didSucceed = jobsApi.didPreviousJobSucceed(
+          new ConnectionJobRequestBody()
+              .connectionId(input.getConnectionId())
+              .jobId(input.getJobId()))
+          .getValue();
+      // Treat anything other than an explicit success as a failure.
+      return !didSucceed;
+    } catch (final ApiException e) {
+      throw new RetryableException(e);
+    }
   }
 
 }

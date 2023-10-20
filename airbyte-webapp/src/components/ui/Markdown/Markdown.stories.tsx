@@ -86,6 +86,11 @@ function codeBlock() {
   This is a danger admonition
 :::
 
+<HideInUI>
+  Users will not see this content in the Airbyte UI, though it will be visible when
+  rendered by other tools (e.g. docusaurus).
+</HideInUI>
+
 `;
 
 export const Primary = Template.bind({});

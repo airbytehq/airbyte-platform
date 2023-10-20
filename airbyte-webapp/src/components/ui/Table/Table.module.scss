@@ -33,6 +33,7 @@ $border-radius: variables.$border-radius-lg;
   font-weight: 600;
   width: auto;
   padding: variables.$spacing-md variables.$spacing-lg;
+  white-space: nowrap;
 
   &--sorted {
     color: colors.$blue;

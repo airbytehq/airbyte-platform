@@ -16,3 +16,6 @@ properties:
     type: string
   stats:
     "$ref": SyncStats.yaml
+  wasBackfilled:
+    type: boolean
+    description: Indicates whether the stream state was cleared before the sync

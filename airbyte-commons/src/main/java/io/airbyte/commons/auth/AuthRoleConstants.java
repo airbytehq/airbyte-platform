@@ -19,6 +19,7 @@ public final class AuthRoleConstants {
   public static final String ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN";
   public static final String ORGANIZATION_EDITOR = "ORGANIZATION_EDITOR";
   public static final String ORGANIZATION_READER = "ORGANIZATION_READER";
+  public static final String ORGANIZATION_MEMBER = "ORGANIZATION_MEMBER";
 
   private AuthRoleConstants() {}
 

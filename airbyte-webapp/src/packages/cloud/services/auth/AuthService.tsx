@@ -14,6 +14,7 @@ import { AuthProviders, AuthContextApi, OAuthLoginState, AuthContext, useAuthSer
 import { trackSignup } from "core/utils/fathom";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { useLocalStorage } from "core/utils/useLocalStorage";
+import { getUtmFromStorage } from "core/utils/utmStorage";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
@@ -73,6 +74,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       isCorporate,
       // Which login provider was used, e.g. "password", "google.com", "github.com"
       provider: firebaseUser.providerData[0]?.providerId,
+      ...getUtmFromStorage(),
     });
 
     trackSignup(isCorporate);
@@ -83,7 +85,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   const onAfterAuth = useCallback(
     async (currentUser: FirebaseUser, user?: UserRead) => {
       try {
-        user ??= await userService.getByAuthId(currentUser.uid, AuthProviders.GoogleIdentityPlatform);
+        user ??= await userService.getByAuthId(currentUser.uid);
         loggedIn({
           user,
           emailVerified: currentUser.emailVerified,
@@ -191,36 +193,45 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         await authService.resetPassword(email);
       },
       async sendEmailVerification(): Promise<void> {
-        return authService.sendEmailVerifiedLink().catch((error) => {
-          switch (error.code) {
-            case AuthErrorCodes.NETWORK_REQUEST_FAILED:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.NetworkFailure,
-                }),
-                type: "error",
-              });
-              break;
-            case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.TooManyRequests,
-                }),
-                type: "warning",
-              });
-              break;
-            default:
-              registerNotification({
-                id: error.code,
-                text: formatMessage({
-                  id: FirebaseAuthMessageId.DefaultError,
-                }),
-                type: "error",
-              });
-          }
-        });
+        return authService
+          .sendEmailVerifiedLink()
+          .then(() => {
+            registerNotification({
+              id: "workspace.emailVerificationResendSuccess",
+              text: formatMessage({ id: "credits.emailVerification.resendConfirmation" }),
+              type: "success",
+            });
+          })
+          .catch((error) => {
+            switch (error.code) {
+              case AuthErrorCodes.NETWORK_REQUEST_FAILED:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.NetworkFailure,
+                  }),
+                  type: "error",
+                });
+                break;
+              case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.TooManyRequests,
+                  }),
+                  type: "warning",
+                });
+                break;
+              default:
+                registerNotification({
+                  id: error.code,
+                  text: formatMessage({
+                    id: FirebaseAuthMessageId.DefaultError,
+                  }),
+                  type: "error",
+                });
+            }
+          });
       },
       async verifyEmail(code: string): Promise<void> {
         await authService.confirmEmailVerify(code);
@@ -244,7 +255,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         }
 
         if (firebaseUser) {
-          const user = await userService.getByAuthId(firebaseUser.uid, AuthProviders.GoogleIdentityPlatform);
+          const user = await userService.getByAuthId(firebaseUser.uid);
           await userService.update({ userId: user.userId, authUserId: firebaseUser.uid, name, news });
           await onAfterAuth(firebaseUser, { ...user, name });
         }

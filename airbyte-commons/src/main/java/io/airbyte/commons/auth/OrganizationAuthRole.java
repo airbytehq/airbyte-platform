@@ -21,6 +21,7 @@ public enum OrganizationAuthRole {
   ORGANIZATION_ADMIN(400, AuthRoleConstants.ORGANIZATION_ADMIN),
   ORGANIZATION_EDITOR(300, AuthRoleConstants.ORGANIZATION_EDITOR),
   ORGANIZATION_READER(200, AuthRoleConstants.ORGANIZATION_READER),
+  ORGANIZATION_MEMBER(100, AuthRoleConstants.ORGANIZATION_MEMBER),
   NONE(0, AuthRoleConstants.NONE);
 
   private final int authority;

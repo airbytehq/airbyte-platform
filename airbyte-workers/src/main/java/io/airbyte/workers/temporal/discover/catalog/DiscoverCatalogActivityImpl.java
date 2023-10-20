@@ -26,11 +26,11 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
@@ -139,7 +139,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                   () -> context);
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
 
   }
 
@@ -161,7 +161,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
               featureFlags, Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
-              Optional.empty());
+              Optional.empty(), false);
       final ConnectorConfigUpdater connectorConfigUpdater =
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());
       return new DefaultDiscoverCatalogWorker(airbyteApiClient, integrationLauncher, connectorConfigUpdater, streamFactory);

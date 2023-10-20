@@ -10,7 +10,13 @@ import {
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
 
-import { ConnectionValues, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
+import {
+  ConnectionValues,
+  useDestinationDefinitionVersion,
+  useSourceDefinitionVersion,
+  useGetSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification,
+} from "core/api";
 import {
   ActorDefinitionVersionRead,
   ConnectionScheduleType,
@@ -23,9 +29,7 @@ import {
 } from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
-import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 
 import { ConnectionHookFormContext } from "./ConnectionHookFormService";
 import { useExperiment } from "../Experiment";

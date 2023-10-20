@@ -33,13 +33,16 @@ dependencies {
 
 airbyte {
     spotless {
-        excludes = ["src/main/resources/seed/oss_registry.json"]
+        excludes = [
+                "src/main/resources/seed/oss_registry.json",
+                "src/main/resources/seed/local_oss_registry.json"
+        ]
     }
 }
 
 def downloadConnectorRegistry = tasks.register("downloadConnectorRegistry", Download) {
     src 'https://connectors.airbyte.com/files/registries/v0/oss_registry.json'
-    dest new File(projectDir, 'src/main/resources/seed/oss_registry.json')
+    dest new File(projectDir, 'src/main/resources/seed/local_oss_registry.json')
     overwrite true
 }
 

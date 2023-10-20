@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import MarkdownToJsx from "markdown-to-jsx";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 
@@ -77,7 +77,10 @@ const Admonition = ({ children, type }: { children: ReactNode; type: string }) =
   return <div className={classNames(styles.admonition, styles[`admonition--${type}`])}>{children}</div>;
 };
 
-export const Markdown: React.FC<MarkdownToJsxProps> = ({ className, content, options }) => {
+const HideInUI = () => null;
+
+export const Markdown: React.FC<MarkdownToJsxProps> = React.memo(({ className, content, options }) => {
+  const processedMarkdown = useMemo(() => preprocessMarkdown(content), [content]);
   return (
     <div className={classNames(className, styles.markdown)}>
       <MarkdownToJsx
@@ -94,11 +97,16 @@ export const Markdown: React.FC<MarkdownToJsxProps> = ({ className, content, opt
             admonition: {
               component: Admonition,
             },
+            HideInUI: {
+              component: HideInUI,
+            },
           },
         }}
       >
-        {preprocessMarkdown(content)}
+        {processedMarkdown}
       </MarkdownToJsx>
     </div>
   );
-};
+});
+
+Markdown.displayName = "Markdown";

@@ -152,6 +152,7 @@ export const ErrorMessage: React.FC = () => {
             upgrade_deadline: getHumanReadableUpgradeDeadline(sourceActorDefinitionVersion),
           }
         ),
+        dataTestId: `breaking-change-${errorType}-connection-banner`,
         onAction: () =>
           navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${connection.sourceId}`),
         actionBtnText: formatMessage({
@@ -185,6 +186,7 @@ export const ErrorMessage: React.FC = () => {
             upgrade_deadline: getHumanReadableUpgradeDeadline(destinationActorDefinitionVersion),
           }
         ),
+        dataTestId: `breaking-change-${errorType}-connection-banner`,
         onAction: () =>
           navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${connection.destinationId}`),
         actionBtnText: formatMessage({

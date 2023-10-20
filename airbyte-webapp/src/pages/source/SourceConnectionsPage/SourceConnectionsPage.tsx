@@ -7,8 +7,8 @@ import { TableItemTitle } from "components/ConnectorBlocks";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 
+import { useGetSourceFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList } from "core/api";
-import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -17,7 +17,8 @@ const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable")
 export const SourceConnectionsPage = () => {
   const source = useGetSourceFromParams();
   const { workspaceId } = useCurrentWorkspace();
-  const { connections } = useConnectionList({ sourceId: [source.sourceId] });
+  const connectionList = useConnectionList({ sourceId: [source.sourceId] });
+  const connections = connectionList?.connections ?? [];
 
   // We load all destinations so the add destination button has a pre-filled list of options.
   const { destinations } = useDestinationList();

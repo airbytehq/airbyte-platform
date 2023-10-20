@@ -8,8 +8,5 @@
   right: 0;
   bottom: 0;
   z-index: z-indices.$overlay;
-
-  &.dark {
-    background: colors.$overlay-background;
-  }
+  background: colors.$overlay-background;
 }

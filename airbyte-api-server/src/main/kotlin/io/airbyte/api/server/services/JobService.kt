@@ -37,14 +37,25 @@ import java.util.Objects
 import java.util.UUID
 
 interface JobService {
+  fun sync(
+    connectionId: UUID,
+    userInfo: String?,
+  ): JobResponse
 
-  fun sync(connectionId: UUID, userInfo: String?): JobResponse
+  fun reset(
+    connectionId: UUID,
+    userInfo: String?,
+  ): JobResponse
 
-  fun reset(connectionId: UUID, userInfo: String?): JobResponse
+  fun cancelJob(
+    jobId: Long,
+    userInfo: String?,
+  ): JobResponse
 
-  fun cancelJob(jobId: Long, userInfo: String?): JobResponse
-
-  fun getJobInfoWithoutLogs(jobId: Long, userInfo: String?): JobResponse
+  fun getJobInfoWithoutLogs(
+    jobId: Long,
+    userInfo: String?,
+  ): JobResponse
 
   fun getJobList(
     connectionId: UUID,
@@ -66,7 +77,6 @@ interface JobService {
 @Singleton
 @Secondary
 class JobServiceImpl(private val configApiClient: ConfigApiClient, val userService: UserService) : JobService {
-
   companion object {
     private val log = LoggerFactory.getLogger(JobServiceImpl::class.java)
   }
@@ -77,20 +87,24 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
   /**
    * Starts a sync job for the given connection ID.
    */
-  override fun sync(connectionId: UUID, userInfo: String?): JobResponse {
+  override fun sync(
+    connectionId: UUID,
+    userInfo: String?,
+  ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-    val response = try {
-      configApiClient.sync(connectionIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for job sync: ", e)
-      e.response as HttpResponse<JobInfoRead>
-    } catch (e: ReadTimeoutException) {
-      log.error("Config api response error for job sync: ", e)
-      throw UnexpectedProblem(
-        HttpStatus.REQUEST_TIMEOUT,
-        "Request timed out. Please check the latest job status to determine whether the sync started.",
-      )
-    }
+    val response =
+      try {
+        configApiClient.sync(connectionIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for job sync: ", e)
+        e.response as HttpResponse<JobInfoRead>
+      } catch (e: ReadTimeoutException) {
+        log.error("Config api response error for job sync: ", e)
+        throw UnexpectedProblem(
+          HttpStatus.REQUEST_TIMEOUT,
+          "Request timed out. Please check the latest job status to determine whether the sync started.",
+        )
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return JobResponseMapper.from(Objects.requireNonNull<JobInfoRead>(response.body()))
@@ -99,14 +113,18 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
   /**
    * Starts a reset job for the given connection ID.
    */
-  override fun reset(connectionId: UUID, userInfo: String?): JobResponse {
+  override fun reset(
+    connectionId: UUID,
+    userInfo: String?,
+  ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-    val response = try {
-      configApiClient.reset(connectionIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for job reset: ", e)
-      e.response as HttpResponse<JobInfoRead>
-    }
+    val response =
+      try {
+        configApiClient.reset(connectionIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for job reset: ", e)
+        e.response as HttpResponse<JobInfoRead>
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return JobResponseMapper.from(Objects.requireNonNull<JobInfoRead>(response.body()))
@@ -115,14 +133,18 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
   /**
    * Cancels a job by ID.
    */
-  override fun cancelJob(jobId: Long, userInfo: String?): JobResponse {
+  override fun cancelJob(
+    jobId: Long,
+    userInfo: String?,
+  ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
-    val response = try {
-      configApiClient.cancelJob(jobIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for cancelJob: ", e)
-      e.response as HttpResponse<JobInfoRead>
-    }
+    val response =
+      try {
+        configApiClient.cancelJob(jobIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for cancelJob: ", e)
+        e.response as HttpResponse<JobInfoRead>
+      }
     ConfigClientErrorHandler.handleError(response, jobId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return JobResponseMapper.from(Objects.requireNonNull<JobInfoRead>(response.body()))
@@ -131,23 +153,27 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
   /**
    * Gets job info without logs as they're sometimes large enough to make the response size exceed the server max.
    */
-  override fun getJobInfoWithoutLogs(jobId: Long, userInfo: String?): JobResponse {
+  override fun getJobInfoWithoutLogs(
+    jobId: Long,
+    userInfo: String?,
+  ): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
-    val response = try {
-      configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error(
-        "Config api response error for getJobInfoWithoutLogs: $jobId",
-        e,
-      )
-      e.response as HttpResponse<JobInfoRead>
-    } catch (e: ReadTimeoutException) {
-      log.error(
-        "Config api read timeout error for getJobInfoWithoutLogs: $jobId",
-        e,
-      )
-      throw UnexpectedProblem(HttpStatus.REQUEST_TIMEOUT)
-    }
+    val response =
+      try {
+        configApiClient.getJobInfoWithoutLogs(jobIdRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error(
+          "Config api response error for getJobInfoWithoutLogs: $jobId",
+          e,
+        )
+        e.response as HttpResponse<JobInfoRead>
+      } catch (e: ReadTimeoutException) {
+        log.error(
+          "Config api read timeout error for getJobInfoWithoutLogs: $jobId",
+          e,
+        )
+        throw UnexpectedProblem(HttpStatus.REQUEST_TIMEOUT)
+      }
 
     ConfigClientErrorHandler.handleError(response, jobId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
@@ -165,26 +191,28 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     userInfo: String?,
   ): JobsResponse {
     val configTypes: List<JobConfigType> = getJobConfigTypes(jobsFilter.jobType)
-    val jobListRequestBody = JobListRequestBody()
-      .configId(connectionId.toString())
-      .configTypes(configTypes)
-      .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-      .status(jobsFilter.getConfigApiStatus())
-      .createdAtStart(jobsFilter.createdAtStart)
-      .createdAtEnd(jobsFilter.createdAtEnd)
-      .updatedAtStart(jobsFilter.updatedAtStart)
-      .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(JobListRequestBody.OrderByFieldEnum.valueOf(orderByField.name))
-      .orderByMethod(
-        JobListRequestBody.OrderByMethodEnum.valueOf(orderByMethod.name),
-      )
+    val jobListRequestBody =
+      JobListRequestBody()
+        .configId(connectionId.toString())
+        .configTypes(configTypes)
+        .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
+        .status(jobsFilter.getConfigApiStatus())
+        .createdAtStart(jobsFilter.createdAtStart)
+        .createdAtEnd(jobsFilter.createdAtEnd)
+        .updatedAtStart(jobsFilter.updatedAtStart)
+        .updatedAtEnd(jobsFilter.updatedAtEnd)
+        .orderByField(JobListRequestBody.OrderByFieldEnum.valueOf(orderByField.name))
+        .orderByMethod(
+          JobListRequestBody.OrderByMethodEnum.valueOf(orderByMethod.name),
+        )
 
-    val response = try {
-      configApiClient.getJobList(jobListRequestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getJobList: ", e)
-      e.response as HttpResponse<JobReadList>
-    }
+    val response =
+      try {
+        configApiClient.getJobList(jobListRequestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getJobList: ", e)
+        e.response as HttpResponse<JobReadList>
+      }
     ConfigClientErrorHandler.handleError(response, connectionId.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return JobsResponseMapper.from(
@@ -210,26 +238,28 @@ class JobServiceImpl(private val configApiClient: ConfigApiClient, val userServi
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
     // Get relevant workspace Ids
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(null, userInfo) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(userInfo) }
 
-    val requestBody = JobListForWorkspacesRequestBody()
-      .workspaceIds(workspaceIdsToQuery)
-      .configTypes(configTypes)
-      .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-      .status(jobsFilter.getConfigApiStatus())
-      .createdAtStart(jobsFilter.createdAtStart)
-      .createdAtEnd(jobsFilter.createdAtEnd)
-      .updatedAtStart(jobsFilter.updatedAtStart)
-      .updatedAtEnd(jobsFilter.updatedAtEnd)
-      .orderByField(OrderByFieldEnum.valueOf(orderByField.name))
-      .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
+    val requestBody =
+      JobListForWorkspacesRequestBody()
+        .workspaceIds(workspaceIdsToQuery)
+        .configTypes(configTypes)
+        .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
+        .status(jobsFilter.getConfigApiStatus())
+        .createdAtStart(jobsFilter.createdAtStart)
+        .createdAtEnd(jobsFilter.createdAtEnd)
+        .updatedAtStart(jobsFilter.updatedAtStart)
+        .updatedAtEnd(jobsFilter.updatedAtEnd)
+        .orderByField(OrderByFieldEnum.valueOf(orderByField.name))
+        .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
 
-    val response = try {
-      configApiClient.getJobListForWorkspaces(requestBody, userInfo)
-    } catch (e: HttpClientResponseException) {
-      log.error("Config api response error for getJobList: ", e)
-      e.response as HttpResponse<JobReadList>
-    }
+    val response =
+      try {
+        configApiClient.getJobListForWorkspaces(requestBody, userInfo)
+      } catch (e: HttpClientResponseException) {
+        log.error("Config api response error for getJobList: ", e)
+        e.response as HttpResponse<JobReadList>
+      }
     ConfigClientErrorHandler.handleError(response, workspaceIds.toString())
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + response.body())
     return JobsResponseMapper.from(

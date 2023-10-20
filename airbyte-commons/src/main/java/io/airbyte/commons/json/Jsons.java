@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.core.util.Separators;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -45,6 +46,16 @@ public class Jsons {
 
   // Object Mapper is thread-safe
   private static final ObjectMapper OBJECT_MAPPER = MoreMappers.initMapper();
+  /**
+   * Exact ObjectMapper preserves float information by using the Java Big Decimal type.
+   */
+  private static final ObjectMapper OBJECT_MAPPER_EXACT;
+
+  static {
+    OBJECT_MAPPER_EXACT = MoreMappers.initMapper();
+    OBJECT_MAPPER_EXACT.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+  }
+
   private static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer(new JsonPrettyPrinter());
 
   /**
@@ -156,16 +167,16 @@ public class Jsons {
   }
 
   /**
-   * Deserialize a string to a JSON object.
+   * Deserialize a string to a JSON object using the exact ObjectMapper.
    *
    * @param jsonString to deserialize.
    * @param klass to deserialize to.
    * @param <T> type of input object.
    * @return optional as type T.
    */
-  public static <T> Optional<T> tryDeserialize(final String jsonString, final Class<T> klass) {
+  public static <T> Optional<T> tryDeserializeExact(final String jsonString, final Class<T> klass) {
     try {
-      return Optional.of(OBJECT_MAPPER.readValue(jsonString, klass));
+      return Optional.of(OBJECT_MAPPER_EXACT.readValue(jsonString, klass));
     } catch (final Throwable e) {
       return Optional.empty();
     }
@@ -572,7 +583,7 @@ public class Jsons {
    * @param json to convert
    * @return json as string-to-string map
    */
-  public static Map<String, String> deserializeToStringMap(JsonNode json) {
+  public static Map<String, String> deserializeToStringMap(final JsonNode json) {
     return OBJECT_MAPPER.convertValue(json, new TypeReference<>() {});
   }
 
@@ -603,20 +614,20 @@ public class Jsons {
    * Merge updateNode into mainNode Stolen from
    * https://stackoverflow.com/questions/9895041/merging-two-json-documents-using-jackson
    */
-  public static JsonNode mergeNodes(JsonNode mainNode, JsonNode updateNode) {
+  public static JsonNode mergeNodes(final JsonNode mainNode, final JsonNode updateNode) {
 
-    Iterator<String> fieldNames = updateNode.fieldNames();
+    final Iterator<String> fieldNames = updateNode.fieldNames();
     while (fieldNames.hasNext()) {
 
-      String fieldName = fieldNames.next();
-      JsonNode jsonNode = mainNode.get(fieldName);
+      final String fieldName = fieldNames.next();
+      final JsonNode jsonNode = mainNode.get(fieldName);
       // if field exists and is an embedded object
       if (jsonNode != null && jsonNode.isObject()) {
         mergeNodes(jsonNode, updateNode.get(fieldName));
       } else {
         if (mainNode instanceof ObjectNode) {
           // Overwrite field
-          JsonNode value = updateNode.get(fieldName);
+          final JsonNode value = updateNode.get(fieldName);
           ((ObjectNode) mainNode).replace(fieldName, value);
         }
       }
@@ -640,7 +651,7 @@ public class Jsons {
    */
   public static JsonNode navigateToAndCreate(JsonNode node, final List<String> keys) {
     for (final String key : keys) {
-      ObjectNode currentNode = (ObjectNode) node;
+      final ObjectNode currentNode = (ObjectNode) node;
       node = node.get(key);
       if (node == null || node.isNull()) {
         node = emptyObject();
@@ -668,17 +679,17 @@ public class Jsons {
    * @return the JSON string
    * @throws IOException if there is an error serializing the object
    */
-  public static String canonicalJsonSerialize(Object object) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode objectNode = mapper.valueToTree(object);
-    ObjectNode sortedObjectNode = (ObjectNode) sortProperties(objectNode);
+  public static String canonicalJsonSerialize(final Object object) throws IOException {
+    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectNode objectNode = mapper.valueToTree(object);
+    final ObjectNode sortedObjectNode = (ObjectNode) sortProperties(objectNode);
     return mapper.writer().writeValueAsString(sortedObjectNode);
   }
 
-  private static JsonNode sortProperties(JsonNode jsonNode) {
+  private static JsonNode sortProperties(final JsonNode jsonNode) {
     if (jsonNode.isObject()) {
-      ObjectNode objectNode = (ObjectNode) jsonNode;
-      ObjectNode sortedObjectNode = JsonNodeFactory.instance.objectNode();
+      final ObjectNode objectNode = (ObjectNode) jsonNode;
+      final ObjectNode sortedObjectNode = JsonNodeFactory.instance.objectNode();
 
       StreamSupport.stream(Spliterators.spliteratorUnknownSize(objectNode.fields(), Spliterator.ORDERED), false)
           .sorted(Map.Entry.comparingByKey())
@@ -686,8 +697,8 @@ public class Jsons {
 
       return sortedObjectNode;
     } else if (jsonNode.isArray()) {
-      ArrayNode arrayNode = (ArrayNode) jsonNode;
-      ArrayNode sortedArrayNode = JsonNodeFactory.instance.arrayNode();
+      final ArrayNode arrayNode = (ArrayNode) jsonNode;
+      final ArrayNode sortedArrayNode = JsonNodeFactory.instance.arrayNode();
       arrayNode.forEach(node -> sortedArrayNode.add(sortProperties(node)));
 
       return sortedArrayNode;

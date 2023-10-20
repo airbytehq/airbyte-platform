@@ -25,7 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings({"PMD.AvoidReassigningParameters", "MissingJavadocType"})
+@SuppressWarnings("PMD.AvoidReassigningParameters")
 public abstract class OAuthFlowIntegrationTest {
 
   /**
@@ -52,7 +52,6 @@ public abstract class OAuthFlowIntegrationTest {
 
   protected abstract OAuthFlowImplementation getFlowImplementation(ConfigRepository configRepository, HttpClient httpClient);
 
-  @SuppressWarnings("MissingJavadocMethod")
   @BeforeEach
   public void setup() throws IOException {
     if (!Files.exists(getCredentialsPath())) {

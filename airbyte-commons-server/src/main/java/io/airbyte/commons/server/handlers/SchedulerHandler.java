@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
-import static io.airbyte.persistence.job.ResourceRequirementsUtils.getResourceRequirementsForJobType;
+import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -29,7 +29,6 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationSyncMode;
 import io.airbyte.api.model.generated.DestinationUpdate;
-import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobCreate;
 import io.airbyte.api.model.generated.JobIdRequestBody;
@@ -43,7 +42,6 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
-import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.features.FeatureFlags;
@@ -51,6 +49,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
@@ -72,6 +71,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -80,6 +80,7 @@ import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -88,7 +89,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
-import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
@@ -113,7 +113,7 @@ import org.slf4j.LoggerFactory;
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
+@SuppressWarnings("ParameterName")
 @Singleton
 @Slf4j
 public class SchedulerHandler {
@@ -453,7 +453,7 @@ public class SchedulerHandler {
                   .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
               .getSupportedDestinationSyncModes();
 
-      if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
+      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead, featureFlagClient)) {
         applySchemaChange(updateObject.getConnectionId(),
             sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
@@ -616,7 +616,7 @@ public class SchedulerHandler {
       final CatalogDiff diff =
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
-      final boolean containsBreakingChange = containsBreakingChange(diff);
+      final boolean containsBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
 
       if (containsBreakingChange) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
@@ -638,8 +638,11 @@ public class SchedulerHandler {
       updateObject.status(connectionStatus);
 
       connectionsHandler.updateConnection(updateObject);
-
-      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
+      // on workspace where the new detailed schema change notification is enabled, notifications are sent
+      // right after the diff is computed, and we
+      // don't need to send them here.
+      boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
+      if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody) && !newNotificationsEnabled) {
         final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
         final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
         eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), connectionRead.getName(), sourceName, url, containsBreakingChange);
@@ -648,17 +651,6 @@ public class SchedulerHandler {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
     }
-  }
-
-  private boolean shouldAutoPropagate(final CatalogDiff diff, final UUID workspaceId, final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
-    final boolean nonBreakingChange = !containsBreakingChange(diff);
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
-    final boolean autoPropagationIsEnabledForConnection =
-        connectionRead.getNonBreakingChangesPreference() != null
-            && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
-                || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
   }
 
   private void applySchemaChange(final UUID connectionId,
@@ -773,22 +765,6 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(manualOperationResult.getJobId().get());
 
     return jobConverter.getJobInfoRead(job);
-  }
-
-  @VisibleForTesting
-  boolean containsBreakingChange(final CatalogDiff diff) {
-    for (final StreamTransform streamTransform : diff.getTransforms()) {
-      if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
-        continue;
-      }
-
-      final boolean anyBreakingFieldTransforms = streamTransform.getUpdateStream().stream().anyMatch(FieldTransform::getBreaking);
-      if (anyBreakingFieldTransforms) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
 }

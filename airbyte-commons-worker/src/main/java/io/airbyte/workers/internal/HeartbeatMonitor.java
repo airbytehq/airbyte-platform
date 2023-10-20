@@ -34,6 +34,7 @@ public class HeartbeatMonitor {
     this.heartbeatFreshnessThreshold = heartbeatFreshnessThreshold;
     this.nowSupplier = nowSupplier;
     this.lastBeat = new AtomicReference<>(null);
+    lastBeat.set(nowSupplier.get());
   }
 
   /**

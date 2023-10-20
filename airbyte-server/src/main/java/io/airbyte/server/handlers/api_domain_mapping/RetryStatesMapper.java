@@ -14,7 +14,6 @@ import jakarta.inject.Singleton;
  * testing in dependents.
  */
 @Singleton
-@SuppressWarnings("MissingJavadocMethod")
 public class RetryStatesMapper {
 
   // API to Domain

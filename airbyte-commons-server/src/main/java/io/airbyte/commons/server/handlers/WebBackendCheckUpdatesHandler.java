@@ -25,8 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  * It should operate exclusively by calling other endpoints that are exposed in the API.
  *
  * Javadocs suppressed because api docs should be used as source of truth.
- **/
-@SuppressWarnings("MissingJavadocMethod")
+ */
 @Slf4j
 @Singleton
 public class WebBackendCheckUpdatesHandler {

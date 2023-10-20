@@ -13,11 +13,6 @@ const localDocMiddleware = (docsPath: string): Plugin => {
       // Serve the docs used in the sidebar. During building Gradle will copy those into the docker image
       // Relavant gradle task :airbyte-webapp:copyDocs
       server.middlewares.use("/docs/integrations", express.static(docsPath) as Connect.NextHandleFunction);
-      // workaround for adblockers to serve google ads docs in development
-      server.middlewares.use(
-        "/docs/integrations/sources/gglad.md",
-        express.static(`${docsPath}/sources/google-ads.md`) as Connect.NextHandleFunction
-      );
       // Server assets that can be used during. Related gradle task: :airbyte-webapp:copyDocAssets
       server.middlewares.use("/docs/.gitbook", express.static(`${docsPath}/../.gitbook`) as Connect.NextHandleFunction);
     },
@@ -36,7 +31,6 @@ const remoteDocMiddleware = (): Plugin => {
               "/docs/integrations": {
                 changeOrigin: true,
                 target: "https://raw.githubusercontent.com/airbytehq/airbyte/master",
-                rewrite: (path) => (path.endsWith("gglad.md") ? path.replace(/\/gglad\.md$/, "/google-ads.md") : path),
               },
               "/docs/.gitbook": {
                 changeOrigin: true,

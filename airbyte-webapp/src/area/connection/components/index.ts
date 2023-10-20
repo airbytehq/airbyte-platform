@@ -1,2 +1,3 @@
-export * from "./data-moved-graph";
-export * from "./historical-overview";
+export * from "./DataMovedGraph";
+export * from "./UptimeStatusGraph";
+export * from "./HistoricalOverview";

@@ -19,7 +19,6 @@ import java.util.Optional;
 /**
  * Utility methods for converting between internal and API representation of catalog diffs.
  */
-@SuppressWarnings("MissingJavadocMethod")
 public class CatalogDiffConverters {
 
   public static StreamTransform streamTransformToApi(final io.airbyte.protocol.models.transform_models.StreamTransform transform) {

@@ -13,11 +13,11 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourcePaths } from "pages/routePaths";
 import { RoutePaths } from "pages/routePaths";
+import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import { SourceForm } from "./SourceForm";
@@ -41,7 +41,7 @@ export const CreateSourcePage: React.FC = () => {
     { label: formatMessage({ id: "sources.newSource" }) },
   ];
 
-  const sourceDefinitions = useAvailableSourceDefinitions();
+  const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
 
   const onSubmitSourceStep = async (values: {

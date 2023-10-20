@@ -5,6 +5,7 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspaceName } from "core/api";
+import { useIntent } from "core/utils/rbac/intent";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -22,6 +23,7 @@ export const UpdateWorkspaceNameForm = () => {
   const { mutateAsync: updateWorkspaceName } = useUpdateWorkspaceName();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
+  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId });
 
   const onSubmit = async ({ name }: UpdateWorkspaceNameFormValues) => {
     await updateWorkspaceName({
@@ -55,13 +57,14 @@ export const UpdateWorkspaceNameForm = () => {
       onSubmit={onSubmit}
       onError={onError}
       onSuccess={onSuccess}
+      disabled={!canUpdateWorkspace}
     >
       <FormControl<UpdateWorkspaceNameFormValues>
         name="name"
         fieldType="input"
         label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
       />
-      <FormSubmissionButtons />
+      {canUpdateWorkspace && <FormSubmissionButtons />}
     </Form>
   );
 };

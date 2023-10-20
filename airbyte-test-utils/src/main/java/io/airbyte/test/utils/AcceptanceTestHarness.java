@@ -69,6 +69,7 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.string.Strings;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
@@ -93,6 +94,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +127,7 @@ import org.testcontainers.utility.MountableFile;
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
-@SuppressWarnings({"MissingJavadocMethod", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
@@ -901,16 +903,20 @@ public class AcceptanceTestHarness {
   public static void waitForSuccessfulJob(final JobsApi jobsApi, final JobRead originalJob) throws InterruptedException, ApiException {
     final JobRead job = waitWhileJobHasStatus(jobsApi, originalJob, Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE));
 
+    final var debugInfo = new ArrayList<String>();
+
     if (!JobStatus.SUCCEEDED.equals(job.getStatus())) {
       // If a job failed during testing, show us why.
       final JobIdRequestBody id = new JobIdRequestBody();
       id.setId(originalJob.getId());
       for (final AttemptInfoRead attemptInfo : jobsApi.getJobInfo(id).getAttempts()) {
-        LOGGER.warn("Unsuccessful job attempt " + attemptInfo.getAttempt().getId()
-            + " with status " + job.getStatus() + " produced log output as follows: " + attemptInfo.getLogs().getLogLines());
+        final var msg = "Unsuccessful job attempt " + attemptInfo.getAttempt().getId()
+            + " with status " + job.getStatus() + " produced log output as follows: " + attemptInfo.getLogs().getLogLines();
+        LOGGER.warn(msg);
+        debugInfo.add(msg);
       }
     }
-    assertEquals(JobStatus.SUCCEEDED, job.getStatus());
+    assertEquals(JobStatus.SUCCEEDED, job.getStatus(), Strings.join(debugInfo, ", "));
     Thread.sleep(200);
   }
 

@@ -1,10 +1,7 @@
 import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
 
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
-
-import { useIsFCPEnabled } from "core/api/cloud";
-import { ReleaseStage, SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/request/AirbyteClient";
 
 import styles from "./SupportLevelBadge.module.scss";
 import { Text } from "../Text";
@@ -17,9 +14,6 @@ interface SupportLevelBadgeProps {
   custom?: boolean;
   size?: IconSize;
   tooltip?: boolean;
-
-  // TODO: remove when sweeping the FCP feature flag
-  releaseStage?: ReleaseStage;
 }
 
 export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
@@ -27,13 +21,7 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   custom = false,
   size = "medium",
   tooltip = true,
-  releaseStage,
 }) => {
-  const isFCPEnabled = useIsFCPEnabled();
-  if (isFCPEnabled) {
-    return <ReleaseStageBadge stage={releaseStage} small={size === "small"} tooltip={tooltip} />;
-  }
-
   if (!supportLevel || (!custom && supportLevel === SupportLevel.none)) {
     return null;
   }
@@ -68,6 +56,7 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
         [styles.smallTooltip]: size === "small",
         [styles.mediumTooltip]: size === "medium",
       })}
+      placement="top"
     >
       <FormattedMessage
         id={

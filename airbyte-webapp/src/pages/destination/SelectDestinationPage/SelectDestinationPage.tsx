@@ -8,11 +8,11 @@ import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
 import { useSuggestedDestinations } from "area/connector/utils";
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
+import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 
 export const SelectDestinationPage: React.FC = () => {
   const navigate = useNavigate();
-  const destinationDefinitions = useAvailableDestinationDefinitions();
+  const { destinationDefinitions } = useDestinationDefinitionList();
   const suggestedDestinationDefinitionIds = useSuggestedDestinations();
 
   return (

@@ -12,9 +12,9 @@ import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
 import { useConfig } from "config";
 import { useListWorkspacesAsync } from "core/api";
+import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { RoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -33,7 +33,7 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { version } = useConfig();
   const { trackError } = useAppMonitoringService();
   const { hasNewVersions } = useGetConnectorsOutOfDate();
-  const newWorkspacesUI = useExperiment("workspaces.newWorkspacesUI", false);
+  const newWorkspacesUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { data: workspaces, isLoading } = useListWorkspacesAsync();
 
   return (

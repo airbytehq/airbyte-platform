@@ -10,6 +10,7 @@ export const useBillingPageBanners = () => {
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
 
   const isNewTrialPolicyEnabled = useExperiment("billing.newTrialPolicy", false);
+  const isAutoRechargeEnabled = useExperiment("billing.autoRecharge", false);
 
   const isPreTrial = isNewTrialPolicyEnabled
     ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
@@ -23,6 +24,10 @@ export const useBillingPageBanners = () => {
       : "positive";
 
   const calculateVariant = (): "warning" | "error" | "info" => {
+    if (isAutoRechargeEnabled) {
+      return "info";
+    }
+
     if (creditStatus === "low") {
       return "warning";
     }

@@ -32,7 +32,10 @@ object ConnectionReadMapper {
    * @param connectionRead Output of a connection create/get from config api
    * @return ConnectionResponse Response object
    */
-  fun from(connectionRead: ConnectionRead, workspaceId: UUID?): ConnectionResponse {
+  fun from(
+    connectionRead: ConnectionRead,
+    workspaceId: UUID?,
+  ): ConnectionResponse {
     val connectionResponse = ConnectionResponse()
     connectionResponse.setConnectionId(connectionRead.connectionId)
     connectionResponse.setName(connectionRead.name)
@@ -73,8 +76,9 @@ object ConnectionReadMapper {
       connectionScheduleResponse.setScheduleType(ScheduleTypeWithBasicEnum.CRON)
       if (connectionRead.scheduleData != null && connectionRead.scheduleData!!.cron != null) {
         // should this string just be a json object?
-        val cronExpressionWithTimezone = connectionRead.scheduleData!!.cron!!
-          .cronExpression + " " + connectionRead.scheduleData!!.cron!!.cronTimeZone
+        val cronExpressionWithTimezone =
+          connectionRead.scheduleData!!.cron!!
+            .cronExpression + " " + connectionRead.scheduleData!!.cron!!.cronTimeZone
         connectionScheduleResponse.setCronExpression(cronExpressionWithTimezone)
       } else {
 //        ConnectionReadMapper.log.error("CronExpression not found in ScheduleData for connection: {}", connectionRead.connectionId)
@@ -93,10 +97,11 @@ object ConnectionReadMapper {
       val streamConfigurations = StreamConfigurations()
       for (streamAndConfiguration in connectionRead.syncCatalog.streams) {
         assert(streamAndConfiguration.config != null)
-        val connectionSyncMode: ConnectionSyncModeEnum? = syncModesToConnectionSyncModeEnum(
-          streamAndConfiguration.config!!.syncMode,
-          streamAndConfiguration.config!!.destinationSyncMode,
-        )
+        val connectionSyncMode: ConnectionSyncModeEnum? =
+          syncModesToConnectionSyncModeEnum(
+            streamAndConfiguration.config!!.syncMode,
+            streamAndConfiguration.config!!.destinationSyncMode,
+          )
         streamConfigurations.addStreamsItem(
           StreamConfiguration()
             .name(streamAndConfiguration.stream!!.name)

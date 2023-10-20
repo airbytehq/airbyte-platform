@@ -6,14 +6,18 @@ package io.airbyte.workers.process;
 
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.list.Lists;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
+import io.airbyte.featureflag.ConnectorApmEnabled;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.helper.ConnectorDatadogSupportHelper;
+import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -46,7 +50,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,8 +117,6 @@ public class KubePodProcess implements KubePod {
   public static final String MAIN_CONTAINER_NAME = "main";
   public static final String INIT_CONTAINER_NAME = "init";
 
-  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
-
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
   private static final String STDOUT_PIPE_FILE = PIPES_DIR + "/stdout";
@@ -144,7 +145,7 @@ public class KubePodProcess implements KubePod {
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
-  private static final ConnectorDatadogSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorDatadogSupportHelper();
+  private static final ConnectorApmSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorApmSupportHelper();
   private final KubernetesClient fabricClient;
   private final Pod podDefinition;
 
@@ -203,13 +204,16 @@ public class KubePodProcess implements KubePod {
         .build();
   }
 
-  private static Container getMain(final String image,
+  private static Container getMain(final FeatureFlagClient featureFlagClient,
+                                   final Context featureFlagContext,
+                                   final String image,
                                    final String imagePullPolicy,
                                    final boolean usesStdin,
                                    final String entrypointOverride,
                                    final List<VolumeMount> mainVolumeMounts,
                                    final ResourceRequirements resourceRequirements,
                                    final Map<Integer, Integer> internalToExternalPorts,
+                                   final String socatCommands,
                                    final Map<String, String> envMap,
                                    final String... args)
       throws IOException {
@@ -226,7 +230,8 @@ public class KubePodProcess implements KubePod {
         .replace("ENTRYPOINT_OVERRIDE_VALUE", entrypointOverrideValue) // use replace and not replaceAll to preserve escaping and quoting
         .replaceAll("ARGS", argsStr)
         .replaceAll("STDERR_PIPE_FILE", STDERR_PIPE_FILE)
-        .replaceAll("STDOUT_PIPE_FILE", STDOUT_PIPE_FILE);
+        .replaceAll("STDOUT_PIPE_FILE", STDOUT_PIPE_FILE)
+        .replaceAll("SOCAT_COMMANDS", socatCommands);
 
     final List<ContainerPort> containerPorts = createContainerPortList(internalToExternalPorts);
 
@@ -234,8 +239,8 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
-    if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null && isSupportDatadog(image)) {
-      CONNECTOR_DATADOG_SUPPORT_HELPER.addDatadogVars(envVars);
+    if (featureFlagClient.boolVariation(ConnectorApmEnabled.INSTANCE, featureFlagContext)) {
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addApmEnvVars(envVars);
       CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
     }
 
@@ -254,11 +259,6 @@ public class KubePodProcess implements KubePod {
       containerBuilder.withResources(resourceRequirementsBuilder.build());
     }
     return containerBuilder.build();
-  }
-
-  private static boolean isSupportDatadog(final String image) {
-    return Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(","))
-        .anyMatch(connectorNameAndVersion -> CONNECTOR_DATADOG_SUPPORT_HELPER.connectorVersionCompare(connectorNameAndVersion, image));
   }
 
   /**
@@ -390,6 +390,8 @@ public class KubePodProcess implements KubePod {
   @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
   public KubePodProcess(final String processRunnerHost,
                         final KubernetesClient fabricClient,
+                        final FeatureFlagClient featureFlagClient,
+                        final Context featureFlagContext,
                         final String podName,
                         final String namespace,
                         final String serviceAccount,
@@ -412,6 +414,7 @@ public class KubePodProcess implements KubePod {
                         final String socatImage,
                         final String busyboxImage,
                         final String curlImage,
+                        final boolean runSocatInMainContainer,
                         final Map<String, String> envMap,
                         final Map<Integer, Integer> internalToExternalPorts,
                         final String... args)
@@ -474,23 +477,6 @@ public class KubePodProcess implements KubePod {
           .withMountPath(TMP_DIR)
           .build();
 
-      // Note that we pass the resource requirements of the main container for the init.
-      // The pod's effective resource requirements is going to be the sum of all final running pods. We
-      // could pass that for the init, but it's
-      // probably not worth the extra logic to sum everything. Passing what should be the largest
-      // requirements should do.
-      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
-      final Container main = getMain(
-          image,
-          imagePullPolicy,
-          usesStdin,
-          entrypointOverride,
-          List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
-          podResourceRequirements.main(),
-          internalToExternalPorts,
-          envMap,
-          args);
-
       // Printing socat notice logs with socat -d -d
       // To print info logs as well use socat -d -d -d
       // more info: https://linux.die.net/man/1/socat
@@ -521,6 +507,43 @@ public class KubePodProcess implements KubePod {
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
+      final List<Container> socatContainers;
+      final String socatCommands;
+
+      if (runSocatInMainContainer) {
+        socatContainers = List.of();
+
+        final var socatStdinCmd = usesStdin ? String.format("socat -d -d TCP-L:9001 STDOUT > %s &", STDIN_PIPE_FILE) : "";
+        final var socatStdoutCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort);
+        final var socatStderrCmd = String.format("(cat %s | socat -d -d -t 60 - TCP:%s:%s &)", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort);
+
+        socatCommands = String.join(System.lineSeparator(), socatStdinCmd, socatStdoutCmd, socatStderrCmd);
+
+      } else {
+        socatContainers = usesStdin ? List.of(remoteStdin, relayStdout, relayStderr) : List.of(relayStdout, relayStderr);
+        socatCommands = "";
+      }
+
+      // Note that we pass the resource requirements of the main container for the init.
+      // The pod's effective resource requirements is going to be the sum of all final running pods. We
+      // could pass that for the init, but it's
+      // probably not worth the extra logic to sum everything. Passing what should be the largest
+      // requirements should do.
+      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage, podResourceRequirements.main());
+      final Container main = getMain(
+          featureFlagClient,
+          featureFlagContext,
+          image,
+          imagePullPolicy,
+          usesStdin,
+          entrypointOverride,
+          List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
+          podResourceRequirements.main(),
+          internalToExternalPorts,
+          socatCommands,
+          envMap,
+          args);
+
       // communicates via a file if it isn't able to reach the heartbeating server and succeeds if the
       // main container completes
       final String heartbeatCommand = MoreResources.readResource("entrypoints/sync/check.sh")
@@ -538,8 +561,7 @@ public class KubePodProcess implements KubePod {
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
-      final List<Container> containers = usesStdin ? List.of(main, remoteStdin, relayStdout, relayStderr, callHeartbeatServer)
-          : List.of(main, relayStdout, relayStderr, callHeartbeatServer);
+      final List<Container> containers = Lists.concat(List.of(main, callHeartbeatServer), socatContainers);
 
       final PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
           .withApiVersion("v1")

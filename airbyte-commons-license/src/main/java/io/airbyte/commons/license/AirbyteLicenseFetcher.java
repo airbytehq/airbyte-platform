@@ -22,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 @Slf4j
 @Requires(property = "airbyte.license-key")
-@SuppressWarnings({"MissingJavadocMethod"})
 public class AirbyteLicenseFetcher {
 
   private static final String LICENSE_URL = "https://oss.airbyte.com/license";

@@ -292,13 +292,13 @@ public class TemporalUtils {
    */
   public <T> T withBackgroundHeartbeat(final AtomicReference<Runnable> afterCancellationCallbackRef,
                                        final Callable<T> callable,
-                                       final Supplier<ActivityExecutionContext> activityContext) {
+                                       final ActivityExecutionContext activityContext) {
     final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
     try {
       // Schedule the cancellation handler.
       scheduledExecutor.scheduleAtFixedRate(() -> {
-        final CancellationHandler cancellationHandler = new CancellationHandler.TemporalCancellationHandler(activityContext.get());
+        final CancellationHandler cancellationHandler = new CancellationHandler.TemporalCancellationHandler(activityContext);
 
         cancellationHandler.checkAndHandleCancellation(() -> {
           // After cancellation cleanup.
@@ -331,7 +331,9 @@ public class TemporalUtils {
         } else {
           // Heartbeat thread failed to stop, we may leak a thread if this happens.
           // We should not fail the execution because of this.
-          log.info("Temporal heartbeating didn't stop within {} seconds, continuing the shutdown.", HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds());
+          log.info("Temporal heartbeating didn't stop within {} seconds, continuing the shutdown. (WorkflowId={}, ActivityId={}, RunId={})",
+              HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds(), activityContext.getInfo().getWorkflowId(),
+              activityContext.getInfo().getActivityId(), activityContext.getInfo().getRunId());
         }
       } catch (InterruptedException e) {
         // We got interrupted while attempting to shutdown the executor. Not much more we can do.

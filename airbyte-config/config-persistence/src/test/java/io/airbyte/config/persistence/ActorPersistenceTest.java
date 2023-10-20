@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import io.airbyte.config.ActorDefinitionVersion;
@@ -16,6 +15,17 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -39,7 +49,19 @@ class ActorPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException, IOException, JsonValidationException {
     truncateAllTables();
 
-    configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(
+        new ConfigRepository(
+            new ActorDefinitionServiceJooqImpl(database),
+            new CatalogServiceJooqImpl(database),
+            new ConnectionServiceJooqImpl(database),
+            new ConnectorBuilderServiceJooqImpl(database),
+            new DestinationServiceJooqImpl(database),
+            new HealthCheckServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database),
+            new OperationServiceJooqImpl(database),
+            new OrganizationServiceJooqImpl(database),
+            new SourceServiceJooqImpl(database),
+            new WorkspaceServiceJooqImpl(database)));
     standardSourceDefinition = MockData.publicSourceDefinition();
     standardDestinationDefinition = MockData.publicDestinationDefinition();
     configRepository.writeConnectorMetadata(standardSourceDefinition, MockData.actorDefinitionVersion()

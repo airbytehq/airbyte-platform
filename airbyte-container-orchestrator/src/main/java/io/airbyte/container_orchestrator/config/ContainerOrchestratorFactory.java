@@ -21,7 +21,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
-import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;

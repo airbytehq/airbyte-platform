@@ -23,27 +23,27 @@ class JobsFilter(
   jobType: JobTypeEnum?,
   status: JobStatusEnum?,
 ) :
-
   BaseFilter(createdAtStart, createdAtEnd, updatedAtStart, updatedAtEnd, limit, offset) {
+  val jobType: JobTypeEnum?
+  private val status: JobStatusEnum?
 
-    val jobType: JobTypeEnum?
-    private val status: JobStatusEnum?
+  init {
+    this.jobType = jobType
+    this.status = status
+  }
 
-    init {
-      this.jobType = jobType
-      this.status = status
+  /**
+   * Convert Airbyte API job status to config API job status.
+   */
+  @Nullable
+  fun getConfigApiStatus(): JobStatus? {
+    return if (status == null) {
+      null
+    } else {
+      JobStatus.fromValue(status.toString())
     }
-
-    /**
-     * Convert Airbyte API job status to config API job status.
-     */
-    @Nullable
-    fun getConfigApiStatus(): JobStatus? {
-      return if (status == null) {
-        null
-      } else JobStatus.fromValue(status.toString())
-    }
+  }
 //    @Nullable fun getJobType(): JobTypeEnum {
 //        return jobType
 //    }
-  }
+}

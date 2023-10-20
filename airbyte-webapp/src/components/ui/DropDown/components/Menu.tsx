@@ -3,6 +3,11 @@ import styled from "styled-components";
 
 import { DropDownOptionDataItem } from "./Option";
 
+/**
+ * @deprecated will be removed with react-select cleanup
+ * use the <ListBox /> component instead
+ * @see ListBox
+ */
 export const Menu = styled(components.Menu)<MenuProps<DropDownOptionDataItem, false>>`
   background: ${({ theme }) => theme.textColor};
 

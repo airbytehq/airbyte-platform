@@ -17,8 +17,8 @@ import {
  * Warms the react-query cache with data that is most likely needed for the given workspace
  */
 export const usePrefetchCloudWorkspaceData = () => {
-  const user = useCurrentUser();
   const workspaceId = useCurrentWorkspaceId();
+  const user = useCurrentUser();
 
   const queries = useQueries({
     queries: [

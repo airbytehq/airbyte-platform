@@ -20,7 +20,7 @@ configurations.all {
     resolutionStrategy {
         // Ensure that the versions defined in deps.toml are used
         // instead of versions from transitive dependencies
-        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.aws.java.sdk.sts
+        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts
     }
 }
 
@@ -43,9 +43,9 @@ dependencies {
     implementation libs.google.cloud.storage
     implementation libs.bundles.micronaut
     implementation libs.micronaut.cache.caffeine
-    implementation libs.flyway.core
     implementation libs.jooq
     implementation libs.s3
+    implementation libs.sts
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.4.0'
@@ -74,7 +74,6 @@ dependencies {
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
     implementation project(':airbyte-commons-with-dependencies')
-    implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-config:specs')
@@ -86,14 +85,6 @@ dependencies {
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-notification')
-    implementation(project(':airbyte-persistence:job-persistence')) {
-        // Temporary hack to avoid dependency conflicts
-        exclude group: 'io.micronaut'
-        exclude group: 'io.micronaut.flyway'
-        exclude group: 'io.micronaut.jaxrs'
-        exclude group: 'io.micronaut.security'
-        exclude group: 'io.micronaut.sql'
-    }
     implementation project(':airbyte-worker-models')
 
     runtimeOnly libs.javax.databind

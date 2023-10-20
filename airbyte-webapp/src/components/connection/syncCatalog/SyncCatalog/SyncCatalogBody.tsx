@@ -1,5 +1,6 @@
 import { Field, FieldProps, setIn } from "formik";
 import React, { useCallback } from "react";
+import { Virtuoso } from "react-virtuoso";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
@@ -52,21 +53,26 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
         />
       </div>
       {streams.length ? (
-        streams.map((streamNode) => (
-          <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>
-            {({ form }: FieldProps<FormikConnectionFormValues>) => (
-              <SyncCatalogRow
-                key={`schema.streams[${streamNode.id}].config`}
-                errors={form.errors}
-                namespaceDefinition={form.values.namespaceDefinition}
-                namespaceFormat={form.values.namespaceFormat}
-                prefix={form.values.prefix}
-                streamNode={streamNode}
-                updateStream={onUpdateStream}
-              />
-            )}
-          </Field>
-        ))
+        <Virtuoso
+          style={{ height: "40vh" }}
+          data={streams}
+          fixedItemHeight={50}
+          itemContent={(_index, streamNode) => (
+            <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>
+              {({ form }: FieldProps<FormikConnectionFormValues>) => (
+                <SyncCatalogRow
+                  key={`schema.streams[${streamNode.id}].config`}
+                  errors={form.errors}
+                  namespaceDefinition={form.values.namespaceDefinition}
+                  namespaceFormat={form.values.namespaceFormat}
+                  prefix={form.values.prefix}
+                  streamNode={streamNode}
+                  updateStream={onUpdateStream}
+                />
+              )}
+            </Field>
+          )}
+        />
       ) : (
         <SyncCatalogEmpty customText={isFilterApplied ? "connection.catalogTree.noMatchingStreams" : ""} />
       )}

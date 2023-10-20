@@ -7,13 +7,13 @@ type: object
 additionalProperties: true
 required:
   - destinationConfiguration
-  - catalog
 properties:
   destinationConfiguration:
     description: Integration specific blob. Must be a valid JSON string.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   catalog:
+    # NOTE: we may leave the catalog null when we invoke the normalization workflow activity, and only hydrate it after
     description: the configured airbyte catalog. this version of the catalog represents the schema of the data in json blobs in the raw tables.
     type: object
     existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog

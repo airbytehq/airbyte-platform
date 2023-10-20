@@ -36,7 +36,6 @@ import io.micronaut.security.rules.SecurityRule;
 @Controller("api/v1/permissions")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @ExecuteOn(AirbyteTaskExecutors.IO)
-@SuppressWarnings({"MissingJavadocType"})
 public class PermissionApiController implements PermissionApi {
 
   private final PermissionHandler permissionHandler;

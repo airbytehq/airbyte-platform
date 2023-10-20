@@ -23,11 +23,7 @@ export const ConnectorButton = <T extends ConnectorDefinition>({ definition, onC
       </Text>
 
       <span className={styles.supportLevel}>
-        <SupportLevelBadge
-          supportLevel={definition.supportLevel}
-          custom={definition.custom}
-          releaseStage={definition.releaseStage}
-        />
+        <SupportLevelBadge supportLevel={definition.supportLevel} custom={definition.custom} tooltip={false} />
       </span>
     </button>
   );

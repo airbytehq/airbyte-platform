@@ -5,10 +5,12 @@ import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types"
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 
 import { readStream, resolveManifest } from "../generated/ConnectorBuilderClient";
+import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
 import {
   ConnectorConfig,
   ConnectorManifest,
   ResolveManifestRequestBody,
+  ResolveManifest,
   StreamRead,
   StreamReadRequestBody,
 } from "../types/ConnectorBuilderClient";
@@ -45,12 +47,16 @@ export const useBuilderReadStream = (
 export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
   const requestOptions = useRequestOptions();
 
-  return useQuery(connectorBuilderKeys.resolve(params.manifest), () => resolveManifest(params, requestOptions), {
-    keepPreviousData: true,
-    cacheTime: 0,
-    retry: false,
-    enabled,
-  });
+  return useQuery<ResolveManifest, KnownExceptionInfo>(
+    connectorBuilderKeys.resolve(params.manifest),
+    () => resolveManifest(params, requestOptions),
+    {
+      keepPreviousData: true,
+      cacheTime: 0,
+      retry: false,
+      enabled,
+    }
+  );
 };
 
 export const useBuilderResolveManifestQuery = () => {

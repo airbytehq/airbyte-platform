@@ -4,9 +4,9 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useDestinationDefinitionVersion } from "core/api";
+import { useGetDestinationFromParams } from "area/connector/utils";
+import { useConnectionList, useDestinationDefinitionVersion, useGetDestinationDefinitionSpecification } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import {
   useDeleteDestination,
@@ -15,7 +15,6 @@ import {
 } from "hooks/services/useDestinationHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
@@ -23,8 +22,8 @@ import styles from "./DestinationSettings.module.scss";
 
 export const DestinationSettingsPage: React.FC = () => {
   const destination = useGetDestinationFromParams();
-
-  const { connections: connectionsWithDestination } = useConnectionList({ destinationId: [destination.destinationId] });
+  const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
+  const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(

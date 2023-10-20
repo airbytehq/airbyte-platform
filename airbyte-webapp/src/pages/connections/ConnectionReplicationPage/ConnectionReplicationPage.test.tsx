@@ -5,6 +5,7 @@ import { render as tlr, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
 import selectEvent from "react-select-event";
+import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
@@ -33,14 +34,6 @@ jest.mock("services/connector/SourceDefinitionService", () => ({
   useSourceDefinition: () => mockSourceDefinition,
 }));
 
-jest.mock("services/connector/SourceDefinitionSpecificationService", () => ({
-  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
-}));
-
-jest.mock("services/connector/DestinationDefinitionSpecificationService", () => ({
-  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
-}));
-
 jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
@@ -62,6 +55,8 @@ jest.mock("core/api", () => ({
   }),
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
+  useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
+  useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
@@ -73,7 +68,9 @@ describe("ConnectionReplicationPage", () => {
     <Suspense fallback={<div>I should not show up in a snapshot</div>}>
       <TestWrapper>
         <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
-          {children}
+          <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
+            {children}
+          </VirtuosoMockContext.Provider>
         </ConnectionEditServiceProvider>
       </TestWrapper>
     </Suspense>

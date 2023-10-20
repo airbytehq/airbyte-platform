@@ -1,6 +1,7 @@
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
+import { SchemaOf } from "yup";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -14,13 +15,13 @@ import { useUpdateCloudWorkspace } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 
-const ValidationSchema = yup.object().shape({
-  name: yup.string().required("form.empty.error"),
-});
-
 interface WorkspaceFormValues {
   name: string;
 }
+
+const ValidationSchema: SchemaOf<WorkspaceFormValues> = yup.object().shape({
+  name: yup.string().required("form.empty.error"),
+});
 
 export const GeneralSettingsSection: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -28,32 +29,32 @@ export const GeneralSettingsSection: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const selectWorkspace = useSelectWorkspace();
-  const workspace = useCurrentWorkspace();
-  const invalidateWorkspace = useInvalidateWorkspace(workspace.workspaceId);
+  const { workspaceId, name, email } = useCurrentWorkspace();
+  const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
 
-  const onSubmit = async (payload: WorkspaceFormValues) => {
-    const { workspaceId } = workspace;
+  const onSubmit = async ({ name }: WorkspaceFormValues) => {
     await updateCloudWorkspace({
       workspaceId,
-      name: payload.name,
+      name,
     });
+
     await invalidateWorkspace();
   };
 
   const onSuccess = () => {
     registerNotification({
-      id: "workspace_name_change_success",
-      text: formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameSuccess" }),
+      id: "workspace_settings_update_success",
+      text: formatMessage({ id: "settings.workspaceSettings.update.success" }),
       type: "success",
     });
   };
 
   const onError = (e: Error, { name }: WorkspaceFormValues) => {
-    trackError(e, { name });
+    trackError(e, { name, email });
 
     registerNotification({
-      id: "workspace_name_change_error",
-      text: formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameError" }),
+      id: "workspace_settings_update_error",
+      text: formatMessage({ id: "settings.workspaceSettings.update.error" }),
       type: "error",
     });
   };
@@ -72,7 +73,7 @@ export const GeneralSettingsSection: React.FC = () => {
       <Card withPadding>
         <Form<WorkspaceFormValues>
           defaultValues={{
-            name: workspace.name,
+            name,
           }}
           schema={ValidationSchema}
           onSubmit={onSubmit}

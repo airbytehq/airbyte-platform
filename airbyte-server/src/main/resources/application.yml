@@ -133,25 +133,25 @@ airbyte:
         memory-request: 25Mi
       # Default base sync values
       destination:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin:
         cpu-limit: 1
         cpu-request: 0.5
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       source:
-        cpu-limit: 1
-        cpu-request: 0.5
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout:
         cpu-limit: 1
         cpu-request: 0.5
@@ -159,25 +159,25 @@ airbyte:
         memory-request: 25Mi
       # API syncs
       source-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout-api:
         cpu-limit: 1
         cpu-request: 0.2
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator-api:
-        cpu-limit: 1
-        cpu-request: 0.3
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-api:
-        cpu-limit: 1
-        cpu-request: 0.2
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin-api:
         cpu-limit: 1
         cpu-request: 0.1
@@ -185,25 +185,25 @@ airbyte:
         memory-request: 25Mi
       # Database syncs resource override
       source-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       source-stdout-database:
         cpu-limit: 1
         cpu-request: 0.5
         memory-limit: 50Mi
         memory-request: 25Mi
       orchestrator-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 2Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
       destination-database:
-        cpu-limit: 2
-        cpu-request: 1
-        memory-limit: 2Gi
-        memory-request: 1Gi
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:2}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
       destination-stdin-database:
         cpu-limit: 2
         cpu-request: 0.5

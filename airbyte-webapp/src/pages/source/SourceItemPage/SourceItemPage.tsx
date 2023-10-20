@@ -10,9 +10,9 @@ import { StepsTypes } from "components/ConnectorBlocks";
 import LoadingPage from "components/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { useGetSourceFromParams } from "area/connector/utils";
 import { useSourceDefinitionVersion } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";

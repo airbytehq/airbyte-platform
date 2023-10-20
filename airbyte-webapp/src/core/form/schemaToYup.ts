@@ -87,34 +87,47 @@ export const buildYupFormForJsonSchema = (
     //   prop1: number.when(type == "A"), string.when(type == "B"), strip.when(type neither "A" nor "B")
     //   prop2: string.when(type == "A"), string.when(type == "B"), boolean.when(type == "C"), strip.when(type neither "A" nor "B" nor "C")
     // }
-    return yup.object().shape(
-      Object.fromEntries(
-        Array.from(flattenedKeys.entries()).map(([key, schemaByCondition]) => {
-          let mergedSchema = yup.mixed();
-          if (key === selectionKey) {
-            // Set the selection key to required, to ensure that the user has selected a condition
-            return [key, mergedSchema.required("form.empty.error")];
-          }
-          const allSelectionConstValuesWithThisKey = schemaByCondition.map(([constValue]) => constValue);
-          schemaByCondition.forEach(([selectionConstValue, conditionalSchema]) => {
+    const oneOfSchema = yup
+      .object()
+      .shape(
+        Object.fromEntries(
+          Array.from(flattenedKeys.entries()).map(([key, schemaByCondition]) => {
+            let mergedSchema = yup.mixed();
+            if (key === selectionKey) {
+              // do not validate the selectionKey itself, as the user can't change it so it doesn't matter
+              return [key, mergedSchema];
+            }
+            const allSelectionConstValuesWithThisKey = schemaByCondition.map(([constValue]) => constValue);
+            schemaByCondition.forEach(([selectionConstValue, conditionalSchema]) => {
+              mergedSchema = mergedSchema.when(selectionKey, {
+                is: selectionConstValue,
+                then: () => conditionalSchema,
+                otherwise: (schema) => schema,
+              });
+            });
             mergedSchema = mergedSchema.when(selectionKey, {
-              is: selectionConstValue,
-              then: () => conditionalSchema,
+              is: (val: JSONSchema7Type | undefined) =>
+                // if typeof val is actually undefined, we are dealing with an inconsistent configuration which doesn't have any value for the condition key.
+                // in this case, just keep the existing value to prevent data loss.
+                typeof val !== "undefined" && !allSelectionConstValuesWithThisKey.includes(val),
+              then: (schema) => schema.strip(),
               otherwise: (schema) => schema,
             });
-          });
-          mergedSchema = mergedSchema.when(selectionKey, {
-            is: (val: JSONSchema7Type | undefined) =>
-              // if typeof val is actually undefined, we are dealing with an inconsistent configuration which doesn't have any value for the condition key.
-              // in this case, just keep the existing value to prevent data loss.
-              typeof val !== "undefined" && !allSelectionConstValuesWithThisKey.includes(val),
-            then: (schema) => schema.strip(),
-            otherwise: (schema) => schema,
-          });
-          return [key, mergedSchema];
-        })
+            return [key, mergedSchema];
+          })
+        )
       )
-    );
+      // This prevents the object from being re-set on the values during yup cast - see https://github.com/jquense/yup/issues/350 for more details.
+      .default(undefined);
+
+    // If the field is hidden, the user cannot select a value for it, so don't make it required
+    // If the field is not required, it's OK to not have a value for it as well
+    if (formField.airbyte_hidden || !formField.isRequired) {
+      return oneOfSchema;
+    }
+
+    // Otherwise require that all oneOfs have an option selected, as the user has no way to unselect an option.
+    return oneOfSchema.required("form.empty.error");
   }
 
   switch (jsonSchema.type) {

@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class DestinationHelpers {
 
   public static JsonNode getTestDestinationJson() throws IOException {

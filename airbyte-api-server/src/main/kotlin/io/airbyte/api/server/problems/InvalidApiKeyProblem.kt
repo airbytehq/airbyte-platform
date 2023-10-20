@@ -16,8 +16,9 @@ import java.net.URI
 class InvalidApiKeyProblem : AbstractThrowableProblem() {
   @Serial
   private val serialVersionUID = 1L
-  private val TYPE = URI.create("$API_DOC_URL/reference/errors#invalid-api-key")
-  private val TITLE = "invalid-api-key"
+  private val type = URI.create("$API_DOC_URL/reference/errors#invalid-api-key")
+  private val title = "invalid-api-key"
+
   override fun getCause(): Exceptional? {
     return null
   }

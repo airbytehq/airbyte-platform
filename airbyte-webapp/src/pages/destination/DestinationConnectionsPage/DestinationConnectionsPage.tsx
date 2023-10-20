@@ -8,8 +8,8 @@ import { DestinationConnectionTable } from "components/destination/DestinationCo
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useGetDestinationFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList } from "core/api";
-import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -20,7 +20,8 @@ export const DestinationConnectionsPage = () => {
   const destination = useGetDestinationFromParams();
 
   // We load only connections attached to this destination to be shown in the connections grid
-  const { connections } = useConnectionList({ destinationId: [destination.destinationId] });
+  const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
+  const connections = connectionList?.connections ?? [];
 
   // We load all sources so the add source button has a pre-filled list of options.
   const { sources } = useSourceList();

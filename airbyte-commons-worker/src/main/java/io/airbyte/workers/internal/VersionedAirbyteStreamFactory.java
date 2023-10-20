@@ -70,6 +70,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private static final int BUFFER_READ_AHEAD_LIMIT = 32000;
   private static final int MESSAGES_LOOK_AHEAD_FOR_DETECTION = 10;
   private static final String TYPE_FIELD_NAME = "type";
+  private static final int MAXIMUM_CHARACTERS_ALLOWED = 5_000_000;
 
   // BASIC PROCESSING FIELDS
   protected final Logger logger;
@@ -87,6 +88,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   private boolean shouldDetectVersion = false;
 
+  private final boolean failTooLongRecords;
+
   /**
    * In some cases, we know the stream will never emit messages that need to be migrated. This is
    * particularly true for tests. This is a convenience method for those cases.
@@ -94,8 +97,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
-  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory() {
-    return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory());
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final boolean failTooLongRecords) {
+    return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
+        failTooLongRecords);
   }
 
   /**
@@ -104,24 +108,25 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
-  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(Logger logger,
-                                                                                       MdcScope.Builder mdcBuilder,
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final Logger logger,
+                                                                                       final MdcScope.Builder mdcBuilder,
                                                                                        final Optional<Class<? extends RuntimeException>> clazz,
-                                                                                       long maxMemory) {
-    AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
+                                                                                       final long maxMemory,
+                                                                                       final boolean failTooLongRecords) {
+    final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
         List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
     provider.initialize();
 
-    AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
+    final AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
     airbyteMessageMigrator.initialize();
-    ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
+    final ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
     configuredAirbyteCatalogMigrator.initialize();
-    AirbyteProtocolVersionedMigratorFactory fac =
+    final AirbyteProtocolVersionedMigratorFactory fac =
         new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
 
     return new VersionedAirbyteStreamFactory<>(provider, fac, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, Optional.empty(), logger,
-        mdcBuilder, clazz, maxMemory);
+        mdcBuilder, clazz, maxMemory, failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -129,18 +134,20 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean failTooLongRecords) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
-        Runtime.getRuntime().maxMemory());
+        Runtime.getRuntime().maxMemory(), failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean failTooLongRecords) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, DEFAULT_LOGGER, DEFAULT_MDC_SCOPE, exceptionClass,
-        DEFAULT_MEMORY_LIMIT);
+        DEFAULT_MEMORY_LIMIT, failTooLongRecords);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -150,7 +157,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Logger logger,
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final long maxMemory) {
+                                       final long maxMemory,
+                                       final boolean failTooLongRecords) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
@@ -162,6 +170,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     this.migratorFactory = migratorFactory;
     this.configuredAirbyteCatalog = configuredAirbyteCatalog;
     this.initializeForProtocolVersion(protocolVersion);
+    this.failTooLongRecords = failTooLongRecords;
   }
 
   /**
@@ -182,7 +191,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     return addLineReadLogic(bufferedReader);
   }
 
-  private void detectAndInitialiseMigrators(BufferedReader bufferedReader) {
+  private void detectAndInitialiseMigrators(final BufferedReader bufferedReader) {
     if (shouldDetectVersion) {
       final Optional<Version> versionMaybe;
       try {
@@ -211,17 +220,13 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
           if (exceptionClass.isPresent()) {
             final long messageSize = str.getBytes(StandardCharsets.UTF_8).length;
             if (messageSize > maxMemory * MAX_SIZE_RATIO) {
-              try {
-                final String errorMessage = String.format(
-                    "Airbyte has received a message at %s UTC which is larger than %s (size: %s). "
-                        + "The sync has been failed to prevent running out of memory.",
-                    DateTime.now(),
-                    humanReadableByteCountSI(maxMemory),
-                    humanReadableByteCountSI(messageSize));
-                throw exceptionClass.get().getConstructor(String.class).newInstance(errorMessage);
-              } catch (final InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                throw new RuntimeException(e);
-              }
+              final String errorMessage = String.format(
+                  "Airbyte has received a message at %s UTC which is larger than %s (size: %s). "
+                      + "The sync has been failed to prevent running out of memory.",
+                  DateTime.now(),
+                  humanReadableByteCountSI(maxMemory),
+                  humanReadableByteCountSI(messageSize));
+              throwExceptionClass(errorMessage);
             }
           }
         })
@@ -339,7 +344,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
     // put back the deserializer.
-    Optional<AirbyteMessage> m = deserializer.deserialize(line);
+    Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
       m = BasicAirbyteMessageValidator.validate(m.get());
@@ -361,9 +366,38 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     //
     // When Connector Ops rectifies this, we can remove this.
     try (final var mdcScope = containerLogMdcBuilder.build()) {
-      logger.info(line);
+      if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
+        MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.TOO_LONG_LINES_DISTRIBUTION, line.length());
+        LOGGER.error("[LINE TOO BIG] line is too big with size: " + line.length());
+        if (failTooLongRecords) {
+          if (exceptionClass.isPresent()) {
+            throwExceptionClass("One record is too big and can't be processed, the sync will be failed");
+          } else {
+            throw new IllegalStateException("Record is too long, the size is: " + line.length());
+          }
+        }
+      } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
+        logger.debug(line);
+        throw new IllegalStateException("Malformated log record line");
+      } else {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
+        logger.info(line);
+      }
+    } catch (final Exception e) {
+      throw e;
     }
     return m.stream();
+  }
+
+  private void throwExceptionClass(final String message) {
+    try {
+      throw exceptionClass.get().getConstructor(String.class)
+          .newInstance(message);
+    } catch (final InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   protected Stream<AirbyteMessage> upgradeMessage(final AirbyteMessage msg) {

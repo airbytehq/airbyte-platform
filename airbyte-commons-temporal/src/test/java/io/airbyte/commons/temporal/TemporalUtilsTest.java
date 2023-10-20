@@ -6,17 +6,12 @@ package io.airbyte.commons.temporal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.temporal.stubs.TestWorkflow.TestActivityImplTest;
-import io.airbyte.commons.temporal.stubs.TestWorkflow.TestWorkflowImpl;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityCancellationType;
 import io.temporal.activity.ActivityExecutionContext;
@@ -184,93 +179,6 @@ class TemporalUtilsTest {
     assertEquals(0, timesReachedEnd.get());
   }
 
-  @Test
-  void testHeartbeatWithContext() throws InterruptedException {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
-    final TestWorkflowEnvironment testEnv = TestWorkflowEnvironment.newInstance();
-
-    final Worker worker = testEnv.newWorker(TASK_QUEUE);
-
-    worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
-    final WorkflowClient client = testEnv.getWorkflowClient();
-
-    final CountDownLatch latch = new CountDownLatch(2);
-    final Runnable cancellationCallback = mock(Runnable.class);
-
-    worker.registerActivitiesImplementations(new TestActivityImplTest(() -> {
-      final ActivityExecutionContext context = Activity.getExecutionContext();
-      temporalUtils.withBackgroundHeartbeat(
-          new AtomicReference<>(cancellationCallback),
-          // TODO (itaseski) figure out how to decrease heartbeat intervals using reflection
-          () -> {
-            latch.await();
-            return new Object();
-          },
-          () -> {
-            latch.countDown();
-            return context;
-          });
-    }));
-
-    testEnv.start();
-
-    final io.airbyte.commons.temporal.stubs.TestWorkflow testWorkflow = client.newWorkflowStub(
-        io.airbyte.commons.temporal.stubs.TestWorkflow.class,
-        WorkflowOptions.newBuilder()
-            .setTaskQueue(TASK_QUEUE)
-            .build());
-
-    // use async execution to avoid blocking the test thread
-    WorkflowClient.start(testWorkflow::execute);
-
-    assertTrue(latch.await(25, TimeUnit.SECONDS));
-    // The activity is expected to succeed, we should never call the cancellation callback.
-    verify(cancellationCallback, never()).run();
-
-  }
-
-  @Test
-  void testHeartbeatWithContextAndCallbackRef() throws InterruptedException {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
-    final TestWorkflowEnvironment testEnv = TestWorkflowEnvironment.newInstance();
-
-    final Worker worker = testEnv.newWorker(TASK_QUEUE);
-
-    worker.registerWorkflowImplementationTypes(TestWorkflowImpl.class);
-    final WorkflowClient client = testEnv.getWorkflowClient();
-
-    final CountDownLatch latch = new CountDownLatch(2);
-
-    worker.registerActivitiesImplementations(new TestActivityImplTest(() -> {
-      final ActivityExecutionContext context = Activity.getExecutionContext();
-      temporalUtils.withBackgroundHeartbeat(
-          // TODO (itaseski) figure out how to decrease heartbeat intervals using reflection
-          new AtomicReference<>(() -> {}),
-          () -> {
-            latch.await();
-            return new Object();
-          },
-          () -> {
-            latch.countDown();
-            return context;
-          });
-    }));
-
-    testEnv.start();
-
-    final io.airbyte.commons.temporal.stubs.TestWorkflow testWorkflow = client.newWorkflowStub(
-        io.airbyte.commons.temporal.stubs.TestWorkflow.class,
-        WorkflowOptions.newBuilder()
-            .setTaskQueue(TASK_QUEUE)
-            .build());
-
-    // use async execution to avoid blocking the test thread
-    WorkflowClient.start(testWorkflow::execute);
-
-    assertTrue(latch.await(25, TimeUnit.SECONDS));
-
-  }
-
   @WorkflowInterface
   public interface TestWorkflow {
 
@@ -411,7 +319,7 @@ class TemporalUtilsTest {
                 return null;
               }
             },
-            () -> context);
+            context);
         timesReachedEnd.incrementAndGet();
         LOGGER.info(BEFORE, ACTIVITY1);
       }

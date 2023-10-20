@@ -40,7 +40,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-@SuppressWarnings("MissingJavadocType")
 @MicronautTest
 class StreamStatusesRepositoryTest {
 

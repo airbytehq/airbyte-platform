@@ -11,7 +11,6 @@ import io.airbyte.oauth.flows.BaseOAuthFlowTest;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("MissingJavadocType")
 public class FacebookMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

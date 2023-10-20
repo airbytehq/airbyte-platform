@@ -6,8 +6,10 @@ import { MissingConfigError, useConfig } from "config";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
 import { RequestAuthMiddleware } from "core/services/auth";
 import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useAuth } from "packages/firebaseReact";
 
+import { KeycloakService } from "./auth/KeycloakService";
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
 
 /**
@@ -16,10 +18,19 @@ import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
  * and also adds all overrides of hooks/services
  */
 const AppServicesProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  // The keycloak service is behind a flag until it's ready to test on cloud
+  const [showSsoLogin] = useLocalStorage("airbyte_show-sso-login", false);
+
   return (
     <ServicesProvider>
       <FirebaseSdkProvider>
-        <ServiceOverrides>{children}</ServiceOverrides>
+        {showSsoLogin ? (
+          <KeycloakService>
+            <ServiceOverrides>{children}</ServiceOverrides>
+          </KeycloakService>
+        ) : (
+          <ServiceOverrides>{children}</ServiceOverrides>
+        )}
       </FirebaseSdkProvider>
     </ServicesProvider>
   );

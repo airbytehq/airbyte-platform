@@ -14,10 +14,10 @@ import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { links } from "core/utils/links";
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
+import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
+import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
@@ -51,13 +51,11 @@ const roundConnectorCount = (connectors: Record<string, SourceDefinitionRead | D
 };
 
 /**
- * Gets all available connectors, filter out the ones that should not get new
- * connections (via the {@code useAvailableConnectorDefintions} hook) and convert
- * them to a map by id, to access them faster.
+ * Gets all available connectors and convert them to a map by id, to access them faster.
  */
 export const useConnectorSpecificationMap = (): ConnectorSpecificationMap => {
-  const sourceDefinitionsList = useAvailableSourceDefinitions();
-  const destinationDefinitionsList = useAvailableDestinationDefinitions();
+  const { sourceDefinitions: sourceDefinitionsList } = useSourceDefinitionList();
+  const { destinationDefinitions: destinationDefinitionsList } = useDestinationDefinitionList();
 
   const sourceDefinitions = useMemo(
     () =>

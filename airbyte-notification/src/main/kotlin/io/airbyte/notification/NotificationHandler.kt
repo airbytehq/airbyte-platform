@@ -8,11 +8,13 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 enum class NotificationType {
-  WEBHOOK, CUSTOMERIO
+  WEBHOOK,
+  CUSTOMERIO,
 }
 
 enum class NotificationEvent {
-  ON_NON_BREAKING_CHANGE, ON_BREAKING_CHANGE
+  ON_NON_BREAKING_CHANGE,
+  ON_BREAKING_CHANGE,
 }
 
 @Singleton
@@ -26,7 +28,12 @@ open class NotificationHandler(
   /**
    * Send a notification with a subject and a message if a configuration is present
    */
-  open fun sendNotification(connectionId: UUID, title: String, message: String, notificationTypes: List<NotificationType>) {
+  open fun sendNotification(
+    connectionId: UUID,
+    title: String,
+    message: String,
+    notificationTypes: List<NotificationType>,
+  ) {
     notificationTypes.forEach { notificationType ->
       runCatching {
         if (maybeWebhookConfigFetcher != null && maybeWebhookNotificationSender != null && notificationType == NotificationType.WEBHOOK) {
@@ -44,7 +51,12 @@ open class NotificationHandler(
     }
   }
 
-  open fun sendNotification(connectionId: UUID, subject: String, message: String, notificationEvent: NotificationEvent) {
+  open fun sendNotification(
+    connectionId: UUID,
+    subject: String,
+    message: String,
+    notificationEvent: NotificationEvent,
+  ) {
     val notificationItemWithCustomerIoEmailConfig = maybeWorkspaceNotificationConfigFetcher?.fetchNotificationConfig(connectionId, notificationEvent)
 
     var notificationItem = notificationItemWithCustomerIoEmailConfig?.getNotificationItem()
@@ -53,9 +65,10 @@ open class NotificationHandler(
         if (maybeWebhookNotificationSender != null &&
           notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK
         ) {
-          val webhookConfig = WebhookConfig(
-            notificationItem!!.slackConfiguration!!.webhook,
-          )
+          val webhookConfig =
+            WebhookConfig(
+              notificationItem!!.slackConfiguration!!.webhook,
+            )
           maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
           MetricClientFactory.getMetricClient().count(
             OssMetricsRegistry.NOTIFICATIONS_SENT,

@@ -17,7 +17,6 @@ import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
-import io.airbyte.workers.internal.NamespacingMapper.NamespaceAndStreamName;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +38,7 @@ class NamespacingMapperTest {
       Field.of(FIELD_NAME, JsonSchemaType.STRING));
   private AirbyteMessage recordMessage;
   private AirbyteMessage stateMessage;
-  private Map<NamespaceAndStreamName, NamespaceAndStreamName> destinationToSourceNamespaceAndStreamName;
+  private Map<NamespaceStreamName, NamespaceStreamName> destinationToSourceNamespaceAndStreamName;
 
   private static AirbyteMessage createRecordMessage() {
     final AirbyteMessage message = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, BLUE);
@@ -241,8 +240,8 @@ class NamespacingMapperTest {
 
     final AirbyteMessage actualMessage = mapper.mapMessage(originalMessage);
     verify(destinationToSourceNamespaceAndStreamName).put(
-        new NamespaceAndStreamName(expectedNamespace, OUTPUT_PREFIX + STREAM_NAME),
-        new NamespaceAndStreamName(INPUT_NAMESPACE, STREAM_NAME));
+        new NamespaceStreamName(expectedNamespace, OUTPUT_PREFIX + STREAM_NAME),
+        new NamespaceStreamName(INPUT_NAMESPACE, STREAM_NAME));
     assertEquals(expectedMessage, actualMessage);
   }
 
@@ -282,8 +281,8 @@ class NamespacingMapperTest {
     originalMessage.getState().getStream().getStreamDescriptor().withNamespace(DESTINATION_NAMESPACE);
     originalMessage.getState().getStream().getStreamDescriptor().withName(OUTPUT_PREFIX + STREAM_NAME);
 
-    when(destinationToSourceNamespaceAndStreamName.get(new NamespaceAndStreamName(DESTINATION_NAMESPACE, OUTPUT_PREFIX + STREAM_NAME)))
-        .thenReturn(new NamespaceAndStreamName(INPUT_NAMESPACE, STREAM_NAME));
+    when(destinationToSourceNamespaceAndStreamName.get(new NamespaceStreamName(DESTINATION_NAMESPACE, OUTPUT_PREFIX + STREAM_NAME)))
+        .thenReturn(new NamespaceStreamName(INPUT_NAMESPACE, STREAM_NAME));
     final AirbyteMessage actualMessage = mapper.revertMap(originalMessage);
 
     final AirbyteMessage expectedMessage = Jsons.clone(stateMessage);

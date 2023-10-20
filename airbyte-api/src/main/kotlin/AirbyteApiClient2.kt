@@ -51,7 +51,6 @@ class AirbyteApiClient2
     policy: RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults(),
     httpClient: OkHttpClient = OkHttpClient(),
   ) {
-
     val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
     val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
     val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)

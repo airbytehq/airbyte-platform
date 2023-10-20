@@ -16,7 +16,6 @@ import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 
-@SuppressWarnings("MissingJavadocType")
 public class CheckConnectionDestinationSystemErrorWorkflow implements CheckConnectionWorkflow {
 
   @Override

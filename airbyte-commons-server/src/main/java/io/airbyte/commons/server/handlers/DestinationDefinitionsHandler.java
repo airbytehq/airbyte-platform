@@ -33,9 +33,9 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -62,7 +62,7 @@ import java.util.stream.Stream;
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod", "LineLength"})
+@SuppressWarnings({"PMD.AvoidCatchingNPE", "LineLength"})
 @Singleton
 public class DestinationDefinitionsHandler {
 

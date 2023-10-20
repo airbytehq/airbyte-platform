@@ -29,11 +29,11 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.persistence.job.ResourceRequirementsUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
@@ -135,7 +135,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                   () -> context);
           return temporalAttemptExecution.get();
         },
-        () -> context);
+        context);
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -179,7 +179,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
       final var protocolVersion =
           launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
       final AirbyteStreamFactory streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty());
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), false);
 
       return new DefaultCheckConnectionWorker(integrationLauncher, connectorConfigUpdater, streamFactory);
     };

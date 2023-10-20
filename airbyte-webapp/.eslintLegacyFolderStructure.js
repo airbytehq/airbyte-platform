@@ -2,11 +2,7 @@
 module.exports = [
   // src/services
   "src/services/connector/SourceDefinitionService.ts",
-  "src/services/connector/ConnectorDefinitions.ts",
   "src/services/connector/DestinationDefinitionService.ts",
-  "src/services/connector/DestinationDefinitionSpecificationService.tsx",
-  "src/services/connector/SourceDefinitionSpecificationService.tsx",
-  "src/services/connector/ConnectorService.ts",
   "src/services/connectorBuilder/ConnectorBuilderTestInputService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderStateService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderLocalStorageService.tsx",
@@ -14,7 +10,6 @@ module.exports = [
   "src/services/useInitService.tsx",
   "src/services/useDefaultRequestMiddlewares.tsx",
   "src/services/Scope.ts",
-  "src/services/KeycloakAuthService.tsx",
   // src/hooks
   "src/hooks/useDeleteModal.tsx",
   "src/hooks/useTypesafeReducer.ts",
@@ -22,10 +17,6 @@ module.exports = [
   "src/hooks/connection/useDestinationNamespace.ts",
   "src/hooks/connection/useSchemaChanges.ts",
   "src/hooks/theme/useAirbyteTheme.tsx",
-  "src/hooks/domain/connector/useGetDestinationFromParams.tsx",
-  "src/hooks/domain/connector/useAvailableDestinationDefinitions.ts",
-  "src/hooks/domain/connector/useAvailableSourceDefinitions.ts",
-  "src/hooks/domain/connector/useGetSourceFromParams.tsx",
   "src/hooks/services/Health/HealthPollService.tsx",
   "src/hooks/services/Health/index.tsx",
   "src/hooks/services/useRequestConnector.tsx",

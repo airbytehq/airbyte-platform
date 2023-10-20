@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.temporal.scheduling.state.listener;
 
-import java.util.LinkedList;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,22 +23,13 @@ public class TestStateListener implements WorkflowStateChangedListener {
 
   @Override
   public Queue<ChangedStateEvent> events(final UUID testId) {
-    if (!events.containsKey(testId)) {
-      return new ConcurrentLinkedQueue<>();
-    }
-
-    return events.get(testId);
+    return events.getOrDefault(testId, new ConcurrentLinkedQueue<>());
   }
 
   @Override
   public void addEvent(final UUID testId, final ChangedStateEvent event) {
-    Optional.ofNullable(events.get(testId))
-        .or(() -> Optional.of(new LinkedList<>()))
-        .stream()
-        .forEach((eventQueue) -> {
-          eventQueue.add(event);
-          events.put(testId, eventQueue);
-        });
+    events.computeIfAbsent(testId, k -> new ConcurrentLinkedQueue<>()).add(event);
+
   }
 
 }

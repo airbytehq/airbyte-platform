@@ -34,7 +34,9 @@ class HeartbeatMonitorTest {
 
   @Test
   void testNeverBeat() {
-    Assertions.assertThat(heartbeatMonitor.isBeating()).isEmpty();
+    when(nowSupplier.get()).thenReturn(THIRTY_SECONDS_BEFORE).thenReturn(NOW);
+    heartbeatMonitor = new HeartbeatMonitor(HEART_BEAT_FRESH_DURATION, nowSupplier);
+    Assertions.assertThat(heartbeatMonitor.isBeating()).hasValue(false);
   }
 
   @Test

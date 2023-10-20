@@ -3,7 +3,6 @@ import React, { memo, useCallback, useMemo } from "react";
 import { useToggle } from "react-use";
 
 import { ConnectionFormValues, SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig";
-import { DropDownOptionDataItem } from "components/ui/DropDown";
 
 import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream } from "core/domain/catalog";
 import { traverseSchemaToField } from "core/domain/catalog/traverseSchemaToField";
@@ -72,13 +71,11 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   );
 
   const onSelectSyncMode = useCallback(
-    (data: DropDownOptionDataItem) => {
+    (syncMode: SyncModeValue) => {
       if (!streamNode.config || !streamNode.stream) {
         return;
       }
-      // todo: Remove once new stream table design is released. The old dropdown types data.value as any, hence the cast here.
-      const syncModes = data.value as SyncModeValue;
-      const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncModes);
+      const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncMode);
       updateStreamWithConfig(updatedConfig);
     },
     [streamNode, updateStreamWithConfig]
@@ -149,13 +146,14 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   const shouldDefinePk = stream?.sourceDefinedPrimaryKey?.length === 0 && pkRequired;
   const shouldDefineCursor = !stream?.sourceDefinedCursor && cursorRequired;
 
-  const availableSyncModes = useMemo(
+  const availableSyncModes: SyncModeValue[] = useMemo(
     () =>
       SUPPORTED_MODES.filter(
         ([syncMode, destinationSyncMode]) =>
           stream?.supportedSyncModes?.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode)
       ).map(([syncMode, destinationSyncMode]) => ({
-        value: { syncMode, destinationSyncMode },
+        syncMode,
+        destinationSyncMode,
       })),
     [stream?.supportedSyncModes, supportedDestinationSyncModes]
   );

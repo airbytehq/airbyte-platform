@@ -28,7 +28,6 @@ import java.time.OffsetDateTime;
  * testing in dependents.
  */
 @Singleton
-@SuppressWarnings("MissingJavadocMethod")
 public class StreamStatusesMapper {
 
   // API to Domain

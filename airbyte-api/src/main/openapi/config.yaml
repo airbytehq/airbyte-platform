@@ -862,6 +862,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectRead"
+  /v1/connector_documentation/get:
+    post:
+      tags:
+        - connector_documentation
+      summary: Get the documentation for a connector
+      operationId: getConnectorDocumentation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorDocumentationRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorDocumentationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/create:
     post:
       tags:
@@ -1919,6 +1942,98 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/sync_progress:
+    post:
+      tags:
+        - connection
+      summary: Get progress information of the current sync of a connection
+      operationId: getConnectionSyncProgress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionSyncProgressRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/history/uptime:
+    post:
+      tags:
+        - connection
+      summary: Get the uptime history of a connection
+      operationId: getConnectionUptimeHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionUptimeHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionUptimeHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/history/data:
+    post:
+      tags:
+        - connection
+      summary: Get the data history of a connection
+      operationId: getConnectionDataHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionDataHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionDataHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/stream_history:
+    post:
+      tags:
+        - connection
+      summary: Get the history of a connection
+      operationId: getConnectionStreamHistory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStreamHistoryRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStreamHistoryRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connections/get:
     post:
       tags:
@@ -1961,6 +2076,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectionReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/apply_schema_changes:
+    post:
+      tags:
+        - connection
+      summary: Auto propagate the change on a catalog to a catalog saved in the DB for the given connection.
+      operationId: applySchemaChangeForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionAutoPropagateSchemaChange"
+        required: true
+      responses:
+        "204":
+          description: The schema was properly auto propagated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionAutoPropagateResult"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -2171,6 +2309,37 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/get_task_queue_name:
+    post:
+      tags:
+        - connection
+        - internal
+      summary: Gets the string task queue name for a connection and job type.
+      operationId: getTaskQueueName
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - temporalJobType
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                temporalJobType:
+                  description: Raw stringified name of the TemporalJobType.
+                  type: string
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskQueueNameRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/operations/check:
     post:
       tags:
@@ -2718,6 +2887,41 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/job_success_with_attempt_number:
+    post:
+      tags:
+        - jobs
+        - attempt
+        - internal
+      summary: For worker to mark an attempt as successful.
+      operationId: jobSuccessWithAttemptNumber
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+                - connectionId
+                - standardSyncOutput
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                standardSyncOutput:
+                  type: object
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
   /v1/jobs/list:
     post:
       tags:
@@ -2964,6 +3168,109 @@ paths:
                 $ref: "#/components/schemas/SyncJobInputRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/fail_non_terminal:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Fails all non-terminal jobs for a connection
+      operationId: failNonTerminalJobs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+  /v1/jobs/reportJobStart:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: For worker to report when a job starts.
+      operationId: reportJobStart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - connectionId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/job_failure:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Marks a job as failed
+      operationId: jobFailure
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+                - connectionId
+                - reason
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                reason:
+                  type: string
+                  description: Reason of the failure
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/delete_stream_reset_records:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Deletes all stream reset records for the specified job
+      operationId: deleteStreamResetRecordsForJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - connectionId
+                - jobId
+              properties:
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "204":
+          description: Successfully delete stream reset records for job
 
   # USERS
   /v1/users/create:
@@ -3032,6 +3339,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/users/get_or_create_by_auth_id:
+    post:
+      tags:
+        - user
+      summary: Find Airbyte user by auth id. If not existed, will create a user.
+      operationId: getOrCreateUserByAuthId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAuthIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserGetOrCreateByAuthIdResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3116,7 +3447,7 @@ paths:
               $ref: "#/components/schemas/OrganizationIdRequestBody"
       responses:
         "200":
-          description: Successfully retrieved workspaces under the given org id.
+          description: Successfully retrieved users under the given org id.
           content:
             application/json:
               schema:
@@ -3250,10 +3581,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/permissions/delete:
     post:
       tags:
@@ -3269,6 +3603,8 @@ paths:
       responses:
         "204":
           description: The resource was deleted successfully.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3348,6 +3684,37 @@ paths:
               schema:
                 type: string
                 format: binary
+  /v1/attempt/create_new_attempt_number:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For worker to create a new attempt number.
+      operationId: createNewAttemptNumber
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                title: CreateNewAttemptNumberResponse
+                type: object
+                required:
+                  - attemptNumber
+                properties:
+                  attemptNumber:
+                    $ref: "#/components/schemas/AttemptNumber"
   /v1/attempt/set_workflow_in_attempt:
     post:
       tags:
@@ -3408,6 +3775,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/fail:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: Fails an attempt with a failure summary and if provided a sync output.
+      operationId: failAttempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+                - attemptNumber
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                attemptNumber:
+                  $ref: "#/components/schemas/AttemptNumber"
+                failureSummary:
+                  description: Attempt failure summary serialized as a raw object
+                  type: object
+                standardSyncOutput:
+                  description: Sync output serialized as a raw object
+                  type: object
+        required: true
+      responses:
+        "204":
+          description: Successfully failed attempt
   /v1/attempt/get_combined_stats:
     post:
       tags:
@@ -3605,6 +4002,41 @@ paths:
                 $ref: "#/components/schemas/RetryStateRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/jobs/did_previous_job_succeed:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Returns whether the job preceding the specified job succeeded
+      operationId: didPreviousJobSucceed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionJobRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BooleanRead"
+  /v1/jobs/persist_cancellation:
+    post:
+      summary: Persists the cancellation of a job and kicks off any post processing (e.g notifications).
+      tags:
+        - jobs
+        - internal
+      operationId: persistJobCancellation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersistCancelJobRequestBody"
+      responses:
+        "204":
+          description: Successfully persisted the job cancellation.
   /v1/organizations/get:
     post:
       summary: Get an organization info
@@ -3677,6 +4109,26 @@ paths:
       responses:
         "204":
           description: Successfully deleted organization.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/list_by_user_id:
+    post:
+      summary: List organizations by a given user id. The function also supports searching by keyword and pagination.
+      tags:
+        - organization
+      operationId: listOrganizationsByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListOrganizationsByUserRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved organizations by given user id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
 
@@ -4174,6 +4626,29 @@ components:
       properties:
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
+    # Connector Documentation
+    ConnectorDocumentationRequestBody:
+      type: object
+      required:
+        - actorType
+        - actorDefinitionId
+        - workspaceId
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        actorId:
+          $ref: "#/components/schemas/ActorId"
+    ConnectorDocumentationRead:
+      type: object
+      required:
+        - doc
+      properties:
+        doc:
+          type: string
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -5060,6 +5535,36 @@ components:
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    ConnectionUptimeHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
+    ConnectionDataHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
+    ConnectionStreamHistoryRequestBody:
+      type: object
+      required:
+        - connectionId
+        - timezone
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        timezone:
+          type: string
     ConnectionStream:
       type: object
       required:
@@ -5409,6 +5914,99 @@ components:
           type: boolean
         failureType:
           $ref: "#/components/schemas/FailureType"
+    ConnectionSyncProgressRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionSyncProgressReadItem"
+    ConnectionSyncProgressReadItem:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+        - recordsExtracted
+        - recordsLoaded
+        - syncTimeElapsed
+        - progressPercentage
+        - lastCommittedTimestamp
+        - lastCursorValue
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        recordsExtracted:
+          type: integer
+          format: int64
+        recordsLoaded:
+          type: integer
+          format: int64
+        syncTimeElapsed:
+          type: integer
+          format: int64
+        progressPercentage:
+          type: integer
+          format: int32
+        lastCommittedTimestamp:
+          type: integer
+          format: int64
+        lastCursorValue:
+          type: string
+    ConnectionUptimeHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionSyncResultRead"
+    ConnectionSyncResultRead:
+      type: object
+      required:
+        - timestamp
+        - status
+        - stream
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        stream:
+          type: string
+    ConnectionDataHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionDataHistoryReadItem"
+    ConnectionDataHistoryReadItem:
+      type: object
+      required:
+        - timestamp
+        - bytes
+      properties:
+        timestamp:
+          type: integer
+          format: int
+        bytes:
+          type: integer
+          format: int
+    ConnectionStreamHistoryRead:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionStreamHistoryReadItem"
+    ConnectionStreamHistoryReadItem:
+      type: object
+      required:
+        - timestamp
+        - stream
+        - namespace
+        - volume
+      properties:
+        timestamp:
+          type: integer
+          format: int
+        stream:
+          type: string
+        namespace:
+          type: string
+        volume:
+          type: integer
+          format: int
     SchemaChange:
       enum:
         - no_change
@@ -5531,6 +6129,32 @@ components:
         - source
         - destination
         - customformat
+    ConnectionAutoPropagateSchemaChange:
+      description: Input of the schema propagation, with the catalog to be propagated and the connection to propagate to
+      type: object
+      required:
+        - catalog
+        - catalogId
+        - connectionId
+        - workspaceId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/AirbyteCatalog"
+        catalogId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+    ConnectionAutoPropagateResult:
+      description: The result of schema propagation for a given connection, with the diff that was applied via auto-propagation.
+      type: object
+      properties:
+        propagatedDiff:
+          $ref: "#/components/schemas/CatalogDiff"
     # Operations
     OperationId:
       type: string
@@ -5700,6 +6324,121 @@ components:
     OrganizationId:
       type: string
       format: uuid
+    OrganizationIdRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+    OrganizationUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
+    OrganizationCreateRequestBody:
+      type: object
+      required:
+        - userId
+        - organizationName
+      properties:
+        userId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        email:
+          type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
+    OrganizationRead:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - email
+        - pba
+        - orgLevelBilling
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        email:
+          type: string
+        pba:
+          type: boolean
+        orgLevelBilling:
+          type: boolean
+        ssoRealm:
+          type: string
+    OrganizationReadList:
+      type: object
+      required:
+        - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationRead"
+    ListOrganizationsByUserRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        keyword:
+          type: string
+    OrganizationUserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationUserRead"
+    OrganizationUserRead:
+      type: object
+      required:
+        - userId
+        - email
+        - permissionId
+        - permissionType
+        - organizationId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
 
     # PERMISSIONS
     PermissionIdRequestBody:
@@ -5716,6 +6455,10 @@ components:
         - permissionType
         - userId
       properties:
+        permissionId:
+          type: string
+          format: uuid
+          description: This is a temporary and optional field just for dual write purpose during the data migration.
         permissionType:
           $ref: "#/components/schemas/PermissionType"
         userId:
@@ -5775,6 +6518,7 @@ components:
         - organization_admin # Permission to update organization settings and manage user roles in an organization and all permissions below
         - organization_editor # Permission to create, read, delete, and edit all workspaces within an organization
         - organization_reader # Permission to read all workspaces within an organization
+        - organization_member # Permission to read organization basic information, not having permissions to any workspaces within an organization
         - workspace_owner # TODO: remove this old enum. It is equivalent to `workspace_admin`.
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
@@ -5920,12 +6664,9 @@ components:
       type: object
       required:
         - authUserId
-        - authProvider
       properties:
         authUserId:
           type: string
-        authProvider:
-          $ref: "#/components/schemas/AuthProvider"
 
     UserCreate:
       type: object
@@ -5935,6 +6676,10 @@ components:
         - authProvider
         - email
       properties:
+        userId:
+          description: User ID. This is a temporary and optional field just for dual write purpose during the data migration.
+          type: string
+          format: uuid
         name:
           description: Caption name for the user
           type: string
@@ -5951,6 +6696,17 @@ components:
           type: string
           format: email
         news:
+          type: boolean
+          default: false
+
+    UserGetOrCreateByAuthIdResponse:
+      type: object
+      required:
+        - userRead
+      properties:
+        userRead:
+          $ref: "#/components/schemas/UserRead"
+        newUserCreated:
           type: boolean
           default: false
 
@@ -6766,6 +7522,10 @@ components:
           $ref: "#/components/schemas/ActorDefinitionId"
         actorType:
           $ref: "#/components/schemas/ActorType"
+    ActorId:
+      description: A unique identifier for an actor.
+      type: string
+      format: uuid
     NormalizationDestinationDefinitionConfig:
       description: describes a normalization config for destination definition version
       type: object
@@ -7739,33 +8499,6 @@ components:
           type: integer
         totalPartialFailures:
           type: integer
-    OrganizationIdRequestBody:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-    OrganizationUpdateRequestBody:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        organizationName:
-          type: string
-    OrganizationCreateRequestBody:
-      type: object
-      required:
-        - organizationName
-      properties:
-        organizationName:
-          type: string
-        email:
-          type: string
     ListWorkspacesInOrganizationRequestBody:
       type: object
       required:
@@ -7789,20 +8522,6 @@ components:
         pagination:
           $ref: "#/components/schemas/Pagination"
         keyword:
-          type: string
-    OrganizationRead:
-      type: object
-      required:
-        - organizationId
-        - organizationName
-        - email
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        organizationName:
-          type: string
-        email:
           type: string
     WorkspaceUserRead:
       type: object
@@ -7839,39 +8558,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceUserRead"
-    OrganizationUserReadList:
-      type: object
-      required:
-        - users
-      properties:
-        users:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrganizationUserRead"
-    OrganizationUserRead:
-      type: object
-      required:
-        - userId
-        - email
-        - permissionId
-        - permissionType
-        - organizationId
-      properties:
-        name:
-          description: Caption name for the user
-          type: string
-        userId:
-          $ref: "#/components/schemas/UserId"
-        email:
-          type: string
-          format: email
-        permissionId:
-          type: string
-          format: uuid
-        permissionType:
-          $ref: "#/components/schemas/PermissionType"
-        organizationId:
-          $ref: "#/components/schemas/OrganizationId"
     UserWithPermissionInfoReadList:
       type: object
       required:
@@ -7964,6 +8650,48 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvalidInputProperty"
+    ConnectionJobRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+    PersistCancelJobRequestBody:
+      type: object
+      required:
+        - attemptFailureSummary
+        - attemptNumber
+        - connectionId
+        - jobId
+      properties:
+        attemptFailureSummary:
+          description: Attempt failure summary serialized as a raw object
+          type: object
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+    BooleanRead:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: boolean
+    TaskQueueNameRead:
+      type: object
+      required:
+        - taskQueueName
+      properties:
+        taskQueueName:
+          description: Name of the temporal task queue.
+          type: string
 
   responses:
     NotFoundResponse:
@@ -7978,6 +8706,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/InvalidInputExceptionInfo"
+    ForbiddenResponse:
+      description: Operation forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KnownExceptionInfo"
     ExceptionResponse:
       description: Exception occurred; see message for details.
       content:

@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ReactNode, useEffect } from "react";
-import { useForm, FormProvider, KeepStateOptions, DefaultValues } from "react-hook-form";
+import { useForm, FormProvider, KeepStateOptions, DefaultValues, UseFormReturn } from "react-hook-form";
 import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
@@ -11,12 +11,17 @@ import { FormDevTools } from "./FormDevTools";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FormValues = Record<string, any>;
 
+export type FormSubmissionHandler<T extends FormValues> = (
+  values: T,
+  methods: UseFormReturn<T>
+) => Promise<void | { keepStateOptions?: KeepStateOptions; resetValues?: T }>;
+
 interface FormProps<T extends FormValues> {
   /**
    * The function that will be called when the form is submitted. This function should return a promise that only resolves after the submission has been handled by the upstream service.
    * The return value of this function will be used to determine which parts of the form should be reset.
    */
-  onSubmit?: (values: T) => Promise<void | { keepStateOptions?: KeepStateOptions; resetValues?: T }>;
+  onSubmit?: FormSubmissionHandler<T>;
   onSuccess?: (values: T) => void;
   onError?: (e: Error, values: T) => void;
   schema: SchemaOf<T>;
@@ -61,7 +66,7 @@ export const Form = <T extends FormValues>({
       return;
     }
 
-    return onSubmit(values)
+    return onSubmit(values, methods)
       .then((submissionResult) => {
         onSuccess?.(values);
         if (submissionResult) {
@@ -79,7 +84,7 @@ export const Form = <T extends FormValues>({
     <FormProvider {...methods}>
       <FormDevTools />
       {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
-      <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>
+      <form onSubmit={methods.handleSubmit(processSubmission)}>
         <fieldset disabled={disabled} className={styles.fieldset}>
           {children}
         </fieldset>

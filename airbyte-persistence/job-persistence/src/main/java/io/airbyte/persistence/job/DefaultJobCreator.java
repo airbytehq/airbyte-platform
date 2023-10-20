@@ -5,6 +5,7 @@
 package io.airbyte.persistence.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.commons.protocol.CatalogTransforms;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
@@ -24,6 +25,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.SyncResourceRequirementsKey;
+import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -38,11 +40,8 @@ import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceResourceOverrides;
 import io.airbyte.featureflag.UseResourceRequirementsVariant;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.StreamDescriptor;
-import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,23 +128,7 @@ public class DefaultJobCreator implements JobCreator {
                                                  final UUID workspaceId)
       throws IOException {
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = standardSync.getCatalog();
-    configuredAirbyteCatalog.getStreams().forEach(configuredAirbyteStream -> {
-      final StreamDescriptor streamDescriptor = CatalogHelpers.extractDescriptor(configuredAirbyteStream);
-      if (streamsToReset.contains(streamDescriptor)) {
-        // The Reset Source will emit no record messages for any streams, so setting the destination sync
-        // mode to OVERWRITE will empty out this stream in the destination.
-        // Note: streams in streamsToReset that are NOT in this configured catalog (i.e. deleted streams)
-        // will still have their state reset by the Reset Source, but will not be modified in the
-        // destination since they are not present in the catalog that is sent to the destination.
-        configuredAirbyteStream.setSyncMode(SyncMode.FULL_REFRESH);
-        configuredAirbyteStream.setDestinationSyncMode(DestinationSyncMode.OVERWRITE);
-      } else {
-        // Set streams that are not being reset to APPEND so that they are not modified in the destination
-        if (configuredAirbyteStream.getDestinationSyncMode() == DestinationSyncMode.OVERWRITE) {
-          configuredAirbyteStream.setDestinationSyncMode(DestinationSyncMode.APPEND);
-        }
-      }
-    });
+    CatalogTransforms.updateCatalogForReset(streamsToReset, configuredAirbyteCatalog);
 
     final var resetResourceRequirements =
         getSyncResourceRequirements(workspaceId, standardSync, RESET_SOURCE_DEFINITION, destinationDefinition, true);

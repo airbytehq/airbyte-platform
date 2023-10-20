@@ -16,7 +16,7 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSyncInput;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
@@ -129,17 +129,17 @@ class WorkerUtilsTest {
 
   @Test
   void testMapStreamNamesToSchemasWithNullNamespace() {
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
-    final StandardSyncInput syncInput = syncPair.getValue();
-    final Map<AirbyteStreamNameNamespacePair, JsonNode> mapOutput = WorkerUtils.mapStreamNamesToSchemas(syncInput);
+    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
+    final ReplicationInput syncInput = syncPair.getValue();
+    final Map<AirbyteStreamNameNamespacePair, JsonNode> mapOutput = WorkerUtils.mapStreamNamesToSchemas(syncInput.getCatalog());
     assertNotNull(mapOutput.get(new AirbyteStreamNameNamespacePair("user_preferences", null)));
   }
 
   @Test
   void testMapStreamNamesToSchemasWithMultipleNamespaces() {
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(true);
-    final StandardSyncInput syncInput = syncPair.getValue();
-    final Map<AirbyteStreamNameNamespacePair, JsonNode> mapOutput = WorkerUtils.mapStreamNamesToSchemas(syncInput);
+    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig(true);
+    final ReplicationInput syncInput = syncPair.getValue();
+    final Map<AirbyteStreamNameNamespacePair, JsonNode> mapOutput = WorkerUtils.mapStreamNamesToSchemas(syncInput.getCatalog());
     assertNotNull(mapOutput.get(new AirbyteStreamNameNamespacePair("user_preferences", "namespace")));
     assertNotNull(mapOutput.get(new AirbyteStreamNameNamespacePair("user_preferences", "namespace2")));
   }

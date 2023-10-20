@@ -12,7 +12,6 @@ import jakarta.inject.Singleton;
 /**
  * HealthCheckHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class HealthCheckHandler {
 

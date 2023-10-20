@@ -167,6 +167,15 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     }
   }
 
+  @VisibleForTesting
+  URL getDocUrl(final String connectorRepository, final String version, final Boolean inapp) {
+    try {
+      return remoteRegistryBaseUrl.resolve(String.format("metadata/%s/%s/doc%s", connectorRepository, version, inapp ? ".inapp.md" : ".md")).toURL();
+    } catch (final MalformedURLException e) {
+      throw new RuntimeException("Invalid URL format", e);
+    }
+  }
+
   /**
    * Get remote connector registry.
    *
@@ -212,6 +221,33 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
       }
     } catch (final IOException e) {
       throw new RuntimeException(String.format("Failed to fetch connector registry entry for %s:%s", connectorName, version), e);
+    }
+  }
+
+  /**
+   * Retrieves the full or inapp documentation for the specified connector repo and version.
+   *
+   * @return Optional containing the connector doc if it can be found, or empty otherwise.
+   */
+  public Optional<String> getConnectorDocumentation(final String connectorRepository, final String version, final Boolean inapp) {
+    final URL docUrl = getDocUrl(connectorRepository, version, inapp);
+    final Request request = new Request.Builder()
+        .url(docUrl)
+        .header(ACCEPT, MediaType.APPLICATION_JSON)
+        .build();
+
+    try (Response response = okHttpClient.newCall(request).execute()) {
+      if (response.code() == NOT_FOUND) {
+        return Optional.empty();
+      } else if (response.isSuccessful() && response.body() != null) {
+        return Optional.of(response.body().string());
+      } else {
+        throw new IOException(
+            "getConnectorDocumentation request ran into status code error: " + response.code() + " with message: " + response.message());
+      }
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          String.format("Failed to fetch %s connector documentation for %s:%s", inapp ? "inapp" : "full", connectorRepository, version), e);
     }
   }
 

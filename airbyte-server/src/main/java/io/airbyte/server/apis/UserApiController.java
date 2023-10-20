@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
@@ -32,7 +33,6 @@ import io.micronaut.security.rules.SecurityRule;
  * User related APIs. TODO: migrate all User endpoints (including some endpoints in WebBackend API)
  * from Cloud to OSS.
  */
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/users")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class UserApiController implements UserApi {
@@ -110,6 +110,15 @@ public class UserApiController implements UserApi {
   @Override
   public UserWithPermissionInfoReadList listInstanceAdminUsers() {
     return ApiHelper.execute(() -> userHandler.listInstanceAdminUsers());
+  }
+
+  @Post("/get_or_create_by_auth_id")
+  @SecuredUser
+  @Secured({ADMIN})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
+    return ApiHelper.execute(() -> userHandler.getOrCreateUserByAuthId(userAuthIdRequestBody));
   }
 
 }

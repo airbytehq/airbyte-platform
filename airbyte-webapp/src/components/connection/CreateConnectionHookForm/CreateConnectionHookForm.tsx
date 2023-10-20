@@ -4,9 +4,8 @@ import { Form } from "components/forms";
 import LoadingSchema from "components/LoadingSchema";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
-import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
 import {
   ConnectionHookFormServiceProvider,
   useConnectionHookFormService,

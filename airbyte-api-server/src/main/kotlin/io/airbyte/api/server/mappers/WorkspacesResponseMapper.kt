@@ -36,15 +36,17 @@ object WorkspacesResponseMapper {
     offset: Int,
     apiHost: String,
   ): WorkspacesResponse {
-    val uriBuilder = PaginationMapper.getBuilder(apiHost, WORKSPACES_PATH)
-      .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
-      .queryParam(INCLUDE_DELETED, includeDeleted)
+    val uriBuilder =
+      PaginationMapper.getBuilder(apiHost, WORKSPACES_PATH)
+        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+        .queryParam(INCLUDE_DELETED, includeDeleted)
     val workspacesResponse = WorkspacesResponse()
     workspacesResponse.next = PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder)
     workspacesResponse.previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder)
-    workspacesResponse.data = workspaceReadList.workspaces.stream()
-      .map { obj: WorkspaceRead? -> from(obj!!) }
-      .toList()
+    workspacesResponse.data =
+      workspaceReadList.workspaces.stream()
+        .map { obj: WorkspaceRead? -> from(obj!!) }
+        .toList()
     return workspacesResponse
   }
 }

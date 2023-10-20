@@ -37,9 +37,10 @@ export const BreakingChangeBanner = ({
   connectorDefinitionId,
 }: BreakingChangeBannerProps) => {
   const [isConfirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
-  const { connections } = useConnectionList({
+  const connectionList = useConnectionList({
     [connectorType === "source" ? "sourceId" : "destinationId"]: [connectorId],
   });
+  const connections = connectionList?.connections ?? [];
   const connectorBreakingChangeDeadlines = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
   const supportState = actorDefinitionVersion.supportState;
@@ -55,9 +56,12 @@ export const BreakingChangeBanner = ({
   // there should always be at least one breaking change, or else this banner wouldn't be shown
   const migrationGuideUrl = breakingChanges.upcomingBreakingChanges[0].migrationDocumentationUrl;
 
+  const messageType = connectorBreakingChangeDeadlines && supportState === "unsupported" ? "error" : "warning";
+
   return (
     <Message
-      type={connectorBreakingChangeDeadlines && supportState === "unsupported" ? "error" : "warning"}
+      type={messageType}
+      data-testid={`breaking-change-${messageType}-actor-banner`}
       iconOverride="warning"
       onAction={() => setConfirmUpdateOpen(true)}
       actionBtnText={<FormattedMessage id="connector.breakingChange.upgradeButton" />}

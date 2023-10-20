@@ -5,6 +5,7 @@ import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
 import { Action, Namespace } from "core/services/analytics";
@@ -12,7 +13,6 @@ import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
-import { ReactComponent as CaretDownIcon } from "../../ui/ListBox/CaretDownIcon.svg";
 import { useBuilderWatch } from "../types";
 
 interface StreamSelectorProps {
@@ -27,7 +27,7 @@ const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOp
           {selectedOption.label}
         </Heading>
       )}
-      <CaretDownIcon className={styles.arrow} />
+      <Icon type="caretDown" color="primary" />
     </>
   );
 };

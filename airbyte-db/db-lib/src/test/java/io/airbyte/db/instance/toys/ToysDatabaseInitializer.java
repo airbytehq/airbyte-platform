@@ -13,7 +13,6 @@ import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("MissingJavadocType")
 public class ToysDatabaseInitializer implements DatabaseInitializer {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ToysDatabaseInitializer.class);

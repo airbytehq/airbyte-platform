@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
 /**
  * WorkspacesHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WorkspacesHandler {
 
@@ -334,7 +333,7 @@ public class WorkspacesHandler {
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByUserId(request.getUserId(), false, keyword)
+          .listActiveWorkspacesByUserId(request.getUserId(), keyword)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());

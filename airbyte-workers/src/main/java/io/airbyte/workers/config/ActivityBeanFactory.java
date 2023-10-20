@@ -45,7 +45,7 @@ import java.util.List;
  * Micronaut bean factory for activity-related singletons.
  */
 @Factory
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ActivityBeanFactory {
 
   @Singleton

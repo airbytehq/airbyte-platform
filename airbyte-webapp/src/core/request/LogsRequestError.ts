@@ -5,7 +5,7 @@ export class LogsRequestError extends CommonRequestError {
   __type = "common.errorWithLogs";
 
   constructor(private jobInfo: SynchronousJobRead, msg?: string) {
-    super(undefined, msg);
+    super(undefined, { message: msg });
     this._status = 400;
   }
 

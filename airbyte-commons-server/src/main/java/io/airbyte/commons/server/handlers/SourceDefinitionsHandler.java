@@ -34,9 +34,9 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SupportStateUpdater;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HideActorDefinitionFromList;
@@ -62,7 +62,7 @@ import java.util.stream.Stream;
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidCatchingNPE")
 @Singleton
 public class SourceDefinitionsHandler {
 

@@ -55,10 +55,10 @@ class DefaultGetSpecWorkerTest {
     process = mock(Process.class);
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
 
-    IntegrationLauncher integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
+    final IntegrationLauncher integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
     when(integrationLauncher.spec(jobRoot)).thenReturn(process);
 
-    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory());
+    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(false));
   }
 
   @Test

@@ -6,7 +6,9 @@ import { ReactComponent as ArrowLeftIcon } from "./icons/arrowLeftIcon.svg";
 import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
 import { ReactComponent as ArticleIcon } from "./icons/articleIcon.svg";
 import { ReactComponent as CalendarIcon } from "./icons/calendarIcon.svg";
+import { ReactComponent as CaretDownIcon } from "./icons/caretDownIcon.svg";
 import { ReactComponent as CertifiedIcon } from "./icons/certifiedIcon.svg";
+import { ReactComponent as CheckCircleIcon } from "./icons/checkCircleIcon.svg";
 import { ReactComponent as CheckIcon } from "./icons/checkIcon.svg";
 import { ReactComponent as ChevronDownIcon } from "./icons/chevronDownIcon.svg";
 import { ReactComponent as ChevronLeftIcon } from "./icons/chevronLeftIcon.svg";
@@ -98,8 +100,10 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
   calendar: CalendarIcon,
+  caretDown: CaretDownIcon,
   certified: CertifiedIcon,
   check: CheckIcon,
+  checkCircle: CheckCircleIcon,
   chevronDown: ChevronDownIcon,
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,

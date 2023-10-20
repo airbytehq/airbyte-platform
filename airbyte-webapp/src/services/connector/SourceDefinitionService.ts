@@ -3,14 +3,13 @@ import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
-import { useSuspenseQuery } from "core/api";
+import { useSuspenseQuery, connectorDefinitionKeys } from "core/api";
 import { SourceDefinitionService } from "core/domain/connector/SourceDefinitionService";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
-import { connectorDefinitionKeys } from "./ConnectorDefinitions";
 import {
   SourceDefinitionCreate,
   SourceDefinitionRead,

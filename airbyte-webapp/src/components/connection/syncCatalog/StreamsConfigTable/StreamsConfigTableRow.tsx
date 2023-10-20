@@ -2,7 +2,6 @@ import classNames from "classnames";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Text, TextWithOverflowTooltip } from "components/ui/Text";
@@ -15,15 +14,15 @@ import { StreamsConfigTableRowStatus } from "./StreamsConfigTableRowStatus";
 import { useRedirectedReplicationStream } from "./useRedirectedReplicationStream";
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 import { CellText } from "../CellText";
-import { SyncModeOption, SyncModeSelect } from "../SyncModeSelect";
+import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 import { FieldPathType } from "../utils";
 
 interface StreamsConfigTableRowProps {
   stream: SyncSchemaStream;
   destName: string;
   destNamespace: string;
-  availableSyncModes: SyncModeOption[];
-  onSelectSyncMode: (selectedMode: DropDownOptionDataItem) => void;
+  availableSyncModes: SyncModeValue[];
+  onSelectSyncMode: (selectedMode: SyncModeValue) => void;
   onSelectStream: () => void;
   primitiveFields: SyncSchemaField[];
   pkType: FieldPathType;
@@ -92,13 +91,15 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     return primaryKey.map(pathDisplayName).join(", ");
   }, [primaryKey]);
 
-  const syncSchema = useMemo(
-    () => ({
+  const syncSchema: SyncModeValue | undefined = useMemo(() => {
+    if (!syncMode || !destinationSyncMode) {
+      return undefined;
+    }
+    return {
       syncMode,
       destinationSyncMode,
-    }),
-    [syncMode, destinationSyncMode]
-  );
+    };
+  }, [syncMode, destinationSyncMode]);
 
   const fieldCount = fields?.length ?? 0;
   const selectedFieldCount = selectedFields?.length ?? fieldCount;

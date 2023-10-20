@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
-@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 class AppendToAttemptLogActivityTest {
 
   @Mock

@@ -18,6 +18,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.State;
+import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -39,17 +40,42 @@ public class TestConfigHelpers {
   private static final String FIELD_NAME = "favorite_color";
   private static final long LAST_SYNC_TIME = 1598565106;
 
-  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig() {
-    return createSyncConfig(false);
-  }
-
   /**
    * Create sync config and appropriate sync input.
    *
-   * @param multipleNamespaces stream namespaces.
-   * @return sync config and sync input
+   * @return sync config and sync input.
    */
-  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig(final Boolean multipleNamespaces) {
+  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig() {
+    final ImmutablePair<StandardSync, ReplicationInput> replicationInputPair = createReplicationConfig();
+    final var replicationInput = replicationInputPair.getRight();
+    // For now, these are identical, so we delegate to createReplicationConfig and copy it over for
+    // simplicity.
+    // Someday these will likely diverge, so it may not make sense to base the sync input on the
+    // replication input.
+    return ImmutablePair.of(replicationInputPair.getLeft(), new StandardSyncInput()
+        .withNamespaceDefinition(replicationInput.getNamespaceDefinition())
+        .withPrefix(replicationInput.getPrefix())
+        .withSourceId(replicationInput.getSourceId())
+        .withDestinationId(replicationInput.getDestinationId())
+        .withDestinationConfiguration(replicationInput.getDestinationConfiguration())
+        .withCatalog(replicationInput.getCatalog())
+        .withSourceConfiguration(replicationInput.getSourceConfiguration())
+        .withState(replicationInput.getState())
+        .withOperationSequence(replicationInput.getOperationSequence())
+        .withWorkspaceId(replicationInput.getWorkspaceId()));
+  }
+
+  public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {
+    return createReplicationConfig(false);
+  }
+
+  /**
+   * Create sync config and appropriate replication input.
+   *
+   * @param multipleNamespaces stream namespaces.
+   * @return sync config and replication input
+   */
+  public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig(final Boolean multipleNamespaces) {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
@@ -134,8 +160,9 @@ public class TestConfigHelpers {
 
     final State state = new State().withState(Jsons.jsonNode(stateValue));
 
-    final StandardSyncInput syncInput = new StandardSyncInput()
+    final ReplicationInput replicationInput = new ReplicationInput()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withConnectionId(connectionId)
         .withPrefix(standardSync.getPrefix())
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
@@ -146,7 +173,7 @@ public class TestConfigHelpers {
         .withOperationSequence(List.of(normalizationOperation, customDbtOperation))
         .withWorkspaceId(workspaceId);
 
-    return new ImmutablePair<>(standardSync, syncInput);
+    return new ImmutablePair<>(standardSync, replicationInput);
   }
 
 }
