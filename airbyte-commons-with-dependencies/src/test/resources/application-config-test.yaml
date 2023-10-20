@@ -60,6 +60,7 @@ airbyte:
           socat: ${UNUSED_VALUE:}
         main:
           container:
+            image-registry: ${UNUSED_VALUE:}
             image-pull-policy: ${UNUSED_VALUE:}
             image-pull-secret: ${UNUSED_VALUE:}
         sidecar:

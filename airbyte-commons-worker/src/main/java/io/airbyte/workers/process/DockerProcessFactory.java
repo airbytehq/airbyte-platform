@@ -135,7 +135,10 @@ public class DockerProcessFactory implements ProcessFactory {
           rebasePath(jobRoot).toString(), // rebases the job root on the job data mount
           "--log-driver",
           "none");
-      final String containerName = ProcessFactory.createProcessName(imageName, jobType, jobId, attempt, DOCKER_NAME_LEN_LIMIT);
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);     
+      final String registry = workerConfigs.getJobImageRegistry();
+      final String image = null == registry || imageName.startsWith(registry) ? imageName : registry + "/" + imageName;
+      final String containerName = ProcessFactory.createProcessName(image, jobType, jobId, attempt, DOCKER_NAME_LEN_LIMIT);
       final ResourceRequirements resourceRequirements = connectorResourceRequirements.main();
       LOGGER.info("Creating docker container = {} with resources {} and allowedHosts {}", containerName, resourceRequirements, allowedHosts);
       cmd.add("--name");
@@ -158,7 +161,6 @@ public class DockerProcessFactory implements ProcessFactory {
         cmd.add(String.format("%s:%s", localMountSource, LOCAL_MOUNT_DESTINATION));
       }
 
-      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
       final Map<String, String> allEnvMap = MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap());
       for (final Map.Entry<String, String> envEntry : allEnvMap.entrySet()) {
         cmd.add("-e");
