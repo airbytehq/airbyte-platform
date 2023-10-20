@@ -15,6 +15,10 @@ public class OperationNotAllowedException extends KnownException {
     super(message);
   }
 
+  public OperationNotAllowedException(final String message, final Exception cause) {
+    super(message, cause);
+  }
+
   @Override
   public int getHttpCode() {
     return 403;

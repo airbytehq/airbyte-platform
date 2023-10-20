@@ -181,7 +181,7 @@ public class PermissionHandler {
       permissionPersistence.writePermission(updatedPermission);
     } catch (final DataAccessException e) {
       if (e.getCause() instanceof SQLOperationNotAllowedException) {
-        throw new OperationNotAllowedException(e.getCause().getMessage());
+        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
       } else {
         throw new IOException(e);
       }
@@ -361,7 +361,7 @@ public class PermissionHandler {
       permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
     } catch (final DataAccessException e) {
       if (e.getCause() instanceof SQLOperationNotAllowedException) {
-        throw new OperationNotAllowedException(e.getCause().getMessage());
+        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
       } else {
         throw new IOException(e);
       }
