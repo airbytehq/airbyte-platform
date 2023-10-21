@@ -52,7 +52,7 @@ repositories {
     }
 }
 
-if (System.getProperty("ciMode") != null) {
+if (System.getProperty("ciMode", "false") != "false") {
     gradle.startParameter.logLevel = LogLevel.QUIET
 
     def logFile = new FileOutputStream('gradle.log', true)
