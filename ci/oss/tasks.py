@@ -37,7 +37,7 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
     # This is the list of files needed to run. Keep this as minimal as possible to avoid accidentally invalidating the cache
     files_from_host=["airbyte-*/**/*"]
     
-    gradle_command = ["./gradlew", "assemble", "-x", "buildDockerImage", "-x", "dockerBuildImage", "publishtoMavenLocal", "--build-cache", "--no-daemon", "-DciMode"]
+    gradle_command = ["./gradlew", "assemble", "-x", "buildDockerImage", "-x", "dockerBuildImage", "publishtoMavenLocal", "--build-cache", "--no-daemon"]
 
     # Now we execute the build inside the container. Each step is analagous to a layer in buildkit
     # Be careful what is passed in here, as anything like a timestamp will invalidate the whole cache.
@@ -46,7 +46,7 @@ async def build_oss_backend_task(settings: OssSettings, ctx: PipelineContext, cl
                 .with_(load_settings(client, settings))
                 .with_env_variable("VERSION", "dev")
                 .with_workdir("/airbyte/oss" if base_dir == "oss" else "/airbyte")
-                .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache", "--no-daemon", "-DciMode"])
+                .with_exec(["./gradlew", ":airbyte-config:specs:downloadConnectorRegistry", "--rerun", "--build-cache", "--no-daemon"])
                 .with_exec(gradle_command + ["--scan"] if scan else gradle_command)
                 .with_(sync_to_gradle_cache_from_homedir(settings.GRADLE_CACHE_VOLUME_PATH, settings.GRADLE_HOMEDIR_PATH)) #TODO: Move this to a context manager
         )
@@ -123,7 +123,7 @@ async def build_storybook_oss_frontend_task(settings: OssSettings, ctx: Pipeline
 
 @task
 async def check_oss_backend_task(client: Client, oss_build_result: Container, settings: OssSettings, ctx: PipelineContext, scan: bool) -> Container:
-    gradle_command = ["./gradlew", "check", "-x", "test", "-x", ":airbyte-webapp:check","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon", "-DciMode"]
+    gradle_command = ["./gradlew", "check", "-x", "test", "-x", ":airbyte-webapp:check","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon"]
     files_from_result = [
                         "**/build.gradle", 
                         "**/gradle.properties", 
@@ -198,7 +198,7 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
         .with_exec(["./run.sh"])
     )
     
-    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon", "-DciMode"]
+    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon"]
 
     result = ( 
                 with_gradle(client, ctx, settings, directory=base_dir)

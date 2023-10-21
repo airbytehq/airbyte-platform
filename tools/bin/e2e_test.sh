@@ -8,10 +8,6 @@ assert_root
 
 echo "Starting app..."
 
-if [[ ! -z "$CI" ]]; then
-    CI_MODE_FLAG='-DciMode'
-fi
-
 # todo (cgardens) - docker-compose 1.27.3 contained a bug that causes a failure if the volume path
 #  does not exist when the volume is created. It was fixed in 1.27.4. Github actions virtual envs,
 #  however, new ubuntu release upgraded to 1.27.3 on 09/24/20. Once github actions virtual envs
@@ -42,10 +38,10 @@ done
 
 echo "Running e2e tests via gradle without cypress key"
 
-if ./gradlew --no-daemon :airbyte-webapp:e2etest "$CI_MODE_FLAG"; then
+if ./gradlew --no-daemon :airbyte-webapp:e2etest ; then
   echo "Tests succeeded"
 else
   echo "Tests failed, retry and record"
-  ./gradlew --no-daemon :airbyte-webapp:e2etest -PcypressWebappKey=$CYPRESS_WEBAPP_KEY "$CI_MODE_FLAG";
+  ./gradlew --no-daemon :airbyte-webapp:e2etest -PcypressWebappKey=$CYPRESS_WEBAPP_KEY ;
 fi
 

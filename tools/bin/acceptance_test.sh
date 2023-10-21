@@ -6,11 +6,6 @@ set -e
 
 assert_root
 
-
-if [[ ! -z "$CI" ]]; then
-    CI_MODE_FLAG='-DciMode'
-fi
-
 ## Helper functions
 
 get_epoch_time() {
@@ -58,6 +53,4 @@ check_success 'init'
 check_success 'airbyte-bootloader'
 
 echo "Running e2e tests via gradle"
-
-USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan "$CI_MODE_FLAG"
-
+USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTest --rerun-tasks --scan
