@@ -343,7 +343,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * 3. upgrade the message to the platform version, if needed.
    */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    // put back the deserializer.
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
@@ -363,8 +362,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     //
     // This is because some sources actually log their process on stdout,
     // so we want to make sure this info is available in the logs.
-    //
-    // When Connector Ops rectifies this, we can remove this.
     try (final var mdcScope = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
@@ -377,10 +374,12 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
             throw new IllegalStateException("Record is too long, the size is: " + line.length());
           }
         }
-      } else if (line.contains("{\"type\":\"RECORD\",\"record\"")) {
+      } else if (line.toLowerCase().contains("\"record\"")) {
+        // Malformed records cannot be logged. Fail fast.
+        // Match on 'record' can catch non-record messages. This is ok as we rather be safe than sorry.
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
         logger.debug(line);
-        throw new IllegalStateException("Malformated log record line");
+        throw new IllegalStateException("Malformed log record line. Please turn on debug logging to see the line.");
       } else {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
         logger.info(line);

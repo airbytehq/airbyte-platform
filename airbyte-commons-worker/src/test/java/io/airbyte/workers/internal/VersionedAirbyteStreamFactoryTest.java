@@ -45,6 +45,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.util.ClassLoaderUtils;
 import org.slf4j.Logger;
 
@@ -131,7 +133,7 @@ class VersionedAirbyteStreamFactoryTest {
 
     @Test
     void testFailDeserializationSubtle() {
-      final String invalidRecord = "{\"type\": \"record\", \"record\": {}}";
+      final String invalidRecord = "{\"type\": \"spec\", \"data\": {}}";
 
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
@@ -164,6 +166,21 @@ class VersionedAirbyteStreamFactoryTest {
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+      // Missing closing bracket.
+      "{\"type\":\"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"amount\": \"100.00\"",
+      // Infinity is invalid json.
+      "{\"type\":\"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}",
+      // Infinity is invalid json. Python code generates json strings with a space.
+      "{\"type\": \"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}",
+      // Infinity is invalid json. Lowercase types.
+      "{\"type\": \"record\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}"})
+    void testMalformedRecordFailFastAndOnlyDebugLog(String invalidRecord) {
+      assertThrows(IllegalStateException.class, () -> stringToMessageStream(invalidRecord).collect(Collectors.toList()));
+      verify(logger).debug(invalidRecord);
     }
 
     private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {
