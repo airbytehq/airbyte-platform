@@ -54,6 +54,7 @@ import io.airbyte.oauth.flows.google.DestinationGoogleSheetsOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleAdsOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleAnalyticsPropertyIdOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleAnalyticsViewIdOAuthFlow;
+import io.airbyte.oauth.flows.google.GoogleDriveOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSheetsOAuthFlow;
 import io.airbyte.oauth.flows.google.YouTubeAnalyticsOAuthFlow;
@@ -84,6 +85,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-google-analytics-data-api", new GoogleAnalyticsPropertyIdOAuthFlow(httpClient));
     builder.put("airbyte/source-google-search-console", new GoogleSearchConsoleOAuthFlow(httpClient));
     builder.put("airbyte/source-google-sheets", new GoogleSheetsOAuthFlow(httpClient));
+    builder.put("airbyte/source-google-drive", new GoogleDriveOAuthFlow(httpClient));
     builder.put("airbyte/source-harvest", new HarvestOAuthFlow(httpClient));
     builder.put("airbyte/source-hubspot", new HubspotOAuthFlow(httpClient));
     builder.put("airbyte/source-intercom", new IntercomOAuthFlow(httpClient));
