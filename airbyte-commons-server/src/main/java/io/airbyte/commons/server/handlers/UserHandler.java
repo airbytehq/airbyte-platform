@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.UserUpdate;
 import io.airbyte.api.model.generated.UserWithPermissionInfoRead;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
@@ -60,6 +61,7 @@ public class UserHandler {
   private final UserPersistence userPersistence;
   private final PermissionPersistence permissionPersistence;
   private final PermissionHandler permissionHandler;
+  private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
 
   private final Optional<JwtUserResolver> jwtUserResolver;
@@ -71,6 +73,7 @@ public class UserHandler {
                      final PermissionPersistence permissionPersistence,
                      final OrganizationPersistence organizationPersistence,
                      final PermissionHandler permissionHandler,
+                     final WorkspacesHandler workspacesHandler,
                      final Supplier<UUID> uuidGenerator,
                      final Optional<JwtUserResolver> jwtUserResolver,
                      final Optional<InitialUserConfiguration> initialUserConfiguration) {
@@ -78,6 +81,7 @@ public class UserHandler {
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
     this.permissionPersistence = permissionPersistence;
+    this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
     this.jwtUserResolver = jwtUserResolver;
     this.initialUserConfiguration = initialUserConfiguration;
@@ -177,7 +181,8 @@ public class UserHandler {
         .companyName(user.getCompanyName())
         .email(user.getEmail())
         .metadata(user.getUiMetadata())
-        .news(user.getNews());
+        .news(user.getNews())
+        .defaultWorkspaceId(user.getDefaultWorkspaceId());
   }
 
   /**
@@ -301,20 +306,43 @@ public class UserHandler {
 
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final Optional<User> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
-    if (user.isPresent()) {
-      return new UserGetOrCreateByAuthIdResponse().userRead(buildUserRead(user.get()));
+
+    final Optional<User> existingUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
+
+    if (existingUser.isPresent()) {
+      return new UserGetOrCreateByAuthIdResponse()
+          .userRead(buildUserRead(existingUser.get()))
+          .newUserCreated(false);
     }
 
+    final User incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
+    final UserRead createdUser = createUserFromIncomingUser(incomingJwtUser, userAuthIdRequestBody);
+
+    handleUserPermissionsAndWorkspace(createdUser);
+
+    // refresh the user from the database in case anything changed during permission/workspace
+    // modification
+    final User updatedUser = userPersistence.getUser(createdUser.getUserId())
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, createdUser.getUserId()));
+
+    return new UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .newUserCreated(true);
+  }
+
+  private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) throws ConfigNotFoundException {
     if (jwtUserResolver.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.USER, userAuthIdRequestBody.getAuthUserId());
     }
-    final User incomingUser = jwtUserResolver.get().resolveUser();
-
-    if (!incomingUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
+    final User incomingJwtUser = jwtUserResolver.get().resolveUser();
+    if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
+    return incomingJwtUser;
+  }
 
+  private UserRead createUserFromIncomingUser(final User incomingUser, final UserAuthIdRequestBody userAuthIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final UserCreate userCreate = new UserCreate()
         .name(incomingUser.getName())
         .authUserId(userAuthIdRequestBody.getAuthUserId())
@@ -322,47 +350,78 @@ public class UserHandler {
         .email(incomingUser.getEmail());
 
     LOGGER.debug("Creating User: " + userCreate);
-    final UserRead createdUser = createUser(userCreate);
 
-    // If new user's email matches the initial user config email, create instance_admin permission for
-    // them.
-    createInstanceAdminPermissionIfInitialUser(createdUser);
-
-    // If incoming SSO Config matches with existing org, find that org and add user to it;
-    addUserToOrganizationIfSso(createdUser.getUserId());
-
-    return new UserGetOrCreateByAuthIdResponse().userRead(createdUser).newUserCreated(true);
+    return createUser(userCreate);
   }
 
-  private void addUserToOrganizationIfSso(final UUID userId) throws IOException {
+  private void handleUserPermissionsAndWorkspace(final UserRead createdUser) throws IOException, JsonValidationException, ConfigNotFoundException {
+    createInstanceAdminPermissionIfInitialUser(createdUser);
+    final Optional<Organization> ssoOrg = getSsoOrganizationIfExists(createdUser.getUserId());
+
+    if (ssoOrg.isPresent()) {
+      handleSsoUser(createdUser, ssoOrg.get());
+    } else {
+      handleNonSsoUser(createdUser);
+    }
+  }
+
+  private void handleSsoUser(final UserRead user, final Organization organization)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    final boolean isFirstOrgUser = permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId()).isEmpty();
+    if (isFirstOrgUser) {
+      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.of(organization));
+      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+      createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_ADMIN);
+    } else {
+      createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
+    }
+  }
+
+  private void handleNonSsoUser(final UserRead user) throws JsonValidationException, ConfigNotFoundException, IOException {
+    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.empty());
+    createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+  }
+
+  private WorkspaceRead createDefaultWorkspaceforUser(final UserRead createdUser, final Optional<Organization> organization)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+
+    final WorkspaceRead defaultWorkspace = workspacesHandler.createDefaultWorkspaceForUser(createdUser, organization);
+
+    // set default workspace id in User table
+    final UserUpdate userUpdateDefaultWorkspace = new UserUpdate()
+        .userId(createdUser.getUserId())
+        .defaultWorkspaceId(defaultWorkspace.getWorkspaceId());
+    updateUser(userUpdateDefaultWorkspace);
+
+    return defaultWorkspace;
+  }
+
+  private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException {
     final String ssoRealm = jwtUserResolver.orElseThrow().resolveSsoRealm();
     if (ssoRealm != null) {
       final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
       if (attachedOrganization.isPresent()) {
-        createPermissionForUserAndOrg(userId, attachedOrganization.get().getOrganizationId());
+        return attachedOrganization;
       } else {
-        LOGGER.warn("New user with ID {} has an SSO realm {} but no Organization was found for it. No Organization permissions will be added.",
-            userId, ssoRealm);
+        LOGGER.warn("New user with ID {} has an SSO realm {} but no Organization was found for it.", userId, ssoRealm);
       }
     }
+    return Optional.empty();
   }
 
-  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId) throws IOException {
-    if (permissionPersistence.listPermissionsForOrganization(orgId).isEmpty()) {
-      LOGGER.debug("Organization {} does not have any users. Adding user {} with permission type {}",
-          orgId, userId, PermissionType.ORGANIZATION_ADMIN);
-      permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-          .organizationId(orgId)
-          .userId(userId)
-          .permissionType(PermissionType.ORGANIZATION_ADMIN));
-    } else {
-      LOGGER.debug("Organization {} already has existing users. Adding user {} with permission type {}",
-          orgId, userId, PermissionType.ORGANIZATION_MEMBER);
-      permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-          .organizationId(orgId)
-          .userId(userId)
-          .permissionType(PermissionType.ORGANIZATION_MEMBER));
-    }
+  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType) throws IOException {
+    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+        .organizationId(orgId)
+        .userId(userId)
+        .permissionType(permissionType));
+  }
+
+  private void createPermissionForUserAndWorkspace(final UUID userId, final UUID workspaceId, final PermissionType permissionType)
+      throws IOException {
+    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
+        .workspaceId(workspaceId)
+        .userId(userId)
+        .permissionType(permissionType));
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {

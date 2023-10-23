@@ -1347,6 +1347,9 @@ components:
         organizationId:
           type: string
           format: uuid
+        existingWorkspaceId:
+          type: string
+          format: uuid
     CloudWorkspaceRead:
       type: object
       required:
