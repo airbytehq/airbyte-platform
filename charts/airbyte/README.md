@@ -41,6 +41,7 @@ Helm chart to deploy airbyte
 | airbyte-bootloader.resources.limits | object | `{}`                                 |  |
 | airbyte-bootloader.resources.requests | object | `{}`                                 |  |
 | airbyte-bootloader.secrets | object | `{}`                                 |  |
+| airbyte-bootloader.shareProcessNamespace | bool | `true` |  |
 | airbyte-bootloader.tolerations | list | `[]`                                 |  |
 | connector-builder-server.enabled | bool | `true`                               |  |
 | connector-builder-server.env_vars | object | `{}`                                 |  |

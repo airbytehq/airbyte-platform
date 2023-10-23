@@ -1048,6 +1048,10 @@ airbyte-bootloader:
   ##   DATABASE_USER: my-db-user
   secrets: {}
 
+  ##  In case you need to implement a side that need to be killed once the bootloader
+  ##  is completed. Example sidecar to connect to db (gcp auth proxy)
+  shareProcessNamespace: false
+
   ##  env_vars [object] Supply extra env variables to main container using simplified notation
   ## Example:
   ## env_vars:

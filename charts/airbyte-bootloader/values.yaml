@@ -24,6 +24,7 @@ global:
 
 
 enabled: true
+
 ##  image.repository The repository to use for the airbyte bootloader image.
 ##  image.pullPolicy the pull policy to use for the airbyte bootloader image
 ##  image.tag The airbyte bootloader image tag. Defaults to the chart's AppVersion
@@ -123,6 +124,10 @@ extraEnv: []
 ##   DATABASE_PASSWORD: strong-password
 ##   DATABASE_USER: my-db-user
 secrets: {}
+
+##  In case you need to implement a side that need to be killed once the bootloader
+##  is completed. Example sidecar to connect to db (gcp auth proxy)
+shareProcessNamespace: false
 
 ##  extraContainer [array] Additional container for server pod(s)
 ## Example:

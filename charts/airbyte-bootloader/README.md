@@ -37,6 +37,7 @@ Helm chart to deploy airbyte-bootloader
 | resources.limits | object | `{}` |  |
 | resources.requests | object | `{}` |  |
 | secrets | object | `{}` |  |
+| shareProcessNamespace | bool | `true` |  |
 | tolerations | list | `[]` |  |
 
 ----------------------------------------------

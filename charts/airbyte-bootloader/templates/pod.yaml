@@ -18,7 +18,10 @@ metadata:
       {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 4 }}
     {{- end }}
 spec:
+  {{- if .Values.shareProcessNamespace }}
+  shareProcessNamespace: {{ .Values.shareProcessNamespace }}
   serviceAccountName: {{ .Values.global.serviceAccountName }}
+  {{- end }}
   {{- if .Values.global.imagePullSecrets }}
   imagePullSecrets:
     {{- range .Values.global.imagePullSecrets }}
