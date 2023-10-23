@@ -77,7 +77,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
   if (hasNonBreakingSchemaChange) {
     return (
       <Message
-        type="warning"
+        type="info"
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
         onAction={refreshSchema}

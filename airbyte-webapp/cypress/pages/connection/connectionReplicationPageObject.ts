@@ -22,7 +22,7 @@ export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) 
   cy.get(schemaChangesDetectedBanner).should("exist");
   cy.get(schemaChangesDetectedBanner)
     .invoke("attr", "class")
-    .should("match", breaking ? /error/ : /warning/);
+    .should("match", breaking ? /error/ : /info/);
   cy.get(schemaChangesBackdrop).should(breaking ? "exist" : "not.exist");
 };
 
