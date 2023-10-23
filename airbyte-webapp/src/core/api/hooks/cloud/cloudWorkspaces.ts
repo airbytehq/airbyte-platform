@@ -1,9 +1,10 @@
 import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { useCurrentUser } from "core/services/auth";
+import { useAuthService, useCurrentUser } from "core/services/auth";
 import { SCOPE_USER } from "services/Scope";
 
+import { useListUsers } from "./users";
 import {
   deleteCloudWorkspace,
   getCloudWorkspace,
@@ -180,3 +181,10 @@ export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: Consu
     getCloudWorkspaceUsage({ workspaceId, timeWindow }, requestOptions)
   );
 }
+
+export const useIsForeignWorkspace = () => {
+  const { user } = useAuthService();
+  const workspaceUsers = useListUsers();
+
+  return !user || !workspaceUsers.users.some((member) => member.userId === user.userId);
+};

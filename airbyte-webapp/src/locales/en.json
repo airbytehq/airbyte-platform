@@ -1363,7 +1363,8 @@
   "trial.alertMessage": "You are using a trial of Airbyte. Your trial ends in <b>{remainingDays, plural, one {# day} other {# days}}</b>. <lnk>Purchase now</lnk>",
 
   "trial.preTrialAlertMessage": "Your 14-day trial of Airbyte will start once your first sync has completed.",
-  "verifyEmail.notification": "You successfully verified your email. Thank you.",
+  "verifyEmail.success": "You successfully verified your email. Thank you.",
+  "verifyEmail.error": "Email verification failed.",
 
   "inviteUsersHint.message": "Need help from a teammate to set up the {connector}?",
   "inviteUsersHint.cta": "Invite users",

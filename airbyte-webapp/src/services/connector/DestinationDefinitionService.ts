@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useSuspenseQuery, connectorDefinitionKeys } from "core/api";
+// eslint-disable-next-line import/no-restricted-paths
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { DestinationDefinitionService } from "core/domain/connector/DestinationDefinitionService";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
 import {
@@ -26,12 +27,9 @@ export const destinationDefinitionKeys = {
 export function useGetDestinationDefinitionService(): DestinationDefinitionService {
   const { apiUrl } = useConfig();
 
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
+  const requestOptions = useRequestOptions();
 
-  return useInitService(
-    () => new DestinationDefinitionService(apiUrl, requestAuthMiddleware),
-    [apiUrl, requestAuthMiddleware]
-  );
+  return useInitService(() => new DestinationDefinitionService(requestOptions), [apiUrl, requestOptions]);
 }
 
 /**

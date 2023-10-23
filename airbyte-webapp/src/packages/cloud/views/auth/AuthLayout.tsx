@@ -1,10 +1,8 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 
-import { useConfig } from "config";
-import { loadFathom } from "core/utils/fathom";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./Auth.module.scss";
@@ -31,11 +29,6 @@ const hasValidRightSideUrl = (url?: string): boolean => {
 export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
   const rightSideUrl = useExperiment("authPage.rightSideUrl", undefined);
-
-  const config = useConfig();
-  useEffect(() => {
-    loadFathom(config.fathomSiteId);
-  }, [config.fathomSiteId]);
 
   return (
     <FlexContainer className={styles.container}>

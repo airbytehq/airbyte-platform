@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useConfig } from "config";
 import { useSuspenseQuery, useRemoveConnectionsFromList } from "core/api";
+// eslint-disable-next-line import/no-restricted-paths
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { SyncSchema } from "core/domain/catalog";
 import { SourceService } from "core/domain/connector/SourceService";
 import { Action, Namespace } from "core/services/analytics";
@@ -15,7 +17,6 @@ import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
-import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
 export const sourcesKeys = {
   all: [SCOPE_WORKSPACE, "sources"] as const,
@@ -38,8 +39,8 @@ interface ConnectorProps {
 
 function useSourceService() {
   const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
-  return useInitService(() => new SourceService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
+  const requestOptions = useRequestOptions();
+  return useInitService(() => new SourceService(requestOptions), [apiUrl, requestOptions]);
 }
 
 interface SourceList {

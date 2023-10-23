@@ -4,10 +4,11 @@ import { useMemo } from "react";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useSuspenseQuery, connectorDefinitionKeys } from "core/api";
+// eslint-disable-next-line import/no-restricted-paths
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { SourceDefinitionService } from "core/domain/connector/SourceDefinitionService";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
 import {
@@ -27,12 +28,9 @@ export const sourceDefinitionKeys = {
 export function useGetSourceDefinitionService(): SourceDefinitionService {
   const { apiUrl } = useConfig();
 
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
+  const requestOptions = useRequestOptions();
 
-  return useInitService(
-    () => new SourceDefinitionService(apiUrl, requestAuthMiddleware),
-    [apiUrl, requestAuthMiddleware]
-  );
+  return useInitService(() => new SourceDefinitionService(requestOptions), [apiUrl, requestOptions]);
 }
 
 interface SourceDefinitions {

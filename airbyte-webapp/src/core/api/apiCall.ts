@@ -2,11 +2,10 @@ import { trackError } from "core/utils/datadog";
 import { shortUuid } from "core/utils/uuid";
 
 import { CommonRequestError } from "../request/CommonRequestError";
-import { RequestMiddleware } from "../request/RequestMiddleware";
 import { VersionError } from "../request/VersionError";
 
 export interface ApiCallOptions {
-  middlewares: RequestMiddleware[];
+  getAccessToken: () => Promise<string | null>;
   signal?: RequestInit["signal"];
 }
 
@@ -40,12 +39,12 @@ export const fetchApiCall = async <T, U = unknown>(
   // to get rid of it from all environment variables.
   const requestUrl = `${apiUrl.replace(/\/v1\/?$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
 
-  for (const middleware of options.middlewares) {
-    ({ headers } = await middleware({ headers }));
+  const requestHeaders = new Headers(headers);
+  const accessToken = await options.getAccessToken();
+  if (accessToken) {
+    requestHeaders.set("Authorization", `Bearer ${accessToken}`);
   }
-
-  headers = new Headers(headers);
-  headers.set("X-Airbyte-Analytic-Source", "webapp");
+  requestHeaders.set("X-Airbyte-Analytic-Source", "webapp");
 
   // We have a proper type for `params` in the RequestOptions interface, so types are validated correctly
   // when calling this method. Unfortunately the `URLSearchParams` typing in TS has wrong typings, since
@@ -57,7 +56,7 @@ export const fetchApiCall = async <T, U = unknown>(
   const response = await fetch(`${requestUrl}${queryParams.length ? `?${queryParams}` : ""}`, {
     method,
     ...(data ? { body: getRequestBody(data) } : {}),
-    headers,
+    headers: requestHeaders,
     signal: signal ?? options.signal,
   });
 

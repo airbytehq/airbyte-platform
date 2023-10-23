@@ -129,8 +129,7 @@ const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ ch
 };
 
 export const Routing: React.FC = () => {
-  const { login, requirePasswordReset } = useAuthService();
-  const { user, inited, providers, loggedOut } = useAuthService();
+  const { user, inited, providers, loggedOut, requirePasswordReset } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
 
@@ -176,6 +175,7 @@ export const Routing: React.FC = () => {
   if (!inited) {
     return <LoadingPage />;
   }
+
   return (
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
@@ -198,7 +198,7 @@ export const Routing: React.FC = () => {
                           <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
                           <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
                         </Route>
-                        {login && <Route path={CloudRoutes.Login} element={<LoginPage login={login} />} />}
+                        <Route path={CloudRoutes.Login} element={<LoginPage />} />
                         <Route path={CloudRoutes.Signup} element={<SignupPage />} />
                         {requirePasswordReset && (
                           <Route

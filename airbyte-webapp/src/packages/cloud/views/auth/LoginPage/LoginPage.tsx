@@ -15,7 +15,7 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { AuthLogin, useAuthService } from "core/services/auth";
+import { useAuthService } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
@@ -47,17 +47,14 @@ const LoginButton: React.FC = () => {
   );
 };
 
-interface LoginPageProps {
-  login: AuthLogin;
-}
-
-export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
-  const { loginWithOAuth } = useAuthService();
+export const LoginPage: React.FC = () => {
+  const { loginWithOAuth, login } = useAuthService();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
   const [searchParams] = useSearchParams();
   const loginRedirectString = searchParams.get("loginRedirect");
+
   const navigate = useNavigate();
 
   const reStringifiedLoginRedirect = loginRedirectString && createSearchParams({ loginRedirect: loginRedirectString });
@@ -68,6 +65,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ login }) => {
   useTrackPage(PageTrackingCodes.LOGIN);
 
   const onSubmit = async (values: LoginPageFormValues) => {
+    if (!login) {
+      throw new Error("Login function is not defined");
+    }
     await login(values);
     return navigate(loginRedirectString ?? "/", { replace: true });
   };

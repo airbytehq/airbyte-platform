@@ -1,7 +1,7 @@
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { faCheckCircle, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useEffect } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
@@ -12,7 +12,6 @@ import { Heading } from "components/ui/Heading";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
-import { trackPageview } from "core/utils/fathom";
 
 import { SignupForm } from "./components/SignupForm";
 import styles from "./SignupPage.module.scss";
@@ -35,10 +34,6 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
 const SignupPage: React.FC<SignupPageProps> = () => {
   const { loginWithOAuth, signUp } = useAuthService();
   useTrackPage(PageTrackingCodes.SIGNUP);
-
-  useEffect(() => {
-    trackPageview();
-  }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
