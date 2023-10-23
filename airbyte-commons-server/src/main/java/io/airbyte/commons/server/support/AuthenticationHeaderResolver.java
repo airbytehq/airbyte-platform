@@ -10,20 +10,25 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTIN
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER;
 
+import io.airbyte.api.model.generated.PermissionIdRequestBody;
+import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -34,9 +39,12 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthenticationHeaderResolver {
 
   private final WorkspaceHelper workspaceHelper;
+  private final PermissionHandler permissionHandler;
 
-  public AuthenticationHeaderResolver(final WorkspaceHelper workspaceHelper) {
+  public AuthenticationHeaderResolver(final WorkspaceHelper workspaceHelper,
+                                      final PermissionHandler permissionHandler) {
     this.workspaceHelper = workspaceHelper;
+    this.permissionHandler = permissionHandler;
   }
 
   /**
@@ -46,17 +54,38 @@ public class AuthenticationHeaderResolver {
    */
   public List<UUID> resolveOrganization(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
+    try {
+      if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
+        return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
+      } else {
+        // resolving by permission id requires a database fetch, so we
+        // handle it last and with a dedicated check to minimize latency.
+        final UUID organizationId = resolveOrganizationIdFromPermissionHeader(properties);
+        if (organizationId != null) {
+          return List.of(organizationId);
+        }
+      }
+      // Else, determine the organization from workspace related fields.
+      final List<UUID> workspaceIds = resolveWorkspace(properties);
+      if (workspaceIds == null) {
+        return null;
+      }
 
-    if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
-      return List.of(UUID.fromString(properties.get(ORGANIZATION_ID_HEADER)));
-    }
-    // Else, determine the organization from workspace related fields.
-
-    final List<UUID> workspaceIds = resolveWorkspace(properties);
-    if (workspaceIds == null) {
+      final List<UUID> organizationIds = new ArrayList<>();
+      for (UUID workspaceId : workspaceIds) {
+        try {
+          organizationIds.add(workspaceHelper.getOrganizationForWorkspace(workspaceId));
+        } catch (final Exception e) {
+          log.debug("Unable to resolve organization ID for workspace ID: {}", workspaceId, e);
+        }
+      }
+      return organizationIds;
+    } catch (final ConfigNotFoundException e) {
+      log.debug("Unable to resolve organization ID.", e);
       return null;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-    return workspaceIds.stream().map(workspaceId -> workspaceHelper.getOrganizationForWorkspace(workspaceId)).collect(Collectors.toList());
   }
 
   /**
@@ -97,13 +126,40 @@ public class AuthenticationHeaderResolver {
       } else if (properties.containsKey(WORKSPACE_IDS_HEADER)) {
         return resolveWorkspaces(properties);
       } else {
+        // resolving by permission id requires a database fetch, so we
+        // handle it last and with a dedicated check to minimize latency.
+        final UUID workspaceId = resolveWorkspaceIdFromPermissionHeader(properties);
+        if (workspaceId != null) {
+          return List.of(workspaceId);
+        }
+
         log.debug("Request does not contain any headers that resolve to a workspace ID.");
         return null;
       }
     } catch (final JsonValidationException | ConfigNotFoundException e) {
       log.debug("Unable to resolve workspace ID.", e);
       return null;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
+  }
+
+  private UUID resolveWorkspaceIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
+    if (!properties.containsKey(PERMISSION_ID_HEADER)) {
+      return null;
+    }
+    final PermissionRead permission = permissionHandler.getPermission(
+        new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
+    return permission.getWorkspaceId();
+  }
+
+  private UUID resolveOrganizationIdFromPermissionHeader(final Map<String, String> properties) throws ConfigNotFoundException, IOException {
+    if (!properties.containsKey(PERMISSION_ID_HEADER)) {
+      return null;
+    }
+    final PermissionRead permission = permissionHandler.getPermission(
+        new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
+    return permission.getOrganizationId();
   }
 
   private List<UUID> resolveWorkspaces(final Map<String, String> properties) {
