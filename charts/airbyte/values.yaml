@@ -1049,7 +1049,13 @@ airbyte-bootloader:
   secrets: {}
 
   ##  In case you need to implement a sidecar pod that needs to be killed once the bootloader
-  ##  is completed. Example sidecar to connect to db (gcp auth proxy)
+  ##  is completed. Example sidecar to connect to db (gcp auth proxy):
+  ##  Create a pod with 3 containers:
+  ##  - Bootloader container
+  ##  - Cloud SQL Auth Proxy container that creates a secured tunnel to communicate with managed GCP database
+  ##  - Additional container that scan processes to killed Cloud SQL Auth Proxy container when bootloader container is done
+  ##  If you don't have this mechanism bootloader pod will still be ready, even if bootloader container is in completed state
+  ##  because Cloud SQL Auth Proxy container is still up and airbyte deployment process will be stuck.
   shareProcessNamespace: false
 
   ##  env_vars [object] Supply extra env variables to main container using simplified notation
