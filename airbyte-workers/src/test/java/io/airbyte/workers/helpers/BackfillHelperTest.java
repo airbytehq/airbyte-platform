@@ -94,7 +94,7 @@ class BackfillHelperTest {
   void testClearStateForStreamsToBackfill() {
     List<StreamDescriptor> streamsToBackfill = List.of(STREAM_DESCRIPTOR);
     final var actualState = BackfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill);
-    final var typedState = StateMessageHelper.getTypedState(actualState.getState(), true);
+    final var typedState = StateMessageHelper.getTypedState(actualState.getState());
     assertEquals(1, typedState.get().getStateMessages().size());
     assertEquals(JsonNodeFactory.instance.objectNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
   }

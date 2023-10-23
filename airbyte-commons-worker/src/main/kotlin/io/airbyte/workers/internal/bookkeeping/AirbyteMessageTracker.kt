@@ -28,7 +28,7 @@ class AirbyteMessageTracker(
   private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
   private val logConnectorMsgs: Boolean = featureFlags.logConnectorMessages()
-  private val stateAggregator: StateAggregator = DefaultStateAggregator(featureFlags.useStreamCapableState())
+  private val stateAggregator: StateAggregator = DefaultStateAggregator()
 
   /**
    * Accepts an AirbyteMessage emitted from a source and tracks any metadata about it that is required

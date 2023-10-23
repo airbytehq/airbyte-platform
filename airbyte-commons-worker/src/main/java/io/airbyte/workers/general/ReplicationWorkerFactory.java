@@ -130,7 +130,7 @@ public class ReplicationWorkerFactory {
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
+        ? new EmptyAirbyteSource()
         : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
             replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), heartbeatMonitor);
 

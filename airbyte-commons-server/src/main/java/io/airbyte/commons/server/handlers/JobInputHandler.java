@@ -313,7 +313,7 @@ public class JobInputHandler {
     attemptHandler.saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(jobId)
         .attemptNumber(attemptNumber)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
   }
 
   /**

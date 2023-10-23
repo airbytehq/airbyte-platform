@@ -80,15 +80,14 @@ public class ApiPojoConverters {
   }
 
   public static io.airbyte.api.model.generated.AttemptSyncConfig attemptSyncConfigToApi(final io.airbyte.config.AttemptSyncConfig attemptSyncConfig,
-                                                                                        final UUID connectionId,
-                                                                                        final boolean useStreamCapableState) {
+                                                                                        final UUID connectionId) {
     if (attemptSyncConfig == null) {
       return null;
     }
 
     final State state = attemptSyncConfig.getState();
     final Optional<StateWrapper> optStateWrapper = state != null ? StateMessageHelper.getTypedState(
-        state.getState(), useStreamCapableState) : Optional.empty();
+        state.getState()) : Optional.empty();
 
     return new io.airbyte.api.model.generated.AttemptSyncConfig()
         .sourceConfiguration(attemptSyncConfig.getSourceConfiguration())

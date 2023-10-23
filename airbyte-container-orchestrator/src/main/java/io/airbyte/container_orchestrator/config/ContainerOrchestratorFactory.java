@@ -135,8 +135,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
-    return new StateAggregatorFactory(featureFlags);
+  public StateAggregatorFactory stateAggregatorFactory() {
+    return new StateAggregatorFactory();
   }
 
 }

@@ -21,7 +21,7 @@ interface StateAggregator {
 /**
  * Default state aggregator that detects which type of state is being used and aggregates appropriately.
  */
-class DefaultStateAggregator(private val useStreamCapableState: Boolean) : StateAggregator {
+class DefaultStateAggregator : StateAggregator {
   private var stateType: AirbyteStateType? = null
   private val streamStateAggregator = StreamStateAggregator()
   private val singleStateAggregator = SingleStateAggregator()
@@ -62,17 +62,12 @@ class DefaultStateAggregator(private val useStreamCapableState: Boolean) : State
   override fun isEmpty(): Boolean = stateType == null || getStateAggregator().isEmpty()
 
   /** Return the state aggregator that match the state type. */
-  private fun getStateAggregator(): StateAggregator {
-    if (!useStreamCapableState) {
-      return singleStateAggregator
-    }
-
-    return when (stateType) {
+  private fun getStateAggregator(): StateAggregator =
+    when (stateType) {
       AirbyteStateType.STREAM -> streamStateAggregator
       AirbyteStateType.GLOBAL, AirbyteStateType.LEGACY -> singleStateAggregator
       null -> throw IllegalArgumentException("StateType must not be null")
     }
-  }
 
   /**
    * We cannot have 2 different state types given to the same instance of this class. This method set

@@ -29,7 +29,7 @@ public class BackfillHelper {
       // This would be the case for a Full Refresh sync.
       return null;
     }
-    final var stateOptional = StateMessageHelper.getTypedState(inputState.getState(), true);
+    final var stateOptional = StateMessageHelper.getTypedState(inputState.getState());
     if (!stateOptional.isPresent()) {
       return null; // No state, no backfill.
     }
