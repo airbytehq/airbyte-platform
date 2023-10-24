@@ -46,8 +46,8 @@ public class BackfillHelper {
           ProtocolConverters.streamDescriptorToClient(stateMessage.getStream().getStreamDescriptor()))) {
         continue;
       }
-      // It's listed in the streams to backfill, so we write the state to {}.
-      stateMessage.getStream().setStreamState(JsonNodeFactory.instance.objectNode());
+      // It's listed in the streams to backfill, so we write the state to null.
+      stateMessage.getStream().setStreamState(JsonNodeFactory.instance.nullNode());
     }
     return StateMessageHelper.getState(state);
   }

@@ -213,7 +213,7 @@ class ReplicationActivityTest {
     input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CATALOG_DIFF));
     final var replicationInput = replicationActivity.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
-    assertEquals(JsonNodeFactory.instance.objectNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
+    assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
   }
 
 }
