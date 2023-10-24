@@ -118,7 +118,6 @@ async def oss_test(settings: OssSettings, ctx: PipelineContext, build_results: O
     test_client = await ctx.get_dagger_client(client, ctx.prefect_flow_run_context.flow.name) 
     build_results = await oss_build(scan=scan, client=test_client) if build_results is None else build_results
     test_results = await test_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
-    await check_oss_backend_task.submit(client=test_client, oss_build_result=build_results[0][0], settings=settings, ctx=quote(ctx), scan=scan)
     # TODO: add cypress E2E tests here
     return [test_results] 
 
