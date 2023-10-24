@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.support;
+package io.airbyte.micronaut.temporal;
 
 import io.temporal.activity.ActivityOptions;
 

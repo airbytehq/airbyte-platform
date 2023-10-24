@@ -2,10 +2,10 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.support;
+package io.airbyte.micronaut.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
+import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;
 import io.micronaut.context.BeanRegistration;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.workflow.Workflow;
@@ -13,10 +13,10 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.implementation.bind.annotation.This;
+import org.slf4j.Logger;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -27,9 +27,9 @@ import org.springframework.util.ReflectionUtils;
  *
  * @param <T> The type of the Temporal workflow.
  */
-@Slf4j
 public class TemporalActivityStubInterceptor<T> {
 
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(TemporalActivityStubInterceptor.class);
   /**
    * Function that generates Temporal activity stubs.
    *

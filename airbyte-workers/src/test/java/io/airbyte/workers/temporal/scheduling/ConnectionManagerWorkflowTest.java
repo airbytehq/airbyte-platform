@@ -27,6 +27,7 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.JobInput;
@@ -74,7 +75,6 @@ import io.airbyte.workers.temporal.scheduling.testsyncworkflow.ReplicateFailureS
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SleepingSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SourceAndDestinationFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SyncWorkflowFailingOutputWorkflow;
-import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityOptions;

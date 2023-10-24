@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.support;
+package io.airbyte.micronaut.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.micronaut.context.BeanRegistration;
@@ -18,12 +18,12 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.TypeCache;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.matcher.ElementMatchers;
+import org.slf4j.Logger;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.ReflectionUtils;
@@ -35,9 +35,9 @@ import org.springframework.util.ReflectionUtils;
  * https://github.com/applicaai/spring-boot-starter-temporal.
  */
 @Singleton
-@Slf4j
 public class TemporalProxyHelper {
 
+  private static final Logger log = org.slf4j.LoggerFactory.getLogger(TemporalProxyHelper.class);
   /**
    * Cache of already generated proxies to reduce the cost of creating and loading the proxies.
    */

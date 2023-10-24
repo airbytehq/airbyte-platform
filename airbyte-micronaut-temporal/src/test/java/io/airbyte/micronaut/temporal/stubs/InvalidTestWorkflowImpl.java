@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.stubs;
+package io.airbyte.micronaut.temporal.stubs;
 
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;

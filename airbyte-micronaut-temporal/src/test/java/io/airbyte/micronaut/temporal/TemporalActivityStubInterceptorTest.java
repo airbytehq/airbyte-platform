@@ -2,16 +2,16 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.support;
+package io.airbyte.micronaut.temporal;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.workers.temporal.stubs.ErrorTestWorkflowImpl;
-import io.airbyte.workers.temporal.stubs.InvalidTestWorkflowImpl;
-import io.airbyte.workers.temporal.stubs.TestActivity;
-import io.airbyte.workers.temporal.stubs.ValidTestWorkflowImpl;
+import io.airbyte.micronaut.temporal.stubs.ErrorTestWorkflowImpl;
+import io.airbyte.micronaut.temporal.stubs.InvalidTestWorkflowImpl;
+import io.airbyte.micronaut.temporal.stubs.TestActivity;
+import io.airbyte.micronaut.temporal.stubs.ValidTestWorkflowImpl;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityOptions;
@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 /**
  * Test suite for the {@link TemporalActivityStubInterceptor} class.
@@ -31,7 +32,7 @@ class TemporalActivityStubInterceptorTest {
   @Test
   void testExecutionOfValidWorkflowWithActivities() throws Exception {
     final ActivityOptions activityOptions = mock(ActivityOptions.class);
-    final TestActivity testActivity = mock(TestActivity.class);
+    final TestActivity testActivity = Mockito.mock(TestActivity.class);
 
     final BeanIdentifier activityOptionsBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration activityOptionsBeanRegistration = mock(BeanRegistration.class);
@@ -56,7 +57,7 @@ class TemporalActivityStubInterceptorTest {
   @Test
   void testExecutionOfValidWorkflowWithActivitiesThatThrows() {
     final ActivityOptions activityOptions = mock(ActivityOptions.class);
-    final TestActivity testActivity = mock(TestActivity.class);
+    final TestActivity testActivity = Mockito.mock(TestActivity.class);
 
     final BeanIdentifier activityOptionsBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration activityOptionsBeanRegistration = mock(BeanRegistration.class);
@@ -83,7 +84,7 @@ class TemporalActivityStubInterceptorTest {
   void testActivityStubsAreOnlyInitializedOnce() throws Exception {
     final AtomicInteger activityStubInitializationCounter = new AtomicInteger(0);
     final ActivityOptions activityOptions = mock(ActivityOptions.class);
-    final TestActivity testActivity = mock(TestActivity.class);
+    final TestActivity testActivity = Mockito.mock(TestActivity.class);
     final TemporalActivityStubGeneratorFunction<Class<?>, ActivityOptions, Object> activityStubFunction = (c, a) -> {
       activityStubInitializationCounter.incrementAndGet();
       return testActivity;
@@ -115,7 +116,7 @@ class TemporalActivityStubInterceptorTest {
   @Test
   void testExecutionOfInvalidWorkflowWithActivityWithMissingActivityOptions() {
     final ActivityOptions activityOptions = mock(ActivityOptions.class);
-    final TestActivity testActivity = mock(TestActivity.class);
+    final TestActivity testActivity = Mockito.mock(TestActivity.class);
 
     final BeanIdentifier activityOptionsBeanIdentifier = mock(BeanIdentifier.class);
     final BeanRegistration activityOptionsBeanRegistration = mock(BeanRegistration.class);
