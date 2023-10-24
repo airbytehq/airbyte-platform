@@ -7,6 +7,5 @@ export {
   useAnalyticsIdentifyUser,
   useTrackPage,
   useAnalyticsRegisterValues,
-  analyticsServiceContext,
 } from "./useAnalyticsService";
 export * from "./pageTrackingCodes";

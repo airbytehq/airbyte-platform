@@ -116,7 +116,7 @@ export const ConnectionReplicationPage: React.FC = () => {
     useConnectionFormService();
   const validationSchema = useConnectionValidationSchema({ mode });
 
-  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION, { stream_count: connection.syncCatalog.streams.length });
 
   const saveConnection = useCallback(
     async (
