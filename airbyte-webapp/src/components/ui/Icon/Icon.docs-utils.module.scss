@@ -1,0 +1,61 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.formFileUpload {
+  height: 16rem;
+  width: 28rem;
+  max-width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+.inputFileUpload {
+  display: none;
+}
+
+.labelFileUpload {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: variables.$spacing-xs;
+  border-radius: 1rem;
+  border-style: dashed;
+  border-color: colors.$grey-200;
+  background-color: colors.$grey-50;
+
+  &.dragActive {
+    background-color: colors.$foreground;
+  }
+}
+
+.uploadButton {
+  cursor: pointer;
+  padding: variables.$spacing-md;
+  font-size: 1rem;
+  border: none;
+  background-color: colors.$transparentColor;
+
+  &:hover {
+    text-decoration-line: underline;
+  }
+}
+
+.dragFileElement {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.code {
+  display: block;
+  margin-top: variables.$spacing-lg;
+  white-space: pre;
+  max-width: 100%;
+  overflow-x: scroll;
+}
