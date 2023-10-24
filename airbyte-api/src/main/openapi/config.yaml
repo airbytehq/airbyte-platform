@@ -7227,6 +7227,7 @@ components:
         - manual_cancellation
         - refresh_schema
         - heartbeat_timeout
+        - destination_timeout
     AttemptStatus:
       type: string
       enum:

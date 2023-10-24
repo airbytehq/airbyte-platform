@@ -7,6 +7,4 @@ package io.airbyte.workers.context;
 /**
  * Feature flags to consider during a Replication job.
  */
-public record ReplicationFeatureFlags() {
-
-}
+public record ReplicationFeatureFlags(boolean isDestinationTimeoutEnabled) {}

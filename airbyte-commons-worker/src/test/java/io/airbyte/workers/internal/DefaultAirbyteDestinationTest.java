@@ -5,17 +5,10 @@
 package io.airbyte.workers.internal;
 
 import static io.airbyte.commons.logging.LoggingHelper.RESET;
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS;
-import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -34,8 +27,6 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
@@ -51,7 +42,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -94,6 +84,7 @@ class DefaultAirbyteDestinationTest {
   private AirbyteMessageBufferedWriterFactory messageWriterFactory;
   private final ProtocolSerializer protocolSerializer = new DefaultProtocolSerializer();
   private ByteArrayOutputStream outputStream;
+  private DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   @BeforeEach
   void setup() throws IOException, WorkerException {
@@ -118,6 +109,8 @@ class DefaultAirbyteDestinationTest {
     when(process.isAlive()).thenReturn(true);
     when(process.getInputStream()).thenReturn(inputStream);
 
+    destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
+
     streamFactory = noop -> MESSAGES.stream();
     messageWriterFactory = new DefaultAirbyteMessageBufferedWriterFactory();
   }
@@ -136,7 +129,7 @@ class DefaultAirbyteDestinationTest {
   @Test
   void testSuccessfulLifecycle() throws Exception {
     final AirbyteDestination destination =
-        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, true, null, null);
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
@@ -156,97 +149,6 @@ class DefaultAirbyteDestinationTest {
     verify(outputStream, never()).close();
 
     destination.notifyEndOfInput();
-
-    verify(outputStream).close();
-
-    destination.close();
-
-    Assertions.assertEquals(MESSAGES, messages);
-
-    Assertions.assertTimeout(Duration.ofSeconds(5), () -> {
-      while (process.getErrorStream().available() != 0) {
-        Thread.sleep(50);
-      }
-    });
-
-    verify(process).exitValue();
-  }
-
-  @SuppressWarnings("BusyWait")
-  @Test
-  void testSuccessfulLifecycleElapsedTimeTrackingEnabled() throws Exception {
-    final MetricClient metricClient = mock(MetricClient.class);
-    final DefaultAirbyteDestination destination =
-        spy(new DefaultAirbyteDestination(
-            integrationLauncher,
-            streamFactory,
-            messageWriterFactory,
-            protocolSerializer,
-            true,
-            metricClient,
-            new MetricAttribute[] {},
-            2));
-    destination.start(DESTINATION_CONFIG, jobRoot);
-
-    final AtomicBoolean acceptIsStuck = new AtomicBoolean(true);
-    doAnswer(invocation -> {
-      while (acceptIsStuck.get()) {
-        Thread.sleep(1000);
-      }
-      invocation.callRealMethod();
-      return null;
-    }).when(destination).acceptWithoutTrackingElapsedTime(any());
-
-    doAnswer(invocation -> {
-      // stops hanging on accept after emitting metrics
-      acceptIsStuck.set(false);
-      return null;
-    }).when(metricClient)
-        .gauge(eq(WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS), anyDouble(), any(MetricAttribute.class));
-
-    final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
-    destination.accept(recordMessage);
-
-    verify(metricClient, atLeastOnce()).gauge(
-        eq(WORKER_DESTINATION_ACCEPT_ELAPSED_MILLISECS),
-        anyDouble(),
-        any(MetricAttribute.class));
-
-    final List<AirbyteMessage> messages = Lists.newArrayList();
-
-    assertFalse(destination.isFinished());
-    messages.add(destination.attemptRead().get());
-    assertFalse(destination.isFinished());
-    messages.add(destination.attemptRead().get());
-    assertFalse(destination.isFinished());
-
-    when(process.isAlive()).thenReturn(false);
-    assertTrue(destination.isFinished());
-
-    verify(outputStream, never()).close();
-
-    final AtomicBoolean notifyEndOfInputIsStuck = new AtomicBoolean(true);
-    doAnswer(invocation -> {
-      while (notifyEndOfInputIsStuck.get()) {
-        Thread.sleep(1000);
-      }
-      invocation.callRealMethod();
-      return null;
-    }).when(destination).notifyEndOfInputWithoutTrackingElapsedTime();
-
-    doAnswer(invocation -> {
-      // stops hanging on notifyEndOfInput after emitting metrics
-      notifyEndOfInputIsStuck.set(false);
-      return null;
-    }).when(metricClient)
-        .gauge(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS), anyDouble(), any(MetricAttribute.class));
-
-    destination.notifyEndOfInput();
-
-    verify(metricClient, atLeastOnce()).gauge(
-        eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_ELAPSED_MILLISECS),
-        anyDouble(),
-        any(MetricAttribute.class));
 
     verify(outputStream).close();
 
@@ -267,7 +169,7 @@ class DefaultAirbyteDestinationTest {
   void testTaggedLogs() throws Exception {
 
     final AirbyteDestination destination =
-        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, false, null, null);
+        new DefaultAirbyteDestination(integrationLauncher, streamFactory, messageWriterFactory, protocolSerializer, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     final AirbyteMessage recordMessage = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "blue");
@@ -295,7 +197,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testCloseNotifiesLifecycle() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     verify(outputStream, never()).close();
@@ -307,7 +209,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testNonzeroExitCodeThrowsException() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);
@@ -317,7 +219,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testIgnoredExitCodes() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
     when(process.isAlive()).thenReturn(false);
 
@@ -329,7 +231,7 @@ class DefaultAirbyteDestinationTest {
 
   @Test
   void testGetExitValue() throws Exception {
-    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher);
+    final AirbyteDestination destination = new DefaultAirbyteDestination(integrationLauncher, destinationTimeoutMonitor);
     destination.start(DESTINATION_CONFIG, jobRoot);
 
     when(process.isAlive()).thenReturn(false);
