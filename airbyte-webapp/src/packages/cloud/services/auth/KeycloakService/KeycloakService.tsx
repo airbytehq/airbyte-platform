@@ -20,7 +20,7 @@ import { UserRead } from "core/request/AirbyteClient";
 
 export const DEFAULT_KEYCLOAK_REALM = "airbyte";
 export const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
-const KEYCLOAK_IDP_HINT = "okta";
+const KEYCLOAK_IDP_HINT = "default";
 
 export type KeycloakServiceContext = {
   userManager: UserManager;
