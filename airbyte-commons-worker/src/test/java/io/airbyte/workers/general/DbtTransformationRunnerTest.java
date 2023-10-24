@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.general;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -25,7 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-public class DbtTransformationRunnerTest {
+@SuppressWarnings("JavadocMethod")
+class DbtTransformationRunnerTest {
 
   /**
    * It is simpler to assert the custom transformation prep image is called with the correct
@@ -72,7 +73,7 @@ public class DbtTransformationRunnerTest {
   })
   void getAirbyteDestinationNameTest(String image, String expected) {
     String name = DbtTransformationRunner.getAirbyteDestinationName(image);
-    assertTrue(name.equals(expected));
+    assertEquals(name, expected);
   }
 
 }

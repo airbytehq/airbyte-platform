@@ -29,8 +29,8 @@ import org.junit.jupiter.api.Test;
 
 class DestinationTimeoutMonitorTest {
 
-  private FeatureFlagClient featureFlagClient = mock(TestClient.class);
-  private MetricClient metricClient = mock(MetricClient.class);
+  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+  private final MetricClient metricClient = mock(MetricClient.class);
 
   @Test
   void testNoTimeout() {

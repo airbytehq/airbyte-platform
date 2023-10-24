@@ -112,8 +112,6 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    *
    * 3. The task that waits for the above two tasks to complete
    *
-   * @param runnableFuture
-   * @throws ExecutionException
    */
   public void runWithTimeoutThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
     final CompletableFuture<Void> timeoutMonitorFuture = CompletableFuture.runAsync(this::pollForTimeout, getLazyExecutorService());
@@ -219,10 +217,12 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOut() {
-    if (hasTimedOutOnAccept())
+    if (hasTimedOutOnAccept()) {
       return true;
-    if (hasTimedOutOnNotifyEndOfInput())
+    }
+    if (hasTimedOutOnNotifyEndOfInput()) {
       return true;
+    }
 
     return false;
   }
