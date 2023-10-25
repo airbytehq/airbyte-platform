@@ -44,8 +44,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class PermissionHandlerTest {
 
+  public static final String BLOCKED = "blocked";
   private Supplier<UUID> uuidSupplier;
   private PermissionPersistence permissionPersistence;
   private WorkspaceService workspaceService;
@@ -157,7 +159,7 @@ class PermissionHandlerTest {
           .userId(PERMISSION_ORGANIZATION_ADMIN.getUserId())
           .organizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId());
 
-      doThrow(new DataAccessException("blocked", new SQLOperationNotAllowedException("blocked"))).when(permissionPersistence).writePermission(any());
+      doThrow(new DataAccessException(BLOCKED, new SQLOperationNotAllowedException(BLOCKED))).when(permissionPersistence).writePermission(any());
       assertThrows(OperationNotAllowedException.class, () -> permissionHandler.updatePermission(update));
     }
 
@@ -198,7 +200,7 @@ class PermissionHandlerTest {
 
     @Test
     void throwsOperationNotAllowedIfPersistenceBlocks() throws Exception {
-      doThrow(new DataAccessException("blocked", new SQLOperationNotAllowedException("blocked"))).when(permissionPersistence)
+      doThrow(new DataAccessException(BLOCKED, new SQLOperationNotAllowedException(BLOCKED))).when(permissionPersistence)
           .deletePermissionById(any());
       assertThrows(OperationNotAllowedException.class, () -> permissionHandler.deletePermission(
           new PermissionIdRequestBody().permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())));

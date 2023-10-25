@@ -1,6 +1,8 @@
+import isEqual from "lodash/isEqual";
 import { User, WebStorageStateStore } from "oidc-client-ts";
 import { UserManager } from "oidc-client-ts";
 import {
+  MutableRefObject,
   PropsWithChildren,
   createContext,
   useCallback,
@@ -13,22 +15,23 @@ import {
 } from "react";
 
 import { config } from "config";
+import { useGetOrCreateUser } from "core/api";
+import { UserRead } from "core/request/AirbyteClient";
 
 export const DEFAULT_KEYCLOAK_REALM = "airbyte";
 export const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
+const KEYCLOAK_IDP_HINT = "default";
 
-interface KeycloakRealmContextType {
+export type KeycloakServiceContext = {
   userManager: UserManager;
-  signinRedirect: () => Promise<void>;
-  signoutRedirect: () => Promise<void>;
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: Error | null;
+  signin: () => Promise<void>;
+  signout: () => Promise<void>;
   changeRealmAndRedirectToSignin: (realm: string) => Promise<void>;
-}
+  // The access token is stored in a ref so we don't cause a re-render each time it changes. Instead, we can use the current ref value when we call the API.
+  accessTokenRef: MutableRefObject<string | null>;
+} & KeycloakAuthState;
 
-const keycloakServiceContext = createContext<KeycloakRealmContextType | undefined>(undefined);
+const keycloakServiceContext = createContext<KeycloakServiceContext | undefined>(undefined);
 
 export const useKeycloakService = () => {
   const context = useContext(keycloakServiceContext);
@@ -41,23 +44,26 @@ export const useKeycloakService = () => {
 };
 
 interface KeycloakAuthState {
-  user: User | null;
+  airbyteUser: UserRead | null;
+  keycloakUser: User | null;
   error: Error | null;
-  isInitializing: boolean;
+  didInitialize: boolean;
   isAuthenticated: boolean;
 }
 
 const keycloakAuthStateInitialState: KeycloakAuthState = {
-  user: null,
+  airbyteUser: null,
+  keycloakUser: null,
   error: null,
-  isInitializing: true,
+  didInitialize: false,
   isAuthenticated: false,
 };
 
 type KeycloakAuthStateAction =
   | {
       type: "userLoaded";
-      user: User;
+      keycloakUser: User;
+      airbyteUser: UserRead;
     }
   | {
       type: "userUnloaded";
@@ -72,23 +78,25 @@ const keycloakAuthStateReducer = (state: KeycloakAuthState, action: KeycloakAuth
     case "userLoaded":
       return {
         ...state,
-        user: action.user,
+        keycloakUser: action.keycloakUser,
+        airbyteUser: action.airbyteUser,
         isAuthenticated: true,
-        isInitializing: false,
+        didInitialize: true,
         error: null,
       };
     case "userUnloaded":
       return {
         ...state,
-        user: null,
+        keycloakUser: null,
+        airbyteUser: null,
         isAuthenticated: false,
-        isInitializing: false,
+        didInitialize: true,
         error: null,
       };
     case "error":
       return {
         ...state,
-        isInitializing: false,
+        didInitialize: true,
         error: action.error,
       };
   }
@@ -98,6 +106,10 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
   const userSigninInitialized = useRef(false);
   const [userManager] = useState<UserManager>(initializeUserManager);
   const [authState, dispatch] = useReducer(keycloakAuthStateReducer, keycloakAuthStateInitialState);
+  const { mutateAsync: getAirbyteUser } = useGetOrCreateUser();
+
+  // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
+  const keycloakAccessTokenRef = useRef<string | null>(null);
 
   // Initialization of the current user
   useEffect(() => {
@@ -108,16 +120,22 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     userSigninInitialized.current = true;
 
     (async (): Promise<void> => {
-      let user: User | void | null = null;
+      let keycloakUser: User | void | null = null;
       try {
-        // check if returning back from authority server
+        // Check if user is returning back from IdP login
         if (hasAuthParams()) {
-          user = await userManager.signinCallback();
+          keycloakUser = await userManager.signinCallback();
           clearSsoSearchParams();
-        }
-        // If not returning from authority server, check if we can get a user
-        if ((user ??= await userManager.getUser())) {
-          dispatch({ type: "userLoaded", user });
+          // Otherwise, check if there is a session currently
+        } else if ((keycloakUser ??= await userManager.getUser())) {
+          // Initialize the access token ref with a value
+          keycloakAccessTokenRef.current = keycloakUser.access_token;
+          const airbyteUser = await getAirbyteUser({
+            authUserId: keycloakUser.profile.sub,
+            getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
+          });
+          dispatch({ type: "userLoaded", airbyteUser, keycloakUser });
+          // Finally, we can assume there is no active session
         } else {
           dispatch({ type: "userUnloaded" });
         }
@@ -125,7 +143,7 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
         dispatch({ type: "error", error });
       }
     })();
-  }, [userManager]);
+  }, [userManager, getAirbyteUser]);
 
   // Hook in to userManager events
   useEffect(() => {
@@ -133,8 +151,19 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       return undefined;
     }
 
-    const handleUserLoaded = (user: User) => {
-      dispatch({ type: "userLoaded", user });
+    const handleUserLoaded = async (keycloakUser: User) => {
+      const airbyteUser = await getAirbyteUser({
+        authUserId: keycloakUser.profile.sub,
+        getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
+      });
+
+      // Update the access token ref with the new access token. This happens each time we get a fresh token.
+      keycloakAccessTokenRef.current = keycloakUser.access_token;
+
+      // Only if actual user values (not just access_token) have changed, do we need to update the state and cause a re-render
+      if (!usersAreSame({ keycloakUser, airbyteUser }, authState)) {
+        dispatch({ type: "userLoaded", keycloakUser, airbyteUser });
+      }
     };
     userManager.events.addUserLoaded(handleUserLoaded);
 
@@ -148,8 +177,8 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
     };
     userManager.events.addSilentRenewError(handleSilentRenewError);
 
-    const handleExpiredToken = () => {
-      userManager.signinSilent().catch(async () => {
+    const handleExpiredToken = async () => {
+      await userManager.signinSilent().catch(async () => {
         // We need to manually sign out, otherwise the expired token and user will stick around
         await userManager.signoutSilent();
         dispatch({ type: "userUnloaded" });
@@ -163,24 +192,24 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
       userManager.events.removeSilentRenewError(handleSilentRenewError);
       userManager.events.removeAccessTokenExpired(handleExpiredToken);
     };
-  }, [userManager]);
+  }, [userManager, getAirbyteUser, authState]);
 
   const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
     const newUserManager = createUserManager(realm);
-    await newUserManager.signinRedirect();
+    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
   }, []);
 
   const contextValue = useMemo(() => {
-    return {
+    const value = {
       ...authState,
       userManager,
-      signinRedirect: () => userManager.signinRedirect(),
-      signoutRedirect: () => userManager.signoutRedirect(),
-      isAuthenticated: userManager.getUser() !== null,
-      isLoading: false,
-      error: null,
+      signin: () => userManager.signinRedirect(),
+      signout: () => userManager.signoutRedirect({ post_logout_redirect_uri: window.location.origin }),
+      isAuthenticated: authState.isAuthenticated,
       changeRealmAndRedirectToSignin,
+      accessTokenRef: keycloakAccessTokenRef,
     };
+    return value;
   }, [userManager, changeRealmAndRedirectToSignin, authState]);
 
   return <keycloakServiceContext.Provider value={contextValue}>{children}</keycloakServiceContext.Provider>;
@@ -240,7 +269,6 @@ function clearSsoSearchParams() {
 }
 
 export const hasAuthParams = (location = window.location): boolean => {
-  // response_mode: query
   const searchParams = new URLSearchParams(location.search);
   if ((searchParams.get("code") || searchParams.get("error")) && searchParams.get("state")) {
     return true;
@@ -248,3 +276,29 @@ export const hasAuthParams = (location = window.location): boolean => {
 
   return false;
 };
+
+// Checks whether users are the same, ignoring properties like the access_token or refresh_token
+function usersAreSame(
+  newState: { keycloakUser: User | null; airbyteUser: UserRead | null },
+  authState: KeycloakAuthState
+): boolean {
+  if (!!authState.airbyteUser !== !!newState.airbyteUser) {
+    return false;
+  }
+
+  if (!!authState.keycloakUser !== !!newState.keycloakUser) {
+    return false;
+  }
+
+  // We only really care if the keycloakUser id changes. If only the access token or refresh token has updated,
+  // we don't need to cause a re-render of the context value.
+  if (authState.keycloakUser?.profile.sub !== newState.keycloakUser?.profile.sub) {
+    return false;
+  }
+
+  if (!isEqual(authState.airbyteUser, newState.airbyteUser)) {
+    return false;
+  }
+
+  return true;
+}

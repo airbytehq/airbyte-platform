@@ -160,3 +160,32 @@ export const useUserHook = () => {
     ),
   };
 };
+
+/**
+ * This mutation is called during the authentication process. It's used after the user has authenticated
+ * and we have a valid JWT, but before the auth context is updated to include that JWT. For that reason,
+ * we pass getAccessToken explicitly here to attach to the authenticated request. This allows us to make
+ * a single update to the auth context containing both the JWT and the airbyte user.
+ */
+export const useUpdateUser = () => {
+  return useMutation(
+    ({ userUpdate, getAccessToken }: { userUpdate: UserUpdate; getAccessToken: () => Promise<string> }) =>
+      updateUser({ ...userUpdate }, { getAccessToken })
+  );
+};
+
+export const useRevokeUserSession = () => {
+  return useMutation(({ getAccessToken }: { getAccessToken: () => Promise<string> }) =>
+    webBackendRevokeUserSession({ getAccessToken })
+  );
+};
+
+export const useResendSigninLink = () => {
+  return useMutation((email: string) =>
+    webBackendResendWithSigninLink(
+      { email, continueUrl: window.location.href },
+      // This is an unsecured endpoint, so we do not need to pass an access token
+      { getAccessToken: () => Promise.resolve(null) }
+    )
+  );
+};

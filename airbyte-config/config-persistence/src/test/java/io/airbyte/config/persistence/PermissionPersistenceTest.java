@@ -9,7 +9,6 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -153,14 +152,14 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void findUsersInWorkspaceTest() throws Exception {
     final PermissionType permissionType = permissionPersistence
-        .findPermissionTypeForUserAndWorkspace(MockData.WORKSPACE_ID_2, MockData.CREATOR_USER_ID_5.toString(), AuthProvider.KEYCLOAK);
+        .findPermissionTypeForUserAndWorkspace(MockData.WORKSPACE_ID_2, MockData.CREATOR_USER_ID_5.toString());
     Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, permissionType);
   }
 
   @Test
   void findUsersInOrganizationTest() throws Exception {
     final PermissionType permissionType = permissionPersistence
-        .findPermissionTypeForUserAndOrganization(MockData.ORGANIZATION_ID_2, MockData.CREATOR_USER_ID_5.toString(), AuthProvider.KEYCLOAK);
+        .findPermissionTypeForUserAndOrganization(MockData.ORGANIZATION_ID_2, MockData.CREATOR_USER_ID_5.toString());
     Assertions.assertEquals(PermissionType.ORGANIZATION_READER, permissionType);
   }
 

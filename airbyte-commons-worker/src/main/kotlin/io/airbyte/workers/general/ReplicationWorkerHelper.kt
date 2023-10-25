@@ -32,6 +32,7 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.AirbyteSource
+import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
@@ -371,6 +372,7 @@ class ReplicationWorkerHelper(
         is SourceException -> FailureHelper.sourceFailure(ex, jobId, attempt)
         is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
         is HeartbeatTimeoutChaperone.HeartbeatTimeoutException -> FailureHelper.sourceHeartbeatFailure(ex, jobId, attempt)
+        is DestinationTimeoutMonitor.TimeoutException -> FailureHelper.destinationTimeoutFailure(ex, jobId, attempt)
         else -> FailureHelper.replicationFailure(ex, jobId, attempt)
       }
   }

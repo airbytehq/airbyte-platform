@@ -29,7 +29,6 @@ import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
@@ -91,9 +90,7 @@ class SyncPersistenceImplTest {
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
     attemptApi = mock(AttemptApi.class);
-    final FeatureFlags featureFlags = mock(FeatureFlags.class);
-    when(featureFlags.useStreamCapableState()).thenReturn(true);
-    syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(featureFlags), syncStatsTracker, executorService,
+    syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(), syncStatsTracker, executorService,
         flushPeriod, new RetryWithJitterConfig(1, 1, 4),
         connectionId, jobId, attemptNumber, catalog);
   }

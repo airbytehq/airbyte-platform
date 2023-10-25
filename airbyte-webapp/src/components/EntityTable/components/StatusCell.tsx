@@ -38,7 +38,7 @@ export const StatusCell: React.FC<StatusCellProps> = ({
         hasBreakingChange={hasBreakingChange}
         connection={connection}
       />
-      {allowAutoDetectSchema && <ChangesStatusIcon schemaChange={schemaChange} />}
+      {allowAutoDetectSchema && hasBreakingChange && <ChangesStatusIcon schemaChange={schemaChange} />}
     </div>
   );
 };

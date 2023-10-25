@@ -309,7 +309,7 @@ class SyncPersistenceImpl
       }
 
       val state = stateToFlush?.getAggregated() ?: return
-      val maybeStateWrapper = StateMessageHelper.getTypedState(state.state, true).getOrNull() ?: return
+      val maybeStateWrapper = StateMessageHelper.getTypedState(state.state).getOrNull() ?: return
 
       metricClient.count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT, 1)
 
@@ -364,7 +364,7 @@ class SyncPersistenceImpl
     private fun validateStreamMigration() {
       val state = stateToFlush?.getAggregated() ?: return
 
-      StateMessageHelper.getTypedState(state.state, true)
+      StateMessageHelper.getTypedState(state.state)
         .getOrNull()
         ?.takeIf { it.stateType == StateType.STREAM }
         ?.let {

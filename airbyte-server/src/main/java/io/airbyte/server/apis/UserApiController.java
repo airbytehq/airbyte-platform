@@ -5,7 +5,9 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_MEMBER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.UserApi;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
@@ -88,7 +90,7 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/list_by_organization_id")
-  @Secured({READER})
+  @Secured({ORGANIZATION_MEMBER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OrganizationUserReadList listUsersInOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
@@ -96,16 +98,15 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/list_by_workspace_id")
-  @Secured({READER})
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
   }
 
-  // TODO: Update permission to instance admin once the permission PR is merged.
   @Post("/list_instance_admins")
-  @Secured({READER})
+  @Secured({ADMIN}) // instance admin only
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public UserWithPermissionInfoReadList listInstanceAdminUsers() {

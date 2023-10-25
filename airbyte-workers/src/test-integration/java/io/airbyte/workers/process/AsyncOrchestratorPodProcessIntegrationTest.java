@@ -118,7 +118,7 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         null,
         null,
         null,
-        Map.of(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, "true", EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
+        Map.of(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
         Map.of("k8s.io/example", "true"),
         serverPort,
         "airbyte-admin",

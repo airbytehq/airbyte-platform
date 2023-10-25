@@ -1,16 +1,15 @@
-import { PropsWithChildren, useMemo } from "react";
+import { PropsWithChildren, useCallback, useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 import { AuthProvider, useAuth } from "react-oidc-context";
 
 import LoadingPage from "components/LoadingPage";
 
-import { useGetInstanceConfiguration } from "core/api";
-import { useGetService, useInjectServices } from "core/servicesProvider";
+import { useGetDefaultUser, useGetInstanceConfiguration } from "core/api";
 
-import { RequestAuthMiddleware } from "./RequestAuthMiddleware";
+import { AuthContext } from "./AuthContext";
 
 // This wrapper is conditionally present if the KeycloakAuthentication feature is enabled
-export const KeycloakAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
+export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   const { auth, webappUrl } = useGetInstanceConfiguration();
 
   if (!auth) {
@@ -37,7 +36,7 @@ export const KeycloakAuthService: React.FC<PropsWithChildren<unknown>> = ({ chil
   return (
     <AuthProvider {...oidcConfig}>
       <LoginRedirectCheck>
-        <KeycloakAuthMiddleware>{children}</KeycloakAuthMiddleware>
+        <AuthServiceProvider>{children}</AuthServiceProvider>
       </LoginRedirectCheck>
     </AuthProvider>
   );
@@ -64,34 +63,30 @@ const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) 
     auth.signinRedirect();
     return <LoadingPage />;
   }
+
   return <>{children}</>;
 };
 
-// This middleware will add the keycloak access_token to all requests
-const KeycloakAuthMiddleware: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  const auth = useAuth();
+const AuthServiceProvider: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
+  const keycloakAuth = useAuth();
 
-  const middlewares = useMemo(
-    () => [
-      RequestAuthMiddleware({
-        getValue() {
-          return auth.user?.access_token ?? "";
-        },
-      }),
-    ],
-    [auth.user?.access_token]
-  );
+  // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
+  const keycloakAccessTokenRef = useRef<string | null>(keycloakAuth.user?.access_token ?? null);
+  keycloakAccessTokenRef.current = keycloakAuth.user?.access_token ?? null;
+  const getAccessToken = useCallback(() => Promise.resolve(keycloakAccessTokenRef.current), []);
 
-  const inject = useMemo(
-    () => ({
-      DefaultRequestMiddlewares: middlewares,
-    }),
-    [middlewares]
-  );
+  const defaultUser = useGetDefaultUser({ getAccessToken });
 
-  useInjectServices(inject);
+  const contextValue = useMemo(() => {
+    return {
+      user: defaultUser,
+      inited: true,
+      emailVerified: false,
+      providers: [],
+      loggedOut: false,
+      getAccessToken,
+    };
+  }, [defaultUser, getAccessToken]);
 
-  const registeredMiddlewares = useGetService("DefaultRequestMiddlewares");
-
-  return registeredMiddlewares ? <>{children}</> : <LoadingPage />;
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

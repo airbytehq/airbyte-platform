@@ -10,7 +10,7 @@ import { Card } from "components/ui/Card";
 import { AuthUpdatePassword, useCurrentUser } from "core/services/auth";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { FirebaseAuthMessageId } from "packages/cloud/services/auth/AuthService";
+import { FirebaseAuthMessageId } from "packages/cloud/services/auth/CloudAuthService";
 import { passwordSchema } from "packages/cloud/views/auth/SignupPage/components/SignupForm";
 
 type AuthErrorCodesNames = (typeof AuthErrorCodes)[keyof typeof AuthErrorCodes];

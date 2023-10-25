@@ -14,8 +14,6 @@ package io.airbyte.featureflag
  * This is a permanent flag and would implement the [Permanent] type once converted from an environment-variable.
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
-
-object StreamCapableState : EnvVar(envVar = "USE_STREAM_CAPABLE_STATE")
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
@@ -53,6 +51,8 @@ object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-sch
 
 object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = false)
 
+object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
+
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -63,7 +63,9 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
-object DestinationCallsElapsedTimeTrackingEnabled : Permanent<Boolean>(key = "destination-calls-elapsed-time-tracking-enabled", default = false)
+object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = false)
+
+object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = false)
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 

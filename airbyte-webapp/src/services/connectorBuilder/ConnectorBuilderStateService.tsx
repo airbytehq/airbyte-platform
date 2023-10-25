@@ -33,6 +33,7 @@ import {
   useBuilderResolvedManifest,
   useBuilderResolvedManifestSuspense,
 } from "core/api";
+import { useIsForeignWorkspace } from "core/api/cloud";
 import { ConnectorConfig, KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
@@ -43,7 +44,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";

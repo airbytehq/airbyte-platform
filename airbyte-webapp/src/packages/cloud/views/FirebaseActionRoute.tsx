@@ -1,12 +1,9 @@
-import React from "react";
-import { useIntl } from "react-intl";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useAsync } from "react-use";
 import { match, P } from "ts-pattern";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { AuthVerifyEmail, useAuthService } from "core/services/auth";
-import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
 
 import AuthLayout from "./auth";
@@ -27,29 +24,29 @@ interface VerifyEmailActionProps {
 }
 
 const VerifyEmailAction: React.FC<VerifyEmailActionProps> = ({ verifyEmail }) => {
+  const verifying = useRef(false);
   const query = useQuery<{ oobCode?: string }>();
   const navigate = useNavigate();
-  const { formatMessage } = useIntl();
-  const { registerNotification } = useNotificationService();
-
   useTrackPage(PageTrackingCodes.VERIFY_EMAIL);
-  useAsync(async () => {
-    if (!query.oobCode) {
-      navigate("/");
+  const verify = useCallback(async () => {
+    if (verifying.current) {
       return;
     }
+    verifying.current = true;
 
-    // Send verification code to authentication service
-    await verifyEmail(query.oobCode);
-    // Show a notification that the mail got verified successfully
-    registerNotification({
-      id: "auth/email-verified",
-      text: formatMessage({ id: "verifyEmail.notification" }),
-      type: "success",
-    });
-    // Navigate the user to the homepage after the email is verified
-    navigate("/");
-  }, []);
+    if (!query.oobCode) {
+      navigate("/");
+    } else {
+      // Send verification code to authentication service
+      await verifyEmail(query.oobCode);
+      // Navigate the user to the homepage after the email is verified
+      navigate("/");
+    }
+  }, [query.oobCode, navigate, verifyEmail]);
+
+  useEffect(() => {
+    verify();
+  }, [verify]);
 
   return <LoadingPage />;
 };

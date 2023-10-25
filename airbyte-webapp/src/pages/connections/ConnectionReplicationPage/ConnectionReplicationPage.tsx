@@ -77,7 +77,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
   if (hasNonBreakingSchemaChange) {
     return (
       <Message
-        type="warning"
+        type="info"
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
         onAction={refreshSchema}
@@ -116,7 +116,7 @@ export const ConnectionReplicationPage: React.FC = () => {
     useConnectionFormService();
   const validationSchema = useConnectionValidationSchema({ mode });
 
-  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION, { stream_count: connection.syncCatalog.streams.length });
 
   const saveConnection = useCallback(
     async (

@@ -4,7 +4,9 @@
 
 package io.airbyte.workers.general;
 
-import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.DestinationTimeoutEnabled;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 
 /**
@@ -12,14 +14,25 @@ import io.airbyte.workers.context.ReplicationFeatureFlags;
  */
 public class ReplicationFeatureFlagReader {
 
+  private final FeatureFlagClient featureFlagClient;
+  private final Context flagContext;
+
+  public ReplicationFeatureFlagReader(final FeatureFlagClient featureFlagClient, final Context flagContext) {
+    this.featureFlagClient = featureFlagClient;
+    this.flagContext = flagContext;
+  }
+
   /**
    * Read Feature flags we need to consider during a sync.
    *
-   * @param replicationInput the input of the sync.
    * @return The flags.
    */
-  public ReplicationFeatureFlags readReplicationFeatureFlags(final ReplicationInput replicationInput) {
-    return new ReplicationFeatureFlags();
+  public ReplicationFeatureFlags readReplicationFeatureFlags() {
+    return new ReplicationFeatureFlags(isDestinationTimeoutEnabled());
+  }
+
+  private boolean isDestinationTimeoutEnabled() {
+    return featureFlagClient.boolVariation(DestinationTimeoutEnabled.INSTANCE, flagContext);
   }
 
 }

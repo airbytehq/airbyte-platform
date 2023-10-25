@@ -12,8 +12,6 @@ public interface FeatureFlags {
 
   boolean autoDisablesFailingConnections();
 
-  boolean useStreamCapableState();
-
   boolean autoDetectSchema();
 
   boolean logConnectorMessages();

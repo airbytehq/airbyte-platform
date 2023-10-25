@@ -36,19 +36,14 @@ plugins {
 
 gradleEnterprise {
     buildScan {
+        uploadInBackground = System.getenv("CI") == null
         termsOfServiceUrl = "https://gradle.com/terms-of-service"
         termsOfServiceAgree = "yes"
-    }
-}
-
-gradleEnterprise {
-    buildScan {
         buildScanPublished { PublishedBuildScan scan ->
             file("scan-journal.log") << "${new Date()} - ${scan.buildScanId} - ${scan.buildScanUri}\n"
         }
     }
 }
-
 
 ext.isCiServer = System.getenv().containsKey("CI")
 
@@ -107,6 +102,7 @@ include ':airbyte-commons-worker'
 include ':airbyte-config:config-persistence' // transitively used by airbyte-workers.
 include ':airbyte-featureflag'
 include ':airbyte-db:jooq' // transitively used by airbyte-workers.
+include ':airbyte-micronaut-temporal'
 include ':airbyte-notification' // transitively used by airbyte-workers.
 include ':airbyte-persistence:job-persistence' // transitively used by airbyte-workers.
 include ':airbyte-worker-models'

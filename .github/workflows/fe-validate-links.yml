@@ -33,7 +33,7 @@ jobs:
           EOF
 
       - name: Run :airbyte-webapp:validateLinks
-        run: ./gradlew --no-daemon :airbyte-webapp:validateLinks --scan
+        run: ./gradlew --no-daemon :airbyte-webapp:validateLinks --scan -DciMode=true
 
       - name: Publish Failures to dev-frontend channel
         uses: abinoda/slack-action@master

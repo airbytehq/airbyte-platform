@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.workers.temporal.support.TemporalProxyHelper;
+import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
 import io.temporal.activity.ActivityOptions;

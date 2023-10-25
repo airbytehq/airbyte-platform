@@ -4,9 +4,8 @@ import React from "react";
 import { useEffectOnce } from "react-use";
 
 import { config } from "config";
-import AnalyticsServiceProvider from "core/services/analytics/useAnalyticsService";
 
-export const AnalyticsProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+export const AnalyticsProvider: React.FC<React.PropsWithChildren> = React.memo(({ children }) => {
   useEffectOnce(() => {
     if (config.segment.enabled && config.segment.token) {
       const script = document.createElement("script");
@@ -24,5 +23,7 @@ export const AnalyticsProvider: React.FC<React.PropsWithChildren<unknown>> = ({ 
     }
   });
 
-  return <AnalyticsServiceProvider>{children}</AnalyticsServiceProvider>;
-};
+  return <>{children}</>;
+});
+
+AnalyticsProvider.displayName = "AnalyticsProvider";

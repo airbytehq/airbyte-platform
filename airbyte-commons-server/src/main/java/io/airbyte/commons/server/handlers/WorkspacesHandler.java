@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.NotificationSettings;
 import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
@@ -35,6 +36,7 @@ import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
+import io.airbyte.config.Organization;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -85,7 +87,8 @@ public class WorkspacesHandler {
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler) {
-    this(configRepository, workspacePersistence, secretsRepositoryWriter, permissionPersistence, connectionsHandler, destinationHandler,
+    this(configRepository, workspacePersistence, secretsRepositoryWriter, permissionPersistence,
+        connectionsHandler, destinationHandler,
         sourceHandler, UUID::randomUUID);
   }
 
@@ -128,7 +131,7 @@ public class WorkspacesHandler {
 
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(uuidSupplier.get())
-        .withCustomerId(uuidSupplier.get())
+        .withCustomerId(uuidSupplier.get()) // "customer_id" should be deprecated
         .withName(workspaceCreate.getName())
         .withSlug(generateUniqueSlug(workspaceCreate.getName()))
         .withInitialSetupComplete(false)
@@ -148,6 +151,46 @@ public class WorkspacesHandler {
     }
 
     return persistStandardWorkspace(workspace);
+  }
+
+  public WorkspaceRead createDefaultWorkspaceForUser(final UserRead user, final Optional<Organization> organization)
+      throws IOException, JsonValidationException {
+    // if user already had a default workspace, throw an exception
+    if (user.getDefaultWorkspaceId() != null) {
+      throw new IllegalArgumentException(
+          String.format("User %s already has a default workspace %s", user.getUserId(), user.getDefaultWorkspaceId()));
+    }
+    final String companyName = user.getCompanyName();
+    final String email = user.getEmail();
+    final Boolean news = user.getNews();
+    // otherwise, create a default workspace for this user
+    final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
+        .name(getDefaultWorkspaceName(organization, companyName, email))
+        .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
+        .email(email)
+        .news(news)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .displaySetupWizard(true);
+    return createWorkspace(workspaceCreate);
+  }
+
+  private String getDefaultWorkspaceName(final Optional<Organization> organization, final String companyName, final String email) {
+    String defaultWorkspaceName = "";
+    if (organization.isPresent()) {
+      // use organization name as default workspace name
+      defaultWorkspaceName = organization.get().getName().trim();
+    }
+    // if organization name is not available or empty, use user's company name (note: this is an
+    // optional field)
+    if (defaultWorkspaceName.isEmpty() && companyName != null) {
+      defaultWorkspaceName = companyName.trim();
+    }
+    // if company name is still empty, use user's email (note: this is a required field)
+    if (defaultWorkspaceName.isEmpty()) {
+      defaultWorkspaceName = email;
+    }
+    return defaultWorkspaceName;
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

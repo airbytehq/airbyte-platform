@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
 public class EnvVariableFeatureFlags implements FeatureFlags {
 
   private static final Logger log = LoggerFactory.getLogger(EnvVariableFeatureFlags.class);
-
-  public static final String USE_STREAM_CAPABLE_STATE = "USE_STREAM_CAPABLE_STATE";
   public static final String AUTO_DETECT_SCHEMA = "AUTO_DETECT_SCHEMA";
   // Set this value to true to see all messages from the source to destination, set to one second
   // emission
@@ -33,11 +31,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
     log.info("Auto Disable Failing Connections: " + Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS")));
 
     return Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS"));
-  }
-
-  @Override
-  public boolean useStreamCapableState() {
-    return getEnvOrDefault(USE_STREAM_CAPABLE_STATE, false, Boolean::parseBoolean);
   }
 
   @Override

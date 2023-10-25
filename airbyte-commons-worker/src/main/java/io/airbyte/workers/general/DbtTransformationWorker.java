@@ -63,7 +63,6 @@ public class DbtTransformationWorker implements Worker<OperatorDbtInput, Void> {
 
     try (dbtTransformationRunner) {
       LOGGER.info("Running dbt transformation.");
-      dbtTransformationRunner.start();
       onTransformationRunning.call();
       final Path transformRoot = Files.createDirectories(jobRoot.resolve("transform"));
       if (!dbtTransformationRunner.run(

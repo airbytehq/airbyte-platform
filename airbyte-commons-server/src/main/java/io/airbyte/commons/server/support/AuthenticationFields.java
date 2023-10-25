@@ -84,6 +84,8 @@ public final class AuthenticationFields {
 
   public static final String ORGANIZATION_ID_FIELD_NAME = "organizationId";
 
+  public static final String PERMISSION_ID_FIELD_NAME = "permissionId";
+
   private AuthenticationFields() {}
 
 }

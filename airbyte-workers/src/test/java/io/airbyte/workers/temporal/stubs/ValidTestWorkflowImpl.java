@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.stubs;
 
-import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
+import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;
 
 public class ValidTestWorkflowImpl implements TestWorkflow {
 

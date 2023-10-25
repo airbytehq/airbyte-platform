@@ -62,8 +62,6 @@ dependencies {
     implementation libs.micrometer.statsd
     implementation libs.bundles.datadog
     implementation libs.sentry.java
-    implementation libs.byte.buddy
-    implementation libs.spring.core
 
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
@@ -82,6 +80,7 @@ dependencies {
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-featureflag')
     implementation project(':airbyte-metrics:metrics-lib')
+    implementation project(':airbyte-micronaut-temporal')
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-notification')

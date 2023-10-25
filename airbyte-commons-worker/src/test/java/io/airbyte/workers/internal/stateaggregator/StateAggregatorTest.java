@@ -33,12 +33,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 class StateAggregatorTest {
 
   StateAggregator stateAggregator;
-  private static final boolean USE_STREAM_CAPABLE_STATE = true;
-  private static final boolean DONT_USE_STREAM_CAPABLE_STATE = false;
 
   @BeforeEach
   void init() {
-    stateAggregator = new DefaultStateAggregator(DONT_USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
   }
 
   @ParameterizedTest
@@ -109,26 +107,7 @@ class StateAggregatorTest {
   }
 
   @Test
-  void testStreamStateWithFeatureFlagOff() {
-    final AirbyteStateMessage state1 = getStreamMessage("a", 1);
-    final AirbyteStateMessage state2 = getStreamMessage("b", 2);
-    final AirbyteStateMessage state3 = getStreamMessage("b", 3);
-
-    stateAggregator.ingest(state1);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state1))));
-
-    stateAggregator.ingest(state2);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state2))));
-
-    stateAggregator.ingest(state3);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state3))));
-  }
-
-  @Test
-  void testStreamStateWithFeatureFlagOn() {
+  void testStreamState() {
     final AirbyteStateMessage state1 = getStreamMessage("a", 1);
     final AirbyteStateMessage state2 = getStreamMessage("b", 2);
     final AirbyteStateMessage state3 = getStreamMessage("b", 3);
@@ -137,7 +116,7 @@ class StateAggregatorTest {
     final AirbyteStateMessage state2NoData = getStreamMessage("b", 2).withData(null);
     final AirbyteStateMessage state3NoData = getStreamMessage("b", 3).withData(null);
 
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state1), AirbyteStateMessage.class));
     Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
@@ -158,7 +137,7 @@ class StateAggregatorTest {
     stateAggregator.ingest(stateG1);
 
     final AirbyteStateMessage stateG2 = getGlobalMessage(2);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
     otherStateAggregator.ingest(stateG2);
 
     stateAggregator.ingest(otherStateAggregator);
@@ -168,7 +147,7 @@ class StateAggregatorTest {
 
   @Test
   void testIngestFromAnotherStateAggregatorStreamStates() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     final AirbyteStateMessage stateA1 = getStreamMessage("a", 1);
     final AirbyteStateMessage stateB2 = getStreamMessage("b", 2);
     stateAggregator.ingest(stateA1);
@@ -176,7 +155,7 @@ class StateAggregatorTest {
 
     final AirbyteStateMessage stateA2 = getStreamMessage("a", 3);
     final AirbyteStateMessage stateC1 = getStreamMessage("c", 1);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
     otherStateAggregator.ingest(stateA2);
     otherStateAggregator.ingest(stateC1);
 
@@ -187,12 +166,12 @@ class StateAggregatorTest {
 
   @Test
   void testIngestFromAnotherStateAggregatorChecksStateType() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     final AirbyteStateMessage stateG1 = getGlobalMessage(1);
     stateAggregator.ingest(stateG1);
 
     final AirbyteStateMessage stateA2 = getStreamMessage("a", 3);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
     otherStateAggregator.ingest(stateA2);
 
     Assertions.assertThatThrownBy(() -> {
@@ -206,7 +185,7 @@ class StateAggregatorTest {
 
   @Test
   void testIsEmptyForSingleStates() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
 
     final AirbyteStateMessage globalState = getGlobalMessage(1);
@@ -216,7 +195,7 @@ class StateAggregatorTest {
 
   @Test
   void testIsEmptyForStreamStates() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
 
     final AirbyteStateMessage streamState = getStreamMessage("woot", 1);
@@ -226,11 +205,11 @@ class StateAggregatorTest {
 
   @Test
   void testIsEmptyWhenIngestFromAggregatorSingle() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
 
     final AirbyteStateMessage globalState = getGlobalMessage(1);
-    final StateAggregator otherAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    final StateAggregator otherAggregator = new DefaultStateAggregator();
     otherAggregator.ingest(globalState);
 
     stateAggregator.ingest(otherAggregator);
@@ -239,11 +218,11 @@ class StateAggregatorTest {
 
   @Test
   void testIsEmptyWhenIngestFromAggregatorStream() {
-    stateAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    stateAggregator = new DefaultStateAggregator();
     Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
 
     final AirbyteStateMessage streamState = getStreamMessage("woot", 1);
-    final StateAggregator otherAggregator = new DefaultStateAggregator(USE_STREAM_CAPABLE_STATE);
+    final StateAggregator otherAggregator = new DefaultStateAggregator();
     otherAggregator.ingest(streamState);
 
     stateAggregator.ingest(otherAggregator);

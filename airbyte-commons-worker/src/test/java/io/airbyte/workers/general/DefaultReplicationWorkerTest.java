@@ -28,10 +28,11 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
         recordSchemaValidator,
         fieldSelector,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(),
+        replicationFeatureFlagReader,
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning);
+        onReplicationRunning,
+        destinationTimeoutMonitor);
   }
 
   // DefaultReplicationWorkerTests.

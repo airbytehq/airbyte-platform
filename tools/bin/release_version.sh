@@ -4,6 +4,10 @@ set -e
 
 . tools/lib/lib.sh
 
+if [[ ! -z "$CI" ]]; then
+    CI_MODE_FLAG='-DciMode=true'
+fi
+
 if [[ -z "${CLOUDREPO_USER}" ]]; then
   echo 'CLOUDREPO_USER env var not set. Please retrieve the user email from the CloudRepo lastpass secret and run export CLOUDREPO_USER=<user_from_secret>.';
   exit 1;
@@ -29,8 +33,8 @@ docker login -u "${DOCKER_HUB_USERNAME}" -p "${DOCKER_HUB_PASSWORD}"
 source ./tools/bin/bump_version.sh
 
 echo "Building and publishing PLATFORM version $NEW_VERSION for git revision $GIT_REVISION..."
-VERSION=$NEW_VERSION ./gradlew clean build --scan
-VERSION=$NEW_VERSION ./gradlew publish --scan
+VERSION=$NEW_VERSION ./gradlew clean build --scan "$CI_MODE_FLAG"
+VERSION=$NEW_VERSION ./gradlew publish --scan "$CI_MODE_FLAG"
 
 # Container should be running before build starts
 # It generates binaries to build images for different CPU architecture

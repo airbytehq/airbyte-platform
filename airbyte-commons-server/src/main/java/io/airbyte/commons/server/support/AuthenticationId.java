@@ -14,6 +14,7 @@ import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERN
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.OPERATION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER;
+import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.PERMISSION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER;
 import static io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER;
@@ -39,7 +40,8 @@ public enum AuthenticationId {
   WORKSPACE_ID(AuthenticationFields.WORKSPACE_ID_FIELD_NAME, WORKSPACE_ID_HEADER),
   WORKSPACE_IDS(AuthenticationFields.WORKSPACE_IDS_FIELD_NAME, WORKSPACE_IDS_HEADER),
   CONFIG_ID(AuthenticationFields.CONFIG_ID_FIELD_NAME, CONFIG_ID_HEADER),
-  ORGANIZATION_ID(AuthenticationFields.ORGANIZATION_ID_FIELD_NAME, ORGANIZATION_ID_HEADER);
+  ORGANIZATION_ID(AuthenticationFields.ORGANIZATION_ID_FIELD_NAME, ORGANIZATION_ID_HEADER),
+  PERMISSION_ID(AuthenticationFields.PERMISSION_ID_FIELD_NAME, PERMISSION_ID_HEADER);
 
   private final String fieldName;
   private final String httpHeader;

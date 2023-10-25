@@ -40,6 +40,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -122,6 +123,7 @@ public class ReplicationWorkerFactory {
     final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceDefinitionId, sourceDefinitionApi);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = createHeartbeatTimeoutChaperone(heartbeatMonitor,
         featureFlagClient, replicationInput, metricClient);
+    final DestinationTimeoutMonitor destinationTimeout = createDestinationTimeout(featureFlagClient, replicationInput, metricClient);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(replicationInput);
 
     // Enable concurrent stream reads for testing purposes
@@ -130,13 +132,13 @@ public class ReplicationWorkerFactory {
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = replicationInput.getIsReset()
-        ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
+        ? new EmptyAirbyteSource()
         : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
             replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), metricClient, replicationInput, featureFlagClient);
+        replicationInput.getSyncResourceRequirements(), replicationInput.getCatalog(), destinationTimeout);
 
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
@@ -150,7 +152,7 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, replicationInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning, metricClient);
+        onReplicationRunning, metricClient, destinationTimeout);
   }
 
   /**
@@ -219,6 +221,16 @@ public class ReplicationWorkerFactory {
         metricClient);
   }
 
+  private static DestinationTimeoutMonitor createDestinationTimeout(final FeatureFlagClient featureFlagClient,
+                                                                    final ReplicationInput replicationInput,
+                                                                    final MetricClient metricClient) {
+    return new DestinationTimeoutMonitor(
+        featureFlagClient,
+        replicationInput.getWorkspaceId(),
+        replicationInput.getConnectionId(),
+        metricClient);
+  }
+
   /**
    * Create MessageTracker.
    */
@@ -264,7 +276,8 @@ public class ReplicationWorkerFactory {
                                                            final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                            final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper,
                                                            final VoidCallable onReplicationRunning,
-                                                           final MetricClient metricClient) {
+                                                           final MetricClient metricClient,
+                                                           final DestinationTimeoutMonitor destinationTimeout) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
@@ -282,11 +295,12 @@ public class ReplicationWorkerFactory {
         recordSchemaValidator,
         fieldSelector,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(),
+        new ReplicationFeatureFlagReader(featureFlagClient, flagContext),
         airbyteMessageDataExtractor,
         replicationEventPublishingHelper,
         onReplicationRunning,
-        metricClient);
+        metricClient,
+        destinationTimeout);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -326,17 +340,18 @@ public class ReplicationWorkerFactory {
                                                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                                   final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                                   final VoidCallable onReplicationRunning,
-                                                                  final MetricClient metricClient) {
+                                                                  final MetricClient metricClient,
+                                                                  final DestinationTimeoutMonitor destinationTimeout) {
     if ("buffered".equals(workerImpl)) {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning);
+          messageEventPublishingHelper, onReplicationRunning, destinationTimeout);
     } else {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning);
+          messageEventPublishingHelper, onReplicationRunning, destinationTimeout);
     }
   }
 

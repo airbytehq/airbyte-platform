@@ -48,6 +48,22 @@ repositories {
     }
 }
 
+if (System.getProperty("ciMode", "false") == "true") {
+    gradle.startParameter.logLevel = LogLevel.QUIET
+
+    def logFile = new FileOutputStream('gradle.log', true)
+    gradle.services.get(LoggingManager).addStandardOutputListener(logFile)
+    gradle.services.get(LoggingManager).addStandardErrorListener(logFile)
+
+    allprojects {
+        tasks.withType(JavaCompile) {
+            options.deprecation = false
+            options.warnings = false
+        }
+    }
+}
+
+
 reporting {
     reports {
         testAggregateTestReport(JacocoCoverageReport) {

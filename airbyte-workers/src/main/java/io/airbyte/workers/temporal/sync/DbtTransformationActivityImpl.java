@@ -35,7 +35,6 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
-import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -161,11 +160,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),
         resourceRequirements,
-        new DbtTransformationRunner(
-            processFactory, new DefaultNormalizationRunner(
-                processFactory,
-                destinationLauncherConfig.getNormalizationDockerImage(),
-                destinationLauncherConfig.getNormalizationIntegrationType())),
+        new DbtTransformationRunner(processFactory, destinationLauncherConfig.getDockerImage()),
         () -> {});
   }
 

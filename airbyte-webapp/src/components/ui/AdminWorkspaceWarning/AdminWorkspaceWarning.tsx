@@ -2,7 +2,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { useIsForeignWorkspace } from "packages/cloud/services/auth/AuthService";
+import { useIsForeignWorkspace } from "core/api/cloud";
 
 import styles from "./AdminWorkspaceWarning.module.scss";
 import { Tooltip } from "../Tooltip";
