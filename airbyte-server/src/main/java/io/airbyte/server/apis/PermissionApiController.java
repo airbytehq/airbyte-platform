@@ -17,12 +17,14 @@ import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionReadList;
+import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.commons.auth.SecuredUser;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -51,7 +53,19 @@ public class PermissionApiController implements PermissionApi {
   @Post("/create")
   @Override
   public PermissionRead createPermission(final PermissionCreate permissionCreate) {
-    return ApiHelper.execute(() -> permissionHandler.createPermission(permissionCreate));
+    return ApiHelper.execute(() -> {
+      validatePermissionCreation(permissionCreate);
+      return permissionHandler.createPermission(permissionCreate);
+    });
+  }
+
+  private void validatePermissionCreation(final PermissionCreate permissionCreate) throws JsonValidationException {
+    if (permissionCreate.getPermissionType() == PermissionType.INSTANCE_ADMIN) {
+      throw new JsonValidationException("Instance Admin permissions cannot be created via API.");
+    }
+    if (permissionCreate.getOrganizationId() == null && permissionCreate.getWorkspaceId() == null) {
+      throw new JsonValidationException("Either workspaceId or organizationId should be provided.");
+    }
   }
 
   @Secured({ORGANIZATION_READER, WORKSPACE_READER})
@@ -65,20 +79,16 @@ public class PermissionApiController implements PermissionApi {
   @Post("/update")
   @Override
   public PermissionRead updatePermission(final PermissionUpdate permissionUpdate) {
-    // Admin users can update permission including permission type, access to which workspace or
-    // organization.
-
     return ApiHelper.execute(() -> {
-
-      final PermissionRead oldPermission =
-          permissionHandler.getPermission(new PermissionIdRequestBody().permissionId(permissionUpdate.getPermissionId()));
-
-      if (oldPermission != null && !oldPermission.getUserId().equals(permissionUpdate.getUserId())) {
-        throw new IllegalArgumentException("The update can not change the user id!");
-      }
-
+      validatePermissionUpdate(permissionUpdate);
       return permissionHandler.updatePermission(permissionUpdate);
     });
+  }
+
+  private void validatePermissionUpdate(final PermissionUpdate permissionUpdate) throws JsonValidationException {
+    if (permissionUpdate.getPermissionType() == PermissionType.INSTANCE_ADMIN) {
+      throw new JsonValidationException("Cannot modify Instance Admin permissions via API.");
+    }
   }
 
   @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})

@@ -45,7 +45,7 @@ export const AccessManagementTable: React.FC<{
           let workspaceId;
           let organizationId;
 
-          const { userId, permissionType, permissionId, name } = props.row.original;
+          const { permissionType, permissionId, name } = props.row.original;
           if ("organizationId" in props.row.original) {
             organizationId = props.row.original.organizationId;
           }
@@ -54,7 +54,6 @@ export const AccessManagementTable: React.FC<{
           }
           return (
             <RoleManagementControl
-              userId={userId}
               userName={name}
               resourceName={pageResourceName}
               permissionType={permissionType}

@@ -179,6 +179,45 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Nested
+  class WritePermission {
+
+    @Test
+    void createNewPermission() throws IOException {
+      final Permission permission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withOrganizationId(MockData.ORGANIZATION_ID_1)
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+          .withUserId(MockData.CREATOR_USER_ID_1);
+
+      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(permission));
+      Assertions.assertEquals(permission, permissionPersistence.getPermission(permission.getPermissionId()).orElseThrow());
+    }
+
+    @Test
+    void updateExistingPermissionCannotChangeUserWorkspaceOrOrganizationIds() throws IOException {
+      final Permission existingPermission = MockData.permissions().get(0);
+
+      final Permission update = new Permission()
+          .withPermissionId(existingPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR)
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+
+      final Permission expectedPermission = new Permission()
+          .withPermissionId(existingPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR) // only type should change
+          .withUserId(existingPermission.getUserId())
+          .withWorkspaceId(existingPermission.getWorkspaceId())
+          .withOrganizationId(existingPermission.getOrganizationId());
+
+      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
+      Assertions.assertEquals(expectedPermission, permissionPersistence.getPermission(update.getPermissionId()).orElseThrow());
+    }
+
+  }
+
+  @Nested
   class SpecializedCases {
 
     @Test

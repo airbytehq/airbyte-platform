@@ -30,6 +30,7 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.support.JwtUserResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
+import io.airbyte.config.Permission;
 import io.airbyte.config.User;
 import io.airbyte.config.User.Status;
 import io.airbyte.config.UserPermission;
@@ -409,7 +410,8 @@ public class UserHandler {
     return Optional.empty();
   }
 
-  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType) throws IOException {
+  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType)
+      throws IOException, JsonValidationException {
     permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
         .organizationId(orgId)
         .userId(userId)
@@ -417,14 +419,14 @@ public class UserHandler {
   }
 
   private void createPermissionForUserAndWorkspace(final UUID userId, final UUID workspaceId, final PermissionType permissionType)
-      throws IOException {
+      throws IOException, JsonValidationException {
     permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
         .workspaceId(workspaceId)
         .userId(userId)
         .permissionType(permissionType));
   }
 
-  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException {
+  private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) throws IOException, JsonValidationException {
     if (initialUserConfiguration.isEmpty()) {
       // do nothing if initial_user bean is not present.
       return;
@@ -446,11 +448,12 @@ public class UserHandler {
     LOGGER.info("creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
         createdUser.getUserId());
 
-    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-        .workspaceId(null)
-        .organizationId(null)
-        .userId(createdUser.getUserId())
-        .permissionType(PermissionType.INSTANCE_ADMIN));
+    permissionPersistence.writePermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(createdUser.getUserId())
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+        .withOrganizationId(null)
+        .withWorkspaceId(null));
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {

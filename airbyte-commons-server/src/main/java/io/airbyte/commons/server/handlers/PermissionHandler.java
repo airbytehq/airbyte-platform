@@ -68,7 +68,12 @@ public class PermissionHandler {
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
   public PermissionRead createPermission(final PermissionCreate permissionCreate)
-      throws IOException {
+      throws IOException, JsonValidationException {
+
+    // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
+    if (permissionCreate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+      throw new JsonValidationException("Cannot create INSTANCE_ADMIN permission record.");
+    }
 
     final Optional<PermissionRead> existingPermission = getExistingPermission(permissionCreate);
     if (existingPermission.isPresent()) {
@@ -170,13 +175,16 @@ public class PermissionHandler {
    * @throws OperationNotAllowedException if update is prevented by business logic.
    */
   public PermissionRead updatePermission(final PermissionUpdate permissionUpdate)
-      throws IOException, ConfigNotFoundException, OperationNotAllowedException {
+      throws IOException, ConfigNotFoundException, OperationNotAllowedException, JsonValidationException {
+
+    // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
+    if (permissionUpdate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+      throw new JsonValidationException("Cannot update permission record to INSTANCE_ADMIN.");
+    }
+
     final Permission updatedPermission = new Permission()
         .withPermissionId(permissionUpdate.getPermissionId())
-        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class))
-        .withUserId(permissionUpdate.getUserId())
-        .withWorkspaceId(permissionUpdate.getWorkspaceId())
-        .withOrganizationId(permissionUpdate.getOrganizationId());
+        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class));
     try {
       permissionPersistence.writePermission(updatedPermission);
     } catch (final DataAccessException e) {

@@ -6504,12 +6504,6 @@ components:
           format: uuid
         permissionType:
           $ref: "#/components/schemas/PermissionType"
-        userId:
-          $ref: "#/components/schemas/UserId"
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        organizationId:
-          $ref: "#/components/schemas/OrganizationId"
     PermissionType:
       type: string
       description: Describes what actions/endpoints the permission entitles to

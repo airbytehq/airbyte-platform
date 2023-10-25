@@ -74,7 +74,7 @@ class PermissionHandlerTest {
         .withPermissionType(PermissionType.WORKSPACE_ADMIN);
 
     @Test
-    void testCreatePermission() throws IOException {
+    void testCreatePermission() throws IOException, JsonValidationException {
       final List<Permission> existingPermissions = List.of();
       when(permissionPersistence.listPermissionsByUser(any())).thenReturn(existingPermissions);
       when(uuidSupplier.get()).thenReturn(PERMISSION_ID);
@@ -91,6 +91,14 @@ class PermissionHandlerTest {
           .workspaceId(WORKSPACE_ID);
 
       assertEquals(expectedRead, actualRead);
+    }
+
+    @Test
+    void testCreateInstanceAdminPermissionThrows() {
+      final PermissionCreate permissionCreate = new PermissionCreate()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)
+          .userId(USER_ID);
+      assertThrows(JsonValidationException.class, () -> permissionHandler.createPermission(permissionCreate));
     }
 
   }
@@ -131,9 +139,7 @@ class PermissionHandlerTest {
 
       final PermissionUpdate update = new PermissionUpdate()
           .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN) // changing to workspace_admin
-          .userId(PERMISSION_WORKSPACE_READER.getUserId())
-          .workspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId());
+          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN); // changing to workspace_admin
 
       final PermissionRead expectedPermissionRead = new PermissionRead()
           .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
@@ -145,19 +151,23 @@ class PermissionHandlerTest {
 
       verify(permissionPersistence).writePermission(new Permission()
           .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-          .withPermissionType(PermissionType.WORKSPACE_ADMIN)
-          .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
-          .withUserId(PERMISSION_WORKSPACE_READER.getUserId()));
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN));
       assertEquals(expectedPermissionRead, actualPermissionRead);
+    }
+
+    @Test
+    void testUpdateToInstanceAdminPermissionThrows() {
+      final PermissionUpdate permissionUpdate = new PermissionUpdate()
+          .permissionType(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)
+          .permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId());
+      assertThrows(JsonValidationException.class, () -> permissionHandler.updatePermission(permissionUpdate));
     }
 
     @Test
     void throwsOperationNotAllowedIfPersistenceBlocksUpdate() throws Exception {
       final PermissionUpdate update = new PermissionUpdate()
           .permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
-          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_EDITOR) // changing to organization_editor
-          .userId(PERMISSION_ORGANIZATION_ADMIN.getUserId())
-          .organizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId());
+          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_EDITOR); // changing to organization_editor
 
       doThrow(new DataAccessException(BLOCKED, new SQLOperationNotAllowedException(BLOCKED))).when(permissionPersistence).writePermission(any());
       assertThrows(OperationNotAllowedException.class, () -> permissionHandler.updatePermission(update));

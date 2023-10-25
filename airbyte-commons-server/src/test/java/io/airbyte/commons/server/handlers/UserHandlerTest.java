@@ -358,25 +358,24 @@ class UserHandlerTest {
         assertEquals(userRead.getAuthProvider(), expectedAuthProvider);
       }
 
-      private void verifyInstanceAdminPermissionCreation(final String initialUserEmail, final boolean initialUserPresent) throws IOException {
+      private void verifyInstanceAdminPermissionCreation(final String initialUserEmail, final boolean initialUserPresent)
+          throws IOException {
         // instance_admin permissions should only ever be created when the initial user config is present
         // (which should never be true in Cloud).
         // also, if the initial user email is null or doesn't match the new user's email, no instance_admin
         // permission should be created
         if (!initialUserPresent || initialUserEmail == null || !initialUserEmail.equalsIgnoreCase(NEW_EMAIL)) {
-          verify(permissionHandler, never()).createPermission(
-              argThat(permission -> permission.getPermissionType().equals(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)));
+          verify(permissionPersistence, never())
+              .writePermission(argThat(permission -> permission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)));
         } else {
           // otherwise, instance_admin permission should be created
-          verify(permissionHandler).createPermission(new PermissionCreate()
-              .permissionType(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)
-              .workspaceId(null)
-              .organizationId(null)
-              .userId(NEW_USER_ID));
+          verify(permissionPersistence).writePermission(argThat(
+              permission -> permission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN) && permission.getUserId().equals(NEW_USER_ID)));
         }
       }
 
-      private void verifyOrganizationPermissionCreation(final String ssoRealm, final boolean isFirstOrgUser) throws IOException {
+      private void verifyOrganizationPermissionCreation(final String ssoRealm, final boolean isFirstOrgUser)
+          throws IOException, JsonValidationException {
         // if the SSO Realm is null, no organization permission should be created
         if (ssoRealm == null) {
           verify(permissionHandler, never()).createPermission(

@@ -40,8 +40,6 @@ public class PermissionPersistence {
   private final ExceptionWrappingDatabase database;
 
   public static final String PRIMARY_KEY = "id";
-  public static final String USER_KEY = "user_id";
-  public static final String WORKSPACE_KEY = "workspace_id";
 
   public PermissionPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
@@ -90,9 +88,6 @@ public class PermissionPersistence {
     transactionCtx.update(PERMISSION)
         .set(PERMISSION.ID, updatedPermission.getPermissionId())
         .set(PERMISSION.PERMISSION_TYPE, updatedPermissionType)
-        .set(PERMISSION.USER_ID, updatedPermission.getUserId())
-        .set(PERMISSION.WORKSPACE_ID, updatedPermission.getWorkspaceId())
-        .set(PERMISSION.ORGANIZATION_ID, updatedPermission.getOrganizationId())
         .set(PERMISSION.UPDATED_AT, timestamp)
         .where(PERMISSION.ID.eq(updatedPermission.getPermissionId()))
         .execute();

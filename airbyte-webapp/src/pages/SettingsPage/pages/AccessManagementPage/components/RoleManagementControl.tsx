@@ -23,18 +23,16 @@ interface RoleManagementControlProps extends PermissionUpdate {
   tableResourceType: ResourceType;
   activeEditRow?: string;
   setActiveEditRow: (permissionId?: string) => void;
+  workspaceId?: string;
+  organizationId?: string;
 }
 
 const roleManagementFormSchema = yup.object().shape({
-  userId: yup.string().required(),
   permissionType: yup.mixed<PermissionType>().oneOf(Object.values(PermissionType)).required(),
   permissionId: yup.string().required(),
-  workspaceId: yup.string(),
-  organizationId: yup.string(),
 });
 
 export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
-  userId,
   permissionType,
   workspaceId,
   organizationId,
@@ -105,7 +103,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
       {isEditMode ? (
         <Form<PermissionUpdate>
           schema={roleManagementFormSchema}
-          defaultValues={{ userId, permissionType, workspaceId, organizationId, permissionId }}
+          defaultValues={{ permissionType, permissionId }}
           onSubmit={onSubmitRoleChangeClick}
         >
           <FlexContainer alignItems="center" gap="2xl">
