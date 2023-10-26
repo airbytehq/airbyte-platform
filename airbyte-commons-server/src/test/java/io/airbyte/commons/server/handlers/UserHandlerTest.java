@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -307,6 +308,14 @@ class UserHandlerTest {
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
         verifyDefaultWorkspaceCreation(ssoRealm, isFirstOrgUser, userPersistenceInOrder);
+      }
+
+      @Test
+      void testNewSsoUserWithoutOrgThrows() throws IOException {
+        when(jwtUserResolver.resolveSsoRealm()).thenReturn("realm");
+        when(organizationPersistence.getOrganizationBySsoConfigRealm("realm")).thenReturn(Optional.empty());
+        assertThrows(ConfigNotFoundException.class, () -> userHandler.getOrCreateUserByAuthId(
+            new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
       }
 
       private void verifyCreatedUser(final AuthProvider expectedAuthProvider, final InOrder inOrder) throws IOException {

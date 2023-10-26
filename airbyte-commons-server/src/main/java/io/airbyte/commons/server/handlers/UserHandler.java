@@ -397,14 +397,15 @@ public class UserHandler {
     return defaultWorkspace;
   }
 
-  private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException {
+  private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException, ConfigNotFoundException {
     final String ssoRealm = jwtUserResolver.orElseThrow().resolveSsoRealm();
     if (ssoRealm != null) {
       final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
       if (attachedOrganization.isPresent()) {
         return attachedOrganization;
       } else {
-        LOGGER.warn("New user with ID {} has an SSO realm {} but no Organization was found for it.", userId, ssoRealm);
+        LOGGER.error("New user with ID {} has an SSO realm {} but no Organization was found for it.", userId, ssoRealm);
+        throw new ConfigNotFoundException(ConfigSchema.ORGANIZATION, ssoRealm);
       }
     }
     return Optional.empty();
