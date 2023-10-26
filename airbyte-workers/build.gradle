@@ -99,8 +99,7 @@ dependencies {
     testImplementation libs.platform.testcontainers
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation project(':airbyte-test-utils')
-    testImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
-    testImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
+    testImplementation libs.bundles.bouncycastle
     testImplementation project(':airbyte-api')
 
     integrationTestAnnotationProcessor platform(libs.micronaut.bom)

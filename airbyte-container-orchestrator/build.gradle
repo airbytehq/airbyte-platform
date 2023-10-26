@@ -62,8 +62,7 @@ dependencies {
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers
     testImplementation libs.platform.testcontainers.postgresql
-    testImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
-    testImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
+    testImplementation libs.bundles.bouncycastle
 
     airbyteProtocol(libs.airbyte.protocol) {
         transitive = false
