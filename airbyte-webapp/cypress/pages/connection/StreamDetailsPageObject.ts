@@ -15,6 +15,7 @@ const [
   cursorRadioButton,
   primaryKeyCheckbox,
   destinationFieldName,
+  syncFieldSwitch,
 ] = getTestIds(
   "stream-details",
   "stream-details-sync-stream-switch",
@@ -25,7 +26,8 @@ const [
   "stream-source-field-data-type",
   "field-cursor-radio-button",
   "field-primary-key-checkbox",
-  "stream-destination-field-name"
+  "stream-destination-field-name",
+  "sync-field-switch"
 );
 
 const getFieldTableRowTestId = (rowIndex: number) => getTestId(`table-row-${rowIndex}`);
@@ -211,6 +213,12 @@ export class StreamDetailsPageObject {
       getRowByFieldName(name).within(() => {
         verifyPrimaryKey(fieldNames, name, true);
       });
+    });
+  }
+
+  areFieldsDeselected() {
+    cy.get(syncFieldSwitch).each(($el) => {
+      cy.wrap($el).should("not.be.checked");
     });
   }
 }

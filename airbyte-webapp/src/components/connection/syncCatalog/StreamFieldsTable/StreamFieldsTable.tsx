@@ -83,6 +83,11 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
 
   const checkIsFieldSelected = useCallback(
     (field: SyncSchemaField): boolean => {
+      // If the stream is disabled, effectively each field is unselected
+      if (!config?.selected) {
+        return false;
+      }
+
       // All fields are implicitly selected if field selection is disabled
       if (!config?.fieldSelectionEnabled) {
         return true;
@@ -91,7 +96,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       // path[0] is the top-level field name for all nested fields
       return !!config?.selectedFields?.find((f) => isEqual(f.fieldPath, [field.path[0]]));
     },
-    [config]
+    [config?.selected, config?.fieldSelectionEnabled, config?.selectedFields]
   );
 
   // header group icons:
@@ -126,10 +131,10 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
               <FlexContainer className={styles.columnSelectionSwitchContainer}>
                 <Switch
                   size="xs"
-                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
-                  checked={!config?.fieldSelectionEnabled}
+                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length && config.selected}
+                  checked={!config?.fieldSelectionEnabled && config?.selected}
                   onChange={toggleAllFieldsSelected}
-                  disabled={mode === "readonly"}
+                  disabled={mode === "readonly" || !config?.selected}
                 />
               </FlexContainer>
             )}
@@ -142,6 +147,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
               {isColumnSelectionEnabled && (
                 <SyncFieldCell
                   field={row.original.field}
+                  streamIsDisabled={!config?.selected}
                   isFieldSelected={row.original.isFieldSelected}
                   handleFieldToggle={handleFieldToggle}
                   checkIsCursor={checkIsCursor}
@@ -227,6 +233,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
       onCursorSelect,
       onPkSelect,
       toggleAllFieldsSelected,
+      config?.selected,
       config?.syncMode,
       config?.destinationSyncMode,
       mode,

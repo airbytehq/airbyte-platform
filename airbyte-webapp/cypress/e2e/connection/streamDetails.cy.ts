@@ -106,6 +106,18 @@ describe("Connection - Stream details", () => {
     });
   });
 
+  describe("column selection", () => {
+    it("disables column selection if a stream is disabled", () => {
+      streamRow.showStreamDetails();
+      streamDetails.disableSyncStream();
+      streamDetails.isSyncStreamDisabled();
+      streamDetails.areFieldsDeselected();
+      streamDetails.close();
+
+      streamRow.isStreamSyncEnabled(false);
+    });
+  });
+
   describe("cursor / primary key", () => {
     const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
 
