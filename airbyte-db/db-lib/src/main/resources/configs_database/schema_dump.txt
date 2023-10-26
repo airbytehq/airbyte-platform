@@ -313,7 +313,9 @@ create table "public"."user" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "auth_provider" "public"."auth_provider" not null,
   constraint "user_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "auth_user_id_auth_provider_key"
+    unique ("auth_user_id", "auth_provider")
 );
 create table "public"."user_invitation" (
   "id" uuid not null,
