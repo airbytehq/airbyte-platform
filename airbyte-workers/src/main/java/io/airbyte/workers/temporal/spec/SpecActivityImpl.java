@@ -15,7 +15,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
@@ -68,7 +68,6 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
-  private final TemporalUtils temporalUtils;
 
   public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                           final ProcessFactory processFactory,
@@ -79,8 +78,7 @@ public class SpecActivityImpl implements SpecActivity {
                           @Value("${airbyte.version}") final String airbyteVersion,
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                          final FeatureFlags featureFlags,
-                          final TemporalUtils temporalUtils) {
+                          final FeatureFlags featureFlags) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
@@ -91,7 +89,6 @@ public class SpecActivityImpl implements SpecActivity {
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
-    this.temporalUtils = temporalUtils;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -108,7 +105,7 @@ public class SpecActivityImpl implements SpecActivity {
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var worker = getWorkerFactory(launcherConfig).get();

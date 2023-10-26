@@ -20,7 +20,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -84,7 +84,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final String airbyteVersion;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
@@ -101,7 +100,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    @Value("${airbyte.version}") final String airbyteVersion,
                                    @Value("${micronaut.server.port}") final Integer serverPort,
                                    final AirbyteConfigValidator airbyteConfigValidator,
-                                   final TemporalUtils temporalUtils,
                                    final AirbyteApiClient airbyteApiClient,
                                    final FeatureFlagClient featureFlagClient,
                                    final MetricClient metricClient) {
@@ -115,7 +113,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.airbyteVersion = airbyteVersion;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
@@ -133,7 +130,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final NormalizationInput fullInput = hydrateNormalizationInput(input);

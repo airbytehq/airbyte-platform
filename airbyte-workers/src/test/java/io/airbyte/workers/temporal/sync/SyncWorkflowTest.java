@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.NormalizationInput;
@@ -177,8 +177,8 @@ class SyncWorkflowTest {
         .setStartToCloseTimeout(Duration.ofDays(3))
         .setScheduleToStartTimeout(Duration.ofDays(3))
         .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-        .setRetryOptions(TemporalUtils.NO_RETRY)
-        .setHeartbeatTimeout(TemporalUtils.HEARTBEAT_TIMEOUT)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
     shortActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(120))
@@ -190,11 +190,11 @@ class SyncWorkflowTest {
         .build();
     discoveryActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(360))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
     refreshSchemaActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(360))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
 
     final BeanIdentifier longActivitiesBeanIdentifier = mock(BeanIdentifier.class);

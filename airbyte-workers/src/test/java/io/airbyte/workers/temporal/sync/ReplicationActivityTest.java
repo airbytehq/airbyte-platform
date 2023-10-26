@@ -144,7 +144,6 @@ class ReplicationActivityTest {
         LogConfigs.EMPTY, // unused,
         "airbyte-version-unused",
         null, // unused
-        null, // unused
         airbyteApiClient,
         null, // unused
         null, // unused,

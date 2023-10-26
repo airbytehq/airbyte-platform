@@ -7,7 +7,7 @@ package io.airbyte.workers.temporal.check.connection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
@@ -28,7 +28,7 @@ class CheckConnectionWorkflowTest {
   void setUp() {
     activityOptions = ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(5))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
 
     final BeanIdentifier activityOptionsBeanIdentifier = mock(BeanIdentifier.class);

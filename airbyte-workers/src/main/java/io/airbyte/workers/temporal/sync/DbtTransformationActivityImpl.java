@@ -13,7 +13,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -66,7 +66,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final String airbyteVersion;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
@@ -81,7 +80,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        @Value("${airbyte.version}") final String airbyteVersion,
                                        @Value("${micronaut.server.port}") final Integer serverPort,
                                        final AirbyteConfigValidator airbyteConfigValidator,
-                                       final TemporalUtils temporalUtils,
                                        final AirbyteApiClient airbyteApiClient,
                                        final FeatureFlagClient featureFlagClient,
                                        final MetricClient metricClient) {
@@ -95,7 +93,6 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.airbyteVersion = airbyteVersion;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
@@ -114,7 +111,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());

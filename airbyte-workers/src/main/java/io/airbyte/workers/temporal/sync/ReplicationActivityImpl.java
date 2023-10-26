@@ -31,7 +31,7 @@ import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogTransforms;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
@@ -96,7 +96,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
@@ -108,7 +107,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final LogConfigs logConfigs,
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
-                                 final TemporalUtils temporalUtils,
                                  final AirbyteApiClient airbyteApiClient,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
@@ -119,7 +117,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
@@ -165,7 +162,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final ReplicationInput hydratedReplicationInput = getHydratedReplicationInput(replicationActivityInput);
@@ -241,7 +238,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return PayloadChecker.validatePayloadSize(temporalUtils.withBackgroundHeartbeat(
+    return PayloadChecker.validatePayloadSize(HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var hydratedSyncInput = getHydratedSyncInput(syncInput);
