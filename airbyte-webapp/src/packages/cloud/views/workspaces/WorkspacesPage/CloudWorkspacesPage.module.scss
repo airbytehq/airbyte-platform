@@ -1,20 +1,26 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.container {
+.cloudWorkspacesPage__container {
   max-width: 680px;
   height: 100%;
   padding: variables.$spacing-xl;
-  margin: 0 auto;
+  margin: auto;
 }
 
-.logo {
+.cloudWorkspacesPage__logo {
   margin-bottom: variables.$spacing-2xl;
   color: colors.$dark-blue;
 }
 
-.loadingSpinner {
+.cloudWorkspacesPage__loadingSpinner {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
 }
+
+.cloudWorkspacesPage__illustration{
+  display: block;
+  margin: auto;
+}
+

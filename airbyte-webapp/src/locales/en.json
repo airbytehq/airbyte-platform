@@ -18,6 +18,8 @@
   "workspaces.workspace": "Workspace",
   "workspaces.seeAll": "See all workspaces",
   "workspaces.name": "Workspace name",
+  "workspaces.noPermissions": "You do not have permission to view any workspaces in your organization.",
+  "workspaces.noPermissions.moreInformation": "Please ask your organization admin for access at <lnk>{adminEmail}</lnk>.",
 
   "user.roleLabel": "Role: {role}",
   "role.admin": "Admin",

@@ -14,7 +14,12 @@ import {
   webBackendListWorkspacesByUser,
   webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
-import { CloudWorkspaceRead, CloudWorkspaceReadList, ConsumptionTimeWindow } from "../../types/CloudApi";
+import {
+  CloudWorkspaceRead,
+  CloudWorkspaceReadList,
+  ConsumptionTimeWindow,
+  PermissionedCloudWorkspaceCreate,
+} from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 
@@ -59,7 +64,8 @@ export function useCreateCloudWorkspace() {
   const user = useCurrentUser();
 
   return useMutation(
-    async (name: string) => webBackendCreatePermissionedCloudWorkspace({ name, userId: user.userId }, requestOptions),
+    async (values: Omit<PermissionedCloudWorkspaceCreate, "userId">) =>
+      webBackendCreatePermissionedCloudWorkspace({ ...values, userId: user.userId }, requestOptions),
     {
       onSuccess: (result) => {
         queryClient.setQueryData<CloudWorkspaceReadList>(workspaceKeys.lists(), (old) => ({
