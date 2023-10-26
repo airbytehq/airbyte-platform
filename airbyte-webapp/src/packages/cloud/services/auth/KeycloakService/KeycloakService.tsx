@@ -18,8 +18,8 @@ import { config } from "config";
 import { useGetOrCreateUser } from "core/api";
 import { UserRead } from "core/request/AirbyteClient";
 
-export const DEFAULT_KEYCLOAK_REALM = "airbyte";
-export const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
+const DEFAULT_KEYCLOAK_REALM = "airbyte";
+const DEFAULT_KEYCLOAK_CLIENT_ID = "airbyte-webapp";
 const KEYCLOAK_IDP_HINT = "default";
 
 export type KeycloakServiceContext = {
@@ -268,7 +268,7 @@ function clearSsoSearchParams() {
   window.history.replaceState({}, document.title, newUrl);
 }
 
-export const hasAuthParams = (location = window.location): boolean => {
+const hasAuthParams = (location = window.location): boolean => {
   const searchParams = new URLSearchParams(location.search);
   if ((searchParams.get("code") || searchParams.get("error")) && searchParams.get("state")) {
     return true;

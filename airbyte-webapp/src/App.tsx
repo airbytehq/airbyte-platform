@@ -13,7 +13,6 @@ import { OSSAuthService } from "core/services/auth";
 import { defaultOssFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
-import { ServicesProvider } from "core/servicesProvider";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -59,21 +58,19 @@ const App: React.FC = () => {
           <I18nProvider locale="en" messages={en}>
             <QueryProvider>
               <BlockerService>
-                <ServicesProvider>
-                  <Suspense fallback={<LoadingPage />}>
-                    <ConfigServiceProvider config={config}>
-                      <AnalyticsProvider>
-                        <AppMonitoringServiceProvider>
-                          <ApiErrorBoundary>
-                            <Services>
-                              <Routing />
-                            </Services>
-                          </ApiErrorBoundary>
-                        </AppMonitoringServiceProvider>
-                      </AnalyticsProvider>
-                    </ConfigServiceProvider>
-                  </Suspense>
-                </ServicesProvider>
+                <Suspense fallback={<LoadingPage />}>
+                  <ConfigServiceProvider config={config}>
+                    <AnalyticsProvider>
+                      <AppMonitoringServiceProvider>
+                        <ApiErrorBoundary>
+                          <Services>
+                            <Routing />
+                          </Services>
+                        </ApiErrorBoundary>
+                      </AppMonitoringServiceProvider>
+                    </AnalyticsProvider>
+                  </ConfigServiceProvider>
+                </Suspense>
               </BlockerService>
             </QueryProvider>
           </I18nProvider>

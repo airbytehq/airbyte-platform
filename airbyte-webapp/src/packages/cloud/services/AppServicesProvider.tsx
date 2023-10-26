@@ -1,7 +1,5 @@
 import React from "react";
 
-import { ServicesProvider } from "core/servicesProvider";
-
 import { CloudAuthService } from "./auth/CloudAuthService";
 import { KeycloakService } from "./auth/KeycloakService";
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
@@ -13,13 +11,11 @@ import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
  */
 const AppServicesProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
-    <ServicesProvider>
-      <FirebaseSdkProvider>
-        <KeycloakService>
-          <CloudAuthService>{children}</CloudAuthService>
-        </KeycloakService>
-      </FirebaseSdkProvider>
-    </ServicesProvider>
+    <FirebaseSdkProvider>
+      <KeycloakService>
+        <CloudAuthService>{children}</CloudAuthService>
+      </KeycloakService>
+    </FirebaseSdkProvider>
   );
 };
 

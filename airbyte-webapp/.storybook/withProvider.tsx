@@ -12,7 +12,6 @@ import messages from "../src/locales/en.json";
 import { FeatureService } from "../src/core/services/features";
 import { ConfigServiceProvider, config } from "../src/config";
 import { DocumentationPanelProvider } from "../src/views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
-import { ServicesProvider } from "../src/core/servicesProvider";
 import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitoringService";
 import { AirbyteThemeProvider } from "../src/hooks/theme/useAirbyteTheme";
 
@@ -29,27 +28,25 @@ export const withProviders = (getStory: Parameters<Decorator>[0]) => (
   <React.Suspense fallback={null}>
     <AirbyteThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <ServicesProvider>
-          <MemoryRouter>
-            <IntlProvider
-              messages={messages}
-              locale={"en"}
-              defaultRichTextElements={{
-                b: (chunk) => <strong>{chunk}</strong>,
-              }}
-            >
-              <ThemeProvider theme={theme}>
-                <ConfigServiceProvider config={config}>
-                  <DocumentationPanelProvider>
-                    <AppMonitoringServiceProvider>
-                      <FeatureService features={[]}>{getStory()}</FeatureService>
-                    </AppMonitoringServiceProvider>
-                  </DocumentationPanelProvider>
-                </ConfigServiceProvider>
-              </ThemeProvider>
-            </IntlProvider>
-          </MemoryRouter>
-        </ServicesProvider>
+        <MemoryRouter>
+          <IntlProvider
+            messages={messages}
+            locale={"en"}
+            defaultRichTextElements={{
+              b: (chunk) => <strong>{chunk}</strong>,
+            }}
+          >
+            <ThemeProvider theme={theme}>
+              <ConfigServiceProvider config={config}>
+                <DocumentationPanelProvider>
+                  <AppMonitoringServiceProvider>
+                    <FeatureService features={[]}>{getStory()}</FeatureService>
+                  </AppMonitoringServiceProvider>
+                </DocumentationPanelProvider>
+              </ConfigServiceProvider>
+            </ThemeProvider>
+          </IntlProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     </AirbyteThemeProvider>
   </React.Suspense>

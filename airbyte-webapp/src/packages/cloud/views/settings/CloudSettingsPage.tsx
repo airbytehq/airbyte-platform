@@ -2,7 +2,6 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FeatureItem, useFeature } from "core/services/features";
-// import useConnector from "hooks/services/useConnector";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
 import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
 import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
@@ -13,15 +12,12 @@ import {
   DestinationsPage as SettingsDestinationPage,
   SourcesPage as SettingsSourcesPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
-// import ConfigurationsPage from "pages/SettingsPage/pages/ConfigurationsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig, SettingsPageBase } from "pages/SettingsPage/SettingsPageBase";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
 export const CloudSettingsPage: React.FC = () => {
-  // TODO: uncomment when supported in cloud
-  // const { countNewSourceVersion, countNewDestinationVersion } = useConnector();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
 
@@ -68,20 +64,13 @@ export const CloudSettingsPage: React.FC = () => {
             {
               path: CloudSettingsRoutePaths.Source,
               name: <FormattedMessage id="tables.sources" />,
-              // indicatorCount: countNewSourceVersion,
               component: SettingsSourcesPage,
             },
             {
               path: CloudSettingsRoutePaths.Destination,
               name: <FormattedMessage id="tables.destinations" />,
-              // indicatorCount: countNewDestinationVersion,
               component: SettingsDestinationPage,
             },
-            // {
-            //   path: CloudSettingsRoutes.Configuration,
-            //   name: <FormattedMessage id="admin.configuration" />,
-            //   component: ConfigurationsPage,
-            // },
             {
               path: CloudSettingsRoutePaths.AccessManagement,
               name: <FormattedMessage id="settings.accessManagementSettings" />,
