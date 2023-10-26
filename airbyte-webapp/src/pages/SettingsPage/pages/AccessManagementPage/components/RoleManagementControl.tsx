@@ -9,22 +9,22 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { useDeletePermissions, useUpdatePermissions } from "core/api";
-import { PermissionRead, PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
-import { useCurrentUser } from "core/services/auth";
+import { PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
 import { useIntent } from "core/utils/rbac/intent";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RoleManagementControl.module.scss";
 import { ResourceType, permissionStringDictionary, permissionsByResourceType } from "./useGetAccessManagementData";
 
-interface RoleManagementControlProps {
+interface RoleManagementControlProps extends PermissionUpdate {
   userName?: string;
   resourceName: string;
   pageResourceType: ResourceType;
   tableResourceType: ResourceType;
   activeEditRow?: string;
   setActiveEditRow: (permissionId?: string) => void;
-  permission: PermissionRead;
+  workspaceId?: string;
+  organizationId?: string;
 }
 
 const roleManagementFormSchema = yup.object().shape({
@@ -33,9 +33,12 @@ const roleManagementFormSchema = yup.object().shape({
 });
 
 export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
-  permission,
+  permissionType,
+  workspaceId,
+  organizationId,
   pageResourceType,
   tableResourceType,
+  permissionId,
   userName,
   resourceName,
   activeEditRow,
@@ -45,19 +48,12 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { mutateAsync: deletePermissions } = useDeletePermissions();
   const { formatMessage } = useIntl();
-  const { permissionId, permissionType, userId } = permission;
-
   const isEditMode = activeEditRow === permissionId;
-  const currentUser = useCurrentUser();
-
-  const isCurrentUsersPermission = userId === currentUser.userId;
 
   const intentKey =
     tableResourceType === "organization" ? "UpdateOrganizationPermissions" : "UpdateWorkspacePermissions";
 
-  const intentMeta = permission.hasOwnProperty("organizationId")
-    ? { organizationId: permission.organizationId }
-    : { workspaceId: permission.workspaceId };
+  const intentMeta = tableResourceType === "organization" ? { organizationId } : { workspaceId };
 
   const canUpdateUserPermissions = useIntent(intentKey, intentMeta);
 
@@ -65,7 +61,7 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
     return null;
   }
 
-  if (pageResourceType !== tableResourceType || !canUpdateUserPermissions || isCurrentUsersPermission) {
+  if (pageResourceType !== tableResourceType || !canUpdateUserPermissions) {
     return (
       <Box py="sm">
         <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
@@ -140,22 +136,16 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
             <FormattedMessage id={`${permissionStringDictionary[permissionType]}`} />
           </Text>
           <FlexContainer>
-            {/* for initial release, there is only a single workspace-level role: workspace_admin */}
-            {tableResourceType !== "workspace" && (
-              <Button
-                variant="secondary"
-                onClick={() => setActiveEditRow(permissionId)}
-                className={styles.roleManagementControl__button}
-              >
-                <FormattedMessage id="settings.accessManagement.changeRole" />
-              </Button>
-            )}
-            {/* for initial release, organization-level permission creation + deletion are to be handled in a user's SSO provider */}
-            {tableResourceType !== "organization" && (
-              <Button variant="danger" onClick={onRemoveUserClick} className={styles.roleManagementControl__button}>
-                <FormattedMessage id="settings.accessManagement.user.remove" />
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              onClick={() => setActiveEditRow(permissionId)}
+              className={styles.roleManagementControl__button}
+            >
+              <FormattedMessage id="settings.accessManagement.changeRole" />
+            </Button>
+            <Button variant="danger" onClick={onRemoveUserClick} className={styles.roleManagementControl__button}>
+              <FormattedMessage id="settings.accessManagement.user.remove" />
+            </Button>
           </FlexContainer>
         </FlexContainer>
       )}

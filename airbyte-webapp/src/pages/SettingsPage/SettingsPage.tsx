@@ -21,8 +21,10 @@ import { MetricsPage } from "./pages/MetricsPage";
 export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
+  const newWorkspacesUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isAccessManagementEnabled = useExperiment("settings.accessManagement", false);
+  const canListWorkspaceUsers = useIntent("ListWorkspaceMembers", { workspaceId });
+  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId });
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
@@ -44,7 +46,7 @@ export const SettingsPage: React.FC = () => {
               {
                 category: <FormattedMessage id="settings.workspaceSettings" />,
                 routes: [
-                  ...(multiWorkspaceUI
+                  ...(newWorkspacesUI
                     ? [
                         {
                           path: `${SettingsRoutePaths.Workspace}`,
@@ -53,7 +55,7 @@ export const SettingsPage: React.FC = () => {
                         },
                       ]
                     : []),
-                  ...(!multiWorkspaceUI
+                  ...(!newWorkspacesUI
                     ? [
                         {
                           path: `${SettingsRoutePaths.Source}`,
@@ -79,7 +81,7 @@ export const SettingsPage: React.FC = () => {
                     name: <FormattedMessage id="settings.metrics" />,
                     component: MetricsPage,
                   },
-                  ...(multiWorkspaceUI && isAccessManagementEnabled
+                  ...(newWorkspacesUI && isAccessManagementEnabled && canListWorkspaceUsers
                     ? [
                         {
                           path: `${SettingsRoutePaths.Workspace}/${SettingsRoutePaths.AccessManagement}`,
@@ -92,7 +94,7 @@ export const SettingsPage: React.FC = () => {
               },
             ]
           : []),
-        ...(multiWorkspaceUI && organizationId && canViewOrganizationSettings
+        ...(newWorkspacesUI && organizationId && canListOrganizationUsers && canViewOrganizationSettings
           ? [
               {
                 category: <FormattedMessage id="settings.organizationSettings" />,
@@ -115,7 +117,7 @@ export const SettingsPage: React.FC = () => {
               },
             ]
           : []),
-        ...(multiWorkspaceUI
+        ...(newWorkspacesUI
           ? [
               {
                 category: <FormattedMessage id="settings.instanceSettings" />,
@@ -139,12 +141,14 @@ export const SettingsPage: React.FC = () => {
       ],
     }),
     [
+      canListOrganizationUsers,
+      canListWorkspaceUsers,
       canViewOrganizationSettings,
       canViewWorkspaceSettings,
       countNewDestinationVersion,
       countNewSourceVersion,
       isAccessManagementEnabled,
-      multiWorkspaceUI,
+      newWorkspacesUI,
       organizationId,
     ]
   );

@@ -25,11 +25,9 @@
   "role.admin": "Admin",
   "role.reader": "Reader",
   "role.editor": "Editor",
-  "role.member": "Member",
   "role.admin.description": "Can view and modify all aspects of the {resourceType}, including its settings, users, and roles",
   "role.editor.description": "Can view and modify the {resourceType}",
   "role.reader.description": "Has read access to the {resourceType}",
-  "role.member.description": "Is a member of the {resourceType}, but needs explicit permissions to access any resources within it.",
 
   "sidebar.homepage": "Homepage",
   "sidebar.sources": "Sources",

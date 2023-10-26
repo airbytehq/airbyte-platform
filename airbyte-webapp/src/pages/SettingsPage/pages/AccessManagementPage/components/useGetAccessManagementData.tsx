@@ -39,15 +39,11 @@ export const tableTitleDictionary: Record<ResourceType, string> = {
 };
 
 export const permissionsByResourceType: Record<ResourceType, PermissionType[]> = {
-  workspace: [
-    PermissionType.workspace_admin,
-    // PermissionType.workspace_editor, PermissionType.workspace_reader -- roles not supported in MVP
-  ],
+  workspace: [PermissionType.workspace_admin, PermissionType.workspace_editor, PermissionType.workspace_reader],
   organization: [
     PermissionType.organization_admin,
-    // PermissionType.organization_editor, -- role not supported in MVP
-    // PermissionType.organization_reader, -- role not supported in MVP
-    PermissionType.organization_member,
+    PermissionType.organization_editor,
+    PermissionType.organization_reader,
   ],
   instance: [PermissionType.instance_admin],
 };
@@ -62,18 +58,22 @@ export const useGetWorkspaceAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
   const workspaceUsers = useListUsersInWorkspace(workspace.workspaceId).users;
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const instanceUsers: WorkspaceUserRead[] = []; // todo: temporary hacky workaround until we have an endpoint
 
   return {
     workspace: workspaceUsers,
-    organization: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
+    organization: organizationUsers,
+    instance: instanceUsers,
   };
 };
 
 export const useGetOrganizationAccessUsers = (): AccessUsers => {
   const workspace = useCurrentWorkspace();
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
+  const instanceUsers: WorkspaceUserRead[] = []; // todo: temporary hacky workaround until we have an endpoint
 
   return {
     organization: organizationUsers,
+    instance: instanceUsers,
   };
 };
