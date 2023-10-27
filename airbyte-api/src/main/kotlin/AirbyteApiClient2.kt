@@ -16,6 +16,7 @@ import io.airbyte.api.client2.generated.SourceDefinitionApi
 import io.airbyte.api.client2.generated.SourceDefinitionSpecificationApi
 import io.airbyte.api.client2.generated.StateApi
 import io.airbyte.api.client2.generated.StreamStatusesApi
+import io.airbyte.api.client2.generated.WorkloadApi
 import io.airbyte.api.client2.generated.WorkspaceApi
 import okhttp3.OkHttpClient
 
@@ -67,4 +68,5 @@ class AirbyteApiClient2
     val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
     val stateApi = StateApi(basePath = basePath, client = httpClient, policy = policy)
     val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
+    val workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
   }

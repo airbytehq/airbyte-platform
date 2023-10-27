@@ -13,7 +13,6 @@ import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.featureflag.Connection;
@@ -65,7 +64,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   /**
    * Pod label used to unique identify the pod launched by this worker.
    */
-  static final String PROCESS_ID_LABEL_KEY = "process_id";
+  public static final String PROCESS_ID_LABEL_KEY = "process_id";
 
   final UUID connectionId;
   final UUID workspaceId;

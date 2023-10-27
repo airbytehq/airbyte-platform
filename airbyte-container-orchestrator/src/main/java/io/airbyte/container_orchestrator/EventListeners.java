@@ -5,10 +5,10 @@
 package io.airbyte.container_orchestrator;
 
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.micronaut.runtime.event.annotation.EventListener;
 import io.micronaut.runtime.server.event.ServerStartupEvent;
 import jakarta.inject.Inject;

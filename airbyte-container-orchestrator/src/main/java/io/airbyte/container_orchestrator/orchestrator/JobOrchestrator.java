@@ -5,8 +5,8 @@
 package io.airbyte.container_orchestrator.orchestrator;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.workers.process.KubePodProcess;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

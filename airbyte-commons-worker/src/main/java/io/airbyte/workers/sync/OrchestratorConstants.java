@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.temporal.sync;
+package io.airbyte.workers.sync;
 
 import com.uber.m3.util.ImmutableSet;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;

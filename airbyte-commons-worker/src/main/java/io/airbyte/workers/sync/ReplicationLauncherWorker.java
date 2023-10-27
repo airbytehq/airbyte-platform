@@ -28,7 +28,7 @@ import java.util.UUID;
 public class ReplicationLauncherWorker extends LauncherWorker<ReplicationInput, ReplicationOutput> {
 
   public static final String REPLICATION = "replication-orchestrator";
-  private static final String POD_NAME_PREFIX = "orchestrator-repl";
+  public static final String POD_NAME_PREFIX = "orchestrator-repl";
   public static final String INIT_FILE_SOURCE_LAUNCHER_CONFIG = "sourceLauncherConfig.json";
   public static final String INIT_FILE_DESTINATION_LAUNCHER_CONFIG = "destinationLauncherConfig.json";
 

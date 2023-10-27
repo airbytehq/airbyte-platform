@@ -262,6 +262,13 @@ Returns the Airbyte Worker Image
 {{- end -}}
 
 {{/*
+Returns the Airbyte Workload Launcher Image
+*/}}
+{{- define "airbyte.workloadLauncherImage" -}}
+{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
+{{- end -}}
+
+{{/*
 Returns the Airbyte Bootloader Image
 */}}
 {{- define "airbyte.bootloaderImage" -}}
