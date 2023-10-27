@@ -1,9 +1,8 @@
 import Anser from "anser";
 import classNames from "classnames";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { HTMLAttributes, useEffect, useRef } from "react";
 import { FormattedMessage } from "react-intl";
-import AutoSizer from "react-virtualized-auto-sizer";
-import { FixedSizeList, ListChildComponentProps, ListOnScrollProps } from "react-window";
+import { Virtuoso, ItemContent, VirtuosoHandle } from "react-virtuoso";
 import sanitize from "sanitize-html";
 
 import { Text } from "components/ui/Text";
@@ -16,6 +15,7 @@ interface VirtualLogsProps {
   searchTerm?: string;
   scrollTo?: number;
   selectedAttempt?: number;
+  hasFailure: boolean;
 }
 
 function escapeRegex(string: string) {
@@ -40,71 +40,31 @@ export const sanitizeHtml = (logLine: string) => {
   });
 };
 
-interface RowData {
-  logLines: CleanedLogLines;
+interface RowContext {
   searchTerm?: string;
   highlightedRowIndex?: number;
 }
 
-const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({ logLines, searchTerm, scrollTo, selectedAttempt }) => {
-  const listRef = useRef<FixedSizeList<RowData> | null>(null);
+const LogLine: React.FC<HTMLAttributes<HTMLDivElement>> = (props) => (
+  <div {...props} className={styles.virtualLogs__line} />
+);
+LogLine.displayName = "LogLine";
+
+const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
+  logLines,
+  searchTerm,
+  scrollTo,
+  selectedAttempt,
+  hasFailure,
+}) => {
+  const listRef = useRef<VirtuosoHandle | null>(null);
   const highlightedRowIndex = scrollTo;
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   useEffect(() => {
     if (scrollTo !== undefined) {
-      listRef.current?.scrollToItem(scrollTo);
+      listRef.current?.scrollIntoView({ index: scrollTo, align: "center" });
     }
   }, [scrollTo]);
-
-  const scrollToBottom = useCallback(() => {
-    if (listRef.current === null || !logLines.length) {
-      return;
-    }
-    listRef?.current.scrollToItem(logLines.length, "end");
-  }, [logLines.length]);
-
-  useEffect(() => {
-    if (isAutoScrollEnabled) {
-      scrollToBottom();
-    }
-  }, [isAutoScrollEnabled, logLines, scrollToBottom]);
-
-  const handleScroll = ({ scrollUpdateWasRequested, scrollOffset }: ListOnScrollProps) => {
-    const element = scrollContainerRef.current;
-    if (!element) {
-      return;
-    }
-
-    // check if user is scrolled to bottom
-    const isScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight;
-
-    //  if scrollUpdateWasRequested is false and scrollOffset > 0 - this means user is scrolling, hence we disable auto-scroll if it was turned on before
-    if (!scrollUpdateWasRequested && scrollOffset > 0 && !isScrolledToBottom && isAutoScrollEnabled) {
-      setIsAutoScrollEnabled(false);
-      return;
-    }
-
-    // otherwise - turn on auto scroll if it wasn't enabled before
-    if (isScrolledToBottom && !isAutoScrollEnabled) {
-      setIsAutoScrollEnabled(true);
-    }
-  };
-
-  // since we can't track the listRef change with useEffect, we use a callback ref instead
-  const setListRef = useCallback(
-    (node: InstanceType<typeof FixedSizeList<RowData>>) => {
-      if (listRef.current !== null) {
-        return;
-      }
-      listRef.current = node;
-
-      // scroll to bottom on mount
-      scrollToBottom();
-    },
-    [scrollToBottom]
-  );
 
   return (
     <div className={styles.virtualLogs}>
@@ -114,26 +74,26 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({ logLines, searchTer
         </Text>
       )}
       {logLines && (
-        <AutoSizer>
-          {({ height, width }) =>
-            height && width ? (
-              <FixedSizeList<RowData>
-                key={selectedAttempt}
-                height={height}
-                itemCount={logLines.length}
-                itemSize={20}
-                itemData={{ logLines, searchTerm, highlightedRowIndex }}
-                width={width}
-                overscanCount={10}
-                ref={setListRef}
-                outerRef={scrollContainerRef}
-                onScroll={handleScroll}
-              >
-                {Row}
-              </FixedSizeList>
-            ) : null
+        <Virtuoso<CleanedLogLines[number], RowContext>
+          ref={listRef}
+          initialTopMostItemIndex={{ index: "LAST" }}
+          followOutput={
+            // smooth scroll unless there's an error, the appearance of the error message decreases
+            // the logs viewport area which invalides the target scroll position during a smooth
+            // scroll, which results in not positioning at the bottom
+            (isAtBottom) => isAtBottom && (hasFailure ? true : "smooth")
           }
-        </AutoSizer>
+          key={selectedAttempt}
+          style={{ width: "100%", height: "100%" }}
+          data={logLines}
+          itemContent={Row}
+          context={{ searchTerm, highlightedRowIndex }}
+          atBottomThreshold={50 /* covers edge case(s) where Virtuoso doesn't scroll all the way to the bottom */}
+          increaseViewportBy={150}
+          components={{
+            Item: LogLine,
+          }}
+        />
       )}
     </div>
   );
@@ -157,30 +117,28 @@ export const getMatchIndices = (text: string, searchTerm?: string) => {
   return matchIndices;
 };
 
-const Row: React.FC<ListChildComponentProps<RowData>> = ({ index, style, data }) => {
-  const rowIsHighlighted = data.highlightedRowIndex === index;
-  const html = Anser.ansiToHtml(expandTabs(data.logLines[index].original), { use_classes: true });
-  const matchIndices = getMatchIndices(expandTabs(data.logLines[index].text), data.searchTerm);
+const Row: ItemContent<CleanedLogLines[number], RowContext> = (index, item, context) => {
+  const rowIsHighlighted = context.highlightedRowIndex === index;
+  const html = Anser.ansiToHtml(expandTabs(item.original), { use_classes: true });
+  const matchIndices = getMatchIndices(expandTabs(item.text), context.searchTerm);
 
   return (
-    <div style={style} className={styles.virtualLogs__line}>
-      <div
-        className={classNames(styles.virtualLogs__lineInner, {
-          [styles["virtualLogs__lineInner--highlighted"]]: rowIsHighlighted,
-        })}
-      >
-        <div className={styles.virtualLogs__lineNumber}>{index + 1}</div>
-        <div className={styles.virtualLogs__lineLogContent}>
-          {matchIndices.length > 0 &&
-            matchIndices.map((matchIndex) => (
-              <div
-                className={styles.virtualLogs__searchMatch}
-                key={matchIndex}
-                style={{ left: `${matchIndex}ch`, width: `${data.searchTerm?.length}ch` }}
-              />
-            ))}
-          <DangerousHTML html={html} />
-        </div>
+    <div
+      className={classNames(styles.virtualLogs__lineInner, {
+        [styles["virtualLogs__lineInner--highlighted"]]: rowIsHighlighted,
+      })}
+    >
+      <div className={styles.virtualLogs__lineNumber}>{index + 1}</div>
+      <div className={styles.virtualLogs__lineLogContent}>
+        {matchIndices.length > 0 &&
+          matchIndices.map((matchIndex) => (
+            <div
+              className={styles.virtualLogs__searchMatch}
+              key={matchIndex}
+              style={{ left: `${matchIndex}ch`, width: `${context.searchTerm?.length}ch` }}
+            />
+          ))}
+        <DangerousHTML html={html} />
       </div>
     </div>
   );

@@ -85,7 +85,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
       }
     },
     150,
-    [inputValue]
+    [inputValue, logLines]
   );
 
   const onSearchTermChange = (searchTerm: string) => {
@@ -177,6 +177,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
         logLines={logLines}
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}
+        hasFailure={!!jobAttempt.attempt.failureSummary}
       />
     </FlexContainer>
   );
