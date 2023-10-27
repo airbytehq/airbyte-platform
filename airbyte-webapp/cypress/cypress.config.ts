@@ -5,7 +5,7 @@ const pgp = pg();
 
 export const DB_CONFIG = {
   user: "postgres",
-  host: "localhost",
+  host: "127.0.0.1",
   database: "airbyte_ci_source",
   password: "secret_password",
   port: 5433,
