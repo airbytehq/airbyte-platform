@@ -49,6 +49,17 @@ public class Asserts {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Asserts.class);
 
+  public static void assertSourceAndDestinationDbRawRecordsInSync(
+                                                                  final Database source,
+                                                                  final Database destination,
+                                                                  final String inputSchema,
+                                                                  final String outputSchema,
+                                                                  final boolean withNormalizedTable,
+                                                                  final boolean withScdTable)
+      throws Exception {
+    assertSourceAndDestinationDbRawRecordsInSync(source, destination, Set.of(inputSchema), outputSchema, withNormalizedTable, withScdTable);
+  }
+
   /**
    * Assert raw records in the destination database match those in the source database.
    *
@@ -61,7 +72,7 @@ public class Asserts {
   public static void assertSourceAndDestinationDbRawRecordsInSync(
                                                                   final Database source,
                                                                   final Database destination,
-                                                                  final String inputSchema,
+                                                                  final Set<String> inputSchemas,
                                                                   final String outputSchema,
                                                                   final boolean withNormalizedTable,
                                                                   final boolean withScdTable)
@@ -70,7 +81,11 @@ public class Asserts {
     // the sync is marked complete but the destination tables aren't finalized yet.
     AirbyteApiClient.retryWithJitterThrows(() -> {
       try {
-        final Set<SchemaTableNamePair> sourceTables = Databases.listAllTables(source, inputSchema);
+        Set<SchemaTableNamePair> sourceTables = new HashSet<>();
+        for (String inputSchema : inputSchemas) {
+          sourceTables.addAll(Databases.listAllTables(source, inputSchema));
+        }
+
         final Set<SchemaTableNamePair> expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables);
 
         final Set<SchemaTableNamePair> destinationTables = Databases.listAllTables(destination, outputSchema);
@@ -274,8 +289,6 @@ public class Asserts {
       }
 
       if (withScdTable) {
-        explodedStreamNames
-            .add(new SchemaTableNamePair("_airbyte_" + outputSchema, String.format("%s%s_stg", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
         explodedStreamNames
             .add(new SchemaTableNamePair(outputSchema, String.format("%s%s_scd", OUTPUT_STREAM_PREFIX, cleanedNameStream)));
       }

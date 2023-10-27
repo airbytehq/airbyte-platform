@@ -386,7 +386,8 @@ secrets: {}
 #   ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS:
 #   ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:
 #   WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:
-env_vars: {}
+env_vars:
+  CONTAINER_ORCHESTRATOR_ENABLED: true
 
 ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
 extraSelectorLabels: {}

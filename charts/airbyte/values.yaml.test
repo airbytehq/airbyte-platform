@@ -11,6 +11,7 @@ global:
   image:
     tag: dev
 
+  env_vars: {}
   ##  database [object] -- Object used to overrite database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
   ##  database.secretValue -- secret value for database password
@@ -819,11 +820,9 @@ worker:
   hpa:
     enabled: false
   ## Container Orchestrator
-  ## enabled -- Enable or disable Orchestrator
   ## image -- Orchestrator image
 
   containerOrchestrator:
-    enabled: true
     image: ""
 
 ## @section Workload Launcher Parameters
@@ -1399,6 +1398,7 @@ externalDatabase:
 ##  minio.secretKey.password Minio Secret Key
 minio:
   enabled: true
+  endpoint: http://airbyte-minio-svc:9000
 
   ## image.repository Minio image used by Minio helm chart
   ## image.tag Minio tag image

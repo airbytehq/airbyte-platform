@@ -15,7 +15,7 @@ mv Chart.yaml.local Chart.yaml
 # Create a local helm installation called 'local' using the local charts.
 # Additional arguments passed in to the script are appended to the end of the `helm install`
 # command so that additional flags can be passed, like --set <value> or --values <file>
-helm dep update && helm install local . "$@"
+helm dep update && helm upgrade --install local . "$@"
 
 # Replace original Chart.yaml
 mv Chart.yaml Chart.yaml.local

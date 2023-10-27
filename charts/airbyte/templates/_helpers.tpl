@@ -201,7 +201,7 @@ Add environment variables to configure minio
 */}}
 {{- define "airbyte.minio.endpoint" -}}
 {{- if .Values.global.logs.minio.enabled -}}
-    {{- printf "http://%s:%d" "airbyte-minio-svc" 9000 -}}
+    {{- .Values.minio.endpoint -}}
 {{- else if .Values.global.logs.externalMinio.endpoint -}}
     {{- .Values.global.logs.externalMinio.endpoint -}}
 {{- else if .Values.global.logs.externalMinio.enabled -}}

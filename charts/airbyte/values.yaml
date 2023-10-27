@@ -843,11 +843,9 @@ worker:
     enabled: false
 
   ## Container Orchestrator
-  ## enabled -- Enable or disable Orchestrator
   ## image -- Orchestrator image
 
   containerOrchestrator:
-    enabled: true
     image: ""
 
   ## current no exist documentations
@@ -1443,6 +1441,7 @@ externalDatabase:
 ##  minio.secretKey.password Minio Secret Key
 minio:
   enabled: true
+  endpoint: http://airbyte-minio-svc:9000
 
   ## image.repository Minio image used by Minio helm chart
   ## image.tag Minio tag image
