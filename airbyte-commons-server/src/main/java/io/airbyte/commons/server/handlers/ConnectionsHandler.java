@@ -981,7 +981,7 @@ public class ConnectionsHandler {
     return propagateResult.appliedDiff();
   }
 
-  private void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
+  public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
       final Map<String, Object> payload = new HashMap<>();
       payload.put("workspace_id", workspaceId);

@@ -473,6 +473,8 @@ public class SchedulerHandler {
             sourceAutoPropagateChange.getCatalogId(),
             connectionRead.getNonBreakingChangesPreference(), supportedDestinationSyncModes);
         connectionsHandler.updateConnection(updateObject);
+        connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
+            updateObject.getConnectionId(), result);
         boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
         if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
