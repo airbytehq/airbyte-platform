@@ -19,6 +19,7 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
+import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -325,6 +326,18 @@ public class PermissionHandler {
     return results.stream().allMatch(result -> result.getStatus().equals(StatusEnum.SUCCEEDED))
         ? new PermissionCheckRead().status(StatusEnum.SUCCEEDED)
         : new PermissionCheckRead().status(StatusEnum.FAILED);
+  }
+
+  /**
+   * Check and get instance_admin permission for a user.
+   *
+   * @param userId user id
+   * @return UserPermission User details with instance_admin permission, null if user does not have
+   *         instance_admin role.
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
+    return permissionPersistence.getUserInstanceAdminPermission(userId);
   }
 
   /**
