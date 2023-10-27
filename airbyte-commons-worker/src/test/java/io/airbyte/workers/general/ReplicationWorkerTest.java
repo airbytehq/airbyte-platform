@@ -799,6 +799,8 @@ abstract class ReplicationWorkerTest {
   void testPopulatesOutputOnSuccess() throws WorkerException {
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
+    when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(100L);
     when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
     when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(1L);
     when(syncStatsTracker.getStreamToEmittedBytes())

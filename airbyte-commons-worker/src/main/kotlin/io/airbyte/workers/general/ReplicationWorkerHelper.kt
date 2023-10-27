@@ -225,8 +225,8 @@ class ReplicationWorkerHelper(
       ReplicationAttemptSummary()
         .withStatus(outputStatus)
         // TODO records and bytes synced should no longer be used as we are consuming total stats, we should make a pass to remove them.
-        .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsEmitted())
-        .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsCommitted())
+        .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesCommitted())
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
