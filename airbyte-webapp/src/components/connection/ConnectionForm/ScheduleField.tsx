@@ -29,7 +29,7 @@ const CRON_DEFAULT_VALUE = {
 };
 
 const CronErrorChatWithUsButton: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  return <ExternalLink href={links.supportPortal}>{children}</ExternalLink>;
+  return <ExternalLink href={links.contactSales}>{children}</ExternalLink>;
 };
 
 export const ScheduleField: React.FC = () => {

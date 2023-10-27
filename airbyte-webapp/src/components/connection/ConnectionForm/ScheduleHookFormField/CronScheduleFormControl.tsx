@@ -92,7 +92,7 @@ export const CronScheduleFormControl: React.FC = () => {
                     ? {
                         values: {
                           lnk: (btnText: React.ReactNode) => (
-                            <ExternalLink href={links.supportPortal}>{btnText}</ExternalLink>
+                            <ExternalLink href={links.contactSales}>{btnText}</ExternalLink>
                           ),
                         },
                       }
