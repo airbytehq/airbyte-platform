@@ -1,6 +1,8 @@
 import classNames from "classnames";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
@@ -11,9 +13,9 @@ import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
 import styles from "./StreamsConfigTableRow.module.scss";
 import { StreamsConfigTableRowStatus } from "./StreamsConfigTableRowStatus";
-import { useRedirectedReplicationStream } from "./useRedirectedReplicationStream";
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 import { CellText } from "../CellText";
+import { LocationWithState } from "../SyncCatalog/SyncCatalogBody";
 import { SyncModeSelect, SyncModeValue } from "../SyncModeSelect";
 import { FieldPathType } from "../utils";
 
@@ -123,35 +125,40 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
 
   const { streamHeaderContentStyle, pillButtonVariant } = useStreamsConfigTableRowProps(stream);
 
+  const { state: locationState, pathname } = useLocation() as LocationWithState;
+  const navigate = useNavigate();
   const rowRef = useRef<HTMLDivElement>(null);
   const [highlighted, setHighlighted] = useState(false);
-  const { doesStreamExist, redirectionAction } = useRedirectedReplicationStream(stream);
 
-  useEffect(() => {
+  useEffectOnce(() => {
     let highlightTimeout: number;
     let openTimeout: number;
 
-    // Scroll to the stream and highlight it
-    if (doesStreamExist && (redirectionAction === "showInReplicationTable" || redirectionAction === "openDetails")) {
-      rowRef.current?.scrollIntoView({ block: "center" });
-      setHighlighted(true);
-      highlightTimeout = window.setTimeout(() => {
-        setHighlighted(false);
-      }, 1500);
-    }
+    // Is it the stream we are looking for?
+    if (locationState?.streamName === stream.stream?.name && locationState?.namespace === stream.stream?.namespace) {
+      // Scroll to the stream and highlight it
+      if (locationState?.action === "showInReplicationTable" || locationState?.action === "openDetails") {
+        setHighlighted(true);
+        highlightTimeout = window.setTimeout(() => {
+          setHighlighted(false);
+        }, 1500);
+      }
 
-    // Open the stream details
-    if (doesStreamExist && redirectionAction === "openDetails") {
-      openTimeout = window.setTimeout(() => {
-        rowRef.current?.click();
-      }, 750);
+      // Open the stream details
+      if (locationState?.action === "openDetails") {
+        openTimeout = window.setTimeout(() => {
+          rowRef.current?.click();
+        }, 750);
+      }
+      // remove the redirection info from the location state
+      navigate(pathname, { replace: true });
     }
 
     return () => {
       window.clearTimeout(highlightTimeout);
       window.clearTimeout(openTimeout);
     };
-  }, [rowRef, redirectionAction, doesStreamExist]);
+  });
 
   return (
     <FlexContainer

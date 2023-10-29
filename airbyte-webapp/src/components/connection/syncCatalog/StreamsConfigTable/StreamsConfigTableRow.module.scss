@@ -13,6 +13,7 @@
 @keyframes highlight {
   0%,
   50% {
+    position: relative;
     box-shadow: 0 0 47px -5px colors.$blue-200;
     z-index: 1;
   }

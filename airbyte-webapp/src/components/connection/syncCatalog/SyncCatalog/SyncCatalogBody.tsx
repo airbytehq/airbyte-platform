@@ -1,6 +1,7 @@
 import { Field, FieldProps, setIn } from "formik";
-import React, { useCallback } from "react";
-import { Virtuoso } from "react-virtuoso";
+import React, { useCallback, useMemo } from "react";
+import { Location, useLocation } from "react-router-dom";
+import { IndexLocationWithAlign, Virtuoso } from "react-virtuoso";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
@@ -11,6 +12,16 @@ import styles from "./SyncCatalogBody.module.scss";
 import { SyncCatalogEmpty } from "./SyncCatalogEmpty";
 import { SyncCatalogRow } from "./SyncCatalogRow";
 import { StreamsConfigTableHeader } from "../StreamsConfigTable";
+
+interface RedirectionLocationState {
+  namespace?: string;
+  streamName?: string;
+  action?: "showInReplicationTable" | "openDetails";
+}
+
+export interface LocationWithState extends Location {
+  state: RedirectionLocationState;
+}
 
 interface SyncCatalogBodyProps {
   streams: SyncSchemaStream[];
@@ -43,6 +54,22 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
     [streams, onStreamChanged]
   );
 
+  // Scroll to the stream that was redirected from the Status tab
+  const { state: locationState } = useLocation() as LocationWithState;
+  const initialTopMostItemIndex: IndexLocationWithAlign | undefined = useMemo(() => {
+    if (locationState?.action !== "showInReplicationTable" && locationState?.action !== "openDetails") {
+      return;
+    }
+
+    return {
+      index: streams.findIndex(
+        (stream) =>
+          stream.stream?.name === locationState?.streamName && stream.stream?.namespace === locationState?.namespace
+      ),
+      align: "center",
+    };
+  }, [locationState?.action, locationState?.namespace, locationState?.streamName, streams]);
+
   return (
     <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
@@ -56,6 +83,7 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
         <Virtuoso
           style={{ height: "40vh" }}
           data={streams}
+          initialTopMostItemIndex={initialTopMostItemIndex}
           fixedItemHeight={50}
           itemContent={(_index, streamNode) => (
             <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>
