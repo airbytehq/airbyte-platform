@@ -27,7 +27,7 @@ class StatusUpdater(
         WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.failure)
       airbyteApi.workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest)
     } catch (e: Exception) {
-      LOGGER.warn { "Could not set the status for workload $workloadId to failed even after re-tries" }
+      LOGGER.warn(e) { "Could not set the status for workload $workloadId to failed even after re-tries" }
     }
   }
 }
