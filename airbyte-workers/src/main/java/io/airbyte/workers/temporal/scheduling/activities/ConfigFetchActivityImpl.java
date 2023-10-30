@@ -29,8 +29,10 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.AddSchedulingJitter;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.UseNewCronScheduleCalculation;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.workers.helpers.CronSchedulingHelper;
 import io.airbyte.workers.helpers.ScheduleJitterHelper;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
@@ -104,31 +106,29 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
       final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(input.getConnectionId());
       final ConnectionRead connectionRead = connectionApi.getConnection(connectionIdRequestBody);
+      final UUID workspaceId = workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody).getWorkspaceId();
       final Duration timeToWait = connectionRead.getScheduleType() != null
-          ? getTimeToWaitFromScheduleType(connectionRead, input.getConnectionId())
+          ? getTimeToWaitFromScheduleType(connectionRead, input.getConnectionId(), workspaceId)
           : getTimeToWaitFromLegacy(connectionRead, input.getConnectionId());
-      final Duration timeToWaitWithSchedulingJitter = applyJitterRules(timeToWait, input.getConnectionId(), connectionRead.getScheduleType());
+      final Duration timeToWaitWithSchedulingJitter =
+          applyJitterRules(timeToWait, input.getConnectionId(), connectionRead.getScheduleType(), workspaceId);
       return new ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter);
     } catch (final IOException | ApiException e) {
       throw new RetryableException(e);
     }
   }
 
-  private Duration applyJitterRules(final Duration timeToWait, final UUID connectionId, final ConnectionScheduleType scheduleType) {
-    try {
-      final UUID workspaceId = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId();
-      if (featureFlagClient.boolVariation(AddSchedulingJitter.INSTANCE, new Multi(List.of(
-          new Workspace(workspaceId),
-          new Connection(connectionId))))) {
-        return scheduleJitterHelper.addJitterBasedOnWaitTime(timeToWait, scheduleType);
-      } else {
-        return addSchedulingNoiseForAllowListedWorkspace(timeToWait, scheduleType, workspaceId);
-      }
-    } catch (final ApiException e) {
-      log.warn("Failed to get workspace for connection: {}, proceeding anyways...", connectionId, e);
-      // We tolerate exceptions and fail open by doing nothing
+  private Duration applyJitterRules(final Duration timeToWait,
+                                    final UUID connectionId,
+                                    final ConnectionScheduleType scheduleType,
+                                    final UUID workspaceId) {
+    if (featureFlagClient.boolVariation(AddSchedulingJitter.INSTANCE, new Multi(List.of(
+        new Workspace(workspaceId),
+        new Connection(connectionId))))) {
+      return scheduleJitterHelper.addJitterBasedOnWaitTime(timeToWait, scheduleType);
+    } else {
+      return addSchedulingNoiseForAllowListedWorkspace(timeToWait, scheduleType, workspaceId);
     }
-    return timeToWait;
   }
 
   /**
@@ -140,7 +140,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
    * @return time to wait
    * @throws IOException exception while interacting with db
    */
-  private Duration getTimeToWaitFromScheduleType(final ConnectionRead connectionRead, final UUID connectionId)
+  private Duration getTimeToWaitFromScheduleType(final ConnectionRead connectionRead, final UUID connectionId, final UUID workspaceId)
       throws IOException, ApiException {
     if (connectionRead.getScheduleType() == ConnectionScheduleType.MANUAL || connectionRead.getStatus() != ConnectionStatus.ACTIVE) {
       // Manual syncs wait for their first run
@@ -166,18 +166,25 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       try {
         final CronExpression cronExpression = new CronExpression(scheduleCron.getCronExpression());
         cronExpression.setTimeZone(timeZone);
-        // Ensure that at least a minimum interval -- one minute -- passes between executions. This prevents
-        // us from multiple executions for the same scheduled time, since cron only has a 1-minute
-        // resolution.
-        final long earliestNextRun = Math.max(currentSecondsSupplier.get() * MS_PER_SECOND,
-            (previousJobOptional.getJob() != null
-                ? previousJobOptional.getJob().getStartedAt() != null ? previousJobOptional.getJob().getStartedAt() + MIN_CRON_INTERVAL_SECONDS
-                    : previousJobOptional.getJob().getCreatedAt()
-                        + MIN_CRON_INTERVAL_SECONDS
-                : currentSecondsSupplier.get()) * MS_PER_SECOND);
-        final Date nextRunStart = cronExpression.getNextValidTimeAfter(new Date(earliestNextRun));
-        return Duration.ofSeconds(
-            Math.max(0, nextRunStart.getTime() / MS_PER_SECOND - currentSecondsSupplier.get()));
+        if (featureFlagClient.boolVariation(UseNewCronScheduleCalculation.INSTANCE, new Multi(List.of(
+            new Workspace(workspaceId),
+            new Connection(connectionId))))) {
+          return CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, previousJobOptional.getJob(),
+              cronExpression);
+        } else {
+          // Ensure that at least a minimum interval -- one minute -- passes between executions. This prevents
+          // us from multiple executions for the same scheduled time, since cron only has a 1-minute
+          // resolution.
+          final long earliestNextRun = Math.max(currentSecondsSupplier.get() * MS_PER_SECOND,
+              (previousJobOptional.getJob() != null
+                  ? previousJobOptional.getJob().getStartedAt() != null ? previousJobOptional.getJob().getStartedAt() + MIN_CRON_INTERVAL_SECONDS
+                      : previousJobOptional.getJob().getCreatedAt()
+                          + MIN_CRON_INTERVAL_SECONDS
+                  : currentSecondsSupplier.get()) * MS_PER_SECOND);
+          final Date nextRunStart = cronExpression.getNextValidTimeAfter(new Date(earliestNextRun));
+          return Duration.ofSeconds(
+              Math.max(0, nextRunStart.getTime() / MS_PER_SECOND - currentSecondsSupplier.get()));
+        }
       } catch (final ParseException e) {
         throw (DateTimeException) new DateTimeException(e.getMessage()).initCause(e);
       }

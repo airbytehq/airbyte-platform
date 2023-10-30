@@ -157,3 +157,5 @@ object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-soc
 object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
+
+object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
