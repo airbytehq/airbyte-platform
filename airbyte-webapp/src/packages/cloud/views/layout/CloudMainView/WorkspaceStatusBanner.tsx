@@ -80,7 +80,11 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ cl
   return (
     <>
       {!!workspaceCreditsBannerContent && (
-        <AlertBanner message={workspaceCreditsBannerContent} data-testid="workspace-status-banner" />
+        <AlertBanner
+          message={workspaceCreditsBannerContent}
+          data-testid="workspace-status-banner"
+          color={negativeCreditStatus ? "warning" : "default"}
+        />
       )}
     </>
   );
