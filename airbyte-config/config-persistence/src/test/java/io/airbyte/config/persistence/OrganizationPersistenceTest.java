@@ -4,7 +4,9 @@
 
 package io.airbyte.config.persistence;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -48,7 +50,9 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(UUID.randomUUID())
         .withUserId(UUID.randomUUID())
         .withEmail("octavia@airbyte.io")
-        .withName("new org");
+        .withName("new org")
+        .withPba(false)
+        .withOrgLevelBilling(false);
     organizationPersistence.createOrganization(organization);
     Optional<Organization> result = organizationPersistence.getOrganization(organization.getOrganizationId());
     assertTrue(result.isPresent());
@@ -61,7 +65,9 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(UUID.randomUUID())
         .withUserId(UUID.randomUUID())
         .withEmail("test@test.com")
-        .withName("new org");
+        .withName("new org")
+        .withPba(false)
+        .withOrgLevelBilling(false);
     final SsoConfig ssoConfig = new SsoConfig()
         .withSsoConfigId(UUID.randomUUID())
         .withOrganizationId(org.getOrganizationId())
@@ -126,7 +132,9 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(orgId1)
         .withUserId(userId)
         .withName("keyword")
-        .withEmail("email1"));
+        .withEmail("email1")
+        .withPba(false)
+        .withOrgLevelBilling(false));
     // grant user an admin access to org 1
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
@@ -139,7 +147,9 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(orgId2)
         .withUserId(userId)
         .withName("Keyword")
-        .withEmail("email2"));
+        .withEmail("email2")
+        .withPba(false)
+        .withOrgLevelBilling(false));
     // grant user an editor access to org 2
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
@@ -152,7 +162,9 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(orgId3)
         .withUserId(UUID.randomUUID())
         .withName("randomName")
-        .withEmail("email3"));
+        .withEmail("email3")
+        .withPba(false)
+        .withOrgLevelBilling(false));
     // grant user a read access to org 3
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())

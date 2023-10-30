@@ -70,7 +70,10 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.ID, organization.getOrganizationId())
             .set(ORGANIZATION.NAME, organization.getName())
             .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(ORGANIZATION.UPDATED_AT, timestamp)
+            .set(ORGANIZATION.PBA, organization.getPba())
+            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
             .execute();
       } else {
@@ -78,8 +81,11 @@ public class OrganizationServiceJooqImpl implements OrganizationService {
             .set(ORGANIZATION.ID, organization.getOrganizationId())
             .set(ORGANIZATION.NAME, organization.getName())
             .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(ORGANIZATION.USER_ID, organization.getUserId())
             .set(WORKSPACE.CREATED_AT, timestamp)
             .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(ORGANIZATION.PBA, organization.getPba())
+            .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
             .execute();
       }
       return null;

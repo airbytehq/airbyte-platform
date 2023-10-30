@@ -114,7 +114,6 @@ public class OrganizationsHandler {
   }
 
   public OrganizationReadList listOrganizationsByUser(final ListOrganizationsByUserRequestBody request) throws IOException {
-
     Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
     List<OrganizationRead> organizationReadList;
     if (request.getPagination() != null) {
@@ -134,7 +133,6 @@ public class OrganizationsHandler {
           .collect(Collectors.toList());
     }
     return new OrganizationReadList().organizations(organizationReadList);
-
   }
 
   private static OrganizationRead buildOrganizationRead(final Organization organization) {

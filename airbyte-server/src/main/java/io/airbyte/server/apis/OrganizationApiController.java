@@ -45,18 +45,21 @@ public class OrganizationApiController implements OrganizationApi {
     return ApiHelper.execute(() -> organizationsHandler.getOrganization(organizationIdRequestBody));
   }
 
+  @Post("/update")
   @Secured({ORGANIZATION_EDITOR})
   @Override
   public OrganizationRead updateOrganization(OrganizationUpdateRequestBody organizationUpdateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.updateOrganization(organizationUpdateRequestBody));
   }
 
+  @Post("/create")
   @Secured({ADMIN}) // instance admin only
   @Override
   public OrganizationRead createOrganization(OrganizationCreateRequestBody organizationCreateRequestBody) {
     return ApiHelper.execute(() -> organizationsHandler.createOrganization(organizationCreateRequestBody));
   }
 
+  @Post("/delete")
   @Secured({ADMIN}) // instance admin only
   @Override
   public void deleteOrganization(OrganizationIdRequestBody organizationIdRequestBody) {

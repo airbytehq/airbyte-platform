@@ -309,11 +309,14 @@ public class MockData {
 
   public static List<Organization> organizations() {
     final Organization organization1 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com");
+        new Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com").withPba(false)
+            .withOrgLevelBilling(false);
     final Organization organization2 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com");
+        new Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com").withPba(false)
+            .withOrgLevelBilling(false);
     final Organization organization3 =
-        new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com");
+        new Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com").withPba(false)
+            .withOrgLevelBilling(false);
     return Arrays.asList(organization1, organization2, organization3);
   }
 
