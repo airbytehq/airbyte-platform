@@ -170,7 +170,7 @@ class BootloaderTest {
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
     val postLoadExecutor =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
@@ -242,7 +242,7 @@ class BootloaderTest {
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
     val postLoadExecutor =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
