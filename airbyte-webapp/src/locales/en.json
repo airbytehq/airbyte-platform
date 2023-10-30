@@ -1173,6 +1173,7 @@
   "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
   "login.signup": "Sign up",
+  "login.returnToLogin": "Return to login",
   "login.signup.submitButton": "Sign up",
   "login.loginTitle": "Log in to Airbyte",
   "login.resendEmail": "Didn't receive the email? Send it again",

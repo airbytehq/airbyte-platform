@@ -251,20 +251,22 @@ export function initializeUserManager() {
   return createUserManager(DEFAULT_KEYCLOAK_REALM);
 }
 
-function clearSsoSearchParams() {
+// Removes OIDC params from URL, but doesn't remove other params that might be present
+export function createUriWithoutSsoParams() {
+  // state, code and session_state are from keycloak. realm is added by us to indicate which realm the user is signing in to.
+  const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "realm"];
+
   const searchParams = new URLSearchParams(window.location.search);
 
-  // Remove OIDC params from URL, but don't remove other params that might be present
-  searchParams.delete("state");
-  searchParams.delete("code");
-  searchParams.delete("session_state");
+  SSO_SEARCH_PARAMS.forEach((param) => searchParams.delete(param));
 
-  // Remove our own params we set in the redirect_uri
-  searchParams.delete("realm");
+  return searchParams.toString().length > 0
+    ? `${window.location.origin}?${searchParams.toString()}`
+    : window.location.origin;
+}
 
-  const newUrl = searchParams.toString().length
-    ? `${window.location.pathname}?${searchParams.toString()}`
-    : window.location.pathname;
+function clearSsoSearchParams() {
+  const newUrl = createUriWithoutSsoParams();
   window.history.replaceState({}, document.title, newUrl);
 }
 

@@ -3,8 +3,12 @@ import { FormattedMessage } from "react-intl";
 import { AuthProvider, useAuth } from "react-oidc-context";
 
 import LoadingPage from "components/LoadingPage";
+import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { useGetDefaultUser, useGetInstanceConfiguration } from "core/api";
+import { createUriWithoutSsoParams } from "packages/cloud/services/auth/KeycloakService";
 
 import { AuthContext } from "./AuthContext";
 
@@ -19,7 +23,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
   const oidcConfig = {
     authority: `${webappUrl}/auth/realms/${auth.defaultRealm}`,
     client_id: auth.clientId,
-    redirect_uri: window.location.href,
+    redirect_uri: createUriWithoutSsoParams(),
     onSigninCallback: () => {
       // Remove OIDC params from URL, but don't remove other params that might be present
       const searchParams = new URLSearchParams(window.location.search);
@@ -52,10 +56,18 @@ const LoginRedirectCheck: React.FC<PropsWithChildren<unknown>> = ({ children }) 
 
   if (auth.error) {
     return (
-      <>
-        <button onClick={() => auth.signinRedirect()}>Return to login</button>
-        <FormattedMessage id="auth.authError" values={{ errorMessage: auth.error.message }} />;
-      </>
+      <FlexContainer justifyContent="center">
+        <FlexContainer direction="column" justifyContent="center" style={{ height: "100vh" }}>
+          <Text>
+            <FormattedMessage id="auth.authError" values={{ errorMessage: auth.error.message }} />
+          </Text>
+          <div>
+            <Button onClick={() => auth.signinRedirect()}>
+              <FormattedMessage id="login.returnToLogin" />
+            </Button>
+          </div>
+        </FlexContainer>
+      </FlexContainer>
     );
   }
 
