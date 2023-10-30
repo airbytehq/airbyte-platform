@@ -11,6 +11,13 @@ metadata:
       {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    {{- if gt (int .Values.replicaCount) 1 }}
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    {{- end }}
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
