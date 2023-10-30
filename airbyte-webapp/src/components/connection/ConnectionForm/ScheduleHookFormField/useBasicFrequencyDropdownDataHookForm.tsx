@@ -6,7 +6,7 @@ import { Option } from "components/ui/ListBox";
 import { ConnectionScheduleDataBasicSchedule, WebBackendConnectionRead } from "core/request/AirbyteClient";
 
 export const BASIC_FREQUENCY_DEFAULT_VALUE: ConnectionScheduleDataBasicSchedule = { units: 24, timeUnit: "hours" };
-const frequencyConfig: ConnectionScheduleDataBasicSchedule[] = [
+export const frequencyConfig: ConnectionScheduleDataBasicSchedule[] = [
   {
     units: 1,
     timeUnit: "hours",
@@ -42,7 +42,10 @@ export const useBasicFrequencyDropdownDataHookForm = (
   return useMemo(() => {
     const frequencies = [...frequencyConfig];
 
-    // TODO: ask team what is additionalFrequency
+    /**
+     * There's a possibility that users have created custom frequencies via the API,
+     * so we need to append them to the default frequency list.
+     */
     if (additionalFrequency?.basicSchedule) {
       const additionalFreqAlreadyPresent = frequencies.some(
         (frequency) =>

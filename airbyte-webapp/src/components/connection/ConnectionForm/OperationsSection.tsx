@@ -17,6 +17,11 @@ interface OperationsSectionProps {
   onEndEditTransformation?: () => void;
 }
 
+/**
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use OperationsSectionHookForm.tsx instead
+ * @see OperationsSectionHookForm
+ */
 export const OperationsSection: React.FC<OperationsSectionProps> = ({
   onStartEditTransformation,
   onEndEditTransformation,

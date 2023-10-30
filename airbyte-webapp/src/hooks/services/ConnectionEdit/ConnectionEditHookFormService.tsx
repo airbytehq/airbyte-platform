@@ -1,3 +1,5 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during form migration
 import pick from "lodash/pick";
 import { useContext, useState, createContext, useCallback } from "react";
 import { useIntl } from "react-intl";
@@ -11,9 +13,7 @@ import {
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
 
-import { ConnectionEditHookFormContext } from "./ConnectionEditHookFormService";
-import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
-import { useExperiment } from "../Experiment";
+import { ConnectionHookFormServiceProvider } from "../ConnectionForm/ConnectionHookFormService";
 import { useNotificationService } from "../Notification/NotificationService";
 import { SchemaError } from "../useSourceHook";
 
@@ -126,37 +126,34 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
   };
 };
 
-const ConnectionEditContext = createContext<Omit<ConnectionEditHook, "refreshSchema" | "schemaError"> | null>(null);
+export const ConnectionEditHookFormContext = createContext<Omit<
+  ConnectionEditHook,
+  "refreshSchema" | "schemaError"
+> | null>(null);
 
-export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<ConnectionEditProps>> = ({
+export const ConnectionEditHookFormServiceProvider: React.FC<React.PropsWithChildren<ConnectionEditProps>> = ({
   children,
   ...props
 }) => {
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
   return (
-    <ConnectionEditContext.Provider value={data}>
-      <ConnectionFormServiceProvider
+    <ConnectionEditHookFormContext.Provider value={data}>
+      <ConnectionHookFormServiceProvider
         mode={data.connection.status === ConnectionStatus.deprecated ? "readonly" : "edit"}
         connection={data.connection}
         schemaError={schemaError as SchemaError}
         refreshSchema={refreshSchema}
       >
         {children}
-      </ConnectionFormServiceProvider>
-    </ConnectionEditContext.Provider>
+      </ConnectionHookFormServiceProvider>
+    </ConnectionEditHookFormContext.Provider>
   );
 };
 
-export const useConnectionEditService = () => {
-  /**
-   *TODO: remove conditional context after successful CreateConnectionForm migration
-   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
-   */
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
-  const contextType = doUseCreateConnectionHookForm ? ConnectionEditHookFormContext : ConnectionEditContext;
-  const context = useContext(contextType);
+export const useConnectionEditHookFormService = () => {
+  const context = useContext(ConnectionEditHookFormContext);
   if (context === null) {
-    throw new Error("useConnectionEditService must be used within a ConnectionEditServiceProvider");
+    throw new Error("useConnectionEditHookFormService must be used within a ConnectionEditHookFormServiceProvider");
   }
   return context;
 };

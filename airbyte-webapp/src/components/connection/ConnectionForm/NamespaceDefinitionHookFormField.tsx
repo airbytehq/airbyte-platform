@@ -25,7 +25,7 @@ export const NamespaceDefinitionHookFormField = () => {
 
   const destinationNamespaceHookFormChange = useCallback(
     (value: DestinationNamespaceFormValues) => {
-      setValue("namespaceDefinition", value.namespaceDefinition);
+      setValue("namespaceDefinition", value.namespaceDefinition, { shouldDirty: true });
 
       if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
         setValue("namespaceFormat", value.namespaceFormat);

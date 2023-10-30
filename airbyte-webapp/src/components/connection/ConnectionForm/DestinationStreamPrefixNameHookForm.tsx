@@ -28,7 +28,8 @@ export const DestinationStreamPrefixNameHookForm = () => {
     (value: DestinationStreamNamesFormValues) => {
       setValue(
         "prefix",
-        value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : undefined
+        value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : undefined,
+        { shouldDirty: true }
       );
     },
     [setValue]

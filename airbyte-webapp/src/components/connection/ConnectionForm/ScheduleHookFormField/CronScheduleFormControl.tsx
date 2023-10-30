@@ -36,14 +36,14 @@ export const CronScheduleFormControl: React.FC = () => {
   const cronValidationError = errors?.scheduleData?.cron?.cronExpression?.message;
 
   const onCronExpressionChange = (value: string): void => {
-    setValue("scheduleData.cron.cronExpression", value, { shouldValidate: true });
+    setValue("scheduleData.cron.cronExpression", value, { shouldValidate: true, shouldDirty: true });
   };
   const onCronTimeZoneSelect = (value: string): void => {
-    setValue("scheduleData.cron.cronTimeZone", value, { shouldValidate: true });
+    setValue("scheduleData.cron.cronTimeZone", value, { shouldDirty: true });
   };
 
-  // workaround for case when cursor jumps to the end of the input field on every change
-  const watchedScheduleData = useWatch({ name: "scheduleData.cron.cronExpression", control });
+  const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
+  const cronTimeZone = useWatch({ name: "scheduleData.cron.cronTimeZone", control });
 
   return (
     <Controller
@@ -68,14 +68,14 @@ export const CronScheduleFormControl: React.FC = () => {
               placeholder={formatMessage({
                 id: "form.cronExpression.placeholder",
               })}
-              value={watchedScheduleData}
+              value={cronExpression}
               onChange={(event: ChangeEvent<HTMLInputElement>) => onCronExpressionChange(event.currentTarget.value)}
               data-testid="cronExpression"
             />
             <ListBox
               options={cronTimeZones}
               adaptiveWidth
-              selectedValue={field.value?.cronTimeZone}
+              selectedValue={cronTimeZone}
               onSelect={onCronTimeZoneSelect}
               optionClassName={styles.cronZoneOption}
               optionsMenuClassName={styles.cronZonesOptionsMenu}

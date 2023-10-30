@@ -29,7 +29,11 @@ interface SyncCatalogBodyProps {
   onStreamChanged: (stream: SyncSchemaStream) => void;
   isFilterApplied?: boolean;
 }
-
+/**
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use SyncCatalogHookFormField.tsx instead
+ * @see SyncCatalogHookFormField
+ */
 export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   streams,
   onStreamsChanged,

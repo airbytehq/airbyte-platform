@@ -54,12 +54,16 @@ const connectionsKeys = {
 
 export interface ConnectionValues {
   name?: string;
-  scheduleData: ConnectionScheduleData | undefined;
   scheduleType: ConnectionScheduleType;
-  prefix: string;
-  syncCatalog: SyncSchema;
+  scheduleData?: ConnectionScheduleData;
+  prefix?: string;
   namespaceDefinition: NamespaceDefinitionType;
   namespaceFormat?: string;
+  /**
+   * TOD0: change to AirbyteCatalog after migration on react-hook form since we don't use custom id field anymore
+   * https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  syncCatalog: SyncSchema;
   operations?: OperationCreate[];
 }
 

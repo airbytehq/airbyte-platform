@@ -1,22 +1,26 @@
 import isEqual from "lodash/isEqual";
 
-import { SyncSchema, SyncSchemaStream } from "core/domain/catalog";
 import {
   DestinationSyncMode,
   SyncMode,
   AirbyteStreamConfiguration,
   StreamDescriptor,
   StreamTransform,
+  AirbyteCatalog,
+  AirbyteStreamAndConfiguration,
 } from "core/request/AirbyteClient";
 
-const getDefaultCursorField = (streamNode: SyncSchemaStream): string[] => {
+const getDefaultCursorField = (streamNode: AirbyteStreamAndConfiguration): string[] => {
   if (streamNode.stream?.defaultCursorField?.length) {
     return streamNode.stream.defaultCursorField;
   }
   return streamNode.config?.cursorField || [];
 };
 
-const clearBreakingFieldChanges = (nodeStream: SyncSchemaStream, breakingChangesByStream: StreamTransform[]) => {
+const clearBreakingFieldChanges = (
+  nodeStream: AirbyteStreamAndConfiguration,
+  breakingChangesByStream: StreamTransform[]
+) => {
   if (!breakingChangesByStream.length || !nodeStream.config) {
     return nodeStream;
   }
@@ -64,7 +68,7 @@ const clearBreakingFieldChanges = (nodeStream: SyncSchemaStream, breakingChanges
   return nodeStream;
 };
 
-const verifySourceDefinedProperties = (streamNode: SyncSchemaStream, isEditMode: boolean) => {
+const verifySourceDefinedProperties = (streamNode: AirbyteStreamAndConfiguration, isEditMode: boolean) => {
   if (!streamNode.stream || !streamNode.config || !isEditMode) {
     return streamNode;
   }
@@ -89,7 +93,7 @@ const verifySourceDefinedProperties = (streamNode: SyncSchemaStream, isEditMode:
   return streamNode;
 };
 
-const verifySupportedSyncModes = (streamNode: SyncSchemaStream): SyncSchemaStream => {
+const verifySupportedSyncModes = (streamNode: AirbyteStreamAndConfiguration): AirbyteStreamAndConfiguration => {
   if (!streamNode.stream) {
     return streamNode;
   }
@@ -103,7 +107,7 @@ const verifySupportedSyncModes = (streamNode: SyncSchemaStream): SyncSchemaStrea
   return { ...streamNode, stream: { ...streamNode.stream, supportedSyncModes: [SyncMode.full_refresh] } };
 };
 
-const verifyConfigCursorField = (streamNode: SyncSchemaStream): SyncSchemaStream => {
+const verifyConfigCursorField = (streamNode: AirbyteStreamAndConfiguration): AirbyteStreamAndConfiguration => {
   if (!streamNode.config) {
     return streamNode;
   }
@@ -119,12 +123,12 @@ const verifyConfigCursorField = (streamNode: SyncSchemaStream): SyncSchemaStream
 };
 
 const getOptimalSyncMode = (
-  streamNode: SyncSchemaStream,
+  streamNode: AirbyteStreamAndConfiguration,
   supportedDestinationSyncModes: DestinationSyncMode[]
-): SyncSchemaStream => {
+): AirbyteStreamAndConfiguration => {
   const updateStreamConfig = (
     config: Pick<AirbyteStreamConfiguration, "syncMode" | "destinationSyncMode">
-  ): SyncSchemaStream => ({
+  ): AirbyteStreamAndConfiguration => ({
     ...streamNode,
     config: { ...streamNode.config, ...config },
   });
@@ -173,21 +177,17 @@ const getOptimalSyncMode = (
   return streamNode;
 };
 
-/**
- * @deprecated will be removed during clean up -  https://github.com/airbytehq/airbyte-platform-internal/issues/8639
- * @see calculateInitialCatalogHookForm.ts
- */
-const calculateInitialCatalog = (
-  schema: SyncSchema,
+// react-hook-form version of calculateInitialCatalog
+export const calculateInitialCatalogHookForm = (
+  schema: AirbyteCatalog,
   supportedDestinationSyncModes: DestinationSyncMode[],
   streamsWithBreakingFieldChanges?: StreamTransform[],
   isNotCreateMode?: boolean,
   newStreamDescriptors?: StreamDescriptor[]
-): SyncSchema => {
+): AirbyteCatalog => {
   return {
-    streams: schema.streams.map<SyncSchemaStream>((apiNode, id) => {
-      const nodeWithId: SyncSchemaStream = { ...apiNode, id: id.toString() };
-      const nodeStream = verifySourceDefinedProperties(verifySupportedSyncModes(nodeWithId), isNotCreateMode || false);
+    streams: schema.streams.map<AirbyteStreamAndConfiguration>((apiNode) => {
+      const nodeStream = verifySourceDefinedProperties(verifySupportedSyncModes(apiNode), isNotCreateMode || false);
 
       // if the stream is new since a refresh, verify cursor and get optimal sync modes
       const isStreamNew = newStreamDescriptors?.some(
@@ -216,5 +216,3 @@ const calculateInitialCatalog = (
     }),
   };
 };
-
-export default calculateInitialCatalog;

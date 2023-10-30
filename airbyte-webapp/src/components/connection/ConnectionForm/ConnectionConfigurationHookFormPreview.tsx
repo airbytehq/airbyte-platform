@@ -1,5 +1,5 @@
 import React from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -15,8 +15,10 @@ import { HookFormConnectionFormValues } from "./hookFormConfig";
 import { namespaceDefinitionOptions } from "./types";
 
 const Frequency: React.FC = () => {
-  const { getValues } = useFormContext<HookFormConnectionFormValues>();
-  const { scheduleType, scheduleData } = getValues();
+  const { control } = useFormContext<HookFormConnectionFormValues>();
+
+  const scheduleType = useWatch({ name: "scheduleType", control });
+  const scheduleData = useWatch({ name: "scheduleData", control });
 
   return (
     <div>
@@ -43,9 +45,10 @@ const Frequency: React.FC = () => {
 };
 
 const DestinationNamespace: React.FC = () => {
-  const { getValues } = useFormContext<HookFormConnectionFormValues>();
-  const { namespaceDefinition, namespaceFormat } = getValues();
+  const { control } = useFormContext<HookFormConnectionFormValues>();
 
+  const namespaceDefinition = useWatch({ name: "namespaceDefinition", control });
+  const namespaceFormat = useWatch({ name: "namespaceFormat", control });
   const namespaceDefinitionValue = namespaceDefinitionOptions[namespaceDefinition];
 
   return (
@@ -69,8 +72,8 @@ const DestinationNamespace: React.FC = () => {
 };
 
 const DestinationPrefix: React.FC = () => {
-  const { getValues } = useFormContext<HookFormConnectionFormValues>();
-  const { prefix } = getValues();
+  const { control } = useFormContext<HookFormConnectionFormValues>();
+  const prefix = useWatch({ name: "prefix", control });
 
   return (
     <div>
@@ -78,19 +81,15 @@ const DestinationPrefix: React.FC = () => {
         <FormattedMessage id="form.prefix" />:
       </Text>
       <Text size="md" color="grey">
-        {prefix === "" ? (
-          <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />
-        ) : (
-          prefix
-        )}
+        {prefix ? prefix : <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />}
       </Text>
     </div>
   );
 };
 
 const NonBreakingChanges: React.FC = () => {
-  const { getValues } = useFormContext<HookFormConnectionFormValues>();
-  const { nonBreakingChangesPreference } = getValues();
+  const { control } = useFormContext<HookFormConnectionFormValues>();
+  const nonBreakingChangesPreference = useWatch({ name: "nonBreakingChangesPreference", control });
 
   const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
   const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";

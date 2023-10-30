@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
@@ -14,12 +14,9 @@ import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { DestinationNamespaceDescription } from "./DestinationNamespaceDescription";
 import styles from "./DestinationNamespaceModal.module.scss";
 import { FormikConnectionFormValues } from "../ConnectionForm/formConfig";
-import {
-  HookFormConnectionFormValues,
-  namespaceDefinitionSchema,
-  namespaceFormatSchema,
-} from "../ConnectionForm/hookFormConfig";
+import { HookFormConnectionFormValues } from "../ConnectionForm/hookFormConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
+import { namespaceDefinitionSchema, namespaceFormatSchema } from "../ConnectionForm/schema";
 
 export interface DestinationNamespaceFormValues {
   namespaceDefinition: NamespaceDefinitionType;
@@ -28,8 +25,12 @@ export interface DestinationNamespaceFormValues {
 
 const NameSpaceCustomFormatInput: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { watch } = useFormContext<DestinationNamespaceFormValues>();
+  const { watch, trigger } = useFormContext<DestinationNamespaceFormValues>();
   const watchedNamespaceDefinition = watch("namespaceDefinition");
+
+  useEffect(() => {
+    trigger("namespaceFormat");
+  }, [trigger, watchedNamespaceDefinition]);
 
   return (
     <FormControl

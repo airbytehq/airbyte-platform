@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { FeatureItem, useFeature } from "core/services/features";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { NormalizationHookFormField } from "./NormalizationHookFormField";
 import { TransformationFieldHookForm } from "./TransformationFieldHookForm";
@@ -15,7 +15,7 @@ export const OperationsSectionHookForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const {
     destDefinitionVersion: { normalizationConfig, supportsDbt },
-  } = useConnectionHookFormService();
+  } = useConnectionFormService();
 
   const supportsNormalization = normalizationConfig.supported;
   const supportsTransformations = useFeature(FeatureItem.AllowCustomDBT) && supportsDbt;
