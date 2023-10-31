@@ -39,7 +39,7 @@ class GoogleSecretManagerPersistenceTest {
     every { mockResponse.payload } returns mockPayload
     every { mockGoogleClient.accessSecretVersion(ofType(SecretVersionName::class)) } returns mockResponse
     every { mockGoogleClient.close() } returns Unit
-    every { mockClient.client } returns mockGoogleClient
+    every { mockClient.createClient() } returns mockGoogleClient
 
     val result = persistence.read(coordinate)
     Assertions.assertEquals(secret, result)
@@ -62,7 +62,7 @@ class GoogleSecretManagerPersistenceTest {
         false,
       )
     every { mockGoogleClient.close() } returns Unit
-    every { mockClient.client } returns mockGoogleClient
+    every { mockClient.createClient() } returns mockGoogleClient
 
     Assertions.assertDoesNotThrow {
       val result = persistence.read(coordinate)
@@ -94,7 +94,7 @@ class GoogleSecretManagerPersistenceTest {
     every { mockGoogleClient.createSecret(any<ProjectName>(), any<String>(), any<Secret>()) } returns mockk<Secret>()
     every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
     every { mockGoogleClient.close() } returns Unit
-    every { mockClient.client } returns mockGoogleClient
+    every { mockClient.createClient() } returns mockGoogleClient
 
     persistence.write(coordinate, secret)
 
@@ -118,7 +118,7 @@ class GoogleSecretManagerPersistenceTest {
     every { mockGoogleClient.accessSecretVersion(ofType(SecretVersionName::class)) } returns mockResponse
     every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
     every { mockGoogleClient.close() } returns Unit
-    every { mockClient.client } returns mockGoogleClient
+    every { mockClient.createClient() } returns mockGoogleClient
 
     persistence.write(coordinate, secret)
 

@@ -1,5 +1,6 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
+import io.airbyte.config.secrets.hydration.SecretsHydrator
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workload.launcher.pipeline.LaunchStage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
@@ -11,7 +12,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class BuildInputStage(
-//  private val secretsHydrator: SecretsHydrator,
+  private val secretsHydrator: SecretsHydrator,
   private val deserializer: PayloadDeserializer,
 ) : LaunchStage {
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
@@ -19,10 +20,10 @@ class BuildInputStage(
 
     val parsed: ReplicationInput = deserializer.toReplicationInput(input.msg.workloadInput)
 
-//    parsed.apply {
-//      sourceConfiguration = secretsHydrator.hydrate(parsed.sourceConfiguration)
-//      destinationConfiguration = secretsHydrator.hydrate(parsed.destinationConfiguration)
-//    }
+    parsed.apply {
+      sourceConfiguration = secretsHydrator.hydrate(parsed.sourceConfiguration)
+      destinationConfiguration = secretsHydrator.hydrate(parsed.destinationConfiguration)
+    }
 
     return input.apply {
       replicationInput = parsed

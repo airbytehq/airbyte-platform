@@ -1,6 +1,7 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import com.fasterxml.jackson.databind.node.POJONode
+import io.airbyte.config.secrets.hydration.SecretsHydrator
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
@@ -21,14 +22,14 @@ class BuildInputStageTest {
         .withSourceConfiguration(sourceConfig)
         .withDestinationConfiguration(destConfig)
 
-//    val secretsHydrator: SecretsHydrator = mockk()
+    val secretsHydrator: SecretsHydrator = mockk()
     val deserializer: PayloadDeserializer = mockk()
     every { deserializer.toReplicationInput(msgStr) } returns replInput
-//    every { secretsHydrator.hydrate(any()) } returns POJONode("")
+    every { secretsHydrator.hydrate(any()) } returns POJONode("")
 
     val stage =
       BuildInputStage(
-//      secretsHydrator,
+        secretsHydrator,
         deserializer,
       )
     val io = LaunchStageIO(msg = LauncherInputMessage("1", msgStr))
@@ -37,8 +38,8 @@ class BuildInputStageTest {
 
     verify {
       deserializer.toReplicationInput(msgStr)
-//      secretsHydrator.hydrate(sourceConfig)
-//      secretsHydrator.hydrate(destConfig)
+      secretsHydrator.hydrate(sourceConfig)
+      secretsHydrator.hydrate(destConfig)
     }
 
     assert(result.replicationInput == replInput)
