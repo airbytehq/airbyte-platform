@@ -1,9 +1,9 @@
 package pipeline
 
-import io.airbyte.api.client2.model.generated.Workload
-import io.airbyte.api.client2.model.generated.WorkloadListRequest
-import io.airbyte.api.client2.model.generated.WorkloadListResponse
-import io.airbyte.api.client2.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client2.model.generated.Workload
+import io.airbyte.workload.api.client2.model.generated.WorkloadListRequest
+import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse
+import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.PipelineRunner
 import io.airbyte.workload.launcher.StartupApplicationEventListener
 import io.airbyte.workload.launcher.client.WorkloadApiClient
@@ -33,11 +33,11 @@ class PipelineStartupTest {
     val workloadListRequest =
       WorkloadListRequest(
         listOf(dataplaneId),
-        listOf(WorkloadStatus.claimed),
+        listOf(WorkloadStatus.cLAIMED),
       )
 
     val workload: Workload =
-      Workload(workloadId, dataplaneId, WorkloadStatus.claimed)
+      Workload(workloadId, dataplaneId, WorkloadStatus.cLAIMED)
 
     val workloadListResponse = WorkloadListResponse(listOf(workload))
 

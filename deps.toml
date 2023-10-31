@@ -28,6 +28,7 @@ micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.8.0"
 micronaut-kotlin-extensions = "3.2.2"
 micronaut-micrometer = "4.8.3"
+micronaut-openapi = "4.10.0"
 micronaut-security = "3.11.1"
 micronaut-test = "3.9.2"
 moshi = "1.15.0"
@@ -41,6 +42,7 @@ segment = "2.1.1"
 sentry = "6.14.0"
 slf4j = "1.7.36"
 swagger = "1.6.2"
+v3-swagger = "2.2.16"
 temporal = "1.17.0"
 
 [libraries]
@@ -149,6 +151,7 @@ spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", ve
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
 stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
+v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
@@ -187,6 +190,7 @@ micronaut-kotlin-extensions = { module = "io.micronaut.kotlin:micronaut-kotlin-e
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
+micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "2.6.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "5.3.2" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
@@ -205,8 +209,8 @@ keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
 log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
-micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
-micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
+micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-openapi"]
+micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]

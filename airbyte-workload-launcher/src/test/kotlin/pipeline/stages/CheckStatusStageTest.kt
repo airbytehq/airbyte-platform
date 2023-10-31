@@ -1,8 +1,8 @@
 package pipeline.stages
 
-import io.airbyte.api.client2.AirbyteApiClient2
-import io.airbyte.api.client2.model.generated.WorkloadStatus
-import io.airbyte.api.client2.model.generated.WorkloadStatusUpdateRequest
+import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest
 import io.airbyte.workload.launcher.client.KubeClient
 import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
@@ -21,13 +21,13 @@ class CheckStatusStageTest {
     val namespace = "namespace"
 
     val workloadStatusUpdateRequest =
-      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.running)
+      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
-    val airbyteApiClient: AirbyteApiClient2 = mockk()
+    val workloadApi: WorkloadApi = mockk()
     val kubernetesClient: KubeClient = mockk()
 
     every {
-      airbyteApiClient.workloadApi.workloadStatusUpdate(
+      workloadApi.workloadStatusUpdate(
         workloadStatusUpdateRequest,
       )
     } returns Unit
@@ -37,12 +37,12 @@ class CheckStatusStageTest {
     } returns true
 
     val checkStatusStage: CheckStatusStage =
-      spyk(CheckStatusStage(airbyteApiClient, kubernetesClient, namespace))
+      spyk(CheckStatusStage(workloadApi, kubernetesClient, namespace))
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    verify { airbyteApiClient.workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
+    verify { workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
 
     assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
   }
@@ -53,21 +53,21 @@ class CheckStatusStageTest {
     val namespace = "namespace"
 
     val workloadStatusUpdateRequest =
-      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.running)
+      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
-    val airbyteApiClient: AirbyteApiClient2 = mockk()
+    val workloadApi: WorkloadApi = mockk()
     val kubernetesClient: KubeClient = mockk()
 
     every {
       kubernetesClient.podsExistForWorkload(workloadId, namespace)
     } returns false
 
-    val checkStatusStage: CheckStatusStage = CheckStatusStage(airbyteApiClient, kubernetesClient, namespace)
+    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient, namespace)
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    verify(exactly = 0) { airbyteApiClient.workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
+    verify(exactly = 0) { workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
 
     assert(!outputFromCheckStatusStage.skip) { "Skip Launch flag should be false but it's true" }
   }
@@ -78,13 +78,13 @@ class CheckStatusStageTest {
     val namespace = "namespace"
 
     val workloadStatusUpdateRequest =
-      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.running)
+      WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
-    val airbyteApiClient: AirbyteApiClient2 = mockk()
+    val workloadApi: WorkloadApi = mockk()
     val kubernetesClient: KubeClient = mockk()
 
     every {
-      airbyteApiClient.workloadApi.workloadStatusUpdate(
+      workloadApi.workloadStatusUpdate(
         workloadStatusUpdateRequest,
       )
     } throws ClientErrorException(400)
@@ -93,12 +93,12 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForWorkload(workloadId, namespace)
     } returns true
 
-    val checkStatusStage: CheckStatusStage = CheckStatusStage(airbyteApiClient, kubernetesClient, namespace)
+    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient, namespace)
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    verify { airbyteApiClient.workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
+    verify { workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest) }
 
     assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
   }

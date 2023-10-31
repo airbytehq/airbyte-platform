@@ -1,7 +1,7 @@
 package pipeline.stages
 
-import io.airbyte.api.client2.model.generated.ClaimResponse
-import io.airbyte.api.client2.model.generated.WorkloadClaimRequest
+import io.airbyte.workload.api.client2.model.generated.ClaimResponse
+import io.airbyte.workload.api.client2.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO

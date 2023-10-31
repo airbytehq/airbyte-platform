@@ -83,6 +83,7 @@ include ':airbyte-commons'
 
 include ':airbyte-api'
 include ':airbyte-api-server'
+include ':airbyte-workload-api-server'
 include ':airbyte-commons-protocol'
 include ':airbyte-config:specs'
 include ':airbyte-config:init'
