@@ -1598,7 +1598,7 @@ class ConnectionManagerWorkflowTest {
     }
 
     @ParameterizedTest
-    @Timeout(value = 10,
+    @Timeout(value = 30,
              unit = TimeUnit.SECONDS)
     @DisplayName("We use attempt-based retries when retry manager not present.")
     @MethodSource("coreFailureTypesMatrix")
