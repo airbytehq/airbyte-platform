@@ -95,7 +95,7 @@ const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
   xl: styles.xl,
 };
 
-const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
+export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   arrowLeft: ArrowLeftIcon,
   arrowRight: ArrowRightIcon,
   article: ArticleIcon,
