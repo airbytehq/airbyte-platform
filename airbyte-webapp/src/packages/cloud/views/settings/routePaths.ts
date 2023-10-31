@@ -6,8 +6,8 @@ export const CloudSettingsRoutePaths = {
   Source: SettingsRoutePaths.Source,
   Destination: SettingsRoutePaths.Destination,
   DataResidency: SettingsRoutePaths.DataResidency,
-
-  Workspace: "workspaces",
+  Workspace: SettingsRoutePaths.Workspace,
+  Organization: SettingsRoutePaths.Organization,
   AccessManagement: "access-management",
   DbtCloud: "dbt-cloud",
 } as const;

@@ -84,12 +84,12 @@ describe("useIntent", () => {
 
     processIntent("__Mock_OrganizationReader");
     processIntent("__Mock_OrganizationReader", { organizationId: "org" });
-    // @ts-expect-error workspaceId is not valid for ListOrganizationMembers
+    // @ts-expect-error workspaceId is not valid for ListOrganizationREADERs
     processIntent("__Mock_OrganizationReader", { workspaceId: "workspace" });
 
     processIntent("__Mock_WorkspaceReader");
     processIntent("__Mock_WorkspaceReader", { workspaceId: "workspace" });
-    // @ts-expect-error workspaceId is not valid for ListWorkspaceMembers
+    // @ts-expect-error workspaceId is not valid for ListWorkspaceREADERs
     processIntent("__Mock_WorkspaceReader", { organizationId: "organizationId" });
   });
 });
