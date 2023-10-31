@@ -2,7 +2,6 @@ package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.commons.features.FeatureFlags
-import io.airbyte.config.Configs
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricEmittingApps
@@ -24,8 +23,4 @@ class ApplicationBeanFactory {
     MetricClientFactory.initialize(MetricEmittingApps.SERVER)
     return MetricClientFactory.getMetricClient()
   }
-
-  // TODO: This should be injected from the ENV somehow
-  @Singleton
-  fun deploymentMode(): Configs.DeploymentMode = Configs.DeploymentMode.OSS
 }

@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-with-dependencies"))
+    implementation(project(":airbyte-commons-micronaut"))
     implementation(project(":airbyte-commons-worker"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-config:config-secrets"))

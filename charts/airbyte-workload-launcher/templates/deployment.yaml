@@ -344,7 +344,10 @@ spec:
               name: {{ .Release.Name }}-airbyte-env
               key: SHOULD_RUN_NOTIFY_WORKFLOWS
         - name: MICRONAUT_ENVIRONMENTS
-          value: "oss"
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: LAUNCHER_MICRONAUT_ENVIRONMENTS
         - name: WORKER_LOGS_STORAGE_TYPE
           valueFrom:
             configMapKeyRef:

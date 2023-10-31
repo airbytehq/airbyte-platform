@@ -45,6 +45,7 @@ airbyte:
     secret-mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
     secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}
   role: ${AIRBYTE_ROLE:}
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   worker:
     job:
       error-reporting:
