@@ -42,10 +42,7 @@ public class CronSchedulingHelper {
    * resolution.
    */
   private static Date getEarliestNextRun(final Supplier<Long> currentSecondsSupplier, final @Nullable JobRead priorJobRead) {
-    final long earliestNextRunSeconds = (priorJobRead == null || priorJobRead.getStartedAt() == null)
-        ? currentSecondsSupplier.get()
-        : priorJobRead.getStartedAt() + MIN_CRON_INTERVAL_SECONDS;
-
+    final Long earliestNextRunSeconds = priorJobRead == null ? currentSecondsSupplier.get() : priorJobRead.getCreatedAt() + MIN_CRON_INTERVAL_SECONDS;
     return new Date(earliestNextRunSeconds * MS_PER_SECOND);
   }
 

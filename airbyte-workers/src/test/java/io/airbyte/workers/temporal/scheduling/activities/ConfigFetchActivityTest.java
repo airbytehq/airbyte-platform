@@ -59,6 +59,7 @@ class ConfigFetchActivityTest {
 
   @Mock
   private WorkspaceApi mWorkspaceApi;
+
   @Mock
   private JobRead mJobRead;
 
@@ -203,7 +204,8 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi, mFeatureFlagClient,
                 mScheduleJitterHelper);
 
-        when(mJobRead.getStartedAt())
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
@@ -227,7 +229,8 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 10, mConnectionApi, mFeatureFlagClient,
                 mScheduleJitterHelper);
 
-        when(mJobRead.getStartedAt())
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
@@ -281,7 +284,8 @@ class ConfigFetchActivityTest {
         configFetchActivity = new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3, mConnectionApi,
             mFeatureFlagClient, mScheduleJitterHelper);
 
-        when(mJobRead.getStartedAt())
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 
         when(mJobsApi.getLastReplicationJob(any()))
@@ -323,7 +327,8 @@ class ConfigFetchActivityTest {
         // prior job completed 3 hours ago, so expect the next job to be scheduled
         // according to the next cron run time.
         final long threeHoursAgoSeconds = currentSecondsSupplier.get() - Duration.ofHours(3).toSeconds();
-        when(mJobRead.getStartedAt()).thenReturn(threeHoursAgoSeconds);
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt()).thenReturn(threeHoursAgoSeconds);
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
@@ -358,7 +363,7 @@ class ConfigFetchActivityTest {
 
         // prior job completed over 24 hours ago, so expect the next job to be scheduled immediately
         final long twentyFiveHoursAgoSeconds = currentSecondsSupplier.get() - Duration.ofHours(25).toSeconds();
-        when(mJobRead.getStartedAt()).thenReturn(twentyFiveHoursAgoSeconds);
+        when(mJobRead.getCreatedAt()).thenReturn(twentyFiveHoursAgoSeconds);
 
         when(mConnectionApi.getConnection(any()))
             .thenReturn(connectionReadWithCronScheduleType);
@@ -384,7 +389,8 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
                 currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
 
-        when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead().job(mJobRead));
 
@@ -416,7 +422,8 @@ class ConfigFetchActivityTest {
             new ConfigFetchActivityImpl(mJobsApi, mWorkspaceApi, SYNC_JOB_MAX_ATTEMPTS,
                 currentSecondsSupplier, mConnectionApi, mFeatureFlagClient, mScheduleJitterHelper);
 
-        when(mJobRead.getStartedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
+        when(mJobRead.getStartedAt()).thenReturn(null);
+        when(mJobRead.getCreatedAt()).thenReturn(mockRightNow.getTimeInMillis() / 1000L);
         when(mJobsApi.getLastReplicationJob(any()))
             .thenReturn(new JobOptionalRead().job(mJobRead));
 

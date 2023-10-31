@@ -42,18 +42,14 @@ class CronSchedulingHelperTest {
   }
 
   @Test
-  void testNextRunWhenPriorJobStartedAtIsNull() {
+  void testNextRunWhenPriorJobIsNull() {
     // set current time to 3 hours before the next run
     final Date nextRun = EVERY_DAY_AT_MIDNIGHT.getNextValidTimeAfter(NOW);
     final long threeHoursBeforeNextRun = nextRun.getTime() / MS_PER_SECOND - Duration.ofHours(3).toSeconds();
     when(currentSecondsSupplier.get()).thenReturn(threeHoursBeforeNextRun);
 
-    // prior job does not have a startedAt
-    final JobRead priorJobRead = mock(JobRead.class);
-    when(priorJobRead.getStartedAt()).thenReturn(null);
-
     final long actualNextRuntimeSeconds =
-        CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, priorJobRead, EVERY_DAY_AT_MIDNIGHT).getSeconds();
+        CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, null, EVERY_DAY_AT_MIDNIGHT).getSeconds();
 
     // Expect duration to be exactly three hours
     Assertions.assertEquals(Duration.ofHours(3).toSeconds(), actualNextRuntimeSeconds);
@@ -66,11 +62,11 @@ class CronSchedulingHelperTest {
     final long fiveMinutesAfterRun = nextRun.getTime() / MS_PER_SECOND + Duration.ofMinutes(5).toSeconds();
     when(currentSecondsSupplier.get()).thenReturn(fiveMinutesAfterRun);
 
-    // set prior job startedAt to 10 minutes after it's previous run schedule, to simulate jitter having
+    // set prior job createdAt to 10 minutes after it's previous run schedule, to simulate jitter having
     // delayed the previous run slightly.
     final long tenMinutesAfterPreviousRun = nextRun.getTime() / MS_PER_SECOND - Duration.ofHours(24).toSeconds() + Duration.ofMinutes(10).toSeconds();
     final JobRead priorJobRead = mock(JobRead.class);
-    when(priorJobRead.getStartedAt()).thenReturn(tenMinutesAfterPreviousRun);
+    when(priorJobRead.getCreatedAt()).thenReturn(tenMinutesAfterPreviousRun);
 
     final long actualNextRuntimeSeconds =
         CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, priorJobRead, EVERY_DAY_AT_MIDNIGHT).getSeconds();
@@ -87,10 +83,10 @@ class CronSchedulingHelperTest {
     final long twentyMinutesAfterRun = nextRun.getTime() / MS_PER_SECOND + Duration.ofMinutes(20).toSeconds();
     when(currentSecondsSupplier.get()).thenReturn(twentyMinutesAfterRun);
 
-    // set prior job startedAt to 5 minutes ago.
+    // set prior job createdAt to 5 minutes ago.
     final long fiveMinutesAgo = twentyMinutesAfterRun - Duration.ofMinutes(5).toSeconds();
     final JobRead priorJobRead = mock(JobRead.class);
-    when(priorJobRead.getStartedAt()).thenReturn(fiveMinutesAgo);
+    when(priorJobRead.getCreatedAt()).thenReturn(fiveMinutesAgo);
 
     final long actualNextRuntimeSeconds =
         CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, priorJobRead, EVERY_DAY_AT_MIDNIGHT).getSeconds();
