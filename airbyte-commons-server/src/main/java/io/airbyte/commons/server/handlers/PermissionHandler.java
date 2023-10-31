@@ -168,6 +168,16 @@ public class PermissionHandler {
 
   /**
    * Updates the permissions.
+   * <p>
+   * We only allow updating permission type between workspace level roles OR organization level roles.
+   * <p>
+   * Valid examples: 1. update "workspace_xxx" to "workspace_yyy" 2. update "organization_xxx" to
+   * "organization_yyy" (only invalid when demoting the LAST organization_admin role in an org to
+   * another organization level role)
+   * <p>
+   * Invalid examples: 1. update "instance_admin" to any other types 2. update "workspace_xxx" to
+   * "organization_xxx"/"instance_admin" 3. update "organization_xxx" to
+   * "workspace_xxx"/"instance_admin"
    *
    * @param permissionUpdate The permission update.
    * @return The updated permission.

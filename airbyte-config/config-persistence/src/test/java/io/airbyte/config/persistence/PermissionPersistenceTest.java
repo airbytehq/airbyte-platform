@@ -79,12 +79,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void createPermissionExceptionTest() {
-    // permission_type cannot be null
-    Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(MockData.permission8));
-  }
-
-  @Test
   void permissionTypeTest() throws IOException {
     for (final Permission permission : MockData.permissions()) {
       final Optional<Permission> permissionFromDb = permissionPersistence.getPermission(permission.getPermissionId());
@@ -194,25 +188,133 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     }
 
     @Test
-    void updateExistingPermissionCannotChangeUserWorkspaceOrOrganizationIds() throws IOException {
-      final Permission existingPermission = MockData.permissions().get(0);
+    void createPermissionExceptionTest() {
+      // writing permissions against Permission table constraint should throw db exception.
+
+      // invalid permission 1: permission type cannot be null
+      final Permission invalidPermission1 = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(UUID.randomUUID())
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(null);
+
+      // invalid permission 2: for workspace level permission, org id should be null and workspace id
+      // cannot be null
+      final Permission invalidPermission2 = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(UUID.randomUUID())
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(PermissionType.WORKSPACE_OWNER);
+
+      // invalid permission 3: for organization level permission, org id cannot be null and workspace id
+      // should be null
+      final Permission invalidPermission3 = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(UUID.randomUUID())
+          .withWorkspaceId(UUID.randomUUID())
+          .withPermissionType(PermissionType.ORGANIZATION_MEMBER);
+
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission1));
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission2));
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(invalidPermission3));
+    }
+
+  }
+
+  @Nested
+  class UpdatePermission {
+
+    final Permission instanceAdminPermission = MockData.permission1;
+    final Permission workspaceOwnerPermission = MockData.permission2;
+    final Permission organizationAdminPermission = MockData.permission5;
+    final Permission organizationReaderPermission = MockData.permission7;
+
+    @Test
+    void shouldNotUpdateInstanceAdminPermissionTypeToOthers() throws IOException {
+      final Permission update = new Permission()
+          .withPermissionId(instanceAdminPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR) // another permission type
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
+    }
+
+    @Test
+    void shouldNotUpdateWorkspaceLevelPermissionTypeToOrganizationLevelPermissions() throws IOException {
+      final Permission update = new Permission()
+          .withPermissionId(workspaceOwnerPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR) // org level permission type
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
+    }
+
+    @Test
+    void shouldNotUpdateOrganizationLevelPermissionTypeToWorkspaceLevelPermissions() throws IOException {
+      final Permission update = new Permission()
+          .withPermissionId(organizationReaderPermission.getPermissionId())
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN) // workspace level permission type
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
+    }
+
+    @Test
+    void updateExistingWorkspaceLevelPermissionCannotChangeUserWorkspaceId() throws IOException {
 
       final Permission update = new Permission()
-          .withPermissionId(existingPermission.getPermissionId())
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR)
+          .withPermissionId(workspaceOwnerPermission.getPermissionId())
+          .withPermissionType(PermissionType.WORKSPACE_EDITOR) // another workspace level permission type, changing from "owner" to "editor".
           .withUserId(UUID.randomUUID()) // should be ignored
           .withWorkspaceId(UUID.randomUUID()) // should be ignored
           .withOrganizationId(UUID.randomUUID()); // should be ignored
 
       final Permission expectedPermission = new Permission()
-          .withPermissionId(existingPermission.getPermissionId())
-          .withPermissionType(PermissionType.ORGANIZATION_EDITOR) // only type should change
-          .withUserId(existingPermission.getUserId())
-          .withWorkspaceId(existingPermission.getWorkspaceId())
-          .withOrganizationId(existingPermission.getOrganizationId());
+          .withPermissionId(workspaceOwnerPermission.getPermissionId())
+          .withPermissionType(PermissionType.WORKSPACE_EDITOR) // only type should change
+          .withUserId(workspaceOwnerPermission.getUserId())
+          .withWorkspaceId(workspaceOwnerPermission.getWorkspaceId())
+          .withOrganizationId(workspaceOwnerPermission.getOrganizationId());
 
       Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
       Assertions.assertEquals(expectedPermission, permissionPersistence.getPermission(update.getPermissionId()).orElseThrow());
+    }
+
+    @Test
+    void updateExistingOrganizationLevelPermissionCannotChangeUserOrganizationId() throws IOException {
+
+      final Permission update = new Permission()
+          .withPermissionId(organizationReaderPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_MEMBER) // another org level permission type, changing from "admin" to "member".
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+
+      final Permission expectedPermission = new Permission()
+          .withPermissionId(organizationReaderPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_MEMBER) // only type should change
+          .withUserId(organizationReaderPermission.getUserId())
+          .withWorkspaceId(organizationReaderPermission.getWorkspaceId())
+          .withOrganizationId(organizationReaderPermission.getOrganizationId());
+
+      Assertions.assertDoesNotThrow(() -> permissionPersistence.writePermission(update));
+      Assertions.assertEquals(expectedPermission, permissionPersistence.getPermission(update.getPermissionId()).orElseThrow());
+    }
+
+    @Test
+    void shouldNotRemoveTheLastOrganizationAdminFromAnOrganization() throws IOException {
+
+      final Permission update = new Permission()
+          .withPermissionId(organizationAdminPermission.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_MEMBER) // demote the last org admin role into a member role
+          .withUserId(UUID.randomUUID()) // should be ignored
+          .withWorkspaceId(UUID.randomUUID()) // should be ignored
+          .withOrganizationId(UUID.randomUUID()); // should be ignored
+
+      Assertions.assertThrows(DataAccessException.class, () -> permissionPersistence.writePermission(update));
     }
 
   }

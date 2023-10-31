@@ -134,7 +134,6 @@ public class MockData {
   static final UUID CREATOR_USER_ID_3 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_4 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_5 = UUID.randomUUID();
-  static final UUID CREATOR_USER_ID_6 = UUID.randomUUID();
 
   // Permission
   static final UUID PERMISSION_ID_1 = UUID.randomUUID();
@@ -145,12 +144,10 @@ public class MockData {
   static final UUID PERMISSION_ID_5 = UUID.randomUUID();
   static final UUID PERMISSION_ID_6 = UUID.randomUUID();
   static final UUID PERMISSION_ID_7 = UUID.randomUUID();
-  static final UUID PERMISSION_ID_8 = UUID.randomUUID();
 
   static final UUID ORGANIZATION_ID_1 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_2 = UUID.randomUUID();
   static final UUID ORGANIZATION_ID_3 = UUID.randomUUID();
-  static final UUID ORGANIZATION_ID_4 = UUID.randomUUID();
 
   static final UUID SSO_CONFIG_ID_1 = UUID.randomUUID();
   static final UUID SSO_CONFIG_ID_2 = UUID.randomUUID();
@@ -195,6 +192,46 @@ public class MockData {
   private static final String WEBHOOK_OPERATION_EXECUTION_BODY = "test-webhook-body";
   public static final String CONFIG_HASH = "1394";
   public static final String CONNECTOR_VERSION = "1.2.0";
+  public static final Permission permission1 = new Permission()
+      .withPermissionId(PERMISSION_ID_1)
+      .withUserId(CREATOR_USER_ID_1)
+      .withPermissionType(PermissionType.INSTANCE_ADMIN);
+
+  public static final Permission permission2 = new Permission()
+      .withPermissionId(PERMISSION_ID_2)
+      .withUserId(CREATOR_USER_ID_2)
+      .withWorkspaceId(WORKSPACE_ID_2)
+      .withPermissionType(PermissionType.WORKSPACE_OWNER);
+
+  public static final Permission permission3 = new Permission()
+      .withPermissionId(PERMISSION_ID_3)
+      .withUserId(CREATOR_USER_ID_3)
+      .withWorkspaceId(WORKSPACE_ID_1)
+      .withPermissionType(PermissionType.WORKSPACE_OWNER);
+
+  public static final Permission permission4 = new Permission()
+      .withPermissionId(PERMISSION_ID_4)
+      .withUserId(CREATOR_USER_ID_1)
+      .withWorkspaceId(WORKSPACE_ID_1)
+      .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+  public static final Permission permission5 = new Permission()
+      .withPermissionId(PERMISSION_ID_5)
+      .withUserId(CREATOR_USER_ID_4)
+      .withOrganizationId(ORGANIZATION_ID_1)
+      .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
+  public static final Permission permission6 = new Permission()
+      .withPermissionId(PERMISSION_ID_6)
+      .withUserId(CREATOR_USER_ID_5)
+      .withWorkspaceId(WORKSPACE_ID_2)
+      .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+  public static final Permission permission7 = new Permission()
+      .withPermissionId(PERMISSION_ID_7)
+      .withUserId(CREATOR_USER_ID_5)
+      .withOrganizationId(ORGANIZATION_ID_2)
+      .withPermissionType(PermissionType.ORGANIZATION_READER);
 
   public static List<User> users() {
     final User user1 = new User()
@@ -256,56 +293,8 @@ public class MockData {
   }
 
   public static List<Permission> permissions() {
-    final Permission permission1 = new Permission()
-        .withPermissionId(PERMISSION_ID_1)
-        .withUserId(CREATOR_USER_ID_1)
-        .withWorkspaceId(WORKSPACE_ID_1)
-        .withPermissionType(PermissionType.INSTANCE_ADMIN);
-
-    final Permission permission2 = new Permission()
-        .withPermissionId(PERMISSION_ID_2)
-        .withUserId(CREATOR_USER_ID_2)
-        .withWorkspaceId(WORKSPACE_ID_2)
-        .withPermissionType(PermissionType.WORKSPACE_OWNER);
-
-    final Permission permission3 = new Permission()
-        .withPermissionId(PERMISSION_ID_3)
-        .withUserId(CREATOR_USER_ID_3)
-        .withWorkspaceId(null)
-        .withPermissionType(PermissionType.WORKSPACE_OWNER);
-
-    final Permission permission4 = new Permission()
-        .withPermissionId(PERMISSION_ID_4)
-        .withUserId(CREATOR_USER_ID_1)
-        .withWorkspaceId(WORKSPACE_ID_1)
-        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
-
-    final Permission permission5 = new Permission()
-        .withPermissionId(PERMISSION_ID_5)
-        .withUserId(CREATOR_USER_ID_4)
-        .withOrganizationId(ORGANIZATION_ID_1)
-        .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
-
-    final Permission permission6 = new Permission()
-        .withPermissionId(PERMISSION_ID_6)
-        .withUserId(CREATOR_USER_ID_5)
-        .withWorkspaceId(WORKSPACE_ID_2)
-        .withPermissionType(PermissionType.WORKSPACE_ADMIN);
-
-    final Permission permission7 = new Permission()
-        .withPermissionId(PERMISSION_ID_7)
-        .withUserId(CREATOR_USER_ID_5)
-        .withOrganizationId(ORGANIZATION_ID_2)
-        .withPermissionType(PermissionType.ORGANIZATION_READER);
-
     return Arrays.asList(permission1, permission2, permission3, permission4, permission5, permission6, permission7);
   }
-
-  public static final Permission permission8 = new Permission()
-      .withPermissionId(PERMISSION_ID_8)
-      .withUserId(CREATOR_USER_ID_6)
-      .withOrganizationId(ORGANIZATION_ID_4)
-      .withPermissionType(null);
 
   public static List<Organization> organizations() {
     final Organization organization1 =
