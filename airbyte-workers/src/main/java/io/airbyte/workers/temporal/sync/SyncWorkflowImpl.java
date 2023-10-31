@@ -153,7 +153,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
               .withConnectionId(syncInput.getConnectionId())
               .withWorkspaceId(syncInput.getWorkspaceId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
-              .withOperatorDbt(standardSyncOperation.getOperatorDbt());
+              .withOperatorDbt(standardSyncOperation.getOperatorDbt())
+              .withConnectionContext(syncInput.getConnectionContext());
 
           dbtTransformationActivity.run(jobRunConfig, destinationLauncherConfig,
               syncInput.getSyncResourceRequirements() != null ? syncInput.getSyncResourceRequirements().getOrchestrator() : null,
@@ -166,7 +167,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                   .withExecutionUrl(standardSyncOperation.getOperatorWebhook().getExecutionUrl())
                   .withExecutionBody(standardSyncOperation.getOperatorWebhook().getExecutionBody())
                   .withWebhookConfigId(standardSyncOperation.getOperatorWebhook().getWebhookConfigId())
-                  .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs()));
+                  .withWorkspaceWebhookConfigs(syncInput.getWebhookOperationConfigs())
+                  .withConnectionContext(syncInput.getConnectionContext()));
           LOGGER.info("webhook {} completed {}", standardSyncOperation.getOperatorWebhook().getWebhookConfigId(),
               success ? "successfully" : "unsuccessfully");
           // TODO(mfsiega-airbyte): clean up this logic to be returned from the webhook invocation.
@@ -197,12 +199,12 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getConnectionId());
   }
 
-  private ReplicationActivityInput generateReplicationActivityInput(StandardSyncInput syncInput,
+  private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,
                                                                     final JobRunConfig jobRunConfig,
                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
                                                                     final String taskQueue,
-                                                                    RefreshSchemaActivityOutput refreshSchemaOutput) {
+                                                                    final RefreshSchemaActivityOutput refreshSchemaOutput) {
     return new ReplicationActivityInput(
         syncInput,
         syncInput.getSourceId(),
@@ -221,7 +223,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getNamespaceDefinition(),
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
-        refreshSchemaOutput);
+        refreshSchemaOutput,
+        syncInput.getConnectionContext());
   }
 
 }

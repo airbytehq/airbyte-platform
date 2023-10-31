@@ -185,7 +185,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         context);
   }
 
-  private NormalizationInput hydrateNormalizationInput(NormalizationInput input) throws Exception {
+  private NormalizationInput hydrateNormalizationInput(final NormalizationInput input) throws Exception {
     // Hydrate the destination config.
     final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
     // Retrieve the catalog.
@@ -213,7 +213,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withCatalog(syncOutput.getOutputCatalog())
         .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(syncInput.getConnectionContext());
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -295,7 +296,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         metricClient);
   }
 
-  private ConfiguredAirbyteCatalog retrieveCatalog(UUID connectionId) throws Exception {
+  private ConfiguredAirbyteCatalog retrieveCatalog(final UUID connectionId) throws Exception {
     final ConnectionRead connectionInfo =
         AirbyteApiClient
             .retryWithJitterThrows(

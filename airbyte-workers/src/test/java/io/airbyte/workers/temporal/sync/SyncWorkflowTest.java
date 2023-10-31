@@ -20,6 +20,7 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -148,13 +149,15 @@ class SyncWorkflowTest {
         .withCatalog(syncInput.getCatalog())
         .withResourceRequirements(new ResourceRequirements())
         .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(new ConnectionContext());
 
     operatorDbtInput = new OperatorDbtInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt())
         .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(new ConnectionContext());
 
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);
@@ -422,7 +425,7 @@ class SyncWorkflowTest {
     syncInput.withOperationSequence(List.of(webhookOperation)).withWebhookOperationConfigs(workspaceWebhookConfigs);
     when(webhookOperationActivity.invokeWebhook(
         new OperatorWebhookInput().withWebhookConfigId(WEBHOOK_CONFIG_ID).withExecutionUrl(WEBHOOK_URL).withExecutionBody(WEBHOOK_BODY)
-            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs))).thenReturn(true);
+            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs).withConnectionContext(new ConnectionContext()))).thenReturn(true);
     final StandardSyncOutput actualOutput = execute();
     assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().get(0), WEBHOOK_CONFIG_ID);
   }
@@ -486,7 +489,8 @@ class SyncWorkflowTest {
         syncInput.getNamespaceDefinition(),
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
-        null));
+        null,
+        new ConnectionContext()));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

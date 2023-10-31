@@ -28,3 +28,7 @@ properties:
     description: optional resource requirements to run check workers; will use bigger one of this value or the default check worker resource requirements.
     type: object
     "$ref": ResourceRequirements.yaml
+  actorContext:
+    description: Replication Context object with IDs of the relevant connection, source, destination, etc.
+    type: object
+    "$ref": ActorContext.yaml

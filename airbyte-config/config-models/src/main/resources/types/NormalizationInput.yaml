@@ -29,3 +29,7 @@ properties:
     description: The id of the workspace associated with this sync
     type: string
     format: uuid
+  connectionContext:
+    description: Context object with IDs of the relevant connection, source, destination, etc.
+    type: object
+    "$ref": ConnectionContext.yaml

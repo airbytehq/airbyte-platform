@@ -22,3 +22,7 @@ properties:
     description: Webhook configs for this workspace. Must conform to WebhookOperationConfigs.yaml; any secrets must be hydrated before use.
     type: object
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  connectionContext:
+    description: Context object with IDs of the relevant connection, source, destination, etc.
+    type: object
+    "$ref": ConnectionContext.yaml

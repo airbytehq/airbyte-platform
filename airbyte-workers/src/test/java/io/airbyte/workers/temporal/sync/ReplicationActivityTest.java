@@ -34,6 +34,7 @@ import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Configs;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
@@ -169,8 +170,8 @@ class ReplicationActivityTest {
         JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT,
         "unused",
         "unused",
-        null // unused
-    );
+        null, // unused
+        new ConnectionContext());
   }
 
   @Test

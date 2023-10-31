@@ -15,6 +15,7 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
@@ -399,7 +400,8 @@ public class TemporalClient {
                                                                     final int attempt,
                                                                     final UUID workspaceId,
                                                                     final String taskQueue,
-                                                                    final JobCheckConnectionConfig config) {
+                                                                    final JobCheckConnectionConfig config,
+                                                                    final ActorContext context) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
@@ -408,11 +410,13 @@ public class TemporalClient {
         .withDockerImage(config.getDockerImage())
         .withProtocolVersion(config.getProtocolVersion())
         .withIsCustomConnector(config.getIsCustomConnector());
+
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorType(config.getActorType())
         .withActorId(config.getActorId())
         .withConnectionConfiguration(config.getConnectionConfiguration())
-        .withResourceRequirements(config.getResourceRequirements());
+        .withResourceRequirements(config.getResourceRequirements())
+        .withActorContext(context);
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
@@ -425,13 +429,15 @@ public class TemporalClient {
    * @param attempt attempt
    * @param taskQueue task queue to submit the job to
    * @param config discover config
+   * @param context actor context
    * @return discover output
    */
   public TemporalResponse<ConnectorJobOutput> submitDiscoverSchema(final UUID jobId,
                                                                    final int attempt,
                                                                    final UUID workspaceId,
                                                                    final String taskQueue,
-                                                                   final JobDiscoverCatalogConfig config) {
+                                                                   final JobDiscoverCatalogConfig config,
+                                                                   final ActorContext context) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
         .withJobId(jobId.toString())
@@ -442,7 +448,7 @@ public class TemporalClient {
         .withIsCustomConnector(config.getIsCustomConnector());
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput().withConnectionConfiguration(config.getConnectionConfiguration())
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash())
-        .withResourceRequirements(config.getResourceRequirements());
+        .withResourceRequirements(config.getResourceRequirements()).withActorContext(context);
 
     return execute(jobRunConfig,
         () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));

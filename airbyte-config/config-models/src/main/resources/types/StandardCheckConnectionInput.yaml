@@ -22,3 +22,7 @@ properties:
     description: optional resource requirements to run check workers; will prefer to use this value than the default check worker resource requirements.
     type: object
     "$ref": ResourceRequirements.yaml
+  actorContext:
+    description: Context object with IDs relevant to the actor.
+    type: object
+    "$ref": ActorContext.yaml
