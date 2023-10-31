@@ -46,13 +46,16 @@ class GoogleSecretManagerPersistence(
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     try {
-      googleSecretManagerServiceClient.client.use { client ->
+      googleSecretManagerServiceClient.createClient().use { client ->
         val secretVersionName = SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, LATEST)
         val response = client.accessSecretVersion(secretVersionName)
         return response.payload.data.toStringUtf8()
       }
     } catch (e: NotFoundException) {
       logger.warn(e) { "Unable to locate secret for coordinate ${coordinate.fullCoordinate}." }
+      return ""
+    } catch (e: Exception) {
+      logger.error(e) { "Unable to read secret for coordinate ${coordinate.fullCoordinate}. " }
       return ""
     }
   }
@@ -61,7 +64,7 @@ class GoogleSecretManagerPersistence(
     coordinate: SecretCoordinate,
     payload: String,
   ) {
-    googleSecretManagerServiceClient.client.use { client ->
+    googleSecretManagerServiceClient.createClient().use { client ->
       if (read(coordinate).isEmpty()) {
         val secretBuilder = Secret.newBuilder().setReplication(replicationPolicy)
         client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
@@ -90,15 +93,20 @@ class GoogleSecretManagerPersistence(
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^google_secret_manager$")
 class GoogleSecretManagerServiceClient(
-  @Value("\${airbyte.secret.store.gcp.credentials}") val gcpCredentialsJson: String,
+  @Value("\${airbyte.secret.store.gcp.credentials}") private val gcpCredentialsJson: String,
 ) {
-  val client: SecretManagerServiceClient by lazy {
+  /**
+   * Creates a new {@link SecretManagerServiceClient} on each invocation.
+   *
+   * @return A new {@link SecretManagerServiceClient} instance.
+   */
+  fun createClient(): SecretManagerServiceClient {
     val credentialsByteStream = ByteArrayInputStream(gcpCredentialsJson.toByteArray(StandardCharsets.UTF_8))
     val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
     val clientSettings =
       SecretManagerServiceSettings.newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
         .build()
-    SecretManagerServiceClient.create(clientSettings)
+    return SecretManagerServiceClient.create(clientSettings)
   }
 }
