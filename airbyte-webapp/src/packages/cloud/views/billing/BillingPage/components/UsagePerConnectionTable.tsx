@@ -167,7 +167,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         meta: {
           responsive: true,
         },
-        sortingFn: "alphanumeric",
+        sortingFn: "basic",
         cell: (props) => (
           <FlexContainer
             alignItems="center"
