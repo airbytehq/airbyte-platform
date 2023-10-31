@@ -925,7 +925,7 @@
   "airbyte.datatype.timestamp_without_timezone": "Datetime",
   "airbyte.datatype.time_with_timezone": "Time with Timezone",
   "airbyte.datatype.time_without_timezone": "Time",
-  "airbyte.datatype.datetime": "Datetime",
+  "airbyte.datatype.date-time": "Datetime",
   "airbyte.datatype.integer": "Integer",
   "airbyte.datatype.big_integer": "Big Integer",
   "airbyte.datatype.number": "Number",
