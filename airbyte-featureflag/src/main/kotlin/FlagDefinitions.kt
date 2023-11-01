@@ -115,6 +115,8 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
+object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
+
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
  * the sync input.
