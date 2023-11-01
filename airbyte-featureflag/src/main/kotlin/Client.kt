@@ -41,21 +41,30 @@ sealed interface FeatureFlagClient {
    *
    * Returns the [flag] default value if the [flag] cannot be evaluated.
    */
-  fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean
+  fun boolVariation(
+    flag: Flag<Boolean>,
+    context: Context,
+  ): Boolean
 
   /**
    * Calculates the string value of the [flag] for the given [context].
    *
    * Returns the [flag] default value if no calculated value exists.
    */
-  fun stringVariation(flag: Flag<String>, context: Context): String
+  fun stringVariation(
+    flag: Flag<String>,
+    context: Context,
+  ): String
 
   /**
    * Calculates the string value of the [flag] for the given [context].
    *
    * Returns the [flag] default value if no calculated value exists.
    */
-  fun intVariation(flag: Flag<Int>, context: Context): Int
+  fun intVariation(
+    flag: Flag<Int>,
+    context: Context,
+  ): Int
 }
 
 /** Config key used to determine which [FeatureFlagClient] to expose. */
@@ -105,20 +114,30 @@ class ConfigFileClient(
     }
   }
 
-  override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
+  override fun boolVariation(
+    flag: Flag<Boolean>,
+    context: Context,
+  ): Boolean {
     return when (flag) {
       is EnvVar -> flag.enabled(context)
-      else -> lock.read {
-        flags[flag.key]?.serve?.let { it as? Boolean } ?: flag.default
-      }
+      else ->
+        lock.read {
+          flags[flag.key]?.serve?.let { it as? Boolean } ?: flag.default
+        }
     }
   }
 
-  override fun stringVariation(flag: Flag<String>, context: Context): String {
+  override fun stringVariation(
+    flag: Flag<String>,
+    context: Context,
+  ): String {
     return flags[flag.key]?.serve?.let { it as? String } ?: flag.default
   }
 
-  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+  override fun intVariation(
+    flag: Flag<Int>,
+    context: Context,
+  ): Int {
     return flags[flag.key]?.serve?.let { it as? Int } ?: flag.default
   }
 
@@ -136,18 +155,27 @@ class ConfigFileClient(
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
-  override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
+  override fun boolVariation(
+    flag: Flag<Boolean>,
+    context: Context,
+  ): Boolean {
     return when (flag) {
       is EnvVar -> flag.enabled(context)
       else -> client.boolVariation(flag.key, context.toLDContext(), flag.default)
     }
   }
 
-  override fun stringVariation(flag: Flag<String>, context: Context): String {
+  override fun stringVariation(
+    flag: Flag<String>,
+    context: Context,
+  ): String {
     return client.stringVariation(flag.key, context.toLDContext(), flag.default)
   }
 
-  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+  override fun intVariation(
+    flag: Flag<Int>,
+    context: Context,
+  ): Int {
     return client.intVariation(flag.key, context.toLDContext(), flag.default)
   }
 }
@@ -171,11 +199,13 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
  */
 @Secondary
 open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
-
   @Inject
   constructor() : this(mapOf())
 
-  override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
+  override fun boolVariation(
+    flag: Flag<Boolean>,
+    context: Context,
+  ): Boolean {
     return when (flag) {
       is EnvVar -> {
         // convert to a EnvVar flag with a custom fetcher that uses the [values] of this Test class
@@ -189,11 +219,17 @@ open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
     }
   }
 
-  override fun stringVariation(flag: Flag<String>, context: Context): String {
+  override fun stringVariation(
+    flag: Flag<String>,
+    context: Context,
+  ): String {
     return values[flag.key]?.let { it as? String } ?: flag.default
   }
 
-  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+  override fun intVariation(
+    flag: Flag<Int>,
+    context: Context,
+  ): Int {
     return values[flag.key]?.let { it as? Int } ?: flag.default
   }
 }
@@ -224,8 +260,9 @@ private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
  * @param [path] to yaml config file
  * @return map of feature-flag name to feature-flag config
  */
-private fun readConfig(path: Path): Map<String, ConfigFileFlag> = yamlMapper.readValue<ConfigFileFlags>(path.toFile()).flags
-  .associateBy { it.name }
+private fun readConfig(path: Path): Map<String, ConfigFileFlag> =
+  yamlMapper.readValue<ConfigFileFlags>(path.toFile()).flags
+    .associateBy { it.name }
 
 /**
  * Monitors a [Path] for changes, calling [block] when a change is detected.

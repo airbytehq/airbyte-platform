@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.NotificationType as ApiNotification
 
 interface ConfigFetcher<T> {
   fun fetchConfig(connectionId: UUID): T?
+
   fun notificationType(): NotificationType
 }
 
@@ -16,11 +17,11 @@ data class WebhookConfig(val webhookUrl: String)
 
 @Singleton
 class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : ConfigFetcher<WebhookConfig> {
-
   override fun fetchConfig(connectionId: UUID): WebhookConfig? {
-    val workspaceRead: WorkspaceRead? = ConnectionIdRequestBody().connectionId(connectionId).let {
-      workspaceApiClient.getWorkspaceByConnectionId(it)
-    }
+    val workspaceRead: WorkspaceRead? =
+      ConnectionIdRequestBody().connectionId(connectionId).let {
+        workspaceApiClient.getWorkspaceByConnectionId(it)
+      }
 
     return workspaceRead
       ?.notifications

@@ -1,16 +1,16 @@
 import { useMemo } from "react";
 
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
+import { useAuthService } from "core/services/auth";
 
 import { ApiCallOptions } from "./apiCall";
 
 export const useRequestOptions = (): ApiCallOptions => {
-  const middlewares = useDefaultRequestMiddlewares();
+  const { getAccessToken } = useAuthService();
 
   return useMemo(
     () => ({
-      middlewares,
+      getAccessToken: getAccessToken ?? (() => Promise.resolve(null)),
     }),
-    [middlewares]
+    [getAccessToken]
   );
 };

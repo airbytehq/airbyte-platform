@@ -7,7 +7,6 @@
   "GOOGLE_APPLICATION_CREDENTIALS": "src/test/resources/files/creds.json",
   "STATE_STORAGE_GCS_APPLICATION_CREDENTIALS": "src/test/resources/files/app-creds.json",
   "S3_MINIO_ENDPOINT": " ",
-  "USE_STREAM_CAPABLE_STATE": "true",
   "WORKER_ENVIRONMENT": "KUBERNETES",
   "AWS_ACCESS_KEY_ID": "access-key-id",
   "JOB_MAIN_CONTAINER_MEMORY_REQUEST": "1Gi",

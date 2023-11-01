@@ -17,6 +17,11 @@ interface SchemaViewProps extends FieldProps<SyncSchemaStream[]> {
   isSubmitting: boolean;
 }
 
+/**
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use SyncCatalogHookFormField.tsx instead
+ * @see SyncCatalogHookFormField
+ */
 const SyncCatalogFieldComponent: React.FC<React.PropsWithChildren<SchemaViewProps>> = ({
   additionalControl,
   field,

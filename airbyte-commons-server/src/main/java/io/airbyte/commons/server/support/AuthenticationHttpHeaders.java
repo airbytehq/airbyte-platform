@@ -80,6 +80,7 @@ public final class AuthenticationHttpHeaders {
   public static final String CONFIG_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Config-Id";
 
   public static final String ORGANIZATION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Organization-Id";
+  public static final String PERMISSION_ID_HEADER = AIRBYTE_HEADER_PREFIX + "Permission-Id";
 
   private AuthenticationHttpHeaders() {}
 

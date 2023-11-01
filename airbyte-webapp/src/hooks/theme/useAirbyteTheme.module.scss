@@ -1,0 +1,32 @@
+@use "scss/colors";
+
+:export {
+  // prettier wants to put all of the values on one line 😱
+  // prettier-ignore
+  colorVariables:
+    colors.$foreground
+    colors.$inverse
+    colors.$white
+    colors.$black
+
+    colors.$blue-500
+
+    colors.$red-300
+
+    colors.$orange-600
+
+    colors.$green-200
+    colors.$green-600
+
+    colors.$grey-50
+    colors.$grey-100
+    colors.$grey-300
+    colors.$grey-400
+    colors.$grey-900
+
+    colors.$dark-blue
+    colors.$dark-blue-40
+    colors.$dark-blue-50
+    colors.$dark-blue-300
+  ;
+}

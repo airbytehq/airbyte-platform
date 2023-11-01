@@ -23,6 +23,7 @@ interface BoxProps {
   mr?: SpacingSize;
   mb?: SpacingSize;
   ml?: SpacingSize;
+  "data-testid"?: string;
 }
 
 function toClassName(key: keyof Omit<BoxProps, "className">, value: SpacingSize | undefined) {
@@ -42,5 +43,5 @@ export const Box: React.FC<PropsWithChildren<BoxProps>> = ({
 }) => {
   const className = classNames(classNameProp, ...keys.map((key) => toClassName(key, props[key])));
 
-  return React.createElement(as, { className, children });
+  return React.createElement(as, { className, children, "data-testid": props["data-testid"] });
 };

@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_NOTIFICATION;
 import static io.airbyte.persistence.job.JobNotifier.CONNECTION_DISABLED_WARNING_NOTIFICATION;
 import static io.airbyte.persistence.job.models.Job.REPLICATION_TYPES;
@@ -46,6 +47,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
 import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper;
+import io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.UpdateSchemaResult;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
@@ -101,6 +103,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +120,6 @@ import org.slf4j.LoggerFactory;
 /**
  * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class ConnectionsHandler {
 
@@ -367,6 +369,7 @@ public class ConnectionsHandler {
 
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       standardSync.withCatalog(CatalogConverter.toConfiguredProtocol(connectionCreate.getSyncCatalog()));
       standardSync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(connectionCreate.getSyncCatalog()));
     } else {
@@ -532,6 +535,7 @@ public class ConnectionsHandler {
     // in the patch. Otherwise, leave the field unchanged.
 
     if (patch.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(patch.getSyncCatalog());
       sync.setCatalog(CatalogConverter.toConfiguredProtocol(patch.getSyncCatalog()));
       sync.withFieldSelectionData(CatalogConverter.getFieldSelectionData(patch.getSyncCatalog()));
     }
@@ -973,7 +977,21 @@ public class ConnectionsHandler {
         featureFlagClient, workspaceId);
     updateObject.setSyncCatalog(propagateResult.catalog());
     updateObject.setSourceCatalogId(sourceCatalogId);
+    trackSchemaChange(workspaceId, connectionId, propagateResult);
     return propagateResult.appliedDiff();
+  }
+
+  public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
+    try {
+      final Map<String, Object> payload = new HashMap<>();
+      payload.put("workspace_id", workspaceId);
+      payload.put("connection_id", connectionId);
+      payload.put("event_date", Instant.now());
+      payload.put("changes", propagateResult.appliedDiff().getTransforms());
+      trackingClient.track(workspaceId, "schema-changes", payload);
+    } catch (final Exception e) {
+      LOGGER.error("Error while sending tracking event for schema change", e);
+    }
   }
 
 }

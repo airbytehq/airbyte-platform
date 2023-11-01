@@ -19,7 +19,7 @@ import jakarta.inject.Singleton
 @Replaces(DefaultRequestBinderRegistry::class)
 class AirbyteRequestBinderRegistry(conversionService: ConversionService<*>?, binders: List<RequestArgumentBinder<*>?>?) :
   DefaultRequestBinderRegistry(conversionService, binders) {
-    init {
-      addRequestArgumentBinder(QueryValueBinder<Any>(conversionService))
-    }
+  init {
+    addRequestArgumentBinder(QueryValueBinder<Any>(conversionService))
   }
+}

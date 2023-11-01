@@ -19,7 +19,6 @@ import java.util.Objects
 import java.util.UUID
 
 interface SourceDefinitionService {
-
   fun getSourceDefinitionSpecification(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
@@ -30,12 +29,15 @@ interface SourceDefinitionService {
 @Singleton
 @Secondary
 class SourceDefinitionServiceImpl(private val configApiClient: ConfigApiClient) : SourceDefinitionService {
-
   companion object {
     private val log = LoggerFactory.getLogger(SourceDefinitionServiceImpl::class.java)
   }
 
-  override fun getSourceDefinitionSpecification(sourceDefinitionId: UUID, workspaceId: UUID, userInfo: String?): SourceDefinitionSpecificationRead? {
+  override fun getSourceDefinitionSpecification(
+    sourceDefinitionId: UUID,
+    workspaceId: UUID,
+    userInfo: String?,
+  ): SourceDefinitionSpecificationRead? {
     val sourceDefinitionIdWithWorkspaceId = SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
 
     var response: HttpResponse<SourceDefinitionSpecificationRead>

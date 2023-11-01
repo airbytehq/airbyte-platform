@@ -19,22 +19,30 @@ private val logger = KotlinLogging.logger { }
 @Singleton
 class AirbyteControlMessageEventListener(private val connectorConfigUpdater: ConnectorConfigUpdater) :
   ApplicationEventListener<ReplicationAirbyteMessageEvent> {
-
-    override fun onApplicationEvent(event: ReplicationAirbyteMessageEvent): Unit = when (event.airbyteMessageOrigin) {
+  override fun onApplicationEvent(event: ReplicationAirbyteMessageEvent): Unit =
+    when (event.airbyteMessageOrigin) {
       AirbyteMessageOrigin.DESTINATION -> acceptDstControlMessage(event.airbyteMessage.control, event.replicationContext)
       AirbyteMessageOrigin.SOURCE -> acceptSrcControlMessage(event.airbyteMessage.control, event.replicationContext)
       else -> logger.warn { "Invalid event from ${event.airbyteMessageOrigin} message origin for message: ${event.airbyteMessage}" }
     }
 
-    override fun supports(event: ReplicationAirbyteMessageEvent) = event.airbyteMessage.type == AirbyteMessage.Type.CONTROL
+  override fun supports(event: ReplicationAirbyteMessageEvent) = event.airbyteMessage.type == AirbyteMessage.Type.CONTROL
 
-    private fun acceptDstControlMessage(msg: AirbyteControlMessage, ctx: ReplicationContext): Unit = when (msg.type) {
+  private fun acceptDstControlMessage(
+    msg: AirbyteControlMessage,
+    ctx: ReplicationContext,
+  ): Unit =
+    when (msg.type) {
       AirbyteControlMessage.Type.CONNECTOR_CONFIG -> connectorConfigUpdater.updateDestination(ctx.destinationId, msg.connectorConfig.config)
       else -> logger.debug { "Control message type ${msg.type} not supported." }
     }
 
-    private fun acceptSrcControlMessage(msg: AirbyteControlMessage, ctx: ReplicationContext): Unit = when (msg.type) {
+  private fun acceptSrcControlMessage(
+    msg: AirbyteControlMessage,
+    ctx: ReplicationContext,
+  ): Unit =
+    when (msg.type) {
       AirbyteControlMessage.Type.CONNECTOR_CONFIG -> connectorConfigUpdater.updateSource(ctx.sourceId, msg.connectorConfig.config)
       else -> logger.debug { "Control message type ${msg.type} not supported." }
     }
-  }
+}

@@ -98,6 +98,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -1631,9 +1632,13 @@ class SchedulerHandlerTest {
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM))
         .config(new AirbyteStreamConfiguration().selected(true)));
 
+    UUID workspaceId = source.getWorkspaceId();
+    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
-        .workspaceId(UUID.randomUUID())
+        .workspaceId(workspaceId)
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
@@ -1667,9 +1672,13 @@ class SchedulerHandlerTest {
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
         Field.of(SKU, JsonSchemaType.STRING), Field.of("aDifferentField", JsonSchemaType.STRING)), sourceVersion);
 
+    UUID workspaceId = source.getWorkspaceId();
+    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
-        .workspaceId(UUID.randomUUID())
+        .workspaceId(workspaceId)
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
@@ -1703,9 +1712,13 @@ class SchedulerHandlerTest {
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion)
         .streams(List.of());
 
+    UUID workspaceId = source.getWorkspaceId();
+    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
-        .workspaceId(UUID.randomUUID())
+        .workspaceId(workspaceId)
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
@@ -1740,6 +1753,10 @@ class SchedulerHandlerTest {
         Field.of(SKU, JsonSchemaType.STRING)), sourceVersion);
     final var catalogWithNewColumnAndStream = Jsons.clone(catalogWithNewColumn)
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
+
+    UUID workspaceId = source.getWorkspaceId();
+    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
@@ -1777,9 +1794,13 @@ class SchedulerHandlerTest {
         CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
 
+    UUID workspaceId = source.getWorkspaceId();
+    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
         .sourceId(source.getSourceId())
-        .workspaceId(UUID.randomUUID())
+        .workspaceId(workspaceId)
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
@@ -27,8 +27,12 @@ export interface DestinationStreamNamesFormValues {
 
 const StreamNamePrefixInput: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { watch } = useFormContext<DestinationStreamNamesFormValues>();
+  const { watch, trigger } = useFormContext<DestinationStreamNamesFormValues>();
   const watchedStreamNameDefinition = watch("streamNameDefinition");
+
+  useEffect(() => {
+    trigger("prefix");
+  }, [trigger, watchedStreamNameDefinition]);
 
   return (
     <FormControl

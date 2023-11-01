@@ -66,6 +66,22 @@ data class Multi(val contexts: List<Context>) : Context {
 }
 
 /**
+ * Context for representing an organization.
+ *
+ * @param [key] the unique identifying value of this organization
+ */
+data class Organization constructor(override val key: String) : Context {
+  override val kind = "organization"
+
+  /**
+   * Secondary constructor
+   *
+   * @param [key] organization UUID
+   */
+  constructor(key: UUID) : this(key = key.toString())
+}
+
+/**
  * Context for representing a workspace.
  *
  * @param [key] the unique identifying value of this workspace

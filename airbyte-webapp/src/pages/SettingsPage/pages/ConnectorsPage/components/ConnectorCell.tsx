@@ -4,7 +4,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 
 import { SvgIcon } from "area/connector/utils";
-import { ReleaseStage, SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import styles from "./ConnectorCell.module.scss";
@@ -20,11 +20,10 @@ export interface ConnectorCellProps {
   currentVersion: string;
   type: ConnectorsViewProps["type"];
   id: string;
-  releaseStage?: ReleaseStage;
 }
 
 export const ConnectorCell: React.FC<ConnectorCellProps> = React.memo(
-  ({ connectorName, img, supportLevel, custom = false, type, id, currentVersion, releaseStage }) => {
+  ({ connectorName, img, supportLevel, custom = false, type, id, currentVersion }) => {
     const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
 
     return (
@@ -39,13 +38,7 @@ export const ConnectorCell: React.FC<ConnectorCellProps> = React.memo(
           <SvgIcon svg={img} />
         </div>
         <div>{connectorName}</div>
-        <SupportLevelBadge
-          size="small"
-          tooltip={false}
-          supportLevel={supportLevel}
-          custom={custom}
-          releaseStage={releaseStage}
-        />
+        <SupportLevelBadge tooltip={false} supportLevel={supportLevel} custom={custom} />
       </FlexContainer>
     );
   }

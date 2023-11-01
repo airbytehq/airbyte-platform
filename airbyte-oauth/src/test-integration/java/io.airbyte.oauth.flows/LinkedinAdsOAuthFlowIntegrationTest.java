@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("MissingJavadocType")
 public class LinkedinAdsOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
 
   protected static final Path CREDENTIALS_PATH = Path.of("secrets/config_oauth.json");

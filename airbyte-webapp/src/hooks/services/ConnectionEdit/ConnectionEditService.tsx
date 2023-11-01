@@ -11,7 +11,9 @@ import {
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
 
+import { ConnectionEditHookFormContext } from "./ConnectionEditHookFormService";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
+import { useExperiment } from "../Experiment";
 import { useNotificationService } from "../Notification/NotificationService";
 import { SchemaError } from "../useSourceHook";
 
@@ -146,7 +148,13 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
 };
 
 export const useConnectionEditService = () => {
-  const context = useContext(ConnectionEditContext);
+  /**
+   *TODO: remove conditional context after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const contextType = doUseCreateConnectionHookForm ? ConnectionEditHookFormContext : ConnectionEditContext;
+  const context = useContext(contextType);
   if (context === null) {
     throw new Error("useConnectionEditService must be used within a ConnectionEditServiceProvider");
   }

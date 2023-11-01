@@ -82,7 +82,7 @@ export const ErrorMessage: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const { connection } = useConnectionEditService();
   const { lastCompletedSyncJob } = useConnectionSyncContext();
-  const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
@@ -121,14 +121,14 @@ export const ErrorMessage: React.FC = () => {
     }
 
     // If we have schema changes, show the correct message
-    if (hasSchemaChanges) {
+    if (hasBreakingSchemaChange) {
       const schemaChangeWarning = {
         text: formatMessage({
-          id: `connection.schemaChange.${hasBreakingSchemaChange ? "breaking" : "nonBreaking"}`,
+          id: "connection.schemaChange.breaking",
         }),
         onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
-        type: hasBreakingSchemaChange ? "error" : "warning",
+        type: "error",
       } as const;
       errorMessages.push(schemaChangeWarning);
     }
@@ -211,7 +211,6 @@ export const ErrorMessage: React.FC = () => {
   }, [
     formatMessage,
     hasBreakingSchemaChange,
-    hasSchemaChanges,
     lastCompletedSyncJob,
     navigate,
     connection.sourceId,

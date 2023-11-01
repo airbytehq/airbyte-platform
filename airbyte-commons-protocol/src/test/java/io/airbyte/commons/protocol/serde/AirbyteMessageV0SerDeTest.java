@@ -29,7 +29,7 @@ class AirbyteMessageV0SerDeTest {
                 .withDocumentationUrl(new URI("file:///tmp/doc")));
 
     final String serializedMessage = ser.serialize(message);
-    final Optional<AirbyteMessage> deserializedMessage = deser.deserialize(serializedMessage);
+    final Optional<AirbyteMessage> deserializedMessage = deser.deserializeExact(serializedMessage);
 
     assertEquals(message, deserializedMessage.get());
   }

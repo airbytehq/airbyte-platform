@@ -4,7 +4,6 @@ import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
-import { SortOrderEnum } from "components/EntityTable/types";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
@@ -19,11 +18,6 @@ import { CreditsUsage } from "./components/CreditsUsage";
 import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
 import { RemainingCredits } from "./components/RemainingCredits";
 import { ReactComponent as FilesIcon } from "./filesIcon.svg";
-
-export interface BillingPageQueryParams {
-  sortBy?: string;
-  order?: SortOrderEnum;
-}
 
 const StripePortalLink: React.FC = () => {
   return (

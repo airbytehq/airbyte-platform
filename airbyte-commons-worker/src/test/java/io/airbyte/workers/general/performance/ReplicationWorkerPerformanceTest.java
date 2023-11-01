@@ -7,6 +7,7 @@ package io.airbyte.workers.general.performance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
@@ -27,6 +28,7 @@ import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
+import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.EmptyAirbyteDestination;
 import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
@@ -38,6 +40,7 @@ import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
@@ -61,7 +64,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("MissingJavadocType")
 public abstract class ReplicationWorkerPerformanceTest {
 
   private static final Logger log = LoggerFactory.getLogger(ReplicationWorkerPerformanceTest.class);
@@ -80,7 +82,8 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                          final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                          final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper);
+                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
+                                                         final DestinationTimeoutMonitor destinationTimeoutMonitor);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -119,6 +122,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         new AirbyteStreamNameNamespacePair("s1", null),
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
+    final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false));
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());
@@ -147,6 +152,11 @@ public abstract class ReplicationWorkerPerformanceTest {
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
         new AirbyteControlMessageEventListener(connectorConfigUpdater),
         new AirbyteStreamStatusMessageEventListener(streamStatusTracker));
+    final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
+        featureFlagClient,
+        workspaceID,
+        UUID.randomUUID(),
+        new NotImplementedMetricClient());
     final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
         mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     doAnswer((e) -> {
@@ -167,9 +177,10 @@ public abstract class ReplicationWorkerPerformanceTest {
         validator,
         fieldSelector,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(),
+        replicationFeatureFlagReader,
         airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper);
+        replicationAirbyteMessageEventPublishingHelper,
+        destinationTimeoutMonitor);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {

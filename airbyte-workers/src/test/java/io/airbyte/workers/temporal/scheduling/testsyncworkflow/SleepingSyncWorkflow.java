@@ -13,7 +13,6 @@ import io.temporal.workflow.Workflow;
 import java.time.Duration;
 import java.util.UUID;
 
-@SuppressWarnings("MissingJavadocType")
 public class SleepingSyncWorkflow implements SyncWorkflow {
 
   public static final Duration RUN_TIME = Duration.ofMinutes(10L);

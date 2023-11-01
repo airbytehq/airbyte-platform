@@ -15,6 +15,16 @@ import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -71,7 +81,18 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER, new WorkspaceServiceJooqImpl(database));
+    configRepository = new ConfigRepository(
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database),
+        new OperationServiceJooqImpl(database),
+        new OrganizationServiceJooqImpl(database),
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
     createWorkspace();
 
     for (final StandardSyncOperation op : OPS) {

@@ -80,6 +80,27 @@ paths:
                 $ref: "#/components/schemas/UserRead"
         "409":
           $ref: "#/components/responses/ExceptionResponse"
+  /v1/users/create_with_id:
+    post:
+      tags:
+        - user
+      summary: Creates a user with userId. This is used for dual write purposes.
+      operationId: createUserWithId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateWithId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
   /v1/users/list:
     post:
       tags:
@@ -891,12 +912,9 @@ components:
       type: object
       required:
         - authUserId
-        - authProvider
       properties:
         authUserId:
           type: string
-        authProvider:
-          $ref: "#/components/schemas/AuthProvider"
     UserCreate:
       type: object
       required:
@@ -923,6 +941,18 @@ components:
         news:
           type: boolean
           default: false
+    UserCreateWithId:
+      type: object
+      description: Only used in user/create_user_with_id, and this object should be short lived and not used in webapp.
+      required:
+        - userCreate
+        - userId
+      properties:
+        userCreate:
+          $ref: "#/components/schemas/UserCreate"
+        userId:
+          type: string
+          format: UUID
     UserPaymentAccountId:
       type: string
       description: UserPaymentAccount ID from the Cloud database
@@ -1016,8 +1046,6 @@ components:
         - isDefaultWorkspace
         - status
         - email
-        - permissionId
-        - permissionType
         - workspaceId
       properties:
         name:
@@ -1033,6 +1061,7 @@ components:
           type: string
           format: email
         permissionId:
+          description: (Deprecated) Permission ID from the Cloud database.
           type: string
           format: uuid
         permissionType:
@@ -1197,6 +1226,8 @@ components:
         - workspaceId
         - successUrl
         - cancelUrl
+        - quantity
+        - stripeMode
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
@@ -1314,6 +1345,9 @@ components:
         userId:
           $ref: "#/components/schemas/UserId"
         organizationId:
+          type: string
+          format: uuid
+        existingWorkspaceId:
           type: string
           format: uuid
     CloudWorkspaceRead:
@@ -1650,7 +1684,10 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
     PermissionType:
       type: string
-      description: Describes what actions/endpoints the permission entitles to
+      description: |
+        (Deprecated) Describes what actions/endpoints the permission entitles to. In the process
+        of migration Permissions to Config API/DB, so these Cloud-specific permissions are
+        phasing out.
       enum:
         - instance_admin # Permission to do anything (all permissions below)
         - workspace_owner # Permission to own a workspace (and being billed for it)

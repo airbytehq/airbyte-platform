@@ -77,15 +77,13 @@ describe("Connection - Auto-detect schema changes", () => {
       requestGetConnection({ connectionId: connection.connectionId, withRefreshedCatalog: true });
     });
 
-    it("shows non-breaking change on list page", () => {
+    it("does not show non-breaking change on list page", () => {
       connectionListPage.visit();
-      connectionListPage.getSchemaChangeIcon(connection, "non_breaking").should("exist");
+      connectionListPage.getSchemaChangeIcon(connection, "non_breaking").should("not.exist");
       connectionListPage.getManualSyncButton(connection).should("be.enabled");
     });
 
     it("shows non-breaking change that can be saved after refresh", () => {
-      // Need to continue running but async breaks everything
-      // todo: i am not sure what that comment means ^
       connectionPage.visit(connection, "replication");
 
       // check overlay panel

@@ -9,11 +9,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.server.pro.KeycloakTokenValidator;
 import io.micronaut.http.HttpHeaders;
@@ -40,7 +38,6 @@ class KeycloakTokenValidatorTest {
 
   private static final String LOCALHOST = "http://localhost";
   private static final String URI_PATH = "/some/path";
-  private static final Collection<String> DEFAULT_ROLES = AuthRole.buildAuthRolesSet(AuthRole.ADMIN);
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID ORGANIZATION_ID = UUID.randomUUID();
@@ -111,14 +108,15 @@ class KeycloakTokenValidatorTest {
 
     when(headerResolver.resolveWorkspace(any())).thenReturn(List.of(WORKSPACE_ID));
     when(headerResolver.resolveOrganization(any())).thenReturn(List.of(ORGANIZATION_ID));
-    when(permissionPersistence.findPermissionTypeForUserAndWorkspace(WORKSPACE_ID, expectedUserId, AuthProvider.KEYCLOAK))
+    when(permissionPersistence.findPermissionTypeForUserAndWorkspace(WORKSPACE_ID, expectedUserId))
         .thenReturn(PermissionType.WORKSPACE_ADMIN);
-    when(permissionPersistence.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, expectedUserId, AuthProvider.KEYCLOAK))
+    when(permissionPersistence.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, expectedUserId))
         .thenReturn(PermissionType.ORGANIZATION_READER);
 
     // TODO: enable this once we are ready to enable getRoles function in KeycloakTokenValidator.
     // Set<String> expectedResult = Set.of("ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
-    Set<String> expectedResult = Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ADMIN", "EDITOR", "READER");
+    Set<String> expectedResult =
+        Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER", "ADMIN", "EDITOR", "READER");
 
     StepVerifier.create(responsePublisher)
         .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, expectedResult))

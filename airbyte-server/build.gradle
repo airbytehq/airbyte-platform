@@ -10,7 +10,7 @@ configurations.all {
         // instead of versions from transitive dependencies
         // Force to avoid updated version brought in transitively from Micronaut 3.8+
         // that is incompatible with our current Helm setup
-        force libs.flyway.core, libs.s3, libs.aws.java.sdk.s3, libs.aws.java.sdk.sts
+        force libs.flyway.core, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts
     }
 }
 
@@ -33,6 +33,7 @@ dependencies {
     implementation libs.micronaut.security
     implementation libs.flyway.core
     implementation libs.s3
+    implementation libs.sts
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
 
@@ -44,6 +45,7 @@ dependencies {
     implementation project(':airbyte-commons-license')
     implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-temporal-core')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:init')

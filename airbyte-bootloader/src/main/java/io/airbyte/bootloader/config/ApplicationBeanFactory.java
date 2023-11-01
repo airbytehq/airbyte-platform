@@ -8,17 +8,9 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
-import io.airbyte.config.persistence.split_secrets.SecretPersistence;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.util.Optional;
 
 /**
  * Micronaut bean factory for general application-related singletons.
@@ -36,31 +28,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public FeatureFlags featureFlags() {
     return new EnvVariableFeatureFlags();
-  }
-
-  /**
-   * Create JsonSecretsProcessor.
-   *
-   * @return json secrets processor
-   */
-  @Singleton
-  public JsonSecretsProcessor jsonSecretsProcessor() {
-    return JsonSecretsProcessor.builder()
-        .copySecrets(false)
-        .build();
-  }
-
-  @Singleton
-  public SecretsRepositoryReader secretsRepositoryReader(final ConfigRepository configRepository, final SecretsHydrator secretsHydrator) {
-    return new SecretsRepositoryReader(configRepository, secretsHydrator);
-  }
-
-  @SuppressWarnings("LineLength")
-  @Singleton
-  public SecretsRepositoryWriter secretsRepositoryWriter(final ConfigRepository configRepository,
-                                                         @Named("secretPersistence") final Optional<SecretPersistence> secretPersistence,
-                                                         @Named("ephemeralSecretPersistence") final Optional<SecretPersistence> ephemeralSecretPersistence) {
-    return new SecretsRepositoryWriter(configRepository, secretPersistence, ephemeralSecretPersistence);
   }
 
 }

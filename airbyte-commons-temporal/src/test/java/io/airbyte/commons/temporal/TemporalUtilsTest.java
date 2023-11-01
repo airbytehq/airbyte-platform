@@ -7,7 +7,6 @@ package io.airbyte.commons.temporal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -18,9 +17,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import io.temporal.activity.ActivityOptions;
-import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.namespace.v1.NamespaceInfo;
-import io.temporal.api.workflow.v1.WorkflowExecutionInfo;
 import io.temporal.api.workflowservice.v1.DescribeNamespaceResponse;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowFailedException;
@@ -33,13 +30,9 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -50,49 +43,6 @@ class TemporalUtilsTest {
 
   private static final String TASK_QUEUE = "default";
   private static final String BEFORE = "before: {}";
-
-  @Test
-  void testAsyncExecute() throws Exception {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
-    final CountDownLatch countDownLatch = new CountDownLatch(1);
-
-    final VoidCallable callable = mock(VoidCallable.class);
-
-    // force it to wait until we can verify that it is running.
-    doAnswer((a) -> {
-      countDownLatch.await(1, TimeUnit.MINUTES);
-      return null;
-    }).when(callable).call();
-
-    final TestWorkflowEnvironment testEnv = TestWorkflowEnvironment.newInstance();
-    final WorkflowServiceStubs temporalService = testEnv.getWorkflowService();
-    final Worker worker = testEnv.newWorker(TASK_QUEUE);
-    worker.registerWorkflowImplementationTypes(TestWorkflow.WorkflowImpl.class);
-    final WorkflowClient client = testEnv.getWorkflowClient();
-    worker.registerActivitiesImplementations(new TestWorkflow.Activity1Impl(callable));
-    testEnv.start();
-
-    final TestWorkflow workflowStub = client.newWorkflowStub(TestWorkflow.class, WorkflowOptions.newBuilder().setTaskQueue(TASK_QUEUE).build());
-    final ImmutablePair<WorkflowExecution, CompletableFuture<String>> pair = temporalUtils.asyncExecute(
-        workflowStub,
-        workflowStub::run,
-        "whatever",
-        String.class);
-
-    final WorkflowExecution workflowExecution = pair.getLeft();
-    final String workflowId = workflowExecution.getWorkflowId();
-    final String runId = workflowExecution.getRunId();
-
-    final WorkflowExecutionInfo workflowExecutionInfo = temporalService.blockingStub().listOpenWorkflowExecutions(null).getExecutionsList().get(0);
-    assertEquals(workflowId, workflowExecutionInfo.getExecution().getWorkflowId());
-    assertEquals(runId, workflowExecutionInfo.getExecution().getRunId());
-
-    // allow the workflow to complete.
-    countDownLatch.countDown();
-
-    final String result = pair.getRight().get(1, TimeUnit.MINUTES);
-    assertEquals("completed", result);
-  }
 
   @Test
   void testWaitForTemporalServerAndLogThrowsException() {
@@ -192,7 +142,7 @@ class TemporalUtilsTest {
       private final ActivityOptions options = ActivityOptions.newBuilder()
           .setScheduleToCloseTimeout(Duration.ofDays(3))
           .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-          .setRetryOptions(TemporalUtils.NO_RETRY)
+          .setRetryOptions(TemporalConstants.NO_RETRY)
           .build();
 
       private final Activity1 activity1 = Workflow.newActivityStub(Activity1.class, options);
@@ -260,7 +210,7 @@ class TemporalUtilsTest {
           .setStartToCloseTimeout(Duration.ofMinutes(30))
           .setScheduleToStartTimeout(Duration.ofMinutes(30))
           .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-          .setRetryOptions(TemporalUtils.NO_RETRY)
+          .setRetryOptions(TemporalConstants.NO_RETRY)
           .setHeartbeatTimeout(Duration.ofSeconds(1))
           .build();
 
@@ -303,7 +253,7 @@ class TemporalUtilsTest {
       public void activity(final String arg) {
         LOGGER.info(BEFORE, ACTIVITY1);
         final ActivityExecutionContext context = Activity.getExecutionContext();
-        temporalUtils.withBackgroundHeartbeat(
+        HeartbeatUtils.withBackgroundHeartbeat(
             new AtomicReference<>(null),
             () -> {
               if (timesReachedEnd.get() == 0) {

@@ -25,11 +25,11 @@ buildscript {
 plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
-    id "io.airbyte.gradle.jvm" version "0.16.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.16.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.16.0" apply false
-    id "io.airbyte.gradle.docker" version "0.16.0" apply false
-    id "io.airbyte.gradle.publish" version "0.16.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.17.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.17.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.17.0" apply false
+    id "io.airbyte.gradle.docker" version "0.17.0" apply false
+    id "io.airbyte.gradle.publish" version "0.17.0" apply false
     id "jacoco-report-aggregation"
 }
 
@@ -47,6 +47,22 @@ repositories {
         }
     }
 }
+
+if (System.getProperty("ciMode", "false") == "true") {
+    gradle.startParameter.logLevel = LogLevel.QUIET
+
+    def logFile = new FileOutputStream('gradle.log', true)
+    gradle.services.get(LoggingManager).addStandardOutputListener(logFile)
+    gradle.services.get(LoggingManager).addStandardErrorListener(logFile)
+
+    allprojects {
+        tasks.withType(JavaCompile) {
+            options.deprecation = false
+            options.warnings = false
+        }
+    }
+}
+
 
 reporting {
     reports {

@@ -21,6 +21,10 @@ class SyncPersistenceFactory(private val applicationContext: ApplicationContext)
   /**
    * Get an instance of SyncPersistence
    */
-  fun get(connectionId: UUID, jobId: Long, attemptNumber: Int, catalog: ConfiguredAirbyteCatalog): SyncPersistence =
-    applicationContext.createBean(connectionId, jobId, attemptNumber, catalog)
+  fun get(
+    connectionId: UUID,
+    jobId: Long,
+    attemptNumber: Int,
+    catalog: ConfiguredAirbyteCatalog,
+  ): SyncPersistence = applicationContext.createBean(connectionId, jobId, attemptNumber, catalog)
 }

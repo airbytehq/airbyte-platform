@@ -23,3 +23,7 @@ properties:
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   operatorDbt:
     "$ref": OperatorDbt.yaml
+  connectionContext:
+    description: Context object with IDs of the relevant connection, source, destination, etc.
+    type: object
+    "$ref": ConnectionContext.yaml

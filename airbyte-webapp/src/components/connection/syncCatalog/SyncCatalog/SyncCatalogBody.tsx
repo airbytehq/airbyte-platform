@@ -1,5 +1,7 @@
 import { Field, FieldProps, setIn } from "formik";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
+import { Location, useLocation } from "react-router-dom";
+import { IndexLocationWithAlign, Virtuoso } from "react-virtuoso";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
@@ -11,13 +13,27 @@ import { SyncCatalogEmpty } from "./SyncCatalogEmpty";
 import { SyncCatalogRow } from "./SyncCatalogRow";
 import { StreamsConfigTableHeader } from "../StreamsConfigTable";
 
+interface RedirectionLocationState {
+  namespace?: string;
+  streamName?: string;
+  action?: "showInReplicationTable" | "openDetails";
+}
+
+export interface LocationWithState extends Location {
+  state: RedirectionLocationState;
+}
+
 interface SyncCatalogBodyProps {
   streams: SyncSchemaStream[];
   onStreamsChanged: (streams: SyncSchemaStream[]) => void;
   onStreamChanged: (stream: SyncSchemaStream) => void;
   isFilterApplied?: boolean;
 }
-
+/**
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use SyncCatalogHookFormField.tsx instead
+ * @see SyncCatalogHookFormField
+ */
 export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   streams,
   onStreamsChanged,
@@ -42,6 +58,22 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
     [streams, onStreamChanged]
   );
 
+  // Scroll to the stream that was redirected from the Status tab
+  const { state: locationState } = useLocation() as LocationWithState;
+  const initialTopMostItemIndex: IndexLocationWithAlign | undefined = useMemo(() => {
+    if (locationState?.action !== "showInReplicationTable" && locationState?.action !== "openDetails") {
+      return;
+    }
+
+    return {
+      index: streams.findIndex(
+        (stream) =>
+          stream.stream?.name === locationState?.streamName && stream.stream?.namespace === locationState?.namespace
+      ),
+      align: "center",
+    };
+  }, [locationState?.action, locationState?.namespace, locationState?.streamName, streams]);
+
   return (
     <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
@@ -52,21 +84,27 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
         />
       </div>
       {streams.length ? (
-        streams.map((streamNode) => (
-          <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>
-            {({ form }: FieldProps<FormikConnectionFormValues>) => (
-              <SyncCatalogRow
-                key={`schema.streams[${streamNode.id}].config`}
-                errors={form.errors}
-                namespaceDefinition={form.values.namespaceDefinition}
-                namespaceFormat={form.values.namespaceFormat}
-                prefix={form.values.prefix}
-                streamNode={streamNode}
-                updateStream={onUpdateStream}
-              />
-            )}
-          </Field>
-        ))
+        <Virtuoso
+          style={{ height: "40vh" }}
+          data={streams}
+          initialTopMostItemIndex={initialTopMostItemIndex}
+          fixedItemHeight={50}
+          itemContent={(_index, streamNode) => (
+            <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>
+              {({ form }: FieldProps<FormikConnectionFormValues>) => (
+                <SyncCatalogRow
+                  key={`schema.streams[${streamNode.id}].config`}
+                  errors={form.errors}
+                  namespaceDefinition={form.values.namespaceDefinition}
+                  namespaceFormat={form.values.namespaceFormat}
+                  prefix={form.values.prefix}
+                  streamNode={streamNode}
+                  updateStream={onUpdateStream}
+                />
+              )}
+            </Field>
+          )}
+        />
       ) : (
         <SyncCatalogEmpty customText={isFilterApplied ? "connection.catalogTree.noMatchingStreams" : ""} />
       )}

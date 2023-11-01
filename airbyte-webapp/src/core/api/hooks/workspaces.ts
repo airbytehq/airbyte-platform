@@ -1,7 +1,8 @@
-import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentUser } from "core/services/auth";
 import { SCOPE_USER, SCOPE_WORKSPACE } from "services/Scope";
 
 import {
@@ -10,6 +11,7 @@ import {
   getWorkspace,
   listUsersInWorkspace,
   listWorkspaces,
+  listWorkspacesByUser,
   updateWorkspace,
   updateWorkspaceName,
   webBackendGetWorkspaceState,
@@ -147,13 +149,43 @@ export const useListUsersInWorkspace = (workspaceId: string) => {
   return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
+export const useListWorkspacesInfinite = (pageSize: number, keyword?: string) => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery(
+    workspaceKeys.list(`paginated`),
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await listWorkspacesByUser(
+          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, keyword },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      suspense: true,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
+};
+
 export const useUpdateWorkspace = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
   return useMutation((workspace: WorkspaceUpdate) => updateWorkspace(workspace, requestOptions), {
     onSuccess: (data) => {
-      queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
+      queryClient.setQueryData<WorkspaceRead>(workspaceKeys.detail(data.workspaceId), data);
+      queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => {
+        return {
+          workspaces: old?.workspaces.map((workspace) => {
+            return workspace.workspaceId === data.workspaceId ? data : workspace;
+          }) ?? [data],
+        };
+      });
     },
   });
 };
@@ -166,7 +198,21 @@ export const useUpdateWorkspaceName = () => {
     (workspaceUpdateNameBody: WorkspaceUpdateName) => updateWorkspaceName(workspaceUpdateNameBody, requestOptions),
     {
       onSuccess: (data) => {
-        queryClient.setQueryData(workspaceKeys.detail(data.workspaceId), data);
+        queryClient.setQueryData<WorkspaceRead>(workspaceKeys.detail(data.workspaceId), data);
+        queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) => {
+          const list = old?.workspaces ?? [];
+          if (list.length === 0) {
+            return { workspaces: [data] };
+          }
+
+          const index = list.findIndex((item) => item.workspaceId === data.workspaceId);
+
+          if (index === -1) {
+            return { workspaces: list };
+          }
+
+          return { workspaces: [...list.slice(0, index), data, ...list.slice(index + 1)] };
+        });
       },
     }
   );

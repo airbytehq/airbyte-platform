@@ -21,7 +21,6 @@ private val logger = KotlinLogging.logger { }
 class ReplicationAirbyteMessageEventPublishingHelper(
   private val eventPublisher: ApplicationEventPublisher<ReplicationAirbyteMessageEvent>,
 ) {
-
   /**
    * Publishes a complete status event used to indicate that the source or destination has finished
    * its execution for the given stream successfully.
@@ -31,8 +30,11 @@ class ReplicationAirbyteMessageEventPublishingHelper(
    * @param origin The [AirbyteMessage] origin that will be associated with the
    *        published complete status event.
    */
-  fun publishCompleteStatusEvent(stream: StreamDescriptor, ctx: ReplicationContext, origin: AirbyteMessageOrigin): Unit =
-    publishStatusEvent(stream = stream, ctx = ctx, origin = origin, streamStatus = AirbyteStreamStatus.COMPLETE)
+  fun publishCompleteStatusEvent(
+    stream: StreamDescriptor,
+    ctx: ReplicationContext,
+    origin: AirbyteMessageOrigin,
+  ): Unit = publishStatusEvent(stream = stream, ctx = ctx, origin = origin, streamStatus = AirbyteStreamStatus.COMPLETE)
 
   /**
    * Publishes an incomplete status event used to indicate that the source or destination has finished
@@ -49,14 +51,13 @@ class ReplicationAirbyteMessageEventPublishingHelper(
     ctx: ReplicationContext,
     origin: AirbyteMessageOrigin,
     incompleteRunCause: StreamStatusIncompleteRunCause?,
-  ) =
-    publishStatusEvent(
-      stream = stream,
-      ctx = ctx,
-      origin = origin,
-      streamStatus = AirbyteStreamStatus.INCOMPLETE,
-      incompleteRunCause = incompleteRunCause,
-    )
+  ) = publishStatusEvent(
+    stream = stream,
+    ctx = ctx,
+    origin = origin,
+    streamStatus = AirbyteStreamStatus.INCOMPLETE,
+    incompleteRunCause = incompleteRunCause,
+  )
 
   /**
    * Publishes a stream status event using the provided event publisher.

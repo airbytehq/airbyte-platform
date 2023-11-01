@@ -14,7 +14,8 @@ import styles from "./NormalizationField.module.scss";
 type NormalizationBlockProps = FieldProps<string>;
 
 /**
- * @deprecated will be removed during CreateConnectionForm migration
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use NormalizationHookForm.tsx instead
  * @see NormalizationHookFormField
  */
 export const NormalizationField: React.FC<NormalizationBlockProps> = ({ form, field }) => {

@@ -28,6 +28,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
@@ -39,6 +40,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -72,6 +74,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   private final String jobId;
   private final int attempt;
+  private final DestinationTimeoutMonitor destinationTimeoutMonitor;
   private final ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteSource source;
   private final AirbyteDestination destination;
@@ -99,15 +102,19 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final VoidCallable onReplicationRunning) {
+                                  final VoidCallable onReplicationRunning,
+                                  final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
+    this.destinationTimeoutMonitor = destinationTimeoutMonitor;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
-    this.executors = Executors.newFixedThreadPool(2);
+    // readFromSrcAndWriteToDstRunnable + readFromDstThread
+    // + source heartbeat + dest timeout monitor = 4
+    this.executors = Executors.newFixedThreadPool(4);
     this.recordSchemaValidator = recordSchemaValidator;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
@@ -147,10 +154,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
               replicationInput.getDestinationId(), Long.parseLong(jobId),
               attempt, replicationInput.getWorkspaceId());
 
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
-      replicate(jobRoot, replicationInput);
+      replicate(jobRoot, replicationInput, flags);
 
       return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
@@ -161,12 +168,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private void replicate(final Path jobRoot,
-                         final ReplicationInput replicationInput) {
+                         final ReplicationInput replicationInput,
+                         final ReplicationFeatureFlags flags)
+      throws Exception {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
-    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
+    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source) {
       replicationWorkerHelper.startDestination(destination, replicationInput, jobRoot);
       replicationWorkerHelper.startSource(source, replicationInput, jobRoot);
 
@@ -198,11 +207,16 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           });
 
-      try {
-        srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
-      } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
-        ApmTraceUtils.addExceptionToTrace(ex);
-        replicationWorkerHelper.trackFailure(ex);
+      if (flags.isDestinationTimeoutEnabled()) {
+        attachHeartbeatCheck(readSrcAndWriteDstThread, srcHeartbeatTimeoutChaperone, mdc);
+        attachDestinationTimeout(readSrcAndWriteDstThread, mdc);
+      } else {
+        try {
+          srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+        } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+          ApmTraceUtils.addExceptionToTrace(ex);
+          replicationWorkerHelper.trackFailure(ex);
+        }
       }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
@@ -223,6 +237,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Sync worker failed.", e);
     } finally {
+      closeDestination(mdc, flags);
       executors.shutdownNow();
 
       try {
@@ -237,6 +252,65 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         Thread.currentThread().interrupt();
       }
     }
+  }
+
+  private void closeDestination(final Map<String, String> mdc, final ReplicationFeatureFlags flags) throws Exception {
+    if (flags.isDestinationTimeoutEnabled()) {
+      runAsyncWithTimeout(() -> {
+        try {
+          destination.close();
+        } catch (final Exception e) {
+          throw new RuntimeException(e);
+        }
+      }, mdc).join();
+    } else {
+      destination.close();
+    }
+
+    destinationTimeoutMonitor.close();
+  }
+
+  private void attachHeartbeatCheck(
+                                    final CompletableFuture<Void> completableFuture,
+                                    final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
+                                    final Map<String, String> mdc) {
+    // new thread since heartbeatTimeoutChaperone.runWithHeartbeatThread is blocking
+    CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      try {
+        heartbeatTimeoutChaperone.runWithHeartbeatThread(completableFuture);
+      } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+        replicationWorkerHelper.trackFailure(e);
+      } catch (final ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }, executors);
+  }
+
+  private void attachDestinationTimeout(final CompletableFuture<Void> completableFuture, final Map<String, String> mdc) {
+    CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      try {
+        destinationTimeoutMonitor.runWithTimeoutThread(completableFuture);
+      } catch (final DestinationTimeoutMonitor.TimeoutException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+        replicationWorkerHelper.trackFailure(e);
+      } catch (final ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    }, executors);
+  }
+
+  private CompletableFuture<?> runAsyncWithTimeout(final Runnable runnable, final Map<String, String> mdc) {
+    final CompletableFuture<Void> runnableFuture = CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      runnable.run();
+    }, executors);
+
+    attachDestinationTimeout(runnableFuture, mdc);
+
+    return runnableFuture;
   }
 
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")

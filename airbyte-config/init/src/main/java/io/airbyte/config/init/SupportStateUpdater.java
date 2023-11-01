@@ -138,82 +138,11 @@ public class SupportStateUpdater {
         versionIdsToUpdateByState.get(SupportState.SUPPORTED));
   }
 
-  private SupportState calcVersionSupportState(final Version version,
-                                               final Optional<ActorDefinitionBreakingChange> latestStaleBreakingChange,
-                                               final Optional<ActorDefinitionBreakingChange> latestFutureBreakingChange) {
-    // A version is UNSUPPORTED if it's older (semver) than a version that has had a breaking change,
-    // and the deadline to upgrade from that breaking change has already passed.
-    if (latestStaleBreakingChange.isPresent() && latestStaleBreakingChange.get().getVersion().greaterThan(version)) {
-      return SupportState.UNSUPPORTED;
-    }
-
-    // A version is DEPRECATED if it's older (semver) than a version that has had a breaking change,
-    // and the deadline to upgrade from that breaking change has NOT yet passed.
-    if (latestFutureBreakingChange.isPresent() && latestFutureBreakingChange.get().getVersion().greaterThan(version)) {
-      return SupportState.DEPRECATED;
-    }
-
-    return SupportState.SUPPORTED;
-  }
-
-  /**
-   * Updates the version support states for a given source definition.
-   */
-  public void updateSupportStatesForSourceDefinition(final StandardSourceDefinition sourceDefinition)
-      throws ConfigNotFoundException, IOException {
-    if (!sourceDefinition.getCustom()) {
-      log.info("Updating support states for source definition: {}", sourceDefinition.getName());
-      final ActorDefinitionVersion defaultActorDefinitionVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
-      final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
-      updateSupportStatesForActorDefinition(sourceDefinition.getSourceDefinitionId(), currentDefaultVersion);
-
-      log.info("Finished updating support states for source definition: {}", sourceDefinition.getName());
-    }
-  }
-
-  /**
-   * Updates the version support states for a given destination definition.
-   */
-  public void updateSupportStatesForDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
-      throws ConfigNotFoundException, IOException {
-    if (!destinationDefinition.getCustom()) {
-      log.info("Updating support states for destination definition: {}", destinationDefinition.getName());
-      final ActorDefinitionVersion defaultActorDefinitionVersion =
-          configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
-      final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
-      updateSupportStatesForActorDefinition(destinationDefinition.getDestinationDefinitionId(), currentDefaultVersion);
-
-      log.info("Finished updating support states for destination definition: {}", destinationDefinition.getName());
-    }
-  }
-
-  private void updateSupportStatesForActorDefinition(final UUID actorDefinitionId, final Version currentDefaultVersion) throws IOException {
-    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinition(actorDefinitionId);
-    final List<ActorDefinitionVersion> actorDefinitionVersions = configRepository.listActorDefinitionVersionsForDefinition(actorDefinitionId);
-    final SupportStateUpdate supportStateUpdate =
-        getSupportStateUpdate(currentDefaultVersion, LocalDate.now(), breakingChanges, actorDefinitionVersions);
-    executeSupportStateUpdate(supportStateUpdate);
-  }
-
-  private Version getVersionTag(final List<ActorDefinitionVersion> actorDefinitionVersions, final UUID versionId) {
-    return actorDefinitionVersions.stream()
-        .filter(actorDefinitionVersion -> actorDefinitionVersion.getVersionId().equals(versionId))
-        .findFirst()
-        .map(actorDefinitionVersion -> new Version(actorDefinitionVersion.getDockerImageTag()))
-        .orElseThrow();
-  }
-
   /**
    * Updates the version support states for all source and destination definitions.
    */
   public void updateSupportStates() throws IOException, JsonValidationException, ConfigNotFoundException {
     updateSupportStates(LocalDate.now());
-  }
-
-  private boolean shouldNotifyBreakingChanges() {
-    // we only want to notify about these on Cloud
-    return deploymentMode == DeploymentMode.CLOUD
-        && featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS));
   }
 
   /**
@@ -281,16 +210,21 @@ public class SupportStateUpdater {
     log.info("Finished updating support states for all definitions");
   }
 
-  /**
-   * Gets the version IDs that will go from SUPPORTED to DEPRECATED after applying the
-   * SupportStateUpdate. This is used when sending notifications, to ensure we only notify on this
-   * specific state transition.
-   */
-  private List<UUID> getNewlyDeprecatedVersionIds(final List<ActorDefinitionVersion> versionsBeforeUpdate,
-                                                  final SupportStateUpdate supportStateUpdate) {
-    final List<UUID> previouslySupportedVersionIds =
-        versionsBeforeUpdate.stream().filter(v -> v.getSupportState() == SupportState.SUPPORTED).map(ActorDefinitionVersion::getVersionId).toList();
-    return supportStateUpdate.deprecatedVersionIds.stream().filter(previouslySupportedVersionIds::contains).toList();
+  @VisibleForTesting
+  BreakingChangeNotificationData buildSourceNotificationData(final StandardSourceDefinition sourceDefinition,
+                                                             final ActorDefinitionBreakingChange breakingChange,
+                                                             final List<ActorDefinitionVersion> versionsBeforeUpdate,
+                                                             final SupportStateUpdate supportStateUpdate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
+    final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
+        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, newlyDeprecatedVersionIds);
+    final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
+    return new BreakingChangeNotificationData(
+        ActorType.SOURCE,
+        sourceDefinition.getName(),
+        workspaceIds,
+        breakingChange);
   }
 
   @VisibleForTesting
@@ -310,21 +244,87 @@ public class SupportStateUpdater {
         breakingChange);
   }
 
-  @VisibleForTesting
-  BreakingChangeNotificationData buildSourceNotificationData(final StandardSourceDefinition sourceDefinition,
-                                                             final ActorDefinitionBreakingChange breakingChange,
-                                                             final List<ActorDefinitionVersion> versionsBeforeUpdate,
-                                                             final SupportStateUpdate supportStateUpdate)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final List<UUID> newlyDeprecatedVersionIds = getNewlyDeprecatedVersionIds(versionsBeforeUpdate, supportStateUpdate);
-    final List<Pair<UUID, List<UUID>>> workspaceSyncIds =
-        actorDefinitionVersionHelper.getActiveWorkspaceSyncsWithSourceVersionIds(sourceDefinition, newlyDeprecatedVersionIds);
-    final List<UUID> workspaceIds = workspaceSyncIds.stream().map(Pair::getFirst).toList();
-    return new BreakingChangeNotificationData(
-        ActorType.SOURCE,
-        sourceDefinition.getName(),
-        workspaceIds,
-        breakingChange);
+  private SupportState calcVersionSupportState(final Version version,
+                                               final Optional<ActorDefinitionBreakingChange> latestStaleBreakingChange,
+                                               final Optional<ActorDefinitionBreakingChange> latestFutureBreakingChange) {
+    // A version is UNSUPPORTED if it's older (semver) than a version that has had a breaking change,
+    // and the deadline to upgrade from that breaking change has already passed.
+    if (latestStaleBreakingChange.isPresent() && latestStaleBreakingChange.get().getVersion().greaterThan(version)) {
+      return SupportState.UNSUPPORTED;
+    }
+
+    // A version is DEPRECATED if it's older (semver) than a version that has had a breaking change,
+    // and the deadline to upgrade from that breaking change has NOT yet passed.
+    if (latestFutureBreakingChange.isPresent() && latestFutureBreakingChange.get().getVersion().greaterThan(version)) {
+      return SupportState.DEPRECATED;
+    }
+
+    return SupportState.SUPPORTED;
+  }
+
+  /**
+   * Updates the version support states for a given source definition.
+   */
+  public void updateSupportStatesForSourceDefinition(final StandardSourceDefinition sourceDefinition)
+      throws ConfigNotFoundException, IOException {
+    if (!sourceDefinition.getCustom()) {
+      log.info("Updating support states for source definition: {}", sourceDefinition.getName());
+      final ActorDefinitionVersion defaultActorDefinitionVersion = configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId());
+      final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
+      updateSupportStatesForActorDefinition(sourceDefinition.getSourceDefinitionId(), currentDefaultVersion);
+
+      log.info("Finished updating support states for source definition: {}", sourceDefinition.getName());
+    }
+  }
+
+  /**
+   * Updates the version support states for a given destination definition.
+   */
+  public void updateSupportStatesForDestinationDefinition(final StandardDestinationDefinition destinationDefinition)
+      throws ConfigNotFoundException, IOException {
+    if (!destinationDefinition.getCustom()) {
+      log.info("Updating support states for destination definition: {}", destinationDefinition.getName());
+      final ActorDefinitionVersion defaultActorDefinitionVersion =
+          configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+      final Version currentDefaultVersion = new Version(defaultActorDefinitionVersion.getDockerImageTag());
+      updateSupportStatesForActorDefinition(destinationDefinition.getDestinationDefinitionId(), currentDefaultVersion);
+
+      log.info("Finished updating support states for destination definition: {}", destinationDefinition.getName());
+    }
+  }
+
+  private void updateSupportStatesForActorDefinition(final UUID actorDefinitionId, final Version currentDefaultVersion) throws IOException {
+    final List<ActorDefinitionBreakingChange> breakingChanges = configRepository.listBreakingChangesForActorDefinition(actorDefinitionId);
+    final List<ActorDefinitionVersion> actorDefinitionVersions = configRepository.listActorDefinitionVersionsForDefinition(actorDefinitionId);
+    final SupportStateUpdate supportStateUpdate =
+        getSupportStateUpdate(currentDefaultVersion, LocalDate.now(), breakingChanges, actorDefinitionVersions);
+    executeSupportStateUpdate(supportStateUpdate);
+  }
+
+  private Version getVersionTag(final List<ActorDefinitionVersion> actorDefinitionVersions, final UUID versionId) {
+    return actorDefinitionVersions.stream()
+        .filter(actorDefinitionVersion -> actorDefinitionVersion.getVersionId().equals(versionId))
+        .findFirst()
+        .map(actorDefinitionVersion -> new Version(actorDefinitionVersion.getDockerImageTag()))
+        .orElseThrow();
+  }
+
+  private boolean shouldNotifyBreakingChanges() {
+    // we only want to notify about these on Cloud
+    return deploymentMode == DeploymentMode.CLOUD
+        && featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate.INSTANCE, new Workspace(ANONYMOUS));
+  }
+
+  /**
+   * Gets the version IDs that will go from SUPPORTED to DEPRECATED after applying the
+   * SupportStateUpdate. This is used when sending notifications, to ensure we only notify on this
+   * specific state transition.
+   */
+  private List<UUID> getNewlyDeprecatedVersionIds(final List<ActorDefinitionVersion> versionsBeforeUpdate,
+                                                  final SupportStateUpdate supportStateUpdate) {
+    final List<UUID> previouslySupportedVersionIds =
+        versionsBeforeUpdate.stream().filter(v -> v.getSupportState() == SupportState.SUPPORTED).map(ActorDefinitionVersion::getVersionId).toList();
+    return supportStateUpdate.deprecatedVersionIds.stream().filter(previouslySupportedVersionIds::contains).toList();
   }
 
   /**

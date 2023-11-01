@@ -12,7 +12,7 @@ export interface ModalOptions<T> {
 
 export type ModalResult<T> = { type: "canceled" } | { type: "closed"; reason: T };
 
-interface ModalContentProps<T> {
+export interface ModalContentProps<T> {
   onClose: (reason: T) => void;
   onCancel: () => void;
 }

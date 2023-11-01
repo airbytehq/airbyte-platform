@@ -31,6 +31,7 @@ import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
@@ -76,6 +77,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   private final BoundedConcurrentLinkedQueue<AirbyteMessage> messagesForDestinationQueue;
   private final ExecutorService executors;
   private final ScheduledExecutorService scheduledExecutors;
+  private final DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   private final AtomicLong destMessagesRead;
   private final AtomicLong destMessagesSent;
@@ -109,11 +111,13 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                    final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                   final VoidCallable onReplicationRunning) {
+                                   final VoidCallable onReplicationRunning,
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
     this.destination = destination;
+    this.destinationTimeoutMonitor = destinationTimeoutMonitor;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
@@ -122,7 +126,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
     this.messagesFromSourceQueue = new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize);
     this.messagesForDestinationQueue = new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize);
-    this.executors = Executors.newFixedThreadPool(4);
+    // readFromSource + processMessage + writeToDestination + readFromDestination +
+    // source heartbeat + dest timeout monitor = 6 threads
+    this.executors = Executors.newFixedThreadPool(6);
     this.scheduledExecutors = Executors.newSingleThreadScheduledExecutor();
     this.isReadFromDestRunning = true;
     this.writeToDestFailed = false;
@@ -148,12 +154,12 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     try {
       final ReplicationContext replicationContext = getReplicationContext(replicationInput);
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
       // note: resources are closed in the opposite order in which they are declared. thus source will be
       // closed first (which is what we want).
-      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
+      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source) {
         scheduledExecutors.scheduleAtFixedRate(this::reportObservabilityMetrics, 0, observabilityMetricsPeriodInSeconds, TimeUnit.SECONDS);
 
         CompletableFuture.allOf(
@@ -165,7 +171,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         CompletableFuture.allOf(
             runAsyncWithHeartbeatCheck(this::readFromSource, mdc),
             runAsync(this::processMessage, mdc),
-            runAsync(this::writeToDestination, mdc),
+            flags.isDestinationTimeoutEnabled() ? runAsyncWithTimeout(this::writeToDestination, mdc) : runAsync(this::writeToDestination, mdc),
             runAsync(this::readFromDestination, mdc)).join();
 
       } catch (final CompletionException e) {
@@ -178,6 +184,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         replicationWorkerHelper.trackFailure(e);
         replicationWorkerHelper.markFailed();
       } finally {
+        // not closing in try-with-resources block since we want to monitor timeouts when closing
+        closeDestination(mdc, flags);
         executors.shutdownNow();
         scheduledExecutors.shutdownNow();
 
@@ -214,6 +222,22 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   }
 
+  private void closeDestination(final Map<String, String> mdc, final ReplicationFeatureFlags flags) throws Exception {
+    if (flags.isDestinationTimeoutEnabled()) {
+      runAsyncWithTimeout(() -> {
+        try {
+          destination.close();
+        } catch (final Exception e) {
+          throw new RuntimeException(e);
+        }
+      }, mdc).join();
+    } else {
+      destination.close();
+    }
+
+    destinationTimeoutMonitor.close();
+  }
+
   private void reportObservabilityMetrics() {
     final MetricClient metricClient = MetricClientFactory.getMetricClient();
     metricClient.gauge(OssMetricsRegistry.WORKER_DESTINATION_BUFFER_SIZE, messagesForDestinationQueue.size());
@@ -247,8 +271,27 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         // We only want to report source heartbeat failures, the rest is noise
         ApmTraceUtils.addExceptionToTrace(e);
       }
-    });
+    }, executors);
     return CompletableFuture.allOf(heartbeatFuture, runnableFuture).whenComplete(this::trackFailures);
+  }
+
+  private CompletableFuture<?> runAsyncWithTimeout(final Runnable runnable, final Map<String, String> mdc) {
+    final CompletableFuture<Void> runnableFuture = CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      runnable.run();
+    }, executors);
+    final CompletableFuture<Void> timeoutFuture = CompletableFuture.runAsync(() -> {
+      MDC.setContextMap(mdc);
+      try {
+        destinationTimeoutMonitor.runWithTimeoutThread(runnableFuture);
+      } catch (final DestinationTimeoutMonitor.TimeoutException e) {
+        messagesFromSourceQueue.close();
+        throw e;
+      } catch (final CompletionException | ExecutionException e) {
+        ApmTraceUtils.addExceptionToTrace(e);
+      }
+    }, executors);
+    return CompletableFuture.allOf(timeoutFuture, runnableFuture).whenComplete(this::trackFailures);
   }
 
   @SuppressWarnings("PMD.UnusedFormalParameter")

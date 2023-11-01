@@ -20,3 +20,4 @@ export * from "./permissions";
 export * from "./upgradeConnectorVersion";
 export * from "./users";
 export * from "./workspaces";
+export * from "./connectorDocumentation";

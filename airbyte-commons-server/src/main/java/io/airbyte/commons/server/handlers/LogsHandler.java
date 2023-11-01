@@ -21,7 +21,6 @@ import java.nio.file.Path;
  *
  * Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class LogsHandler {
 

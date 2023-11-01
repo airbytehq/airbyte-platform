@@ -3,6 +3,8 @@ import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useRemoveConnectionsFromList, useSuspenseQuery } from "core/api";
+// eslint-disable-next-line import/no-restricted-paths
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
@@ -14,7 +16,6 @@ import { useCurrentWorkspace } from "./useWorkspace";
 import { useConfig } from "../../config";
 import { DestinationRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
-import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
 export const destinationsKeys = {
   all: [SCOPE_WORKSPACE, "destinations"] as const,
@@ -36,8 +37,8 @@ interface ConnectorProps {
 
 function useDestinationService() {
   const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
-  return useInitService(() => new DestinationService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
+  const requestOptions = useRequestOptions();
+  return useInitService(() => new DestinationService(requestOptions), [apiUrl, requestOptions]);
 }
 
 interface DestinationList {

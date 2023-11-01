@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 class HealthControllerTest(
   @Client("/") val client: HttpClient,
 ) {
-
   @Test
   fun testHealthEndpoint() {
     val request: HttpRequest<String> = HttpRequest.GET("/health")

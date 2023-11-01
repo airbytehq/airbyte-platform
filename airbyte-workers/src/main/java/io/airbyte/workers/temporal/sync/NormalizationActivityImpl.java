@@ -16,10 +16,11 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.commons.converters.CatalogClientConverters;
+import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.version.Version;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
@@ -27,6 +28,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.ResourceRequirements;
@@ -38,6 +40,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -46,6 +49,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
+import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
@@ -80,9 +84,9 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final String airbyteVersion;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
 
@@ -96,9 +100,9 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    @Value("${airbyte.version}") final String airbyteVersion,
                                    @Value("${micronaut.server.port}") final Integer serverPort,
                                    final AirbyteConfigValidator airbyteConfigValidator,
-                                   final TemporalUtils temporalUtils,
                                    final AirbyteApiClient airbyteApiClient,
-                                   final FeatureFlagClient featureFlagClient) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -109,9 +113,9 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.airbyteVersion = airbyteVersion;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -126,7 +130,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final NormalizationInput fullInput = hydrateNormalizationInput(input);
@@ -181,7 +185,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         context);
   }
 
-  private NormalizationInput hydrateNormalizationInput(NormalizationInput input) throws Exception {
+  private NormalizationInput hydrateNormalizationInput(final NormalizationInput input) throws Exception {
     // Hydrate the destination config.
     final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
     // Retrieve the catalog.
@@ -209,7 +213,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withCatalog(syncOutput.getOutputCatalog())
         .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(syncInput.getConnectionContext());
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -287,10 +292,11 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         workerConfigs,
         containerOrchestratorConfig.get(),
         serverPort,
-        featureFlagClient);
+        featureFlagClient,
+        metricClient);
   }
 
-  private ConfiguredAirbyteCatalog retrieveCatalog(UUID connectionId) throws Exception {
+  private ConfiguredAirbyteCatalog retrieveCatalog(final UUID connectionId) throws Exception {
     final ConnectionRead connectionInfo =
         AirbyteApiClient
             .retryWithJitterThrows(
@@ -301,7 +307,13 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       throw new IllegalArgumentException("Connection is missing catalog, which is required");
     }
     final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
-    return catalog;
+
+    // NOTE: when we passed the catalog through the activity input, this mapping was previously done
+    // during replication.
+    return new NamespacingMapper(
+        Enums.convertTo(connectionInfo.getNamespaceDefinition(), JobSyncConfig.NamespaceDefinitionType.class),
+        connectionInfo.getNamespaceFormat(),
+        connectionInfo.getPrefix()).mapCatalog(catalog);
   }
 
 }

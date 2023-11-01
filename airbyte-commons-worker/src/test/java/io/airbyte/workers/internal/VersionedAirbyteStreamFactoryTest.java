@@ -31,6 +31,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -43,6 +45,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.util.ClassLoaderUtils;
 import org.slf4j.Logger;
 
@@ -73,6 +77,28 @@ class VersionedAirbyteStreamFactoryTest {
 
       assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
       verify(logger).info("Reading messages from protocol version {}{}", "0.2.0", "");
+    }
+
+    @Test
+    void testValidBigInteger() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
+    }
+
+    @Test
+    void testValidBigDecimal() {
+      final AirbyteMessage record = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME,
+          new BigDecimal("1234567890.1234567890"));
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record));
+      final Stream<AirbyteMessage> expectedStream = Stream.of(record);
+
+      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
     }
 
     @Test
@@ -107,7 +133,7 @@ class VersionedAirbyteStreamFactoryTest {
 
     @Test
     void testFailDeserializationSubtle() {
-      final String invalidRecord = "{\"type\": \"record\", \"record\": {}}";
+      final String invalidRecord = "{\"type\": \"spec\", \"data\": {}}";
 
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
@@ -140,6 +166,21 @@ class VersionedAirbyteStreamFactoryTest {
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+      // Missing closing bracket.
+      "{\"type\":\"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"amount\": \"100.00\"",
+      // Infinity is invalid json.
+      "{\"type\":\"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}",
+      // Infinity is invalid json. Python code generates json strings with a space.
+      "{\"type\": \"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}",
+      // Infinity is invalid json. Lowercase types.
+      "{\"type\": \"record\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}"})
+    void testMalformedRecordFailFastAndOnlyDebugLog(String invalidRecord) {
+      assertThrows(IllegalStateException.class, () -> stringToMessageStream(invalidRecord).collect(Collectors.toList()));
+      verify(logger).debug(invalidRecord);
     }
 
     private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {

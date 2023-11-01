@@ -46,7 +46,7 @@ class EmptyAirbyteSourceTest {
 
   @BeforeEach
   void init() {
-    emptyAirbyteSource = new EmptyAirbyteSource(true);
+    emptyAirbyteSource = new EmptyAirbyteSource();
   }
 
   @Test

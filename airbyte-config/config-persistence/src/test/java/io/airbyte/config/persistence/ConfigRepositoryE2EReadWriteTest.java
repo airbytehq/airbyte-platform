@@ -35,6 +35,16 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.HealthCheckServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OAuthServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
+import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.Database;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -77,7 +87,19 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
     truncateAllTables();
-    configRepository = spy(new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER, new WorkspaceServiceJooqImpl(database)));
+    configRepository = spy(
+        new ConfigRepository(
+            new ActorDefinitionServiceJooqImpl(database),
+            new CatalogServiceJooqImpl(database),
+            new ConnectionServiceJooqImpl(database),
+            new ConnectorBuilderServiceJooqImpl(database),
+            new DestinationServiceJooqImpl(database),
+            new HealthCheckServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database),
+            new OperationServiceJooqImpl(database),
+            new OrganizationServiceJooqImpl(database),
+            new SourceServiceJooqImpl(database),
+            new WorkspaceServiceJooqImpl(database)));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }

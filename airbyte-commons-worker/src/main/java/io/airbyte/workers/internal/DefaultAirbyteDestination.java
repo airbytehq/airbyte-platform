@@ -60,24 +60,29 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private AirbyteMessageBufferedWriter writer = null;
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
+  private final DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   @VisibleForTesting
-  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher) {
+  public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this(integrationLauncher,
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(LOGGER, CONTAINER_LOG_MDC_BUILDER, Optional.empty(),
             Runtime.getRuntime().maxMemory(), false),
         new DefaultAirbyteMessageBufferedWriterFactory(),
-        new DefaultProtocolSerializer());
+        new DefaultProtocolSerializer(),
+        destinationTimeoutMonitor);
   }
 
+  @SuppressWarnings({"PMD.ArrayIsStoredDirectly", "PMD.UseVarargs"})
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher,
                                    final AirbyteStreamFactory streamFactory,
                                    final AirbyteMessageBufferedWriterFactory messageWriterFactory,
-                                   final ProtocolSerializer protocolSerializer) {
+                                   final ProtocolSerializer protocolSerializer,
+                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.messageWriterFactory = messageWriterFactory;
     this.protocolSerializer = protocolSerializer;
+    this.destinationTimeoutMonitor = destinationTimeoutMonitor;
   }
 
   @Override
@@ -104,6 +109,12 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void accept(final AirbyteMessage message) throws IOException {
+    destinationTimeoutMonitor.startAcceptTimer();
+    acceptWithNoTimeoutMonitor(message);
+    destinationTimeoutMonitor.resetAcceptTimer();
+  }
+
+  public void acceptWithNoTimeoutMonitor(final AirbyteMessage message) throws IOException {
     Preconditions.checkState(destinationProcess != null && !inputHasEnded.get());
 
     writer.write(message);
@@ -111,6 +122,12 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @Override
   public void notifyEndOfInput() throws IOException {
+    destinationTimeoutMonitor.startNotifyEndOfInputTimer();
+    notifyEndOfInputWithNoTimeoutMonitor();
+    destinationTimeoutMonitor.resetNotifyEndOfInputTimer();
+  }
+
+  public void notifyEndOfInputWithNoTimeoutMonitor() throws IOException {
     Preconditions.checkState(destinationProcess != null && !inputHasEnded.get());
 
     writer.flush();

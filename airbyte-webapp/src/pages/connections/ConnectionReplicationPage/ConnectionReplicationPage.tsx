@@ -31,8 +31,10 @@ import {
   tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
+import { ConnectionReplicationHookFormPage } from "./ConnectionReplicationHookFormPage";
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";
 
@@ -77,7 +79,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
   if (hasNonBreakingSchemaChange) {
     return (
       <Message
-        type="warning"
+        type="info"
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
         onAction={refreshSchema}
@@ -100,7 +102,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
   return null;
 };
 
-export const ConnectionReplicationPage: React.FC = () => {
+const ConnectionReplicationFormikFormPage: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const getStateType = useGetStateTypeQuery();
   const workspaceId = useCurrentWorkspaceId();
@@ -116,7 +118,7 @@ export const ConnectionReplicationPage: React.FC = () => {
     useConnectionFormService();
   const validationSchema = useConnectionValidationSchema({ mode });
 
-  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
+  useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION, { stream_count: connection.syncCatalog.streams.length });
 
   const saveConnection = useCallback(
     async (
@@ -301,4 +303,17 @@ export const ConnectionReplicationPage: React.FC = () => {
       )}
     </div>
   );
+};
+
+export const ConnectionReplicationPage: React.FC = () => {
+  /**
+   *TODO: remove conditional component rendering after successful CreateConnectionForm migration
+   *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+   * didn't want to add conditional logic to routes file, decided to do it here, since it's temporary
+   */
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  if (doUseCreateConnectionHookForm) {
+    return <ConnectionReplicationHookFormPage />;
+  }
+  return <ConnectionReplicationFormikFormPage />;
 };

@@ -14,20 +14,21 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
 
   // assume every stream with stats is in streamToEmittedRecords map
   return getStreamToEmittedRecords().map { (stream, records) ->
-    val syncStats: SyncStats = SyncStats()
-      .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
-      .withRecordsEmitted(records)
-      .withSourceStateMessagesEmitted(null)
-      .withDestinationStateMessagesEmitted(null)
-      .apply {
-        if (hasReplicationCompleted) {
-          bytesCommitted = tracker.getStreamToEmittedBytes()[stream]
-          recordsCommitted = tracker.getStreamToEmittedRecords()[stream]
-        } else {
-          bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
-          recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
+    val syncStats: SyncStats =
+      SyncStats()
+        .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
+        .withRecordsEmitted(records)
+        .withSourceStateMessagesEmitted(null)
+        .withDestinationStateMessagesEmitted(null)
+        .apply {
+          if (hasReplicationCompleted) {
+            bytesCommitted = tracker.getStreamToEmittedBytes()[stream]
+            recordsCommitted = tracker.getStreamToEmittedRecords()[stream]
+          } else {
+            bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
+            recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
+          }
         }
-      }
 
     StreamSyncStats()
       .withStreamName(stream.name)

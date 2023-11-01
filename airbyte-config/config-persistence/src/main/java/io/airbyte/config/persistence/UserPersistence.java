@@ -10,6 +10,7 @@ import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.select;
 
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -17,6 +18,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider;
 import io.airbyte.db.instance.configs.jooq.generated.enums.Status;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -145,17 +147,15 @@ public class UserPersistence {
    * Fetch user information from their authentication id.
    *
    * @param userAuthId the authentication Identifier of the user
-   * @param authProvider the authentication provider
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-  public Optional<User> getUserByAuthId(final String userAuthId, final User.AuthProvider authProvider) throws IOException {
+  public Optional<User> getUserByAuthId(final String userAuthId) throws IOException {
 
-    final AuthProvider sqlAuthProvider = Enums.toEnum(authProvider.value(), AuthProvider.class).orElseThrow();
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(USER)
-        .where(USER.AUTH_USER_ID.eq(userAuthId), USER.AUTH_PROVIDER.eq(sqlAuthProvider)).fetch());
+        .where(USER.AUTH_USER_ID.eq(userAuthId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();
@@ -190,6 +190,20 @@ public class UserPersistence {
    */
   public Optional<User> getDefaultUser() throws IOException {
     return getUser(DEFAULT_USER_ID);
+  }
+
+  /**
+   * Get all users that have read access to the specified workspace.
+   */
+  public List<User> getUsersWithWorkspaceAccess(final UUID workspaceId) throws IOException {
+    return database
+        .query(ctx -> ctx.fetch(
+            PermissionPersistenceHelper.LIST_USERS_BY_WORKSPACE_ID_AND_PERMISSION_TYPES_QUERY,
+            workspaceId,
+            PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER)))
+        .stream()
+        .map(this::createUserFromRecord)
+        .toList();
   }
 
 }

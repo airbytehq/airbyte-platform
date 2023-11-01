@@ -67,3 +67,10 @@
   height: 1px;
   background-color: colors.$foreground;
 }
+
+// Specificity hack: this style overrides an inner component's `margin-bottom` which is
+// defined with an additional `:not(last-child)` pseudoselector and therefore has higher
+// specificity than a single class selector.
+.traceback.traceback {
+  margin-bottom: 0;
+}

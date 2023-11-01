@@ -18,8 +18,9 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -35,12 +36,12 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
+import io.airbyte.micronaut.temporal.TemporalProxyHelper;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
-import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.inject.BeanIdentifier;
@@ -148,13 +149,15 @@ class SyncWorkflowTest {
         .withCatalog(syncInput.getCatalog())
         .withResourceRequirements(new ResourceRequirements())
         .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(new ConnectionContext());
 
     operatorDbtInput = new OperatorDbtInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt())
         .withConnectionId(syncInput.getConnectionId())
-        .withWorkspaceId(syncInput.getWorkspaceId());
+        .withWorkspaceId(syncInput.getWorkspaceId())
+        .withConnectionContext(new ConnectionContext());
 
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);
@@ -177,8 +180,8 @@ class SyncWorkflowTest {
         .setStartToCloseTimeout(Duration.ofDays(3))
         .setScheduleToStartTimeout(Duration.ofDays(3))
         .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-        .setRetryOptions(TemporalUtils.NO_RETRY)
-        .setHeartbeatTimeout(TemporalUtils.HEARTBEAT_TIMEOUT)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
     shortActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(120))
@@ -190,11 +193,11 @@ class SyncWorkflowTest {
         .build();
     discoveryActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(360))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
     refreshSchemaActivityOptions = ActivityOptions.newBuilder()
         .setStartToCloseTimeout(Duration.ofSeconds(360))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
 
     final BeanIdentifier longActivitiesBeanIdentifier = mock(BeanIdentifier.class);
@@ -422,7 +425,7 @@ class SyncWorkflowTest {
     syncInput.withOperationSequence(List.of(webhookOperation)).withWebhookOperationConfigs(workspaceWebhookConfigs);
     when(webhookOperationActivity.invokeWebhook(
         new OperatorWebhookInput().withWebhookConfigId(WEBHOOK_CONFIG_ID).withExecutionUrl(WEBHOOK_URL).withExecutionBody(WEBHOOK_BODY)
-            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs))).thenReturn(true);
+            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs).withConnectionContext(new ConnectionContext()))).thenReturn(true);
     final StandardSyncOutput actualOutput = execute();
     assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().get(0), WEBHOOK_CONFIG_ID);
   }
@@ -485,7 +488,9 @@ class SyncWorkflowTest {
         syncInput.getIsReset(),
         syncInput.getNamespaceDefinition(),
         syncInput.getNamespaceFormat(),
-        syncInput.getPrefix()));
+        syncInput.getPrefix(),
+        null,
+        new ConnectionContext()));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

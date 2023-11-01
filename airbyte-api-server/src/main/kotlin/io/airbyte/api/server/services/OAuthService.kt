@@ -13,7 +13,6 @@ import java.util.UUID
 import javax.validation.constraints.NotBlank
 
 interface OAuthService {
-
   fun getSourceConsentUrl(
     workspaceId: @NotBlank UUID,
     definitionId: @NotBlank UUID,

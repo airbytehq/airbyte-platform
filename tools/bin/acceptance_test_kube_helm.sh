@@ -106,23 +106,6 @@ fi
 echo "Running worker integration tests..."
 KUBE=true ./gradlew :airbyte-workers:integrationTest --scan
 
-echo "Printing system disk usage..."
-df -h
-
-echo "Printing docker disk usage..."
-docker system df
-
-if [ -n "$CI" ]; then
- echo "Pruning all images..."
- docker image prune --all --force
-
- echo "Printing system disk usage after pruning..."
- df -h
-
- echo "Printing docker disk usage after pruning..."
-fi
- docker system df
-
 echo "Running e2e tests via gradle..."
 # Note: we skip basic acceptance tests on local Kube.
 KUBE=true SKIP_BASIC_ACCEPTANCE_TESTS=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTest --scan

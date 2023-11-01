@@ -15,7 +15,6 @@ import java.util.Optional;
 /**
  * Interface layer between the API and Persistence layers.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class RetryStatesHandler {
 

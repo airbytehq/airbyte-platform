@@ -43,11 +43,7 @@ export const ConnectorTitleBlock = <T extends Connector>({
           </Heading>
           <FlexContainer alignItems="center">
             <Text color="grey">{titleInfo}</Text>
-            <SupportLevelBadge
-              supportLevel={actorDefinitionVersion.supportLevel}
-              custom={connectorDefinition.custom}
-              releaseStage={connectorDefinition.releaseStage}
-            />
+            <SupportLevelBadge supportLevel={actorDefinitionVersion.supportLevel} custom={connectorDefinition.custom} />
           </FlexContainer>
         </FlexContainer>
       </FlexContainer>

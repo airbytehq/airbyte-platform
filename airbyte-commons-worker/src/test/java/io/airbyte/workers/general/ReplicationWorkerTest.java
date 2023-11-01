@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.general;
 
+import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT;
+import static io.airbyte.metrics.lib.OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,6 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -34,6 +38,7 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
+import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSync;
@@ -44,11 +49,12 @@ import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
@@ -63,11 +69,14 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
+import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor.TimeoutException;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
@@ -98,6 +107,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -157,6 +167,8 @@ abstract class ReplicationWorkerTest {
   protected ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   protected FeatureFlagClient featureFlagClient;
   protected AirbyteMessageDataExtractor airbyteMessageDataExtractor;
+  protected ReplicationFeatureFlagReader replicationFeatureFlagReader;
+  protected DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   protected VoidCallable onReplicationRunning;
 
@@ -191,13 +203,15 @@ abstract class ReplicationWorkerTest {
     syncPersistence = mock(SyncPersistence.class);
     recordSchemaValidator = mock(RecordSchemaValidator.class);
     connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
-    metricClient = MetricClientFactory.getMetricClient();
+    metricClient = mock(MetricClient.class);
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
     airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     onReplicationRunning = mock(VoidCallable.class);
+    replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
     heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+    destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     featureFlagClient = mock(TestClient.class);
 
@@ -210,6 +224,7 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
@@ -784,6 +799,8 @@ abstract class ReplicationWorkerTest {
   void testPopulatesOutputOnSuccess() throws WorkerException {
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
+    when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(100L);
     when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
     when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(1L);
     when(syncStatsTracker.getStreamToEmittedBytes())
@@ -955,6 +972,56 @@ abstract class ReplicationWorkerTest {
   }
 
   @Test
+  void testDestinationTimeout() throws Exception {
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
+        .thenReturn(new ReplicationFeatureFlags(true));
+
+    destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
+        featureFlagClient,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        metricClient,
+        Duration.ofSeconds(1),
+        Duration.ofSeconds(1)));
+
+    destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
+
+    final AtomicBoolean acceptCallIsStuck = new AtomicBoolean(true);
+    doAnswer(invocation -> {
+      // replication is hanging on accept call
+      while (acceptCallIsStuck.get()) {
+        Thread.sleep(1000);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).resetAcceptTimer();
+
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
+
+    doAnswer(invocation -> {
+      try {
+        invocation.callRealMethod();
+      } finally {
+        // replication stops hanging on accept call
+        acceptCallIsStuck.set(false);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).runWithTimeoutThread(any());
+
+    sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
+
+    verify(metricClient).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+
+    assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.DESTINATION, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.DESTINATION_TIMEOUT, actual.getFailures().get(0).getFailureType());
+  }
+
+  @Test
   void testGetFailureReason() {
     final long jobId = 1;
     final int attempt = 1;
@@ -967,6 +1034,9 @@ abstract class ReplicationWorkerTest {
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
     failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
+    assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {

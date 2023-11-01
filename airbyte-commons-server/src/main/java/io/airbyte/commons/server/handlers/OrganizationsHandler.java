@@ -32,10 +32,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * OrganizationHandler for handling organization resource related operation.
- *
+ * <p>
  * Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class OrganizationsHandler {
 
@@ -60,11 +59,15 @@ public class OrganizationsHandler {
     final String email = organizationCreateRequestBody.getEmail();
     final UUID userId = organizationCreateRequestBody.getUserId();
     final UUID orgId = uuidGenerator.get();
+    final Boolean pba = organizationCreateRequestBody.getPba() != null && organizationCreateRequestBody.getPba();
+    final Boolean orgLevelBilling = organizationCreateRequestBody.getOrgLevelBilling() != null && organizationCreateRequestBody.getOrgLevelBilling();
     Organization organization = new Organization()
         .withOrganizationId(orgId)
         .withName(organizationName)
         .withEmail(email)
-        .withUserId(userId);
+        .withUserId(userId)
+        .withPba(pba)
+        .withOrgLevelBilling(orgLevelBilling);
     organizationPersistence.createOrganization(organization);
     // Also create an OrgAdmin permission.
     final Permission orgAdminPermission = new Permission()
@@ -86,6 +89,15 @@ public class OrganizationsHandler {
       organization.setName(organizationUpdateRequestBody.getOrganizationName());
       hasChanged = true;
     }
+    if (organizationUpdateRequestBody.getPba() != null && !organization.getPba().equals(organizationUpdateRequestBody.getPba())) {
+      organization.setPba(organizationUpdateRequestBody.getPba());
+      hasChanged = true;
+    }
+    if (organizationUpdateRequestBody.getOrgLevelBilling() != null && !organization.getOrgLevelBilling()
+        .equals(organizationUpdateRequestBody.getOrgLevelBilling())) {
+      organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
+      hasChanged = true;
+    }
     if (hasChanged) {
       organizationPersistence.updateOrganization(organization);
     }
@@ -94,7 +106,7 @@ public class OrganizationsHandler {
 
   public OrganizationRead getOrganization(final OrganizationIdRequestBody organizationIdRequestBody) throws IOException, ConfigNotFoundException {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
-    Optional<Organization> organization = organizationPersistence.getOrganization(organizationId);
+    final Optional<Organization> organization = organizationPersistence.getOrganization(organizationId);
     if (organization.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId);
     }
@@ -102,7 +114,6 @@ public class OrganizationsHandler {
   }
 
   public OrganizationReadList listOrganizationsByUser(final ListOrganizationsByUserRequestBody request) throws IOException {
-
     Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
     List<OrganizationRead> organizationReadList;
     if (request.getPagination() != null) {
@@ -122,14 +133,16 @@ public class OrganizationsHandler {
           .collect(Collectors.toList());
     }
     return new OrganizationReadList().organizations(organizationReadList);
-
   }
 
   private static OrganizationRead buildOrganizationRead(final Organization organization) {
     return new OrganizationRead()
         .organizationId(organization.getOrganizationId())
         .organizationName(organization.getName())
-        .email(organization.getEmail());
+        .email(organization.getEmail())
+        .pba(organization.getPba())
+        .orgLevelBilling(organization.getOrgLevelBilling())
+        .ssoRealm(organization.getSsoRealm());
   }
 
 }

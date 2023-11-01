@@ -13,7 +13,7 @@ import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
-import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Value;
@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Factory
 @Slf4j
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ApplicationBeanFactory {
 
   @Singleton
@@ -77,8 +77,8 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
-    return new StateAggregatorFactory(featureFlags);
+  public StateAggregatorFactory stateAggregatorFactory() {
+    return new StateAggregatorFactory();
   }
 
   @Singleton

@@ -23,3 +23,7 @@ flags:
     serve: true
   - name: refreshSchema.period.hours
     serve: 0
+  - name: platform.auto-backfill-on-new-columns
+    serve: true
+  - name: platform.remove-large-sync-inputs
+    serve: true

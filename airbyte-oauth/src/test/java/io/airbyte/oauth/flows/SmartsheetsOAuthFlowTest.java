@@ -13,7 +13,7 @@ import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"MissingJavadocType", "PMD.JUnitTestsShouldIncludeAssert"})
+@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class SmartsheetsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

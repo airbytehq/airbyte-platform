@@ -28,6 +28,7 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
     private val serialVersionUID = 1L
     private val TYPE = URI.create("$API_DOC_URL/reference/errors")
     private const val TITLE = "bad-request"
+
     fun handleSyncModeProblem(
       connectionSyncMode: @Valid ConnectionSyncModeEnum?,
       streamName: String,
@@ -48,7 +49,10 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       return ConnectionConfigurationProblem("Duplicate stream found in configuration for: $streamName.")
     }
 
-    fun sourceDefinedCursorFieldProblem(streamName: String, cursorField: List<String?>): ConnectionConfigurationProblem {
+    fun sourceDefinedCursorFieldProblem(
+      streamName: String,
+      cursorField: List<String?>,
+    ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "Cursor Field " + cursorField + " is already defined by source for stream: " + streamName +
           ". Do not include a cursor field configuration for this stream.",
@@ -61,7 +65,10 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
-    fun invalidCursorField(streamName: String, validFields: List<List<String?>?>): ConnectionConfigurationProblem {
+    fun invalidCursorField(
+      streamName: String,
+      validFields: List<List<String?>?>,
+    ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "Invalid cursor field for stream: $streamName. The list of valid cursor fields include: $validFields.",
       )
@@ -79,7 +86,10 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
-    fun invalidPrimaryKey(streamName: String, validFields: List<List<String?>?>): ConnectionConfigurationProblem {
+    fun invalidPrimaryKey(
+      streamName: String,
+      validFields: List<List<String?>?>,
+    ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "Invalid cursor field for stream: $streamName. The list of valid primary keys fields: $validFields.",
       )
@@ -92,7 +102,10 @@ class ConnectionConfigurationProblem private constructor(message: String) : Abst
       )
     }
 
-    fun invalidCronExpression(cronExpression: String, message: String?): ConnectionConfigurationProblem {
+    fun invalidCronExpression(
+      cronExpression: String,
+      message: String?,
+    ): ConnectionConfigurationProblem {
       return ConnectionConfigurationProblem(
         "The cron expression $cronExpression is not valid. Error: $message" +
           ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",

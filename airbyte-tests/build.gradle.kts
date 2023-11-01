@@ -29,8 +29,8 @@ testing {
         implementation(libs.postgresql)
 
         // needed for fabric to connect to k8s.
-        runtimeOnly("org.bouncycastle:bcprov-jdk15on:1.66")
-        runtimeOnly("org.bouncycastle:bcpkix-jdk15on:1.66")
+        runtimeOnly(libs.bouncycastle.bcpkix)
+        runtimeOnly(libs.bouncycastle.bcprov)
     }
 }
 

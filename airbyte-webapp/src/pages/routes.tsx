@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
+import { FeatureItem, useFeature } from "core/services/features";
+import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -118,6 +120,11 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 
 export const Routing: React.FC = () => {
   useBuildUpdateCheck();
+  const { search } = useLocation();
+
+  useEffectOnce(() => {
+    storeUtmFromQuery(search);
+  });
 
   // TODO: Remove this after it is verified there are no problems with current routing
   const OldRoutes = useMemo(
@@ -126,7 +133,7 @@ export const Routing: React.FC = () => {
     []
   );
 
-  const isNewWorkspacesUIEnabled = useExperiment("workspaces.newWorkspacesUI", false);
+  const isNewWorkspacesUIEnabled = useFeature(FeatureItem.MultiWorkspaceUI);
 
   return (
     <Routes>

@@ -49,7 +49,7 @@ interface OrganizationWorkspacesCreateControlProps {
 }
 
 export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateControlProps> = ({ createWorkspace }) => {
-  const organizations = useOrganizationsToCreateWorkspaces();
+  const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
@@ -59,7 +59,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
   const isFirstWorkspace = workspaces.length === 0;
 
   // if the user does not have create permissions in any organizations, do not show the control at all
-  if (organizations.length === 0) {
+  if (organizationsToCreateIn.length === 0) {
     return null;
   }
 
@@ -93,14 +93,14 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
           <Form<CreateWorkspaceFormValues>
             defaultValues={{
               name: "",
-              organizationId: organizations[0].organizationId,
+              organizationId: organizationsToCreateIn[0].organizationId,
             }}
             schema={OrganizationCreateWorkspaceFormValidationSchema}
             onSubmit={onSubmit}
             onSuccess={onSuccess}
             onError={onError}
           >
-            <WorkspaceCreateControlFormContent organizations={organizations} toggleMode={toggleMode} />
+            <WorkspaceCreateControlFormContent organizations={organizationsToCreateIn} toggleMode={toggleMode} />
           </Form>
         </Card>
       ) : (

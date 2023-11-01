@@ -2,11 +2,11 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.featureflag
-
 /**
  * Feature-Flag definitions are defined in this file.
  */
+
+package io.airbyte.featureflag
 
 /**
  * If enabled, all messages from the source to the destination will be logged in 1 second intervals.
@@ -14,8 +14,6 @@ package io.airbyte.featureflag
  * This is a permanent flag and would implement the [Permanent] type once converted from an environment-variable.
  */
 object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
-
-object StreamCapableState : EnvVar(envVar = "USE_STREAM_CAPABLE_STATE")
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
@@ -26,8 +24,6 @@ object NormalizationInDestination : Temporary<String>(key = "connectors.normaliz
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
-
-object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
@@ -55,6 +51,8 @@ object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-sch
 
 object AutoBackfillOnNewColumns : Temporary<Boolean>(key = "platform.auto-backfill-on-new-columns", default = false)
 
+object ResetBackfillState : Temporary<Boolean>(key = "platform.reset-backfill-state", default = false)
+
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -64,6 +62,10 @@ object HeartbeatMaxSecondsBetweenMessages : Permanent<String>(key = "heartbeat-m
 object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = true)
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
+
+object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = false)
+
+object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = false)
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 
@@ -111,6 +113,8 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
+object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
+
 /**
  * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
  * the sync input.
@@ -120,16 +124,18 @@ object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-s
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
-    val enabledWorkspaceIds: List<String> = fetcher(key)
-      ?.takeIf { it.isNotEmpty() }
-      ?.split(",")
-      ?: listOf()
+    val enabledWorkspaceIds: List<String> =
+      fetcher(key)
+        ?.takeIf { it.isNotEmpty() }
+        ?.split(",")
+        ?: listOf()
 
-    val contextWorkspaceIds: List<String> = when (ctx) {
-      is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
-      is Workspace -> listOf(ctx.key)
-      else -> listOf()
-    }
+    val contextWorkspaceIds: List<String> =
+      when (ctx) {
+        is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
+        is Workspace -> listOf(ctx.key)
+        else -> listOf()
+      }
 
     return when (contextWorkspaceIds.any { it in enabledWorkspaceIds }) {
       true -> true
@@ -149,3 +155,7 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 object RunSocatInConnectorContainer : Temporary<Boolean>(key = "platform.run-socat-in-connector-container", default = false)
 
 object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-big", default = false)
+
+object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
+
+object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)

@@ -33,7 +33,8 @@ class AirbyteMessageTrackerTest {
 
   @BeforeEach
   void setup() {
-    this.messageTracker = new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags());
+    this.messageTracker =
+        new AirbyteMessageTracker(syncStatsTracker, new EnvVariableFeatureFlags(), "airbyte/source-image", "airbyte/destination-image");
   }
 
   @Test
@@ -106,6 +107,24 @@ class AirbyteMessageTrackerTest {
     messageTracker.acceptFromDestination(trace);
 
     verify(syncStatsTracker).updateEstimates(trace.getTrace().getEstimate());
+  }
+
+  @Test
+  void testAcceptFromDestinationTraceAnalytics() {
+    final AirbyteMessage trace = AirbyteMessageUtils.createAnalyticsTraceMessage("abc", "def");
+
+    messageTracker.acceptFromDestination(trace);
+
+    verifyNoInteractions(syncStatsTracker);
+  }
+
+  @Test
+  void testAcceptFromSourceTraceAnalytics() {
+    final AirbyteMessage trace = AirbyteMessageUtils.createAnalyticsTraceMessage("abc", "def");
+
+    messageTracker.acceptFromSource(trace);
+
+    verifyNoInteractions(syncStatsTracker);
   }
 
   @Test

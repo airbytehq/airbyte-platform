@@ -45,6 +45,7 @@ export interface Option<T> {
   value: T;
   icon?: React.ReactNode;
   disabled?: boolean;
+  testId?: string;
 }
 
 export interface ListBoxProps<T> {
@@ -121,7 +122,7 @@ export const ListBox = <T,>({
           <Listbox.Options className={classNames(styles.optionsMenu, optionsMenuClassName)}>
             {options.length > 0 && (
               <>
-                {options.map(({ label, value, icon, disabled }, index) => (
+                {options.map(({ label, value, icon, disabled, testId }, index) => (
                   <Listbox.Option
                     key={typeof label === "string" ? label : index}
                     value={value}
@@ -130,6 +131,7 @@ export const ListBox = <T,>({
                       [styles.disabled]: disabled,
                     })}
                     onClick={(e) => e.stopPropagation()}
+                    {...(testId && { "data-testid": testId })}
                   >
                     {({ active, selected }) => (
                       <FlexContainer

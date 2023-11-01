@@ -1,5 +1,6 @@
 [versions]
-airbyte-protocol = "0.4.1"
+airbyte-protocol = "0.4.2"
+bouncycastle = "1.70"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
 datadog-version = "1.14.0"
@@ -27,8 +28,9 @@ micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.8.0"
 micronaut-kotlin-extensions = "3.2.2"
 micronaut-micrometer = "4.8.3"
+micronaut-openapi = "4.10.0"
 micronaut-security = "3.11.1"
-micronaut-test = "3.8.2"
+micronaut-test = "3.9.2"
 moshi = "1.15.0"
 mockito = "4.11.0"
 mockito-kotlin = "5.1.0"
@@ -40,6 +42,7 @@ segment = "2.1.1"
 sentry = "6.14.0"
 slf4j = "1.7.36"
 swagger = "1.6.2"
+v3-swagger = "2.2.16"
 temporal = "1.17.0"
 
 [libraries]
@@ -55,6 +58,9 @@ appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0"
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
+aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
@@ -71,6 +77,7 @@ findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", 
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 glassfish = { module = "org.glassfish.jersey:jackson-bom", version.ref = "glassfish_version" }
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.17.2" }
+google-cloud-storage-secretmanager = { module = "com.google.cloud:google-cloud-secretmanager", version = "2.0.5" }
 guava = { module = "com.google.guava:guava", version = "31.1-jre" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "fasterxml_version" }
@@ -79,6 +86,7 @@ jackson-dataformat = { module = "com.fasterxml.jackson.dataformat:jackson-datafo
 jackson-datatype = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "fasterxml_version" }
 jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "fasterxml_version" }
 java-dogstatsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.1.0" }
+java-jwt = { module = "com.auth0:java-jwt", version = "3.19.2" }
 javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "java-common-annotations" }
 javax-databind = { module = "javax.xml.bind:jaxb-api", version = "2.4.0-b180830.0359" }
 javax-validation-api = { module = "javax.validation:validation-api", version.ref = "java-beans-validation" }
@@ -100,6 +108,8 @@ junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" 
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "1.9.10" }
+kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
 launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.0.1" }
@@ -115,7 +125,7 @@ mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
-mockk = { module = "io.mockk:mockk", version = "1.13.3" }
+mockk = { module = "io.mockk:mockk", version = "1.13.8" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
@@ -129,8 +139,10 @@ platform-testcontainers-postgresql = { module = "org.testcontainers:postgresql",
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
+reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version = "1.2.2" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
 s3 = { module = "software.amazon.awssdk:s3", version = "2.16.84" }
+sts = { module = "software.amazon.awssdk:sts", version = "2.20.162" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
@@ -139,14 +151,18 @@ spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", ve
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
 stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
+v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
+testcontainers-vault = { module = "org.testcontainers:vault",  version = "1.18.3" }
+vault-java-driver = { module = "com.bettercloud:vault-java-driver", version = "5.1.0" }
 
 # Micronaut-related dependencies
-h2-database = { module = "com.h2database:h2", version = "2.1.214" }
+h2-database = { module = "com.h2database:h2", version = "2.2.224" }
 jakarta-inject = { module = "jakarta.annotation:jakarta.annotation-api", version = "2.1.1" }
 jakarta-persistence-api = { module = "jakarta.persistence:jakarta.persistence-api", version = "3.1.0" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version = "3.0.2" }
 javax-transaction = { module = "javax.transaction:javax.transaction-api", version = "1.3" }
 micronaut-bom = { module = "io.micronaut:micronaut-bom", version.ref = "micronaut" }
 micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine", version = "3.5.0" }
@@ -174,6 +190,7 @@ micronaut-kotlin-extensions = { module = "io.micronaut.kotlin:micronaut-kotlin-e
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
+micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "2.6.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "5.3.2" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
@@ -184,21 +201,23 @@ micronaut-validation = { module = "io.micronaut:micronaut-validation", version.r
 
 [bundles]
 apache = ["apache-commons", "apache-commons-lang"]
+bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype"]
-junit = ["junit-jupiter-api", "junit-jupiter-params", "mockito-junit-jupiter"]
+junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
 log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
-micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
-micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
+micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-openapi"]
+micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]
+secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j", "log4j-over-slf4j"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]
 

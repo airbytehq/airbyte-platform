@@ -15,6 +15,7 @@ const [
   cursorRadioButton,
   primaryKeyCheckbox,
   destinationFieldName,
+  syncFieldSwitch,
 ] = getTestIds(
   "stream-details",
   "stream-details-sync-stream-switch",
@@ -25,7 +26,8 @@ const [
   "stream-source-field-data-type",
   "field-cursor-radio-button",
   "field-primary-key-checkbox",
-  "stream-destination-field-name"
+  "stream-destination-field-name",
+  "sync-field-switch"
 );
 
 const getFieldTableRowTestId = (rowIndex: number) => getTestId(`table-row-${rowIndex}`);
@@ -80,6 +82,18 @@ export class StreamDetailsPageObject {
 
   isClosed() {
     cy.get(streamDetailsPanel).should("not.exist");
+  }
+
+  scrollToBottom() {
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("bottom");
+    });
+  }
+
+  scrollToTop() {
+    return cy.get(streamDetailsPanel).within(() => {
+      cy.get("div[data-test-id='virtuoso-scroller']").scrollTo("top");
+    });
   }
 
   enableSyncStream() {
@@ -145,7 +159,7 @@ export class StreamDetailsPageObject {
 
   selectCursor(fieldName: string) {
     getRowByFieldName(fieldName).within(() => {
-      cy.get(cursorRadioButton).parent().click();
+      cy.get(cursorRadioButton).parent().click({ scrollBehavior: false });
       cy.get(cursorRadioButton).should("be.checked");
     });
   }
@@ -199,6 +213,12 @@ export class StreamDetailsPageObject {
       getRowByFieldName(name).within(() => {
         verifyPrimaryKey(fieldNames, name, true);
       });
+    });
+  }
+
+  areFieldsDeselected() {
+    cy.get(syncFieldSwitch).each(($el) => {
+      cy.wrap($el).should("not.be.checked");
     });
   }
 }

@@ -81,7 +81,10 @@ object AirbyteCatalogHelper {
    * @param streamConfigurations - configurations passed in by the user.
    * @return boolean so we can callWithTracker
    */
-  fun validateStreams(referenceCatalog: AirbyteCatalog, streamConfigurations: StreamConfigurations): Boolean {
+  fun validateStreams(
+    referenceCatalog: AirbyteCatalog,
+    streamConfigurations: StreamConfigurations,
+  ): Boolean {
     val validStreams = getValidStreams(referenceCatalog)
     val alreadyConfiguredStreams: MutableSet<String> = HashSet()
     for (streamConfiguration in streamConfigurations.streams) {
@@ -311,12 +314,13 @@ object AirbyteCatalogHelper {
     val yamlMapper = ObjectMapper(YAMLFactory())
     val streamFields: MutableList<List<String>> = ArrayList()
     val spec: JsonNode
-    spec = try {
-      yamlMapper.readTree<JsonNode>(connectorSchema.traverse())
-    } catch (e: IOException) {
-      log.error("Error getting stream fields from schema", e)
-      throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
-    }
+    spec =
+      try {
+        yamlMapper.readTree<JsonNode>(connectorSchema.traverse())
+      } catch (e: IOException) {
+        log.error("Error getting stream fields from schema", e)
+        throw UnexpectedProblem(HttpStatus.INTERNAL_SERVER_ERROR)
+      }
     val fields = spec.fields()
     while (fields.hasNext()) {
       val (key, paths) = fields.next()

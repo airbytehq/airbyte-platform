@@ -1,8 +1,11 @@
 /* eslint-disable check-file/filename-blocklist */
 // temporary disable eslint rule for this file during form migration
-import React, { createContext, useContext } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
+import { FieldErrors } from "react-hook-form/dist/types/errors";
+import { useIntl } from "react-intl";
 
 import {
+  useSourceDefinitionVersion,
   useDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification,
@@ -15,6 +18,7 @@ import {
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
+import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
@@ -37,31 +41,11 @@ interface ConnectionServiceProps {
   refreshSchema: () => Promise<void>;
 }
 
-// not sure this one should be here, consider moving it to the another file or utils file
-// export const tidyConnectionHookFormValues = (
-//   values: HookFormConnectionFormValues,
-//   workspaceId: string,
-//   validationSchema: ConnectionValidationSchema,
-//   operations?: OperationRead[]
-// ): ConnectionValues => {
-//   // TODO (https://github.com/airbytehq/airbyte/issues/17279): We should try to fix the types so we don't need the casting.
-//   const formValues: ConnectionFormValues = validationSchema.cast(values, {
-//     context: { isRequest: true },
-//   }) as unknown as ConnectionFormValues;
-//
-//   formValues.operations = mapFormPropsToOperation(values, operations, workspaceId);
-//
-//   if (formValues.scheduleType === ConnectionScheduleType.manual) {
-//     // Have to set this to undefined to override the existing scheduleData
-//     formValues.scheduleData = undefined;
-//   }
-//   return formValues;
-// };
-
 interface ConnectionHookFormHook {
   connection: ConnectionOrPartialConnection;
   mode: ConnectionFormMode;
   sourceDefinition: SourceDefinitionRead;
+  sourceDefinitionVersion: ActorDefinitionVersionRead;
   sourceDefinitionSpecification: SourceDefinitionSpecificationRead;
   destDefinition: DestinationDefinitionRead;
   destDefinitionVersion: ActorDefinitionVersionRead;
@@ -69,12 +53,11 @@ interface ConnectionHookFormHook {
   initialValues: HookFormConnectionFormValues;
   schemaError?: SchemaError;
   refreshSchema: () => Promise<void>;
-  // formId: string;
-  // setSubmitError: (submitError: FormError | null) => void;
-  // getErrorMessage: (
-  //   formValid: boolean,
-  //   errors?: FormikErrors<FormikConnectionFormValues>
-  // ) => string | JSX.Element | null;
+  setSubmitError: (submitError: FormError | null) => void;
+  getErrorMessage: (
+    formValid: boolean,
+    errors?: FieldErrors<HookFormConnectionFormValues>
+  ) => string | JSX.Element | null;
 }
 
 const useConnectionHookForm = ({
@@ -84,11 +67,12 @@ const useConnectionHookForm = ({
   refreshSchema,
 }: ConnectionServiceProps): ConnectionHookFormHook => {
   const {
-    source: { sourceDefinitionId },
+    source: { sourceId, sourceDefinitionId },
     destination: { destinationId, destinationDefinitionId },
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
+  const sourceDefinitionVersion = useSourceDefinitionVersion(sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
 
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
@@ -101,46 +85,35 @@ const useConnectionHookForm = ({
   const initialValues = useInitialHookFormValues(
     connection,
     destDefinitionVersion,
+    destDefinitionSpecification,
     mode !== "create"
-    // destDefinitionSpecification,
   );
-  // const { formatMessage } = useIntl();
-  // const [submitError, setSubmitError] = useState<FormError | null>(null);
+  const { formatMessage } = useIntl();
+  const [submitError, setSubmitError] = useState<FormError | null>(null);
 
-  /**
-   * not sure we need this in react-hook-form, since we have change tracker inside thr base form
-   */
+  const getErrorMessage = useCallback<ConnectionHookFormHook["getErrorMessage"]>(
+    (formValid, errors) => {
+      if (submitError) {
+        return generateMessageFromError(submitError);
+      }
 
-  // const formId = useUniqueFormId();
+      if (!formValid) {
+        const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
+        return formatMessage({
+          id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
+        });
+      }
 
-  /**
-   * commented out because need to figure out how to manage errors with react-hook-form
-   */
-  // const getErrorMessage = useCallback<ConnectionHookFormHook["getErrorMessage"]>(
-  //   (formValid, errors) => {
-  //     if (submitError) {
-  //       return generateMessageFromError(submitError);
-  //     }
-  //
-  //     // There is a case when some fields could be dropped in the database. We need to validate the form without property dirty
-  //     const hasValidationError = !formValid;
-  //
-  //     if (hasValidationError) {
-  //       const hasNoStreamsSelectedError = errors?.syncCatalog?.streams === "connectionForm.streams.required";
-  //       return formatMessage({
-  //         id: hasNoStreamsSelectedError ? "connectionForm.streams.required" : "connectionForm.validation.error",
-  //       });
-  //     }
-  //
-  //     return null;
-  //   },
-  //   [formatMessage, submitError]
-  // );
+      return null;
+    },
+    [formatMessage, submitError]
+  );
 
   return {
     connection,
     mode,
     sourceDefinition,
+    sourceDefinitionVersion,
     sourceDefinitionSpecification,
     destDefinition,
     destDefinitionVersion,
@@ -148,9 +121,8 @@ const useConnectionHookForm = ({
     initialValues,
     schemaError,
     refreshSchema,
-    // formId,
-    // setSubmitError,
-    // getErrorMessage,
+    setSubmitError,
+    getErrorMessage,
   };
 };
 

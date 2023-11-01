@@ -76,7 +76,6 @@ public class ApplicationBeanFactory {
     return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public JobNotifier jobNotifier(
                                  final ConfigRepository configRepository,
@@ -99,7 +98,7 @@ public class ApplicationBeanFactory {
     return new DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient);
   }
 
-  @SuppressWarnings({"ParameterName", "MissingJavadocMethod"})
+  @SuppressWarnings("ParameterName")
   @Singleton
   public SyncJobFactory jobFactory(
                                    final ConfigRepository configRepository,
@@ -142,7 +141,6 @@ public class ApplicationBeanFactory {
     return Path.of(workspaceRoot);
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public JsonSecretsProcessor jsonSecretsProcessor(final FeatureFlags featureFlags) {
     return JsonSecretsProcessor.builder()

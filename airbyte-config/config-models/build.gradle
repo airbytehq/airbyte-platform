@@ -20,6 +20,7 @@ dependencies {
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation libs.s3
+    implementation libs.sts
     implementation libs.bundles.apache
 
     compileOnly libs.lombok

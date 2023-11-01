@@ -77,6 +77,8 @@ const Admonition = ({ children, type }: { children: ReactNode; type: string }) =
   return <div className={classNames(styles.admonition, styles[`admonition--${type}`])}>{children}</div>;
 };
 
+const HideInUI = () => null;
+
 export const Markdown: React.FC<MarkdownToJsxProps> = React.memo(({ className, content, options }) => {
   const processedMarkdown = useMemo(() => preprocessMarkdown(content), [content]);
   return (
@@ -94,6 +96,9 @@ export const Markdown: React.FC<MarkdownToJsxProps> = React.memo(({ className, c
             },
             admonition: {
               component: Admonition,
+            },
+            HideInUI: {
+              component: HideInUI,
             },
           },
         }}

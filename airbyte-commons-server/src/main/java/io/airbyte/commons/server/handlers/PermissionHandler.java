@@ -15,20 +15,26 @@ import io.airbyte.api.model.generated.PermissionType;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.lang.Exceptions;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
+import io.airbyte.config.UserPermission;
+import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.config.persistence.SQLOperationNotAllowedException;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.jooq.exception.DataAccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,19 +42,21 @@ import org.slf4j.LoggerFactory;
  * PermissionHandler, provides basic CRUD operation access for permissions. Some are migrated from
  * Cloud PermissionHandler {@link io.airbyte.cloud.server.handlers.PermissionHandler}.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
 public class PermissionHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PermissionHandler.class);
   private final Supplier<UUID> uuidGenerator;
   private final PermissionPersistence permissionPersistence;
+  private final WorkspaceService workspaceService;
 
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
+                           final WorkspaceService workspaceService,
                            final Supplier<UUID> uuidGenerator) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
+    this.workspaceService = workspaceService;
   }
 
   /**
@@ -61,7 +69,12 @@ public class PermissionHandler {
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
   public PermissionRead createPermission(final PermissionCreate permissionCreate)
-      throws IOException {
+      throws IOException, JsonValidationException {
+
+    // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
+    if (permissionCreate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+      throw new JsonValidationException("Cannot create INSTANCE_ADMIN permission record.");
+    }
 
     final Optional<PermissionRead> existingPermission = getExistingPermission(permissionCreate);
     if (existingPermission.isPresent()) {
@@ -155,83 +168,186 @@ public class PermissionHandler {
 
   /**
    * Updates the permissions.
+   * <p>
+   * We only allow updating permission type between workspace level roles OR organization level roles.
+   * <p>
+   * Valid examples: 1. update "workspace_xxx" to "workspace_yyy" 2. update "organization_xxx" to
+   * "organization_yyy" (only invalid when demoting the LAST organization_admin role in an org to
+   * another organization level role)
+   * <p>
+   * Invalid examples: 1. update "instance_admin" to any other types 2. update "workspace_xxx" to
+   * "organization_xxx"/"instance_admin" 3. update "organization_xxx" to
+   * "workspace_xxx"/"instance_admin"
    *
    * @param permissionUpdate The permission update.
    * @return The updated permission.
    * @throws IOException if unable to update the permissions.
    * @throws ConfigNotFoundException if unable to update the permissions.
-   * @throws JsonValidationException if unable to update the permissions.
+   * @throws OperationNotAllowedException if update is prevented by business logic.
    */
   public PermissionRead updatePermission(final PermissionUpdate permissionUpdate)
-      throws IOException, ConfigNotFoundException {
-    final Permission permission = new Permission()
+      throws IOException, ConfigNotFoundException, OperationNotAllowedException, JsonValidationException {
+
+    // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
+    if (permissionUpdate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+      throw new JsonValidationException("Cannot update permission record to INSTANCE_ADMIN.");
+    }
+
+    final Permission updatedPermission = new Permission()
         .withPermissionId(permissionUpdate.getPermissionId())
-        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class))
-        .withUserId(permissionUpdate.getUserId())
-        .withWorkspaceId(permissionUpdate.getWorkspaceId())
-        .withOrganizationId(permissionUpdate.getOrganizationId());
-
-    permissionPersistence.writePermission(permission);
-
+        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class));
+    try {
+      permissionPersistence.writePermission(updatedPermission);
+    } catch (final DataAccessException e) {
+      if (e.getCause() instanceof SQLOperationNotAllowedException) {
+        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
+      } else {
+        throw new IOException(e);
+      }
+    }
     return buildPermissionRead(permissionUpdate.getPermissionId());
   }
 
   /**
-   * Checks the permissions associated with a user.
+   * Checks the permissions associated with a user. All user permissions are fetched and each one is
+   * checked against the requested permission. If any of the user's permissions meet the requirements
+   * of the permission check, then the check succeeds.
    *
-   * @param permissionCheckRequest The permission. check request.
+   * @param permissionCheckRequest The permission check request.
    * @return The result of the permission check.
    * @throws IOException if unable to check the permission.
-   * @throws JsonValidationException if unable to check the permission.
    */
   public PermissionCheckRead checkPermissions(final PermissionCheckRequest permissionCheckRequest) throws IOException {
-    final List<PermissionRead> permissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
-    final boolean anyMatch = permissions.stream().anyMatch(p -> checkPermissions(permissionCheckRequest, p));
+    final List<PermissionRead> userPermissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
+
+    final boolean anyMatch =
+        userPermissions.stream().anyMatch(userPermission -> Exceptions.toRuntime(() -> checkPermissions(permissionCheckRequest, userPermission)));
+
     return new PermissionCheckRead().status(anyMatch ? StatusEnum.SUCCEEDED : StatusEnum.FAILED);
   }
 
-  private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead permissionRead) {
-    if (!permissionCheckRequest.getUserId().equals(permissionRead.getUserId())) {
+  /**
+   * Checks whether a particular user permission meets the requirements of a particular permission
+   * check request. Organization-level user permissions grant workspace-level permissions as long as
+   * the workspace in question belongs to the user's organization, so this method contains logic to
+   * see if the requested permission is for a workspace that the user permission should grant access
+   * to.
+   */
+  private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead userPermission)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+
+    if (mismatchedUserIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    // instance admin permissions have access to everything
-    if (permissionRead.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+    // if the user is an instance admin, return true immediately, since instance admins have access to
+    // everything by definition.
+    if (userPermission.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
       return true;
     }
 
-    if (permissionCheckRequest.getWorkspaceId() != null && !permissionCheckRequest.getWorkspaceId().equals(permissionRead.getWorkspaceId())) {
+    if (mismatchedWorkspaceIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    if (permissionCheckRequest.getOrganizationId() != null
-        && !permissionCheckRequest.getOrganizationId().equals(permissionRead.getOrganizationId())) {
+    if (mismatchedOrganizationIds(userPermission, permissionCheckRequest)) {
       return false;
     }
 
-    return permissionCheckRequest.getPermissionType().equals(permissionRead.getPermissionType());
+    if (requestedWorkspaceNotInOrganization(userPermission, permissionCheckRequest)) {
+      return false;
+    }
+
+    // by this point, we know we can directly compare the user permission's type to the requested
+    // permission's type, because all underlying user/workspace/organization IDs are valid.
+    return PermissionHelper.definedPermissionGrantsTargetPermission(
+        Enums.convertTo(userPermission.getPermissionType(), Permission.PermissionType.class),
+        Enums.convertTo(permissionCheckRequest.getPermissionType(), Permission.PermissionType.class));
+  }
+
+  // check if this permission request is for a user that doesn't match the user permission.
+  // in practice, this shouldn't happen because we fetch user permissions based on the request.
+  private boolean mismatchedUserIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return !userPermission.getUserId().equals(request.getUserId());
+  }
+
+  // check if this permission request is for a workspace that doesn't match the user permission.
+  private boolean mismatchedWorkspaceIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return userPermission.getWorkspaceId() != null && !userPermission.getWorkspaceId().equals(request.getWorkspaceId());
+  }
+
+  // check if this permission request is for an organization that doesn't match the user permission.
+  private boolean mismatchedOrganizationIds(final PermissionRead userPermission, final PermissionCheckRequest request) {
+    return userPermission.getOrganizationId() != null
+        && request.getOrganizationId() != null
+        && !userPermission.getOrganizationId().equals(request.getOrganizationId());
+  }
+
+  // check if this permission request is for a workspace that belongs to a different organization than
+  // the user permission.
+  private boolean requestedWorkspaceNotInOrganization(final PermissionRead userPermission, final PermissionCheckRequest request)
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+
+    // if the user permission is for an organization, and the request is for a workspace, return true if
+    // the workspace
+    // does not belong to the organization.
+    if (userPermission.getOrganizationId() != null && request.getWorkspaceId() != null) {
+      final UUID requestedWorkspaceOrganizationId =
+          workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
+      return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
+    }
+
+    // else, not a workspace-level request with an org-level user permission, so return false.
+    return false;
   }
 
   /**
    * Given multiple workspaceIds, checks whether the user has at least the given permissionType for
    * all workspaceIds.
    *
-   * @param permissionsCheckMultipleWorkspacesRequest The permissions check request
+   * @param multiRequest The permissions check request with multiple workspaces
    * @return The result of the permission check.
    * @throws IOException If unable to check the permission.
    */
   @SuppressWarnings("LineLength")
-  public PermissionCheckRead permissionsCheckMultipleWorkspaces(final PermissionsCheckMultipleWorkspacesRequest permissionsCheckMultipleWorkspacesRequest)
-      throws IOException {
-    final List<PermissionRead> permissions = listPermissionsByUser(permissionsCheckMultipleWorkspacesRequest.getUserId()).getPermissions();
-    final List<UUID> permissionedWorkspaceIds = permissions.stream()
-        .filter(
-            (permission) -> permission.getPermissionType() != null
-                && permission.getPermissionType().equals(permissionsCheckMultipleWorkspacesRequest.getPermissionType()))
-        .map(PermissionRead::getWorkspaceId).toList();
-    final boolean success =
-        new HashSet<UUID>(permissionedWorkspaceIds).containsAll(new HashSet<UUID>(permissionsCheckMultipleWorkspacesRequest.getWorkspaceIds()));
-    return success ? new PermissionCheckRead().status(StatusEnum.SUCCEEDED) : new PermissionCheckRead().status(StatusEnum.FAILED);
+  public PermissionCheckRead permissionsCheckMultipleWorkspaces(final PermissionsCheckMultipleWorkspacesRequest multiRequest) {
+
+    // Turn the multiple-request into a list of individual requests, one per workspace
+    final List<PermissionCheckRequest> permissionCheckRequests = multiRequest.getWorkspaceIds().stream()
+        .map(workspaceId -> new PermissionCheckRequest()
+            .userId(multiRequest.getUserId())
+            .permissionType(multiRequest.getPermissionType())
+            .workspaceId(workspaceId))
+        .toList();
+
+    // Perform the individual permission checks and store the results in a list
+    final List<PermissionCheckRead> results = permissionCheckRequests.stream()
+        .map(permissionCheckRequest -> {
+          try {
+            return checkPermissions(permissionCheckRequest);
+          } catch (IOException e) {
+            LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest);
+            return new PermissionCheckRead().status(StatusEnum.FAILED);
+          }
+        }).toList();
+
+    // If each individual workspace check succeeded, return an overall success. Otherwise, return an
+    // overall failure.
+    return results.stream().allMatch(result -> result.getStatus().equals(StatusEnum.SUCCEEDED))
+        ? new PermissionCheckRead().status(StatusEnum.SUCCEEDED)
+        : new PermissionCheckRead().status(StatusEnum.FAILED);
+  }
+
+  /**
+   * Check and get instance_admin permission for a user.
+   *
+   * @param userId user id
+   * @return UserPermission User details with instance_admin permission, null if user does not have
+   *         instance_admin role.
+   * @throws IOException if there is an issue while interacting with the db.
+   */
+  public UserPermission getUserInstanceAdminPermission(final UUID userId) throws IOException {
+    return permissionPersistence.getUserInstanceAdminPermission(userId);
   }
 
   /**
@@ -269,10 +385,18 @@ public class PermissionHandler {
    *
    * @param permissionIdRequestBody The permission to be deleted.
    * @throws IOException if unable to delete the permission.
-   * @throws ConfigNotFoundException if unable to delete the permission.
+   * @throws OperationNotAllowedException if deletion is prevented by business logic.
    */
   public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) throws IOException {
-    permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
+    try {
+      permissionPersistence.deletePermissionById(permissionIdRequestBody.getPermissionId());
+    } catch (final DataAccessException e) {
+      if (e.getCause() instanceof SQLOperationNotAllowedException) {
+        throw new OperationNotAllowedException(e.getCause().getMessage(), e);
+      } else {
+        throw new IOException(e);
+      }
+    }
   }
 
 }

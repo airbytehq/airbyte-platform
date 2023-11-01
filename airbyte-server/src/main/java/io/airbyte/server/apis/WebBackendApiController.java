@@ -33,7 +33,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/web_backend")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class WebBackendApiController implements WebBackendApi {

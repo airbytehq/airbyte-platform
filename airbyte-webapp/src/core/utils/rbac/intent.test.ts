@@ -3,6 +3,17 @@ import { renderHook } from "@testing-library/react";
 import { useIntent } from "./intent";
 import { useRbac } from "./rbac";
 
+const testIntents = {
+  __Mock_OrganizationReader: { resourceType: "ORGANIZATION", role: "READER" },
+  __Mock_WorkspaceReader: { resourceType: "WORKSPACE", role: "READER" },
+} as const;
+type TestIntents = typeof testIntents;
+declare module "./intent" {
+  // eslint-disable-next-line jest/no-export, @typescript-eslint/no-empty-interface
+  export interface AllIntents extends TestIntents {}
+}
+jest.mock("./intents", () => ({ intentToRbacQuery: testIntents }));
+
 jest.mock("./rbac", () => ({
   useRbac: jest.fn(),
 }));
@@ -11,7 +22,7 @@ const mockUseRbac = useRbac as unknown as jest.Mock;
 describe("useIntent", () => {
   it("maps intent to query", () => {
     mockUseRbac.mockClear();
-    renderHook(() => useIntent("ListOrganizationMembers", undefined));
+    renderHook(() => useIntent("__Mock_OrganizationReader", undefined));
     expect(mockUseRbac).toHaveBeenCalledTimes(1);
     expect(mockUseRbac).toHaveBeenCalledWith({
       resourceType: "ORGANIZATION",
@@ -22,7 +33,7 @@ describe("useIntent", () => {
   describe("applies overriding details", () => {
     it("overrides the organizationId", () => {
       mockUseRbac.mockClear();
-      renderHook(() => useIntent("ListOrganizationMembers", { organizationId: "some-other-org" }));
+      renderHook(() => useIntent("__Mock_OrganizationReader", { organizationId: "some-other-org" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "ORGANIZATION",
@@ -33,7 +44,7 @@ describe("useIntent", () => {
 
     it("overrides the workspaceId", () => {
       mockUseRbac.mockClear();
-      renderHook(() => useIntent("ListWorkspaceMembers", { workspaceId: "some-other-workspace" }));
+      renderHook(() => useIntent("__Mock_WorkspaceReader", { workspaceId: "some-other-workspace" }));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "WORKSPACE",
@@ -46,7 +57,7 @@ describe("useIntent", () => {
       mockUseRbac.mockClear();
       renderHook(() =>
         // @ts-expect-error we're testing invalid object shapes
-        useIntent("ListOrganizationMembers", { workspaceId: "some-other-organization" }, mockUseRbac)
+        useIntent("__Mock_OrganizationReader", { workspaceId: "some-other-organization" }, mockUseRbac)
       );
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
@@ -56,7 +67,7 @@ describe("useIntent", () => {
 
       mockUseRbac.mockClear();
       // @ts-expect-error we're testing invalid object shapes
-      renderHook(() => useIntent("ListWorkspaceMembers", { organizationId: "some-other-workspace" }, mockUseRbac));
+      renderHook(() => useIntent("__Mock_WorkspaceReader", { organizationId: "some-other-workspace" }, mockUseRbac));
       expect(mockUseRbac).toHaveBeenCalledTimes(1);
       expect(mockUseRbac).toHaveBeenCalledWith({
         resourceType: "WORKSPACE",
@@ -71,14 +82,14 @@ describe("useIntent", () => {
 
     // @TODO: if we have any instance-level intents, add checks here to exclude organizationId and workspaceId
 
-    processIntent("ListOrganizationMembers");
-    processIntent("ListOrganizationMembers", { organizationId: "org" });
-    // @ts-expect-error workspaceId is not valid for ListOrganizationMembers
-    processIntent("ListOrganizationMembers", { workspaceId: "workspace" });
+    processIntent("__Mock_OrganizationReader");
+    processIntent("__Mock_OrganizationReader", { organizationId: "org" });
+    // @ts-expect-error workspaceId is not valid for ListOrganizationREADERs
+    processIntent("__Mock_OrganizationReader", { workspaceId: "workspace" });
 
-    processIntent("ListWorkspaceMembers");
-    processIntent("ListWorkspaceMembers", { workspaceId: "workspace" });
-    // @ts-expect-error workspaceId is not valid for ListWorkspaceMembers
-    processIntent("ListWorkspaceMembers", { organizationId: "organizationId" });
+    processIntent("__Mock_WorkspaceReader");
+    processIntent("__Mock_WorkspaceReader", { workspaceId: "workspace" });
+    // @ts-expect-error workspaceId is not valid for ListWorkspaceREADERs
+    processIntent("__Mock_WorkspaceReader", { organizationId: "organizationId" });
   });
 });

@@ -16,7 +16,6 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.io.File;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/openapi")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class OpenapiApiController implements OpenapiApi {

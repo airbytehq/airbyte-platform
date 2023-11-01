@@ -5,9 +5,11 @@
   background: colors.$foreground;
 
   &__left-side {
-    width: 100%;
+    flex: 1 0 50%;
     height: 100%;
     padding: 20px 36px 39px 46px;
+    overflow: auto;
+    margin: auto;
   }
 
   &__right-side {

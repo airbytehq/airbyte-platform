@@ -103,18 +103,23 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
       AirbyteStreamStatus.STARTED -> handleStreamStarted(msg = streamStatus, ctx = ctx, transition = transition)
       AirbyteStreamStatus.RUNNING -> handleStreamRunning(msg = streamStatus, ctx = ctx, transition = transition)
       AirbyteStreamStatus.COMPLETE -> handleStreamComplete(msg = streamStatus, ctx = ctx, transition = transition, origin = origin)
-      AirbyteStreamStatus.INCOMPLETE -> handleStreamIncomplete(
-        msg = streamStatus,
-        ctx = ctx,
-        transition = transition,
-        origin = origin,
-        incompleteCause = incompleteRunCause,
-      )
+      AirbyteStreamStatus.INCOMPLETE ->
+        handleStreamIncomplete(
+          msg = streamStatus,
+          ctx = ctx,
+          transition = transition,
+          origin = origin,
+          incompleteCause = incompleteRunCause,
+        )
       else -> logger.warn { "Invalid stream status '${streamStatus.status}' for message $streamStatus" }
     }
   }
 
-  private fun handleStreamStarted(msg: AirbyteStreamStatusTraceMessage, ctx: ReplicationContext, transition: Duration) {
+  private fun handleStreamStarted(
+    msg: AirbyteStreamStatusTraceMessage,
+    ctx: ReplicationContext,
+    transition: Duration,
+  ) {
     val descriptor = msg.streamDescriptor
     val key = StreamStatusKey(ctx = ctx, descriptor = descriptor)
 
@@ -244,7 +249,11 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
     } ?: throw StreamStatusException("Invalid stream status transition to INCOMPLETE", origin, ctx, descriptor)
   }
 
-  private fun handleStreamRunning(msg: AirbyteStreamStatusTraceMessage, ctx: ReplicationContext, transition: Duration) {
+  private fun handleStreamRunning(
+    msg: AirbyteStreamStatusTraceMessage,
+    ctx: ReplicationContext,
+    transition: Duration,
+  ) {
     val descriptor = msg.streamDescriptor
     val key = StreamStatusKey(ctx, descriptor)
     currentStreamStatuses[key]?.takeIf { it.getCurrentStatus() == AirbyteStreamStatus.STARTED }
@@ -295,22 +304,23 @@ class StreamStatusTracker(private val airbyteApiClient: AirbyteApiClient) {
       throw StreamStatusException("Stream status ID not present to perform update.", origin, ctx, streamName, streamNamespace)
     }
 
-    val requestBody: StreamStatusUpdateRequestBody = StreamStatusUpdateRequestBody()
-      .id(statusId)
-      .streamName(streamName)
-      .streamNamespace(streamNamespace)
-      .jobId(ctx.jobId)
-      .jobType(ctx.jobType())
-      .connectionId(ctx.connectionId)
-      .attemptNumber(ctx.attempt)
-      .runState(streamStatusRunState)
-      .transitionedAt(transition.inWholeMilliseconds)
-      .workspaceId(ctx.workspaceId)
-      .apply {
-        incompleteRunCause?.let {
-          this.incompleteRunCause = it
+    val requestBody: StreamStatusUpdateRequestBody =
+      StreamStatusUpdateRequestBody()
+        .id(statusId)
+        .streamName(streamName)
+        .streamNamespace(streamNamespace)
+        .jobId(ctx.jobId)
+        .jobType(ctx.jobType())
+        .connectionId(ctx.connectionId)
+        .attemptNumber(ctx.attempt)
+        .runState(streamStatusRunState)
+        .transitionedAt(transition.inWholeMilliseconds)
+        .workspaceId(ctx.workspaceId)
+        .apply {
+          incompleteRunCause?.let {
+            this.incompleteRunCause = it
+          }
         }
-      }
 
     try {
       AirbyteApiClient.retryWithJitterThrows(
@@ -443,11 +453,15 @@ data class CurrentStreamStatus(
 ) {
   var statusId: UUID? = null
 
-  fun setStatus(origin: AirbyteMessageOrigin, msg: AirbyteStreamStatusTraceMessage): Unit = when (origin) {
-    AirbyteMessageOrigin.DESTINATION -> destinationStatus = msg
-    AirbyteMessageOrigin.SOURCE -> sourceStatus = msg
-    else -> logger.warn { "Unsupported status message for $origin message source." }
-  }
+  fun setStatus(
+    origin: AirbyteMessageOrigin,
+    msg: AirbyteStreamStatusTraceMessage,
+  ): Unit =
+    when (origin) {
+      AirbyteMessageOrigin.DESTINATION -> destinationStatus = msg
+      AirbyteMessageOrigin.SOURCE -> sourceStatus = msg
+      else -> logger.warn { "Unsupported status message for $origin message source." }
+    }
 
   fun getCurrentStatus(): AirbyteStreamStatus? {
     destinationStatus?.let { return it.status }
@@ -460,16 +474,14 @@ data class CurrentStreamStatus(
    *
    * @return true if status of the stream is COMPlETE, false otherwise
    */
-  fun isComplete(): Boolean =
-    sourceStatus?.status == AirbyteStreamStatus.COMPLETE && destinationStatus?.status == AirbyteStreamStatus.COMPLETE
+  fun isComplete(): Boolean = sourceStatus?.status == AirbyteStreamStatus.COMPLETE && destinationStatus?.status == AirbyteStreamStatus.COMPLETE
 
   /**
    * Checks if the stream is incomplete based on the status of both the source and destination.
    *
    * @return true if statu of the stream is INCOMPLETE, false otherwise
    */
-  fun isIncomplete(): Boolean =
-    sourceStatus?.status == AirbyteStreamStatus.INCOMPLETE && destinationStatus?.status == AirbyteStreamStatus.INCOMPLETE
+  fun isIncomplete(): Boolean = sourceStatus?.status == AirbyteStreamStatus.INCOMPLETE && destinationStatus?.status == AirbyteStreamStatus.INCOMPLETE
 
   /**
    * Checks if the steam is in a terminal state.
@@ -482,25 +494,30 @@ data class CurrentStreamStatus(
  *
  * TODO: move this to the [ReplicationContext] class.
  */
-fun ReplicationContext.jobType(): StreamStatusJobType = if (isReset) {
-  StreamStatusJobType.RESET
-} else {
-  StreamStatusJobType.SYNC
-}
+fun ReplicationContext.jobType(): StreamStatusJobType =
+  if (isReset) {
+    StreamStatusJobType.RESET
+  } else {
+    StreamStatusJobType.SYNC
+  }
 
 /**
  * Faux [StreamStatusCreateRequestBody] constructor
  *
  * @return [StreamStatusCreateRequestBody]
  */
-private fun StreamStatusCreateRequestBody(ctx: ReplicationContext, descriptor: StreamDescriptor, transition: Duration) =
-  StreamStatusCreateRequestBody()
-    .streamName(descriptor.name)
-    .streamNamespace(descriptor.namespace)
-    .jobId(ctx.jobId)
-    .jobType(ctx.jobType())
-    .connectionId(ctx.connectionId)
-    .attemptNumber(ctx.attempt)
-    .runState(StreamStatusRunState.PENDING)
-    .transitionedAt(transition.inWholeMilliseconds)
-    .workspaceId(ctx.workspaceId)
+@Suppress("ktlint:standard:function-naming")
+private fun StreamStatusCreateRequestBody(
+  ctx: ReplicationContext,
+  descriptor: StreamDescriptor,
+  transition: Duration,
+) = StreamStatusCreateRequestBody()
+  .streamName(descriptor.name)
+  .streamNamespace(descriptor.namespace)
+  .jobId(ctx.jobId)
+  .jobType(ctx.jobType())
+  .connectionId(ctx.connectionId)
+  .attemptNumber(ctx.attempt)
+  .runState(StreamStatusRunState.PENDING)
+  .transitionedAt(transition.inWholeMilliseconds)
+  .workspaceId(ctx.workspaceId)

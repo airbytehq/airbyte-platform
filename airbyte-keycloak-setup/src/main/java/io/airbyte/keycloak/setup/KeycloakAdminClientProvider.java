@@ -14,7 +14,6 @@ import org.keycloak.admin.client.KeycloakBuilder;
  * based on specified parameters.
  */
 @Singleton
-@SuppressWarnings("MissingJavadocMethod")
 public class KeycloakAdminClientProvider {
 
   private final AirbyteKeycloakConfiguration keycloakConfiguration;

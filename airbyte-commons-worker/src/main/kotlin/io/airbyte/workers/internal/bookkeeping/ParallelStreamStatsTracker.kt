@@ -75,8 +75,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
    *
    * @param hasReplicationCompleted defines whether a stream has completed. If the stream has
    *        completed, emitted counts/bytes will be used as committed counts/bytes.
+   * TODO make internal?
    */
-  // TODO make internal?
   fun getTotalStats(hasReplicationCompleted: Boolean = false): SyncStats {
     // For backwards compatibility with existing code which treats null and 0 differently,
     // if [getAllStreamSyncStats] is empty then treat it as a null itself.
@@ -86,26 +86,28 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
     val recordsCommitted = streamSyncStats?.sumOf { it.stats.recordsCommitted }
     val bytesEmitted = streamSyncStats?.sumOf { it.stats.bytesEmitted }
     val recordsEmitted = streamSyncStats?.sumOf { it.stats.recordsEmitted }
-    val estimatedBytes = if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
-      syncStatsCounters.estimatedBytesCount.get()
-    } else {
-      streamSyncStats?.mapNotNull { it.stats.estimatedBytes }
-        // mapNotNull with return an empty list if there are no non-null results
-        // we want to treat an empty list as null for backwards compatability reasons,
-        // specifically around treating a 0 and null differently
-        ?.takeIf { it.isNotEmpty() }
-        ?.sumOf { it }
-    }
-    val estimatedRecords = if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
-      syncStatsCounters.estimatedRecordCount.get()
-    } else {
-      streamSyncStats?.mapNotNull { it.stats.estimatedRecords }
-        // mapNotNull with return an empty list if there are no non-null results
-        // we want to treat an empty list as null for backwards compatability reasons,
-        // specifically around treating a 0 and null differently
-        ?.takeIf { it.isNotEmpty() }
-        ?.sumOf { it }
-    }
+    val estimatedBytes =
+      if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
+        syncStatsCounters.estimatedBytesCount.get()
+      } else {
+        streamSyncStats?.mapNotNull { it.stats.estimatedBytes }
+          // mapNotNull with return an empty list if there are no non-null results
+          // we want to treat an empty list as null for backwards compatability reasons,
+          // specifically around treating a 0 and null differently
+          ?.takeIf { it.isNotEmpty() }
+          ?.sumOf { it }
+      }
+    val estimatedRecords =
+      if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
+        syncStatsCounters.estimatedRecordCount.get()
+      } else {
+        streamSyncStats?.mapNotNull { it.stats.estimatedRecords }
+          // mapNotNull with return an empty list if there are no non-null results
+          // we want to treat an empty list as null for backwards compatability reasons,
+          // specifically around treating a 0 and null differently
+          ?.takeIf { it.isNotEmpty() }
+          ?.sumOf { it }
+      }
 
     return SyncStats()
       .withBytesCommitted(bytesCommitted)
@@ -121,8 +123,8 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
    *
    * @param hasReplicationCompleted defines whether a stream has completed. If the stream has
    *        completed, emitted counts/bytes will be used as committed counts/bytes.
+   * TODO make internal?
    */
-  // TODO make internal?
   fun getAllStreamSyncStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> {
     return streamTrackers.values
       // null name means that those are stats from global states or legacy states. We should not
@@ -153,21 +155,23 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
       .filterValues { it.nameNamespacePair.name != null }
       .mapValues { it.value.streamStats.emittedRecordsCount.get() }
 
-  override fun getStreamToEstimatedRecords(): Map<AirbyteStreamNameNamespacePair, Long> = if (hasEstimatesErrors) {
-    mapOf()
-  } else {
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.estimatedRecordsCount.get() }
-  }
+  override fun getStreamToEstimatedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
+    if (hasEstimatesErrors) {
+      mapOf()
+    } else {
+      streamTrackers
+        .filterValues { it.nameNamespacePair.name != null }
+        .mapValues { it.value.streamStats.estimatedRecordsCount.get() }
+    }
 
-  override fun getStreamToEstimatedBytes(): Map<AirbyteStreamNameNamespacePair, Long> = if (hasEstimatesErrors) {
-    mapOf()
-  } else {
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.estimatedBytesCount.get() }
-  }
+  override fun getStreamToEstimatedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
+    if (hasEstimatesErrors) {
+      mapOf()
+    } else {
+      streamTrackers
+        .filterValues { it.nameNamespacePair.name != null }
+        .mapValues { it.value.streamStats.estimatedBytesCount.get() }
+    }
 
   override fun getTotalRecordsEmitted(): Long = getTotalStats().recordsEmitted ?: 0
 
@@ -185,29 +189,33 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
 
   override fun getTotalDestinationStateMessagesEmitted(): Long = streamTrackers.values.sumOf { it.streamStats.destinationStateCount.get() }
 
-  override fun getMaxSecondsToReceiveSourceStateMessage(): Long = streamTrackers.values
-    .maxOfOrNull { it.streamStats.destinationStateCount.get() }
-    ?: 0
+  override fun getMaxSecondsToReceiveSourceStateMessage(): Long =
+    streamTrackers.values
+      .maxOfOrNull { it.streamStats.destinationStateCount.get() }
+      ?: 0
 
-  override fun getMeanSecondsToReceiveSourceStateMessage(): Long = computeMean(
-    getMean = { it.streamStats.maxSecondsToReceiveState.get().toDouble() },
-    getCount = { it.streamStats.sourceStateCount.get() - 1 },
-  )
-
-  override fun getMaxSecondsBetweenStateMessageEmittedAndCommitted(): Long? = if (hasSourceStateErrors()) {
-    null
-  } else {
-    streamTrackers.values.maxOfOrNull { it.streamStats.maxSecondsBetweenStateEmittedAndCommitted.get() }
-  }
-
-  override fun getMeanSecondsBetweenStateMessageEmittedAndCommitted(): Long? = if (hasSourceStateErrors()) {
-    null
-  } else {
+  override fun getMeanSecondsToReceiveSourceStateMessage(): Long =
     computeMean(
-      getMean = { it.streamStats.meanSecondsBetweenStateEmittedAndCommitted.get() },
-      getCount = { it.streamStats.destinationStateCount.get() },
+      getMean = { it.streamStats.maxSecondsToReceiveState.get().toDouble() },
+      getCount = { it.streamStats.sourceStateCount.get() - 1 },
     )
-  }
+
+  override fun getMaxSecondsBetweenStateMessageEmittedAndCommitted(): Long? =
+    if (hasSourceStateErrors()) {
+      null
+    } else {
+      streamTrackers.values.maxOfOrNull { it.streamStats.maxSecondsBetweenStateEmittedAndCommitted.get() }
+    }
+
+  override fun getMeanSecondsBetweenStateMessageEmittedAndCommitted(): Long? =
+    if (hasSourceStateErrors()) {
+      null
+    } else {
+      computeMean(
+        getMean = { it.streamStats.meanSecondsBetweenStateEmittedAndCommitted.get() },
+        getCount = { it.streamStats.destinationStateCount.get() },
+      )
+    }
 
   override fun getUnreliableStateTimingMetrics() = hasSourceStateErrors()
 
@@ -273,7 +281,10 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
    *        [StreamStatsTracker]
    * @return the global average
    */
-  private fun computeMean(getMean: (StreamStatsTracker) -> Double, getCount: (StreamStatsTracker) -> Long): Long {
+  private fun computeMean(
+    getMean: (StreamStatsTracker) -> Double,
+    getCount: (StreamStatsTracker) -> Long,
+  ): Long {
     return streamTrackers.values
       .map {
         val count = getCount(it)
@@ -299,12 +310,13 @@ class ParallelStreamStatsTracker(private val metricClient: MetricClient) : SyncS
  *
  * @throws [IllegalStateException] if an unsupported class is passed.
  */
-private inline fun <reified T : Any> getNameNamespacePair(type: T): AirbyteStreamNameNamespacePair = when (type) {
-  is AirbyteRecordMessage -> AirbyteStreamNameNamespacePair(type.stream, type.namespace)
-  is AirbyteEstimateTraceMessage -> AirbyteStreamNameNamespacePair(type.name, type.namespace)
-  is AirbyteStateMessage ->
-    type.stream?.streamDescriptor
-      ?.let { AirbyteStreamNameNamespacePair(it.name, it.namespace) }
-      ?: AirbyteStreamNameNamespacePair(null, null)
-  else -> throw IllegalArgumentException("Unsupported type ${type::class.java}")
-}
+private inline fun <reified T : Any> getNameNamespacePair(type: T): AirbyteStreamNameNamespacePair =
+  when (type) {
+    is AirbyteRecordMessage -> AirbyteStreamNameNamespacePair(type.stream, type.namespace)
+    is AirbyteEstimateTraceMessage -> AirbyteStreamNameNamespacePair(type.name, type.namespace)
+    is AirbyteStateMessage ->
+      type.stream?.streamDescriptor
+        ?.let { AirbyteStreamNameNamespacePair(it.name, it.namespace) }
+        ?: AirbyteStreamNameNamespacePair(null, null)
+    else -> throw IllegalArgumentException("Unsupported type ${type::class.java}")
+  }

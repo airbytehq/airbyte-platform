@@ -240,4 +240,16 @@ class DefaultAirbyteSourceTest {
     verify(process, times(1)).exitValue();
   }
 
+  @Test
+  void testHeartbeatEligibility() {
+    assertTrue(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.STATE));
+    assertTrue(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.RECORD));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.LOG));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.TRACE));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.CONTROL));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.SPEC));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.CATALOG));
+    assertFalse(DefaultAirbyteSource.shouldBeat(AirbyteMessage.Type.CONNECTION_STATUS));
+  }
+
 }

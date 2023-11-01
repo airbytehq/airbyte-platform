@@ -15,10 +15,10 @@ import jakarta.inject.Singleton
 @Singleton
 class AirbyteStreamStatusMessageEventListener(private val streamStatusTracker: StreamStatusTracker) :
   ApplicationEventListener<ReplicationAirbyteMessageEvent> {
+  override fun onApplicationEvent(event: ReplicationAirbyteMessageEvent): Unit = streamStatusTracker.track(event)
 
-    override fun onApplicationEvent(event: ReplicationAirbyteMessageEvent): Unit = streamStatusTracker.track(event)
-
-    override fun supports(event: ReplicationAirbyteMessageEvent): Boolean = with(event.airbyteMessage) {
+  override fun supports(event: ReplicationAirbyteMessageEvent): Boolean =
+    with(event.airbyteMessage) {
       type == AirbyteMessage.Type.TRACE && trace.type == AirbyteTraceMessage.Type.STREAM_STATUS
     }
-  }
+}

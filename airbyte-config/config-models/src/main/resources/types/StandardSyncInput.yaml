@@ -73,3 +73,7 @@ properties:
     description: whether this 'sync' is performing a logical reset
     type: boolean
     default: false
+  connectionContext:
+    description: Context object with IDs of the relevant connection, source, destination, etc.
+    type: object
+    "$ref": ConnectionContext.yaml

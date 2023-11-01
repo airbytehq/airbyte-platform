@@ -132,25 +132,28 @@ class ConfigFileClientTest {
   @Test
   @Ignore
   fun `verify config-file reload capabilities`() {
-    val contents0 = """flags:
+    val contents0 =
+      """flags:
             |  - name: reload-test-true
             |    enabled: true
             |  - name: reload-test-false
             |    enabled: false
             |    
-    """.trimMargin()
-    val contents1 = """flags:
+      """.trimMargin()
+    val contents1 =
+      """flags:
             |  - name: reload-test-true
             |    enabled: false
             |  - name: reload-test-false
             |    enabled: true
             |    
-    """.trimMargin()
+      """.trimMargin()
 
     // write to a temp config
-    val tmpConfig = createTempFile(prefix = "reload-config", suffix = "yml").apply {
-      writeText(contents0)
-    }
+    val tmpConfig =
+      createTempFile(prefix = "reload-config", suffix = "yml").apply {
+        writeText(contents0)
+      }
 
     val client: FeatureFlagClient = ConfigFileClient(tmpConfig)
 
@@ -324,9 +327,10 @@ class TestClientTest {
 
     val ctx = Workspace(workspaceId)
     // map of flag.key to value that should be returned
-    val values: MutableMap<String, Any> = mutableMapOf(testTrue, testFalse, testStringExample, testInt)
-      .mapKeys { it.key.key }
-      .toMutableMap()
+    val values: MutableMap<String, Any> =
+      mutableMapOf(testTrue, testFalse, testStringExample, testInt)
+        .mapKeys { it.key.key }
+        .toMutableMap()
 
     val client: FeatureFlagClient = TestClient(values)
     with(client) {
@@ -365,10 +369,11 @@ class TestClientTest {
 
     val ctx = User("test")
 
-    val values = mutableMapOf(
-      evTrue.key to true,
-      evFalse.key to false,
-    )
+    val values =
+      mutableMapOf(
+        evTrue.key to true,
+        evFalse.key to false,
+      )
     val client: FeatureFlagClient = TestClient(values)
 
     with(client) {
@@ -409,21 +414,21 @@ class InjectTest {
   @Test
   fun `ConfigFileClient loads if no client property defined`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = "")
   @Test
   fun `ConfigFileClient loads if client property is empty`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = "not-launchdarkly")
   @Test
   fun `ConfigFileClient loads if client property is not ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
     assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) }
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
@@ -432,7 +437,7 @@ class InjectTest {
     every { ldClient.boolVariation(flag.key, any<LDContext>(), flag.default) } returns flag.default
 
     assertTrue { featureFlagClient is LaunchDarklyClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) ?: false }
+    assertTrue { featureFlagClient.boolVariation(flag, context) }
   }
 }
 

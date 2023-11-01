@@ -15,7 +15,6 @@ import {
 } from "core/request/AirbyteClient";
 import { AnalyticsProvider } from "core/services/analytics";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
-import { ServicesProvider } from "core/servicesProvider";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
@@ -63,15 +62,13 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
         <AnalyticsProvider>
           <NotificationService>
             <FeatureService features={features}>
-              <ServicesProvider>
-                <ModalServiceProvider>
-                  <ConfirmationModalService>
-                    <QueryClientProvider client={new QueryClient()}>
-                      <MemoryRouter>{children}</MemoryRouter>
-                    </QueryClientProvider>
-                  </ConfirmationModalService>
-                </ModalServiceProvider>
-              </ServicesProvider>
+              <ModalServiceProvider>
+                <ConfirmationModalService>
+                  <QueryClientProvider client={new QueryClient()}>
+                    <MemoryRouter>{children}</MemoryRouter>
+                  </QueryClientProvider>
+                </ConfirmationModalService>
+              </ModalServiceProvider>
             </FeatureService>
           </NotificationService>
         </AnalyticsProvider>

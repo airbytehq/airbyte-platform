@@ -32,15 +32,24 @@ open class WorkspacesController(
     )
   }
 
-  override fun createWorkspace(workspaceCreateRequest: WorkspaceCreateRequest?, userInfo: String?): Response {
+  override fun createWorkspace(
+    workspaceCreateRequest: WorkspaceCreateRequest?,
+    userInfo: String?,
+  ): Response {
     return workspaceService.controllerCreateWorkspace(workspaceCreateRequest!!, userInfo)
   }
 
-  override fun deleteWorkspace(workspaceId: UUID?, userInfo: String?): Response {
+  override fun deleteWorkspace(
+    workspaceId: UUID?,
+    userInfo: String?,
+  ): Response {
     return workspaceService.controllerDeleteWorkspace(workspaceId!!, userInfo)
   }
 
-  override fun getWorkspace(workspaceId: UUID?, userInfo: String?): Response {
+  override fun getWorkspace(
+    workspaceId: UUID?,
+    userInfo: String?,
+  ): Response {
     return workspaceService.controllerGetWorkspace(workspaceId!!, userInfo)
   }
 

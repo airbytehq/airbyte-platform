@@ -1,8 +1,0 @@
-.checkboxLabel {
-  cursor: pointer;
-  user-select: none;
-
-  &:has(:disabled) {
-    cursor: not-allowed;
-  }
-}

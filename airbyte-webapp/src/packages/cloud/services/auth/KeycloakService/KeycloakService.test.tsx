@@ -1,6 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { PropsWithChildren } from "react";
 
+import { TestWrapper } from "test-utils/testutils";
+
 import { KeycloakService, initializeUserManager, useKeycloakService } from "./KeycloakService";
 
 let windowSearchSpy: jest.SpyInstance;
@@ -37,7 +39,11 @@ describe(`${initializeUserManager.name}()`, () => {
 });
 
 describe(`${KeycloakService.name}`, () => {
-  const wrapper: React.FC<PropsWithChildren> = ({ children }) => <KeycloakService>{children}</KeycloakService>;
+  const wrapper: React.FC<PropsWithChildren> = ({ children }) => (
+    <TestWrapper>
+      <KeycloakService>{children}</KeycloakService>
+    </TestWrapper>
+  );
 
   it("should initialize with the correct default realm", async () => {
     const { result } = renderHook(() => useKeycloakService(), { wrapper });

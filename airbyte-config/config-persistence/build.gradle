@@ -1,6 +1,7 @@
 plugins {
     id "io.airbyte.gradle.jvm.lib"
     id "io.airbyte.gradle.publish"
+    id "java-test-fixtures"
 }
 
 configurations.all {
@@ -29,7 +30,7 @@ dependencies {
     implementation libs.bundles.apache
     implementation libs.google.cloud.storage
 
-    implementation 'commons-io:commons-io:2.7'
+    implementation libs.commons.io
     implementation 'com.google.cloud:google-cloud-secretmanager:2.0.5'
     implementation 'com.bettercloud:vault-java-driver:5.1.0'
     implementation 'com.amazonaws.secretsmanager:aws-secretsmanager-caching-java:1.0.2'
@@ -49,4 +50,13 @@ dependencies {
     testImplementation libs.junit.pioneer
     testCompileOnly libs.lombok
     testAnnotationProcessor libs.lombok
+
+    testFixturesApi libs.jackson.databind
+    testFixturesApi libs.guava
+    testFixturesApi project(':airbyte-json-validation')
+    testFixturesApi project(':airbyte-commons')
+    testFixturesApi project(':airbyte-config:config-models')
+    testFixturesApi libs.airbyte.protocol
+    testFixturesApi libs.lombok
+    testFixturesAnnotationProcessor libs.lombok
 }

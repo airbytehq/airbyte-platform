@@ -18,7 +18,6 @@ import org.keycloak.representations.idm.ClientRepresentation;
  */
 @Singleton
 @Slf4j
-@SuppressWarnings("MissingJavadocMethod")
 public class AccountClientUpdater {
 
   private final String webappUrl;

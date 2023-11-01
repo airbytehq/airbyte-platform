@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.ENDPOINT_EXECUTION_OPERAT
 import datadog.trace.api.Trace;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.validation.json.JsonValidationException;
@@ -32,6 +33,9 @@ public class ApiHelper {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new BadObjectSchemaKnownException(
           String.format("The provided configuration does not fulfill the specification. Errors: %s", e.getMessage()), e);
+    } catch (final OperationNotAllowedException e) {
+      ApmTraceUtils.recordErrorOnRootSpan(e);
+      throw e;
     } catch (final IOException e) {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new RuntimeException(e);

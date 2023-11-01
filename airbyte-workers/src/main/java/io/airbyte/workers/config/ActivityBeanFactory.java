@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.TemporalConstants;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
@@ -45,7 +45,7 @@ import java.util.List;
  * Micronaut bean factory for activity-related singletons.
  */
 @Factory
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ActivityBeanFactory {
 
   @Singleton
@@ -130,7 +130,7 @@ public class ActivityBeanFactory {
                                                         defaultValue = "5") final Integer checkTimeoutMinutes) {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(checkTimeoutMinutes))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
   }
 
@@ -140,7 +140,7 @@ public class ActivityBeanFactory {
                                                             defaultValue = "30") final Integer discoveryTimeoutMinutes) {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(discoveryTimeoutMinutes))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
   }
 
@@ -149,7 +149,7 @@ public class ActivityBeanFactory {
   public ActivityOptions refreshSchemaActivityOptions() {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofMinutes(30))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
   }
 
@@ -164,7 +164,7 @@ public class ActivityBeanFactory {
         .setScheduleToStartTimeout(Duration.ofDays(maxTimeout))
         .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
         .setRetryOptions(retryOptions)
-        .setHeartbeatTimeout(TemporalUtils.HEARTBEAT_TIMEOUT)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
   }
 
@@ -177,7 +177,7 @@ public class ActivityBeanFactory {
         .setStartToCloseTimeout(Duration.ofSeconds(maxTimeout))
         .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
         .setRetryOptions(shortRetryOptions)
-        .setHeartbeatTimeout(TemporalUtils.HEARTBEAT_TIMEOUT)
+        .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
         .build();
   }
 
@@ -187,7 +187,7 @@ public class ActivityBeanFactory {
   public ActivityOptions specActivityOptions() {
     return ActivityOptions.newBuilder()
         .setScheduleToCloseTimeout(Duration.ofHours(1))
-        .setRetryOptions(TemporalUtils.NO_RETRY)
+        .setRetryOptions(TemporalConstants.NO_RETRY)
         .build();
   }
 
@@ -206,7 +206,7 @@ public class ActivityBeanFactory {
             notEquals = "true")
   @Named("longRunActivityRetryOptions")
   public RetryOptions noRetryOptions() {
-    return TemporalUtils.NO_RETRY;
+    return TemporalConstants.NO_RETRY;
   }
 
   @Singleton

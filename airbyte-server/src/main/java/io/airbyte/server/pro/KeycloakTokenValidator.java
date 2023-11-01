@@ -15,7 +15,6 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver;
 import io.airbyte.commons.server.support.JwtTokenParser;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.micrometer.common.util.StringUtils;
 import io.micronaut.http.HttpHeaders;
@@ -62,7 +61,8 @@ public class KeycloakTokenValidator implements TokenValidator {
       PermissionType.WORKSPACE_EDITOR, AuthRole.EDITOR, PermissionType.WORKSPACE_READER, AuthRole.READER);
   private static final Map<PermissionType, OrganizationAuthRole> ORGANIZATION_PERMISSION_TYPE_TO_AUTH_ROLE =
       Map.of(PermissionType.ORGANIZATION_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN, PermissionType.ORGANIZATION_EDITOR,
-          OrganizationAuthRole.ORGANIZATION_EDITOR, PermissionType.ORGANIZATION_READER, OrganizationAuthRole.ORGANIZATION_READER);
+          OrganizationAuthRole.ORGANIZATION_EDITOR, PermissionType.ORGANIZATION_READER, OrganizationAuthRole.ORGANIZATION_READER,
+          PermissionType.ORGANIZATION_MEMBER, OrganizationAuthRole.ORGANIZATION_MEMBER);
 
   public KeycloakTokenValidator(final HttpClient httpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
@@ -125,6 +125,9 @@ public class KeycloakTokenValidator implements TokenValidator {
     return roles;
   }
 
+  // TODO replace this with a call to RbacRoleHelper. Not 100% identical right now because
+  // the RbacRoleHelper uses `WORKSPACE_ADMIN`, `WORKSPACE_EDITOR`, etc. instead of
+  // `ADMIN`, `EDITOR` for workspace roles.
   private Collection<String> getRoles(final String userId, final HttpRequest<?> request) {
     Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
 
@@ -140,7 +143,7 @@ public class KeycloakTokenValidator implements TokenValidator {
       Optional<AuthRole> minAuthRoleOptional = workspaceIds.stream()
           .map(workspaceId -> {
             try {
-              return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, userId, AuthProvider.KEYCLOAK);
+              return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, userId);
             } catch (IOException ex) {
               log.error("Failed to get permission for user {} and workspaces {}", userId, workspaceId, ex);
               throw new RuntimeException(ex);
@@ -155,7 +158,7 @@ public class KeycloakTokenValidator implements TokenValidator {
       Optional<OrganizationAuthRole> minAuthRoleOptional = organizationIds.stream()
           .map(organizationId -> {
             try {
-              return permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, userId, AuthProvider.KEYCLOAK);
+              return permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, userId);
             } catch (IOException ex) {
               log.error("Failed to get permission for user {} and organization {}", userId, organizationId, ex);
               throw new RuntimeException(ex);

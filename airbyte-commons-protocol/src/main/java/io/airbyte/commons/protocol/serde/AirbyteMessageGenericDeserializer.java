@@ -26,8 +26,8 @@ public class AirbyteMessageGenericDeserializer<T> implements AirbyteMessageDeser
   }
 
   @Override
-  public Optional<T> deserialize(String json) {
-    return Jsons.tryDeserialize(json, typeClass);
+  public Optional<T> deserializeExact(final String json) {
+    return Jsons.tryDeserializeExact(json, typeClass);
   }
 
 }

@@ -72,11 +72,12 @@ class NettyHttpResponse {
   }
 
   fun getLogString(): String {
-    val logMap = mapOf(
-      Pair("status", getStatus()),
-      Pair("bodyText", maskBody(getBodyText("...dropped..."), getContentType())),
-      Pair("headers", maskHeaders(getHeaders())),
-    )
+    val logMap =
+      mapOf(
+        Pair("status", getStatus()),
+        Pair("bodyText", maskBody(getBodyText("...dropped..."), getContentType())),
+        Pair("headers", maskHeaders(getHeaders())),
+      )
     return JSONObject(logMap as MutableMap<String, JsonNode>?).toString()
   }
 }

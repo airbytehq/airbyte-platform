@@ -28,7 +28,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("MissingJavadocType")
 class TrelloOAuthFlowTest {
 
   private static final String REDIRECT_URL = "https://airbyte.io";

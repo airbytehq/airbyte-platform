@@ -201,6 +201,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   OLDEST_RUNNING_JOB_AGE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "oldest_running_job_age_secs",
       "oldest running job in seconds"),
+
+  ORCHESTRATOR_OUT_OF_MEMORY(MetricEmittingApps.WORKER,
+      "orchestrator_out_of_memory",
+      "orchestrator out of memory error"),
+
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
@@ -313,9 +318,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "worker_destination_message_sent",
       "whenever a message is sent to the destination"),
 
+  WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT(MetricEmittingApps.WORKER,
+      "notify_end_of_input_timeout",
+      "destination call to notify end of input has timed out"),
+
   WORKER_SOURCE_BUFFER_SIZE(MetricEmittingApps.WORKER,
       "worker_source_buffer_size",
       "the size of the replication worker source buffer queue"),
+
+  WORKER_DESTINATION_ACCEPT_TIMEOUT(MetricEmittingApps.WORKER,
+      "accept_timeout",
+      "destination call to accept has timed out"),
 
   WORKER_SOURCE_MESSAGE_READ(MetricEmittingApps.WORKER,
       "worker_source_message_read",

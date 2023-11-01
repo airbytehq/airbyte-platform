@@ -19,7 +19,11 @@ interface SyncCatalogProps {
   onStreamsChanged: (streams: SyncSchemaStream[]) => void;
   isLoading: boolean;
 }
-
+/**
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use SyncCatalogHookFormField.tsx instead
+ * @see SyncCatalogHookFormField
+ */
 const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> = ({
   streams,
   onStreamsChanged,

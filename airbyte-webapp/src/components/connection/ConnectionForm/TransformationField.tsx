@@ -19,9 +19,9 @@ interface TransformationFieldProps extends ArrayHelpers {
 }
 
 /**
- * @deprecated it's Formik version of TransformationField
+ * @deprecated will be removed during clean up - https://github.com/airbytehq/airbyte-platform-internal/issues/8639
+ * use TransformationHookForm.tsx instead
  * @see TransformationFieldHookForm
- * TODO: replace with TransformationHookForm during Create Connection form refactoring
  */
 const TransformationField: React.FC<TransformationFieldProps> = ({
   remove,

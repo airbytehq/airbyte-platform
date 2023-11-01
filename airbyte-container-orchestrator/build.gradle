@@ -32,6 +32,7 @@ dependencies {
     implementation libs.guava
     implementation libs.s3
     implementation libs.aws.java.sdk.s3
+    implementation libs.sts
     implementation libs.kubernetes.client
     implementation libs.bundles.datadog
     implementation libs.bundles.log4j
@@ -61,8 +62,7 @@ dependencies {
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers
     testImplementation libs.platform.testcontainers.postgresql
-    testImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
-    testImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
+    testImplementation libs.bundles.bouncycastle
 
     airbyteProtocol(libs.airbyte.protocol) {
         transitive = false

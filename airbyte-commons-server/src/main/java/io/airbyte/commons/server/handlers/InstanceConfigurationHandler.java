@@ -33,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
  * InstanceConfigurationHandler. Javadocs suppressed because api docs should be used as source of
  * truth.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Slf4j
 @Singleton
 public class InstanceConfigurationHandler {

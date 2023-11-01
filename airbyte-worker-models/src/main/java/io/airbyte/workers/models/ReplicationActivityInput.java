@@ -5,6 +5,7 @@
 package io.airbyte.workers.models;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.SyncResourceRequirements;
@@ -68,5 +69,10 @@ public class ReplicationActivityInput {
   private String namespaceFormat;
   // Prefix that will be prepended to the name of each stream when it is written to the destination.
   private String prefix;
+  // The results of schema refresh, including the applied diff which is used to determine which
+  // streams to backfill.
+  private RefreshSchemaActivityOutput schemaRefreshOutput;
+  // Replication context object containing relevant IDs
+  private ConnectionContext connectionContext;
 
 }

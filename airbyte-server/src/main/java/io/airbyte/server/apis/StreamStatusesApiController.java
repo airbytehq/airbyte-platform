@@ -28,13 +28,11 @@ import io.micronaut.http.annotation.Status;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/stream_statuses")
 public class StreamStatusesApiController implements StreamStatusesApi {
 
   private final StreamStatusesHandler handler;
 
-  @SuppressWarnings("MissingJavadocType")
   public StreamStatusesApiController(final StreamStatusesHandler handler) {
     this.handler = handler;
   }

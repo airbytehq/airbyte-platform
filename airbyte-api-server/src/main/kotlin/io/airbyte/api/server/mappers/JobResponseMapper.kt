@@ -37,8 +37,8 @@ object JobResponseMapper {
     val jobResponse: JobResponse = jobResponseFromJobReadMinusSyncedData(jobInfoRead.job)
     if (jobInfoRead.attempts.size > 0) {
       val lastAttempt = jobInfoRead.attempts[jobInfoRead.attempts.size - 1]
-      jobResponse.setBytesSynced(lastAttempt.attempt.bytesSynced)
-      jobResponse.setRowsSynced(lastAttempt.attempt.recordsSynced)
+      jobResponse.setBytesSynced(lastAttempt.attempt.totalStats?.bytesCommitted)
+      jobResponse.setRowsSynced(lastAttempt.attempt.totalStats?.recordsCommitted)
     }
     return jobResponse
   }
@@ -53,8 +53,9 @@ object JobResponseMapper {
     val jobResponse: JobResponse = jobResponseFromJobReadMinusSyncedData(jobWithAttemptsRead.job)
     if (jobWithAttemptsRead.attempts != null && jobWithAttemptsRead.attempts!!.size > 0) {
       val lastAttempt = jobWithAttemptsRead.attempts!![jobWithAttemptsRead.attempts!!.size - 1]
-      jobResponse.setBytesSynced(lastAttempt.bytesSynced)
-      jobResponse.setRowsSynced(lastAttempt.recordsSynced)
+
+      jobResponse.setBytesSynced(lastAttempt.totalStats?.bytesCommitted)
+      jobResponse.setRowsSynced(lastAttempt.totalStats?.recordsCommitted)
     }
     return jobResponse
   }

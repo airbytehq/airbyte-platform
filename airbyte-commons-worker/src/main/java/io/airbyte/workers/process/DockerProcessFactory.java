@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.helper.DockerImageNameHelper;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
@@ -49,8 +48,6 @@ public class DockerProcessFactory implements ProcessFactory {
   private static final Path DATA_MOUNT_DESTINATION = Path.of("/data");
   private static final Path LOCAL_MOUNT_DESTINATION = Path.of("/local");
   private static final String IMAGE_EXISTS_SCRIPT = "image_exists.sh";
-  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
-  public static final String JAVA_OPTS = "JAVA_OPTS";
 
   private final String workspaceMountSource;
   private final WorkerConfigsProvider workerConfigsProvider;
@@ -166,12 +163,6 @@ public class DockerProcessFactory implements ProcessFactory {
       for (final Map.Entry<String, String> envEntry : allEnvMap.entrySet()) {
         cmd.add("-e");
         cmd.add(envEntry.getKey() + "=" + envEntry.getValue());
-      }
-
-      if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null
-          && Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(imageName::contains)) {
-        cmd.add("-e");
-        cmd.add(JAVA_OPTS + "=" + WorkerConstants.DD_ENV_VAR);
       }
 
       if (!Strings.isNullOrEmpty(entrypoint)) {

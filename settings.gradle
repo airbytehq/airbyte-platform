@@ -30,25 +30,20 @@ pluginManagement {
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
-    id "com.gradle.enterprise" version "3.4.1"
+    id "com.gradle.enterprise" version "3.15.1"
     id 'com.github.burrunan.s3-build-cache' version "1.5"
 }
 
 gradleEnterprise {
     buildScan {
+        uploadInBackground = System.getenv("CI") == null
         termsOfServiceUrl = "https://gradle.com/terms-of-service"
         termsOfServiceAgree = "yes"
-    }
-}
-
-gradleEnterprise {
-    buildScan {
         buildScanPublished { PublishedBuildScan scan ->
             file("scan-journal.log") << "${new Date()} - ${scan.buildScanId} - ${scan.buildScanUri}\n"
         }
     }
 }
-
 
 ext.isCiServer = System.getenv().containsKey("CI")
 
@@ -88,6 +83,7 @@ include ':airbyte-commons'
 
 include ':airbyte-api'
 include ':airbyte-api-server'
+include ':airbyte-workload-api-server'
 include ':airbyte-commons-protocol'
 include ':airbyte-config:specs'
 include ':airbyte-config:init'
@@ -102,11 +98,14 @@ include ':airbyte-test-utils'
 // airbyte-workers has a lot of dependencies.
 include ':airbyte-analytics' // transitively used by airbyte-workers.
 include ':airbyte-commons-temporal'
+include ':airbyte-commons-temporal-core'
 include ':airbyte-commons-converters'
 include ':airbyte-commons-worker'
 include ':airbyte-config:config-persistence' // transitively used by airbyte-workers.
+include ':airbyte-config:config-secrets' //
 include ':airbyte-featureflag'
 include ':airbyte-db:jooq' // transitively used by airbyte-workers.
+include ':airbyte-micronaut-temporal'
 include ':airbyte-notification' // transitively used by airbyte-workers.
 include ':airbyte-persistence:job-persistence' // transitively used by airbyte-workers.
 include ':airbyte-worker-models'
@@ -129,3 +128,4 @@ include ':airbyte-temporal'
 include ':airbyte-tests'
 include ':airbyte-webapp'
 include ':airbyte-workers'
+include ':airbyte-workload-launcher'

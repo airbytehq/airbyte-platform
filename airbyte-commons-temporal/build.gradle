@@ -15,6 +15,7 @@ dependencies {
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
 
     implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-temporal-core')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-featureflag')

@@ -12,7 +12,6 @@ import org.flywaydb.core.api.migration.Context;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 
-@SuppressWarnings("MissingJavadocType")
 public class V0_30_4_002__Remove_updated_at_column extends BaseJavaMigration {
 
   @Override

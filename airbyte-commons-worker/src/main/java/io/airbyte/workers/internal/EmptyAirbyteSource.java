@@ -44,7 +44,6 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private final AtomicBoolean hasEmittedStreamStatus;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
   private final Queue<AirbyteMessage> perStreamMessages = new LinkedList<>();
-  private final boolean useStreamCapableState;
   // TODO: Once we are sure that the legacy way of transmitting the state is not use anymore, we need
   // to remove this variable and the associated
   // checks
@@ -52,10 +51,9 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private boolean isStarted = false;
   private Optional<StateWrapper> stateWrapper;
 
-  public EmptyAirbyteSource(final boolean useStreamCapableState) {
+  public EmptyAirbyteSource() {
     hasEmittedState = new AtomicBoolean();
     hasEmittedStreamStatus = new AtomicBoolean();
-    this.useStreamCapableState = useStreamCapableState;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -93,7 +91,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
         isResetBasedForConfig = false;
       } else {
         if (workerSourceConfig.getState() != null) {
-          stateWrapper = StateMessageHelper.getTypedState(workerSourceConfig.getState().getState(), useStreamCapableState);
+          stateWrapper = StateMessageHelper.getTypedState(workerSourceConfig.getState().getState());
 
           if (stateWrapper.isPresent()
               && stateWrapper.get().getStateType() == StateType.LEGACY

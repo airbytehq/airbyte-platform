@@ -7,7 +7,6 @@ declare global {
 export interface AirbyteWebappConfig {
   keycloakBaseUrl: string;
   segment: { token?: string; enabled: boolean };
-  fathomSiteId?: string;
   apiUrl: string;
   connectorBuilderApiUrl: string;
   version?: string;

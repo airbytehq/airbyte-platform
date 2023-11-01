@@ -557,7 +557,7 @@ class BasicAcceptanceTests {
 
   @Test
   void testMultipleSchemasAndTablesSync() throws Exception {
-    // create tables in another schema
+    // create tables in the staging schema
     testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql");
 
     final UUID sourceId = testHarness.createPostgresSource().getSourceId();
@@ -578,9 +578,8 @@ class BasicAcceptanceTests {
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, false);
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(),
+        Set.of(PUBLIC_SCHEMA_NAME, "staging"), conn.getNamespaceFormat(), false, false);
     Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
@@ -612,8 +611,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        conn.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false, WITHOUT_SCD_TABLE);
     Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
@@ -1395,13 +1393,15 @@ class BasicAcceptanceTests {
             catalog,
             discoverResult.getCatalogId())
                 .build());
+
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
-    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC,
-        conn.getNamespaceFormat(), true, false);
+
+    Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", PUBLIC), false, WITHOUT_SCD_TABLE);
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), "staging",
-        conn.getNamespaceFormat(), true, false);
+        conn.getNamespaceFormat().replace("${SOURCE_NAMESPACE}", "staging"), false, false);
     final JobInfoRead connectionResetRead = apiClient.getConnectionApi().resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionResetRead.getJob());
     assertDestinationDbEmpty(testHarness.getDestinationDatabase());
@@ -1448,8 +1448,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), syncRead.getJob());
 
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), false, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1503,8 +1502,7 @@ class BasicAcceptanceTests {
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));
@@ -1537,8 +1535,7 @@ class BasicAcceptanceTests {
     // We do not check that the source and the dest are in sync here because removing a stream doesn't
     // remove that
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
-        connection.getNamespaceFormat(),
-        false, WITHOUT_SCD_TABLE);
+        connection.getNamespaceFormat(), true, WITHOUT_SCD_TABLE);
     assertStreamStateContainsStream(connection.getConnectionId(), List.of(
         new StreamDescriptor().name(ID_AND_NAME).namespace(PUBLIC),
         new StreamDescriptor().name(additionalTable).namespace(PUBLIC)));

@@ -20,7 +20,7 @@ configurations.all {
     resolutionStrategy {
         // Ensure that the versions defined in deps.toml are used
         // instead of versions from transitive dependencies
-        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.aws.java.sdk.sts
+        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.sts, libs.aws.java.sdk.sts
     }
 }
 
@@ -45,6 +45,7 @@ dependencies {
     implementation libs.micronaut.cache.caffeine
     implementation libs.jooq
     implementation libs.s3
+    implementation libs.sts
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.4.0'
@@ -61,8 +62,6 @@ dependencies {
     implementation libs.micrometer.statsd
     implementation libs.bundles.datadog
     implementation libs.sentry.java
-    implementation libs.byte.buddy
-    implementation libs.spring.core
 
     implementation project(':airbyte-analytics')
     implementation project(':airbyte-api')
@@ -71,17 +70,18 @@ dependencies {
     implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-temporal-core')
     implementation project(':airbyte-commons-worker')
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:init')
-    implementation project(':airbyte-data')
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-featureflag')
     implementation project(':airbyte-metrics:metrics-lib')
+    implementation project(':airbyte-micronaut-temporal')
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-notification')
@@ -100,8 +100,7 @@ dependencies {
     testImplementation libs.platform.testcontainers
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation project(':airbyte-test-utils')
-    testImplementation 'org.bouncycastle:bcprov-jdk15on:1.66'
-    testImplementation 'org.bouncycastle:bcpkix-jdk15on:1.66'
+    testImplementation libs.bundles.bouncycastle
     testImplementation project(':airbyte-api')
 
     integrationTestAnnotationProcessor platform(libs.micronaut.bom)

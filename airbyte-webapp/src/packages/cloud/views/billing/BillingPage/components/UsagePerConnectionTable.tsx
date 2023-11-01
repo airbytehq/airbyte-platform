@@ -82,8 +82,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.sourceSupportLevel}
                 custom={props.row.original.connection.sourceCustom}
-                size="small"
-                releaseStage={props.row.original.connection.sourceReleaseStage}
               />
             </FlexContainer>
           </Link>
@@ -133,8 +131,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.destinationSupportLevel}
                 custom={props.row.original.connection.destinationCustom}
-                size="small"
-                releaseStage={props.row.original.connection.destinationReleaseStage}
               />
             </FlexContainer>
           </Link>
@@ -169,7 +165,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         meta: {
           responsive: true,
         },
-        sortingFn: "alphanumeric",
+        sortingFn: "basic",
         cell: (props) => (
           <FlexContainer
             alignItems="center"
@@ -206,7 +202,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         variant="white"
         columns={columns}
         data={freeAndPaidUsageByConnection}
-        initialSortBy={[{ id: "connection_connectionName", desc: false }]}
+        initialSortBy={[{ id: "totalUsage", desc: false }]}
       />
     </div>
   );

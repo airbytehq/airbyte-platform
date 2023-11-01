@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("MissingJavadocType")
 class BackoffPolicyTest {
 
   @Test

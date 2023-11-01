@@ -12,6 +12,7 @@ import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
 import io.airbyte.config.Organization;
+import io.airbyte.config.SsoConfig;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -27,9 +28,8 @@ import org.jooq.Result;
 
 /**
  * Permission Persistence.
- *
+ * <p>
  * Handle persisting Permission to the Config Database and perform all SQL queries.
- *
  */
 @Slf4j
 public class OrganizationPersistence {
@@ -57,6 +57,7 @@ public class OrganizationPersistence {
     final Result<Record> result = database.query(ctx -> ctx
         .select(asterisk())
         .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
         .where(ORGANIZATION.ID.eq(organizationId)).fetch());
 
     if (result.isEmpty()) {
@@ -116,10 +117,11 @@ public class OrganizationPersistence {
    */
   public List<Organization> listOrganizationsByUserId(final UUID userId, final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk(), SSO_CONFIG.asterisk())
         .from(ORGANIZATION)
         .join(PERMISSION)
         .on(ORGANIZATION.ID.eq(PERMISSION.ORGANIZATION_ID))
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
         .where(PERMISSION.USER_ID.eq(userId))
         .and(PERMISSION.ORGANIZATION_ID.isNotNull())
         .and(keyword.isPresent() ? ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) : noCondition())
@@ -136,10 +138,11 @@ public class OrganizationPersistence {
    */
   public List<Organization> listOrganizationsByUserIdPaginated(final ResourcesByUserQueryPaginated query, final Optional<String> keyword)
       throws IOException {
-    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk(), SSO_CONFIG.asterisk())
         .from(ORGANIZATION)
         .join(PERMISSION)
         .on(ORGANIZATION.ID.eq(PERMISSION.ORGANIZATION_ID))
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
         .where(PERMISSION.USER_ID.eq(query.userId()))
         .and(PERMISSION.ORGANIZATION_ID.isNotNull())
         .and(keyword.isPresent() ? ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) : noCondition())
@@ -170,6 +173,31 @@ public class OrganizationPersistence {
     }
 
     return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
+  public SsoConfig createSsoConfig(final SsoConfig ssoConfig) throws IOException {
+    database.transaction(ctx -> {
+      try {
+        insertSsoConfigIntoDB(ctx, ssoConfig);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    });
+    return ssoConfig;
+  }
+
+  public Optional<SsoConfig> getSsoConfigForOrganization(final UUID organizationId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(SSO_CONFIG)
+        .where(SSO_CONFIG.ORGANIZATION_ID.eq(organizationId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createSsoConfigFromRecord(result.get(0)));
   }
 
   private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {
@@ -204,10 +232,31 @@ public class OrganizationPersistence {
         .set(ORGANIZATION.USER_ID, organization.getUserId())
         .set(ORGANIZATION.NAME, organization.getName())
         .set(ORGANIZATION.EMAIL, organization.getEmail())
+        .set(ORGANIZATION.PBA, organization.getPba())
+        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.CREATED_AT, timestamp)
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .execute();
 
+  }
+
+  private void insertSsoConfigIntoDB(final DSLContext ctx, SsoConfig ssoConfig) throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    final boolean isExistingConfig = ctx.fetchExists(select()
+        .from(SSO_CONFIG)
+        .where(SSO_CONFIG.ORGANIZATION_ID.eq(ssoConfig.getOrganizationId())));
+
+    if (isExistingConfig) {
+      throw new IOException("SsoConfig with organization id " + ssoConfig.getOrganizationId() + " already exists.");
+    }
+    ctx.insertInto(SSO_CONFIG)
+        .set(SSO_CONFIG.ID, ssoConfig.getSsoConfigId())
+        .set(SSO_CONFIG.ORGANIZATION_ID, ssoConfig.getOrganizationId())
+        .set(SSO_CONFIG.KEYCLOAK_REALM, ssoConfig.getKeycloakRealm())
+        .set(SSO_CONFIG.CREATED_AT, timestamp)
+        .set(SSO_CONFIG.UPDATED_AT, timestamp)
+        .execute();
   }
 
   private static Organization createOrganizationFromRecord(final Record record) {
@@ -215,7 +264,17 @@ public class OrganizationPersistence {
         .withOrganizationId(record.get(ORGANIZATION.ID))
         .withName(record.get(ORGANIZATION.NAME))
         .withEmail(record.get(ORGANIZATION.EMAIL))
-        .withUserId(record.get(ORGANIZATION.USER_ID));
+        .withUserId(record.get(ORGANIZATION.USER_ID))
+        .withSsoRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM))
+        .withPba(record.get(ORGANIZATION.PBA))
+        .withOrgLevelBilling(record.get(ORGANIZATION.ORG_LEVEL_BILLING));
+  }
+
+  private static SsoConfig createSsoConfigFromRecord(final Record record) {
+    return new SsoConfig()
+        .withSsoConfigId(record.get(SSO_CONFIG.ID))
+        .withOrganizationId(record.get(SSO_CONFIG.ORGANIZATION_ID))
+        .withKeycloakRealm(record.get(SSO_CONFIG.KEYCLOAK_REALM));
   }
 
 }

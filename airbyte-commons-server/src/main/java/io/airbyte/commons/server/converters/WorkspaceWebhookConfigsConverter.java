@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * NOTE: we suppress this warning because PMD thinks it can be a foreach loop in toApiReads but the
  * compiler disagrees.
  */
-@SuppressWarnings({"PMD.ForLoopCanBeForeach", "MissingJavadocMethod", "LineLength"})
+@SuppressWarnings({"PMD.ForLoopCanBeForeach", "LineLength"})
 public class WorkspaceWebhookConfigsConverter {
 
   public static JsonNode toPersistenceWrite(List<WebhookConfigWrite> apiWebhookConfigs, Supplier<UUID> uuidSupplier) {

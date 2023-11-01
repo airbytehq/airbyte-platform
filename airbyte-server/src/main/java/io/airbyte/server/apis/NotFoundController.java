@@ -16,7 +16,6 @@ import io.micronaut.security.rules.SecurityRule;
 /**
  * Custom controller that handles global 404 responses for unknown/unmapped paths.
  */
-@SuppressWarnings("MissingJavadocMethod")
 @Controller("/api/notfound")
 @Secured(SecurityRule.IS_ANONYMOUS)
 public class NotFoundController {

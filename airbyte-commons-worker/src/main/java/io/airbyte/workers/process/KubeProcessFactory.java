@@ -14,6 +14,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ImageName;
 import io.airbyte.featureflag.ImageVersion;
@@ -22,9 +23,11 @@ import io.airbyte.featureflag.RunSocatInConnectorContainer;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.ConnectorApmSupportHelper;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.net.InetAddress;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -148,9 +151,13 @@ public class KubeProcessFactory implements ProcessFactory {
 
       final boolean runSocatInMainContainer = shouldRunSocatInMainContainer(imageName, connectionId, workspaceId);
 
+      final Context featureFlagContext = createFeatureFlagContext(connectionId, workspaceId, imageName);
+
       return new KubePodProcess(
           processRunnerHost,
           fabricClient,
+          featureFlagClient,
+          featureFlagContext,
           podName,
           namespace,
           serviceAccount,
@@ -180,6 +187,24 @@ public class KubeProcessFactory implements ProcessFactory {
     } catch (final Exception e) {
       throw new WorkerException("Failed to create pod for " + jobType + " step", e);
     }
+  }
+
+  @org.jetbrains.annotations.NotNull
+  private static Multi createFeatureFlagContext(final UUID connectionId, final UUID workspaceId, final String imageName) {
+    final List<Context> contexts = new ArrayList<>();
+
+    if (workspaceId != null) {
+      contexts.add(new Workspace(workspaceId));
+    }
+    if (connectionId != null) {
+      contexts.add(new Connection(connectionId));
+    }
+    if (imageName != null) {
+      contexts.add(new ImageName(ConnectorApmSupportHelper.getImageName(imageName)));
+      contexts.add(new ImageVersion(ConnectorApmSupportHelper.getImageVersion(imageName)));
+    }
+
+    return new Multi(contexts);
   }
 
   /**
@@ -216,7 +241,7 @@ public class KubeProcessFactory implements ProcessFactory {
     return allLabels;
   }
 
-  private boolean shouldRunSocatInMainContainer(String imageName, UUID connectionId, UUID workspaceId) {
+  private boolean shouldRunSocatInMainContainer(final String imageName, final UUID connectionId, final UUID workspaceId) {
     final String imageNameWithoutVersion;
     final String imageVersion;
     if (imageName == null) {

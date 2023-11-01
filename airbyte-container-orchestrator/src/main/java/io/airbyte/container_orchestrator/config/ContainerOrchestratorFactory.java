@@ -6,7 +6,6 @@ package io.airbyte.container_orchestrator.config;
 
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.AsyncStateManager;
@@ -21,7 +20,7 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
-import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
@@ -31,6 +30,7 @@ import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.storage.StateClients;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
+import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
@@ -135,8 +135,8 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
-    return new StateAggregatorFactory(featureFlags);
+  public StateAggregatorFactory stateAggregatorFactory() {
+    return new StateAggregatorFactory();
   }
 
 }

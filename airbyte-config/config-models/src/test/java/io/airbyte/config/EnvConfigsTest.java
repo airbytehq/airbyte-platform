@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("PMD.NullAssignment")
@@ -369,76 +368,6 @@ class EnvConfigsTest {
     final List<String> expected = List.of("airbyte_instance:dev", "k8s-cluster:eks-dev");
     assertEquals(expected, config.getDDConstantTags());
     assertEquals(2, config.getDDConstantTags().size());
-  }
-
-  @Nested
-  @DisplayName("CheckJobResourceSettings")
-  class CheckJobResourceSettings {
-
-    @Test
-    @DisplayName("should default to JobMainCpuRequest if not set")
-    void testCpuRequestDefaultToJobMainCpuRequest() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST, null);
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_CPU_REQUEST, "1");
-      assertEquals("1", config.getCheckJobMainContainerCpuRequest());
-    }
-
-    @Test
-    @DisplayName("checkJobCpuRequest should take precedent if set")
-    void testCheckJobCpuRequestTakePrecedentIfSet() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST, "1");
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_CPU_REQUEST, "2");
-      assertEquals("1", config.getCheckJobMainContainerCpuRequest());
-    }
-
-    @Test
-    @DisplayName("should default to JobMainCpuLimit if not set")
-    void testCpuLimitDefaultToJobMainCpuLimit() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT, null);
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_CPU_LIMIT, "1");
-      assertEquals("1", config.getCheckJobMainContainerCpuLimit());
-    }
-
-    @Test
-    @DisplayName("checkJobCpuLimit should take precedent if set")
-    void testCheckJobCpuLimitTakePrecedentIfSet() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT, "1");
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_CPU_LIMIT, "2");
-      assertEquals("1", config.getCheckJobMainContainerCpuLimit());
-    }
-
-    @Test
-    @DisplayName("should default to JobMainMemoryRequest if not set")
-    void testMemoryRequestDefaultToJobMainMemoryRequest() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST, null);
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_MEMORY_REQUEST, "1");
-      assertEquals("1", config.getCheckJobMainContainerMemoryRequest());
-    }
-
-    @Test
-    @DisplayName("checkJobMemoryRequest should take precedent if set")
-    void testCheckJobMemoryRequestTakePrecedentIfSet() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST, "1");
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_MEMORY_REQUEST, "2");
-      assertEquals("1", config.getCheckJobMainContainerMemoryRequest());
-    }
-
-    @Test
-    @DisplayName("should default to JobMainMemoryLimit if not set")
-    void testMemoryLimitDefaultToJobMainMemoryLimit() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT, null);
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_MEMORY_LIMIT, "1");
-      assertEquals("1", config.getCheckJobMainContainerMemoryLimit());
-    }
-
-    @Test
-    @DisplayName("checkJobMemoryLimit should take precedent if set")
-    void testCheckJobMemoryLimitTakePrecedentIfSet() {
-      envMap.put(EnvConfigs.CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT, "1");
-      envMap.put(EnvConfigs.JOB_MAIN_CONTAINER_MEMORY_LIMIT, "2");
-      assertEquals("1", config.getCheckJobMainContainerMemoryLimit());
-    }
-
   }
 
   @Test

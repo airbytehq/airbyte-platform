@@ -10,12 +10,6 @@ import { ScheduleTypeFormControl } from "./ScheduleTypeFormControl";
 export const ScheduleHookFormField: React.FC = () => {
   const watchedScheduleType = useWatch({ name: "scheduleType" });
 
-  /**
-   * TODO:
-   * [ ] ask Nataly what exactly to track - scheduleType or scheduleData
-   * [ ] figure out what to do with tests
-   */
-
   return (
     <>
       <ScheduleTypeFormControl />

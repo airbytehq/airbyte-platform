@@ -119,7 +119,7 @@ class AdvancedAcceptanceTests {
   }
 
   @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
-  @RetryingTest(3)
+  @Test
   void testManualSync() throws Exception {
     testHarness.setup();
 
@@ -139,16 +139,19 @@ class AdvancedAcceptanceTests {
             discoverResult.getCatalogId())
                 .build());
     final var connectionId = conn.getConnectionId();
-    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     Asserts.assertSourceAndDestinationDbRawRecordsInSync(testHarness.getSourceDatabase(), testHarness.getDestinationDatabase(), PUBLIC_SCHEMA_NAME,
         conn.getNamespaceFormat(), false, false);
-    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, connectionSyncRead, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+
+    LOGGER.info("===== before stream");
+    final var finalJob = apiClient.getJobsApi().getJobInfoWithoutLogs(new JobIdRequestBody().id(connectionSyncRead.getJob().getId()));
+    Asserts.assertStreamStatuses(apiClient, workspaceId, connectionId, finalJob, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     testHarness.cleanup();
   }
 
-  @RetryingTest(3)
+  @Test
   void testCheckpointing() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);
@@ -222,7 +225,7 @@ class AdvancedAcceptanceTests {
   }
 
   // verify that when the worker uses backpressure from pipes that no records are lost.
-  @RetryingTest(3)
+  @Test
   void testBackpressure() throws Exception {
     final SourceDefinitionRead sourceDefinition = testHarness.createE2eSourceDefinition(workspaceId);
     final DestinationDefinitionRead destinationDefinition = testHarness.createE2eDestinationDefinition(workspaceId);

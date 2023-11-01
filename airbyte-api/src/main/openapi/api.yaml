@@ -1280,12 +1280,16 @@ components:
       type: string
     SourceCreateRequest:
       required:
-        - name
         - workspaceId
         - configuration
       type: object
       properties:
         name:
+          description: Name of the source type e.g. mysql. One of name or definitionId must be provided.
+          type: string
+        definitionId:
+          description: The UUID of the connector definition. One of name or definitionId must be provided.
+          format: uuid
           type: string
         workspaceId:
           format: uuid
@@ -1327,10 +1331,12 @@ components:
       required:
         - redirectUrl
         - workspaceId
-        - name
       type: object
       properties:
         name:
+          description: The name of the source to authenticate to. Deprecated - use sourceType instead.
+          type: string
+        sourceType:
           description: The name of the source to authenticate to
           type: string
         redirectUrl:
@@ -1564,12 +1570,16 @@ components:
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
     DestinationCreateRequest:
       required:
-        - name
         - workspaceId
         - configuration
       type: object
       properties:
         name:
+          description: Name of the destination type e.g. mysql. One of name or definitionId must be provided.
+          type: string
+        definitionId:
+          description: The UUID of the connector definition. One of name or definitionId must be provided.
+          format: uuid
           type: string
         workspaceId:
           format: uuid

@@ -11,7 +11,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal class FlagsTest {
-
   @Nested
   inner class FieldSelectionWorkspacesTest {
     /**

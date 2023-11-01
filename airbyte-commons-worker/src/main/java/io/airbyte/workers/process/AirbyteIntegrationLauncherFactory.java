@@ -22,6 +22,7 @@ import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
+import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -119,14 +120,16 @@ public class AirbyteIntegrationLauncherFactory {
    */
   public AirbyteDestination createAirbyteDestination(final IntegrationLauncherConfig destinationLauncherConfig,
                                                      final SyncResourceRequirements syncResourceRequirements,
-                                                     final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
+                                                     final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
+                                                     final DestinationTimeoutMonitor destinationTimeoutMonitor) {
+
     final IntegrationLauncher destinationLauncher = createIntegrationLauncher(destinationLauncherConfig, syncResourceRequirements);
     return new DefaultAirbyteDestination(destinationLauncher,
         getStreamFactory(destinationLauncherConfig, configuredAirbyteCatalog, DestinationException.class,
             DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, false),
         new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
             Optional.of(configuredAirbyteCatalog)),
-        getProtocolSerializer(destinationLauncherConfig));
+        getProtocolSerializer(destinationLauncherConfig), destinationTimeoutMonitor);
   }
 
   private VersionedProtocolSerializer getProtocolSerializer(final IntegrationLauncherConfig launcherConfig) {

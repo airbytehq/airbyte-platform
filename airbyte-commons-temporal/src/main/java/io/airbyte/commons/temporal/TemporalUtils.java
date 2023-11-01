@@ -15,38 +15,24 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
-import io.temporal.activity.ActivityExecutionContext;
-import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.namespace.v1.NamespaceConfig;
 import io.temporal.api.namespace.v1.NamespaceInfo;
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest;
 import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest;
-import io.temporal.client.ActivityCompletionException;
-import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowStub;
-import io.temporal.common.RetryOptions;
 import io.temporal.common.reporter.MicrometerClientStatsReporter;
 import io.temporal.serviceclient.SimpleSslContextBuilder;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
-import io.temporal.workflow.Functions;
 import jakarta.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
  * Temporal Utility functions.
@@ -60,10 +46,6 @@ public class TemporalUtils {
   private static final Duration MAX_TIME_TO_CONNECT = Duration.ofMinutes(2);
   private static final Duration WAIT_TIME_AFTER_CONNECT = Duration.ofSeconds(5);
   public static final String DEFAULT_NAMESPACE = "default";
-  public static final Duration SEND_HEARTBEAT_INTERVAL = Duration.ofSeconds(20);
-  public static final Duration HEARTBEAT_TIMEOUT = Duration.ofSeconds(30);
-  public static final Duration HEARTBEAT_SHUTDOWN_GRACE_PERIOD = Duration.ofSeconds(30);
-  public static final RetryOptions NO_RETRY = RetryOptions.newBuilder().setMaximumAttempts(1).build();
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
   private final String temporalCloudClientCert;
@@ -197,34 +179,6 @@ public class TemporalUtils {
   }
 
   /**
-   * Allows running a given temporal workflow stub asynchronously. This method only works for
-   * workflows that take one argument. Because of the iface that Temporal supplies, in order to handle
-   * other method signatures, if we need to support them, we will need to add another helper with that
-   * number of args. For a reference on how Temporal recommends to do this see their docs:
-   * https://docs.temporal.io/docs/java/workflows#asynchronous-start
-   *
-   * @param workflowStub - workflow stub to be executed
-   * @param function - function on the workflow stub to be executed
-   * @param arg1 - argument to be supplied to the workflow function
-   * @param outputType - class of the output type of the workflow function
-   * @param <STUB> - type of the workflow stub
-   * @param <A1> - type of the argument of the workflow stub
-   * @param <R> - type of the return of the workflow stub
-   * @return pair of the workflow execution (contains metadata on the asynchronously running job) and
-   *         future that can be used to await the result of the workflow stub's function
-   */
-  @SuppressWarnings("MethodTypeParameterName")
-  public <STUB, A1, R> ImmutablePair<WorkflowExecution, CompletableFuture<R>> asyncExecute(final STUB workflowStub,
-                                                                                           final Functions.Func1<A1, R> function,
-                                                                                           final A1 arg1,
-                                                                                           final Class<R> outputType) {
-    final WorkflowStub untyped = WorkflowStub.fromTyped(workflowStub);
-    final WorkflowExecution workflowExecution = WorkflowClient.start(function, arg1);
-    final CompletableFuture<R> resultAsync = untyped.getResultAsync(outputType);
-    return ImmutablePair.of(workflowExecution, resultAsync);
-  }
-
-  /**
    * Loops and waits for the Temporal service to become available and returns a client.
    * <p>
    * This function uses a supplier as input since the creation of a WorkflowServiceStubs can result in
@@ -273,75 +227,6 @@ public class TemporalUtils {
     return temporalService.blockingStub()
         .describeNamespace(DescribeNamespaceRequest.newBuilder().setNamespace(namespace).build())
         .getNamespaceInfo();
-  }
-
-  /**
-   * Run a callable. If while it is running the temporal activity is cancelled, the provided callback
-   * is triggered.
-   *
-   * It manages this by regularly calling back to temporal in order to check whether the activity has
-   * been cancelled. If it is cancelled it calls the callback.
-   *
-   * @param afterCancellationCallbackRef callback to be triggered if the temporal activity is
-   *        cancelled before the callable completes
-   * @param callable callable to run with cancellation
-   * @param activityContext context used to check whether the activity has been cancelled
-   * @param <T> type of variable returned by the callable
-   * @return if the callable succeeds without being cancelled, returns the value returned by the
-   *         callable
-   */
-  public <T> T withBackgroundHeartbeat(final AtomicReference<Runnable> afterCancellationCallbackRef,
-                                       final Callable<T> callable,
-                                       final ActivityExecutionContext activityContext) {
-    final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    try {
-      // Schedule the cancellation handler.
-      scheduledExecutor.scheduleAtFixedRate(() -> {
-        final CancellationHandler cancellationHandler = new CancellationHandler.TemporalCancellationHandler(activityContext);
-
-        cancellationHandler.checkAndHandleCancellation(() -> {
-          // After cancellation cleanup.
-          if (afterCancellationCallbackRef != null) {
-            final Runnable cancellationCallback = afterCancellationCallbackRef.get();
-            if (cancellationCallback != null) {
-              cancellationCallback.run();
-            }
-          }
-        });
-      }, 0, SEND_HEARTBEAT_INTERVAL.toSeconds(), TimeUnit.SECONDS);
-
-      return callable.call();
-    } catch (final ActivityCompletionException e) {
-      log.warn("Job either timed out or was cancelled.");
-      throw new RuntimeException(e);
-    } catch (final Exception e) {
-      throw new RuntimeException(e);
-    } finally {
-      log.info("Stopping temporal heartbeating...");
-      // At this point we are done, we should try to stop all heartbeat ASAP.
-      // We can safely ignore the list of tasks that didn't start since we are exiting regardless.
-      scheduledExecutor.shutdownNow();
-
-      try {
-        // Making sure the heartbeat executor is terminated to avoid heartbeat attempt after we're done with
-        // the activity.
-        if (scheduledExecutor.awaitTermination(HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds(), TimeUnit.SECONDS)) {
-          log.info("Temporal heartbeating stopped.");
-        } else {
-          // Heartbeat thread failed to stop, we may leak a thread if this happens.
-          // We should not fail the execution because of this.
-          log.info("Temporal heartbeating didn't stop within {} seconds, continuing the shutdown. (WorkflowId={}, ActivityId={}, RunId={})",
-              HEARTBEAT_SHUTDOWN_GRACE_PERIOD.toSeconds(), activityContext.getInfo().getWorkflowId(),
-              activityContext.getInfo().getActivityId(), activityContext.getInfo().getRunId());
-        }
-      } catch (InterruptedException e) {
-        // We got interrupted while attempting to shutdown the executor. Not much more we can do.
-        log.info("Interrupted while stopping the Temporal heartbeating, continuing the shutdown.");
-        // Preserve the interrupt status
-        Thread.currentThread().interrupt();
-      }
-    }
   }
 
   /**

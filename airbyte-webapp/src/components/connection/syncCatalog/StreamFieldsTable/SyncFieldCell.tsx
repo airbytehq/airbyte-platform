@@ -21,6 +21,7 @@ interface SyncFieldCellProps {
   handleFieldToggle: (fieldPath: string[], isSelected: boolean) => void;
   syncMode?: SyncMode;
   destinationSyncMode?: DestinationSyncMode;
+  streamIsDisabled: boolean;
   className?: string;
 }
 
@@ -34,6 +35,7 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
   handleFieldToggle,
   syncMode,
   destinationSyncMode,
+  streamIsDisabled,
   className,
 }) => {
   const { mode } = useConnectionFormService();
@@ -43,11 +45,12 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
   const isPrimaryKey = checkIsPrimaryKey(field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(field.path);
   const isDisabled =
+    streamIsDisabled ||
     mode === "readonly" ||
     (syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
     (destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
     isNestedField;
-  const showTooltip = isDisabled && mode !== "readonly";
+  const showTooltip = isDisabled && mode !== "readonly" && !streamIsDisabled;
 
   const renderDisabledReasonMessage = useCallback(() => {
     if (isPrimaryKey || isChildFieldPrimaryKey) {
@@ -68,6 +71,7 @@ export const SyncFieldCell: React.FC<SyncFieldCellProps> = ({
           checked={isFieldSelected}
           disabled={isDisabled}
           onChange={() => handleFieldToggle(field.path, !isFieldSelected)}
+          data-testid="sync-field-switch"
         />
       )}
       {showTooltip && !isNestedField && (

@@ -7,6 +7,8 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useConfig } from "config";
 import { useGetOutOfDateConnectorsCount } from "core/api";
 import { CheckConnectionRead } from "core/api/types/AirbyteClient";
+// eslint-disable-next-line import/no-restricted-paths
+import { useRequestOptions } from "core/api/useRequestOptions";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { SourceService } from "core/domain/connector/SourceService";
 import {
@@ -19,7 +21,6 @@ import {
   useSourceDefinitionList,
   useUpdateSourceDefinition,
 } from "services/connector/SourceDefinitionService";
-import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
@@ -168,16 +169,16 @@ export const useGetConnectorsOutOfDate = () => {
 
 function useGetDestinationService(): DestinationService {
   const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
+  const requestOptions = useRequestOptions();
 
-  return useInitService(() => new DestinationService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
+  return useInitService(() => new DestinationService(requestOptions), [apiUrl, requestOptions]);
 }
 
 function useGetSourceService(): SourceService {
   const { apiUrl } = useConfig();
-  const requestAuthMiddleware = useDefaultRequestMiddlewares();
+  const requestOptions = useRequestOptions();
 
-  return useInitService(() => new SourceService(apiUrl, requestAuthMiddleware), [apiUrl, requestAuthMiddleware]);
+  return useInitService(() => new SourceService(requestOptions), [apiUrl, requestOptions]);
 }
 
 export type CheckConnectorParams = { signal: AbortSignal } & (

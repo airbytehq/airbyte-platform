@@ -24,7 +24,7 @@ export const BasicScheduleFormControl: React.FC = () => {
 
   const onBasicScheduleSelect = (value: ConnectionScheduleDataBasicSchedule): void => {
     trackDropdownSelect(value);
-    setValue("scheduleData.basicSchedule", value, { shouldValidate: true });
+    setValue("scheduleData.basicSchedule", value, { shouldValidate: true, shouldDirty: true });
   };
 
   return (

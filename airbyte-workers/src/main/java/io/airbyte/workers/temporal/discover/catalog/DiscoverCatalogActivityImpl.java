@@ -17,7 +17,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -72,7 +72,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
-  private final TemporalUtils temporalUtils;
 
   public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -85,8 +84,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags,
-                                     final MetricClient metricClient,
-                                     final TemporalUtils temporalUtils) {
+                                     final MetricClient metricClient) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
@@ -99,7 +97,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.metricClient = metricClient;
-    this.temporalUtils = temporalUtils;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -122,7 +119,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(cancellationCallback,
+    return HeartbeatUtils.withBackgroundHeartbeat(cancellationCallback,
         () -> {
           final var worker = getWorkerFactory(launcherConfig, config.getResourceRequirements()).get();
           cancellationCallback.set(worker::cancel);

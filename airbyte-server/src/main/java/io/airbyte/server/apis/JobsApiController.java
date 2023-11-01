@@ -46,7 +46,6 @@ import io.micronaut.security.rules.SecurityRule;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/jobs")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)

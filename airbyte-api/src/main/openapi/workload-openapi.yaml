@@ -1,0 +1,316 @@
+openapi: 3.0.1
+info:
+  title: WorkloadApi
+  description: API managing the workload
+  version: 1.0.0
+servers:
+  - url: http://localhost:8007/api
+paths:
+  /api/v1/workload:
+    get:
+      tags:
+        - workload
+      operationId: workloadGet
+      responses:
+        "200":
+          description: Successfully retrieved organizations by given user id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workload"
+        "404":
+          description: Object with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+  /api/v1/workload/cancel:
+    put:
+      tags:
+        - workload
+      operationId: workloadCancel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadCancelRequest"
+      responses:
+        "204":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+        "400":
+          description: "Invalid argument, most likely an invalid dataplane id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+        "404":
+          description: Object with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+        "409":
+          description: Workload has already been claimed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+  /api/v1/workload/claim:
+    put:
+      tags:
+        - workload
+      operationId: workloadClaim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadClaimRequest"
+      responses:
+        "200":
+          description:
+            "Returns a boolean denoting whether claim was successful. True\
+            \ if claim was successful, False if workload has already been claimed."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimResponse"
+        "400":
+          description: "Invalid argument, most likely an invalid dataplane id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+        "404":
+          description: Object with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+  /api/v1/workload/heartbeat:
+    put:
+      tags:
+        - workload
+      operationId: workloadHeartbeat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadHeartbeatRequest"
+      responses:
+        "204":
+          description: Successfully heartbeated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+        "404":
+          description: Object with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+        "410":
+          description:
+            Workload should stop because it is no longer expected to be
+            running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+  /api/v1/workload/list:
+    post:
+      tags:
+        - workload
+      operationId: workloadList
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadListRequest"
+      responses:
+        "204":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadListResponse"
+        "400":
+          description: Invalid argument.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+  /api/v1/workload/status:
+    put:
+      tags:
+        - workload
+      operationId: workloadStatusUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadStatusUpdateRequest"
+      responses:
+        "204":
+          description: Successfully updated the workload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Void"
+        "404":
+          description: Object with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+components:
+  schemas:
+    ClaimResponse:
+      required:
+        - claimed
+      type: object
+      properties:
+        claimed:
+          type: boolean
+    NotFoundKnownExceptionInfo:
+      required:
+        - message
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        message:
+          type: string
+        exception-class-name:
+          type: string
+          nullable: true
+        exception-stack:
+          type: array
+          nullable: true
+          items:
+            type: string
+        root-cause-exception-class-name:
+          type: string
+          nullable: true
+        root-cause-exception-stack:
+          type: array
+          nullable: true
+          items:
+            type: string
+    Void:
+      type: object
+    Workload:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+        dataplane-id:
+          type: string
+          nullable: true
+        status:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/WorkloadStatus"
+        last-heartbeat-at:
+          type: string
+          format: date-time
+          nullable: true
+        labels:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/WorkloadLabel"
+    WorkloadCancelRequest:
+      required:
+        - reason
+        - source
+        - workload
+      type: object
+      properties:
+        workload:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+        source:
+          type: string
+    WorkloadClaimRequest:
+      required:
+        - dataplane-id
+        - workload-id
+      type: object
+      properties:
+        workload-id:
+          type: string
+        dataplane-id:
+          type: string
+    WorkloadHeartbeatRequest:
+      required:
+        - workload-id
+      type: object
+      properties:
+        workload-id:
+          type: string
+    WorkloadLabel:
+      required:
+        - key
+        - value
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    WorkloadListRequest:
+      type: object
+      properties:
+        dataplane:
+          type: array
+          nullable: true
+          items:
+            type: string
+        status:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/WorkloadStatus"
+        updated-before:
+          type: string
+          format: date-time
+          nullable: true
+    WorkloadListResponse:
+      required:
+        - workloads
+      type: object
+      properties:
+        workloads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workload"
+    WorkloadStatus:
+      type: string
+      enum:
+        - PENDING
+        - CLAIMED
+        - RUNNING
+        - SUCCESS
+        - FAILURE
+        - CANCELLED
+    WorkloadStatusUpdateRequest:
+      required:
+        - status
+        - workload-id
+      type: object
+      properties:
+        workload-id:
+          type: string
+        status:
+          $ref: "#/components/schemas/WorkloadStatus"

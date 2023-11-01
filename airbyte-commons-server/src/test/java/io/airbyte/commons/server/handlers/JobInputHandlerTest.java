@@ -22,6 +22,7 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
@@ -94,6 +95,7 @@ class JobInputHandlerTest {
   private AttemptHandler attemptHandler;
   private StateHandler stateHandler;
   private JobInputHandler jobInputHandler;
+  private ContextBuilder contextBuilder;
 
   @BeforeEach
   void init() throws IOException, JsonValidationException, ConfigNotFoundException {
@@ -111,6 +113,7 @@ class JobInputHandlerTest {
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    contextBuilder = mock(ContextBuilder.class);
 
     jobInputHandler = new JobInputHandler(jobPersistence,
         configRepository,
@@ -120,7 +123,7 @@ class JobInputHandlerTest {
         configInjector,
         attemptHandler,
         stateHandler,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper, contextBuilder);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
@@ -230,7 +233,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test
@@ -305,7 +308,7 @@ class JobInputHandlerTest {
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
         .attemptNumber(ATTEMPT_NUMBER)
-        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID, true)));
+        .syncConfig(ApiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)));
   }
 
   @Test

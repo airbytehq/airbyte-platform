@@ -1,4 +1,3 @@
-import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -11,35 +10,44 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
 
 import { useListWorkspaces } from "core/api";
-import { CloudWorkspaceRead } from "core/api/types/CloudApi";
+import { useCreateCloudWorkspace } from "core/api/cloud";
+import { OrganizationRead } from "core/request/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
+import { useOrganizationsToCreateWorkspaces } from "pages/workspaces/components/useOrganizationsToCreateWorkspaces";
 import styles from "pages/workspaces/components/WorkspacesCreateControl.module.scss";
 
 interface CreateCloudWorkspaceFormValues {
   name: string;
+  organizationId?: string;
 }
 
-const CreateCloudWorkspaceFormValidationSchema = yup.object().shape({
-  name: yup.string().trim().required("form.empty.error"),
-});
+const generateValidationSchema = (organizationsCount: number) => {
+  return yup.object().shape({
+    name: yup.string().trim().required("form.empty.error"),
+    ...(organizationsCount > 0
+      ? { organizationId: yup.string().required("form.empty.error") }
+      : { organizationId: yup.string().strip() }),
+  });
+};
 
-interface CloudWorkspacesCreateControlProps {
-  createWorkspace: UseMutateAsyncFunction<CloudWorkspaceRead, unknown, string, unknown>;
-}
+export const CloudWorkspacesCreateControl: React.FC = () => {
+  const { mutateAsync: createWorkspace } = useCreateCloudWorkspace();
 
-export const CloudWorkspacesCreateControl: React.FC<CloudWorkspacesCreateControlProps> = ({ createWorkspace }) => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const [isEditMode, toggleMode] = useToggle(false);
   const { registerNotification } = useNotificationService();
   const { workspaces } = useListWorkspaces();
+  const { organizationsToCreateIn, hasOrganization } = useOrganizationsToCreateWorkspaces();
+
   const isFirstWorkspace = workspaces.length === 0;
 
   const onSubmit = async (values: CreateCloudWorkspaceFormValues) => {
-    const newWorkspace = await createWorkspace(values.name);
+    const newWorkspace = await createWorkspace(values);
     toggleMode();
     navigate(`/workspaces/${newWorkspace.workspaceId}`);
   };
@@ -61,6 +69,11 @@ export const CloudWorkspacesCreateControl: React.FC<CloudWorkspacesCreateControl
     });
   };
 
+  // if user is in an organization, but does not have adequate permissions, do not permit workspace creation
+  if (organizationsToCreateIn.length === 0 && hasOrganization) {
+    return null;
+  }
+
   return (
     <>
       {isEditMode ? (
@@ -68,23 +81,15 @@ export const CloudWorkspacesCreateControl: React.FC<CloudWorkspacesCreateControl
           <Form<CreateCloudWorkspaceFormValues>
             defaultValues={{
               name: "",
+              organizationId:
+                organizationsToCreateIn.length > 0 ? organizationsToCreateIn[0].organizationId : undefined,
             }}
-            schema={CreateCloudWorkspaceFormValidationSchema}
+            schema={generateValidationSchema(organizationsToCreateIn.length)}
             onSubmit={onSubmit}
             onSuccess={onSuccess}
             onError={onError}
           >
-            <FormControl<CreateCloudWorkspaceFormValues>
-              label={formatMessage({ id: "form.workspaceName" })}
-              name="name"
-              fieldType="input"
-              type="text"
-            />
-            <FormSubmissionButtons
-              submitKey="form.saveChanges"
-              onCancelClickCallback={toggleMode}
-              allowNonDirtyCancel
-            />
+            <CloudWorkspaceCreateFormContent organizations={organizationsToCreateIn} toggleMode={toggleMode} />
           </Form>
         </Card>
       ) : (
@@ -101,6 +106,50 @@ export const CloudWorkspacesCreateControl: React.FC<CloudWorkspacesCreateControl
           </Button>
         </Box>
       )}
+    </>
+  );
+};
+
+const CloudWorkspaceCreateFormContent: React.FC<{ organizations: OrganizationRead[]; toggleMode: () => void }> = ({
+  organizations,
+  toggleMode,
+}) => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <>
+      {organizations.length > 1 && (
+        <FormControl<CreateCloudWorkspaceFormValues>
+          label={formatMessage({ id: "form.organizationName" })}
+          name="organizationId"
+          fieldType="dropdown"
+          options={organizations.map((organization) => {
+            return {
+              value: organization.organizationId,
+              label: organization.organizationName,
+            };
+          })}
+        />
+      )}
+      <>
+        <FormControl<CreateCloudWorkspaceFormValues>
+          label={formatMessage({ id: "form.workspaceName" })}
+          name="name"
+          fieldType="input"
+          type="text"
+        />
+        {organizations.length === 1 && (
+          <Box pb="md">
+            <Text>
+              <FormattedMessage
+                id="workspaces.create.organizationDescription"
+                values={{ organizationName: organizations[0].organizationName }}
+              />
+            </Text>
+          </Box>
+        )}
+        <FormSubmissionButtons submitKey="form.saveChanges" onCancelClickCallback={toggleMode} allowNonDirtyCancel />
+      </>
     </>
   );
 };

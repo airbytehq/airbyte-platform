@@ -50,13 +50,13 @@ export const createDummyApiSource = (name: string) => {
   cy.wait("@createSource");
 };
 
-export const updateSource = (name: string, field: string, value: string) => {
+export const updateSource = (name: string, field: string, value: string, isDropdown = false) => {
   cy.intercept("/api/v1/sources/check_connection_for_update").as("checkSourceConnection");
   cy.intercept("/api/v1/sources/update").as("updateSource");
 
   goToSourcePage();
   openConnectorPage(name);
-  updateField(field, value);
+  updateField(field, value, isDropdown);
   submitButtonClick();
 
   cy.wait("@checkSourceConnection");

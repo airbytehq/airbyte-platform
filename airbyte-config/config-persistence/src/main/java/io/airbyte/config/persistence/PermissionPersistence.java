@@ -14,11 +14,11 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.User;
-import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.UserPermission;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -40,8 +40,6 @@ public class PermissionPersistence {
   private final ExceptionWrappingDatabase database;
 
   public static final String PRIMARY_KEY = "id";
-  public static final String USER_KEY = "user_id";
-  public static final String WORKSPACE_KEY = "workspace_id";
 
   public PermissionPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
@@ -53,42 +51,65 @@ public class PermissionPersistence {
    * @param permission permission to write into database.
    * @throws IOException in case of a db error.
    */
-
   public void writePermission(final Permission permission) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType newPermissionType =
+        PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(permission.getPermissionType());
     database.transaction(ctx -> {
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(PERMISSION)
-          .where(PERMISSION.ID.eq(permission.getPermissionId())));
-
-      if (isExistingConfig) {
-        ctx.update(PERMISSION)
-            .set(PERMISSION.ID, permission.getPermissionId())
-            .set(PERMISSION.PERMISSION_TYPE, permission.getPermissionType() == null ? null
-                : Enums.toEnum(permission.getPermissionType().value(),
-                    io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class).orElseThrow())
-            .set(PERMISSION.USER_ID, permission.getUserId())
-            .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
-            .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
-            .set(PERMISSION.UPDATED_AT, timestamp)
-            .where(PERMISSION.ID.eq(permission.getPermissionId()))
-            .execute();
-
-      } else {
-        ctx.insertInto(PERMISSION)
-            .set(PERMISSION.ID, permission.getPermissionId())
-            .set(PERMISSION.PERMISSION_TYPE, permission.getPermissionType() == null ? null
-                : Enums.toEnum(permission.getPermissionType().value(),
-                    io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class).orElseThrow())
-            .set(PERMISSION.USER_ID, permission.getUserId())
-            .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
-            .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
-            .set(PERMISSION.CREATED_AT, timestamp)
-            .set(PERMISSION.UPDATED_AT, timestamp)
-            .execute();
+      try {
+        final Permission existingPermission = getPermission(permission.getPermissionId()).orElse(null);
+        if (existingPermission != null) {
+          updatePermission(ctx, existingPermission, permission, newPermissionType, timestamp);
+        } else {
+          ctx.insertInto(PERMISSION)
+              .set(PERMISSION.ID, permission.getPermissionId())
+              .set(PERMISSION.PERMISSION_TYPE, newPermissionType) //
+              .set(PERMISSION.USER_ID, permission.getUserId())
+              .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
+              .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
+              .set(PERMISSION.CREATED_AT, timestamp)
+              .set(PERMISSION.UPDATED_AT, timestamp)
+              .execute();
+        }
+        return null;
+      } catch (final IOException e) {
+        throw new SQLException(e);
       }
-      return null;
     });
+  }
+
+  private void updatePermission(final DSLContext transactionCtx,
+                                final Permission existingPermission,
+                                final Permission updatedPermission,
+                                final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType updatedPermissionType,
+                                final OffsetDateTime timestamp)
+      throws SQLOperationNotAllowedException {
+
+    transactionCtx.update(PERMISSION)
+        .set(PERMISSION.ID, updatedPermission.getPermissionId())
+        .set(PERMISSION.PERMISSION_TYPE, updatedPermissionType)
+        .set(PERMISSION.UPDATED_AT, timestamp)
+        .where(PERMISSION.ID.eq(updatedPermission.getPermissionId()))
+        .execute();
+
+    // check if this update removed the last OrganizationAdmin from the organization
+    final boolean wasOrganizationAdminDemotion = existingPermission.getPermissionType().equals(PermissionType.ORGANIZATION_ADMIN)
+        && !updatedPermission.getPermissionType().equals(PermissionType.ORGANIZATION_ADMIN);
+
+    if (wasOrganizationAdminDemotion && countOrganizationAdmins(transactionCtx, updatedPermission.getOrganizationId()) < 1) {
+      // trigger a transaction rollback
+      throw new SQLOperationNotAllowedException(
+          "Preventing update that would have removed the last OrganizationAdmin from organization " + updatedPermission.getOrganizationId());
+    }
+  }
+
+  private int countOrganizationAdmins(final DSLContext ctx, final UUID organizationId) {
+    // fetch the count of permission records with type OrganizationAdmin and in the indicated
+    // organizationId
+    return ctx.fetchCount(select()
+        .from(PERMISSION)
+        .where(PERMISSION.PERMISSION_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.organization_admin))
+        .and(PERMISSION.ORGANIZATION_ID.eq(organizationId)));
   }
 
   /**
@@ -161,27 +182,30 @@ public class PermissionPersistence {
    *
    */
   public boolean deletePermissionById(final UUID permissionId) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(PERMISSION)).where(field(DSL.name(PRIMARY_KEY)).eq(permissionId)).execute() > 0;
-  }
+    return database.transaction(ctx -> {
+      final Permission deletedPermission;
+      try {
+        deletedPermission = getPermission(permissionId).orElseThrow();
+      } catch (final IOException e) {
+        throw new SQLException(e);
+      }
+      final int modifiedCount = ctx.deleteFrom(PERMISSION).where(field(DSL.name(PRIMARY_KEY)).eq(permissionId)).execute();
 
-  /**
-   * Delete Permissions by User id.
-   *
-   * @param userId the user id
-   * @throws IOException in case of a db error
-   */
-  public boolean deletePermissionByUserId(final UUID userId) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(PERMISSION)).where(field(DSL.name(USER_KEY)).eq(userId)).execute() > 0;
-  }
+      // return early if nothing was deleted
+      if (modifiedCount == 0) {
+        return false;
+      }
 
-  /**
-   * Delete Permissions by workspace.
-   *
-   * @param workspaceId the workspace id
-   * @throws IOException in case of a db error
-   */
-  public boolean deletePermissionByWorkspaceId(final UUID workspaceId) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(PERMISSION)).where(field(DSL.name(WORKSPACE_KEY)).eq(workspaceId)).execute() > 0;
+      // check if this deletion removed the last OrganizationAdmin from the organization
+      final boolean wasOrganizationAdminDeletion = deletedPermission.getPermissionType().equals(PermissionType.ORGANIZATION_ADMIN);
+      if (wasOrganizationAdminDeletion && countOrganizationAdmins(ctx, deletedPermission.getOrganizationId()) < 1) {
+        // trigger a rollback by throwing an exception
+        throw new SQLOperationNotAllowedException(
+            "Rolling back delete that would have removed the last OrganizationAdmin from organization " + deletedPermission.getOrganizationId());
+      }
+
+      return modifiedCount > 0;
+    });
   }
 
   /**
@@ -242,22 +266,20 @@ public class PermissionPersistence {
     return this.database.query(ctx -> getUserInstanceAdminPermission(ctx, userId));
   }
 
-  public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId, final AuthProvider authProvider)
+  public PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
       throws IOException {
-    return this.database.query(ctx -> findPermissionTypeForUserAndWorkspace(ctx, workspaceId, authUserId, authProvider));
+    return this.database.query(ctx -> findPermissionTypeForUserAndWorkspace(ctx, workspaceId, authUserId));
   }
 
   private PermissionType findPermissionTypeForUserAndWorkspace(final DSLContext ctx,
                                                                final UUID workspaceId,
-                                                               final String authUserId,
-                                                               final AuthProvider authProvider) {
+                                                               final String authUserId) {
     var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
         .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
         .and(USER.AUTH_USER_ID.eq(authUserId))
-        .and(USER.AUTH_PROVIDER.eq(Enums.toEnum(authProvider.value(), io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider.class).get()))
         .fetchOne();
     if (record == null) {
       return null;
@@ -268,22 +290,20 @@ public class PermissionPersistence {
     return Enums.toEnum(jooqPermissionType.getLiteral(), PermissionType.class).get();
   }
 
-  public PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId, final AuthProvider authProvider)
+  public PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId)
       throws IOException {
-    return this.database.query(ctx -> findPermissionTypeForUserAndOrganization(ctx, organizationId, authUserId, authProvider));
+    return this.database.query(ctx -> findPermissionTypeForUserAndOrganization(ctx, organizationId, authUserId));
   }
 
   private PermissionType findPermissionTypeForUserAndOrganization(final DSLContext ctx,
                                                                   final UUID organizationId,
-                                                                  final String authUserId,
-                                                                  final AuthProvider authProvider) {
+                                                                  final String authUserId) {
     var record = ctx.select(PERMISSION.PERMISSION_TYPE)
         .from(PERMISSION)
         .join(USER)
         .on(PERMISSION.USER_ID.eq(USER.ID))
         .where(PERMISSION.ORGANIZATION_ID.eq(organizationId))
         .and(USER.AUTH_USER_ID.eq(authUserId))
-        .and(USER.AUTH_PROVIDER.eq(Enums.toEnum(authProvider.value(), io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider.class).get()))
         .fetchOne();
 
     if (record == null) {
@@ -303,6 +323,13 @@ public class PermissionPersistence {
         .fetch();
 
     return records.stream().map(record -> buildUserPermissionFromRecord(record)).collect(Collectors.toList());
+  }
+
+  /**
+   * List all organization-level permissions for an organization.
+   */
+  public List<UserPermission> listPermissionsForOrganization(final UUID organizationId) throws IOException {
+    return this.database.query(ctx -> listPermissionsForOrganization(ctx, organizationId));
   }
 
   private List<UserPermission> listPermissionsForOrganization(final DSLContext ctx, final UUID organizationId) {

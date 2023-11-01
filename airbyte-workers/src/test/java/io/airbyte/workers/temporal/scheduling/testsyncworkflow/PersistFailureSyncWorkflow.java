@@ -13,7 +13,6 @@ import io.temporal.api.enums.v1.RetryState;
 import io.temporal.failure.ActivityFailure;
 import java.util.UUID;
 
-@SuppressWarnings("MissingJavadocType")
 public class PersistFailureSyncWorkflow implements SyncWorkflow {
 
   // Should match activity types from FailureHelper.java

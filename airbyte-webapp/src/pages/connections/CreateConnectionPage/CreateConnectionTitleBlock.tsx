@@ -11,7 +11,7 @@ import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { DestinationRead, ReleaseStage, SourceRead, SupportLevel } from "core/request/AirbyteClient";
+import { DestinationRead, SourceRead, SupportLevel } from "core/request/AirbyteClient";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
@@ -100,7 +100,6 @@ const SourceBlock: React.FC<{ source?: SourceRead }> = ({ source }) => {
       name={source?.name}
       supportLevel={sourceDefinitionVersion?.supportLevel}
       custom={sourceDefinition?.custom}
-      releaseStage={sourceDefinition?.releaseStage}
     />
   );
 };
@@ -115,7 +114,6 @@ const DestinationBlock: React.FC<{ destination?: DestinationRead }> = ({ destina
       name={destination?.name}
       supportLevel={destinationDefinitionVersion?.supportLevel}
       custom={destinationDefinition?.custom}
-      releaseStage={destinationDefinition?.releaseStage}
     />
   );
 };
@@ -125,13 +123,12 @@ const ConnectorPlaceholder: React.FC<{
   name?: string;
   supportLevel?: SupportLevel;
   custom?: boolean;
-  releaseStage?: ReleaseStage;
-}> = ({ icon, name, supportLevel, custom, releaseStage }) => {
+}> = ({ icon, name, supportLevel, custom }) => {
   return (
     <FlexContainer alignItems="center" gap="sm">
       {icon ? <ConnectorIcon icon={icon} /> : <div className={styles.iconPlaceholder} />}
       {name ? <Text>{name}</Text> : <div className={styles.namePlaceholder} />}
-      {supportLevel && <SupportLevelBadge supportLevel={supportLevel} custom={custom} releaseStage={releaseStage} />}
+      {supportLevel && <SupportLevelBadge supportLevel={supportLevel} custom={custom} />}
     </FlexContainer>
   );
 };

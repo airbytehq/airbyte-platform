@@ -41,12 +41,14 @@ dependencies {
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation libs.s3
+    implementation libs.sts
 
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
+    implementation project(':airbyte-commons-temporal-core')
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
@@ -56,6 +58,7 @@ dependencies {
     implementation project(':airbyte-persistence:job-persistence')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-worker-models')
+    implementation libs.jakarta.validation.api
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor

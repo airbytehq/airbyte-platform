@@ -1,9 +1,10 @@
-import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { useCurrentUser } from "core/services/auth";
+import { useAuthService, useCurrentUser } from "core/services/auth";
 import { SCOPE_USER } from "services/Scope";
 
+import { useListUsers } from "./users";
 import {
   deleteCloudWorkspace,
   getCloudWorkspace,
@@ -11,8 +12,14 @@ import {
   updateCloudWorkspace,
   webBackendCreatePermissionedCloudWorkspace,
   webBackendListWorkspacesByUser,
+  webBackendListWorkspacesByUserPaginated,
 } from "../../generated/CloudApi";
-import { CloudWorkspaceRead, CloudWorkspaceReadList, ConsumptionTimeWindow } from "../../types/CloudApi";
+import {
+  CloudWorkspaceRead,
+  CloudWorkspaceReadList,
+  ConsumptionTimeWindow,
+  PermissionedCloudWorkspaceCreate,
+} from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
 
@@ -57,7 +64,8 @@ export function useCreateCloudWorkspace() {
   const user = useCurrentUser();
 
   return useMutation(
-    async (name: string) => webBackendCreatePermissionedCloudWorkspace({ name, userId: user.userId }, requestOptions),
+    async (values: Omit<PermissionedCloudWorkspaceCreate, "userId">) =>
+      webBackendCreatePermissionedCloudWorkspace({ ...values, userId: user.userId }, requestOptions),
     {
       onSuccess: (result) => {
         queryClient.setQueryData<CloudWorkspaceReadList>(workspaceKeys.lists(), (old) => ({
@@ -67,6 +75,29 @@ export function useCreateCloudWorkspace() {
     }
   );
 }
+
+export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains?: string) => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery(
+    workspaceKeys.list(`paginated`),
+    async ({ pageParam = 0 }: { pageParam?: number }) => {
+      return {
+        data: await webBackendListWorkspacesByUserPaginated(
+          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, nameContains },
+          requestOptions
+        ),
+        pageParam,
+      };
+    },
+    {
+      suspense: true,
+      getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
+      getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+    }
+  );
+};
 
 export function useUpdateCloudWorkspace() {
   const requestOptions = useRequestOptions();
@@ -156,3 +187,10 @@ export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: Consu
     getCloudWorkspaceUsage({ workspaceId, timeWindow }, requestOptions)
   );
 }
+
+export const useIsForeignWorkspace = () => {
+  const { user } = useAuthService();
+  const workspaceUsers = useListUsers();
+
+  return !user || !workspaceUsers.users.some((member) => member.userId === user.userId);
+};

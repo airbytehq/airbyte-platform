@@ -6,6 +6,7 @@ package io.airbyte.workers.test_utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.OperatorDbt;
@@ -62,7 +63,8 @@ public class TestConfigHelpers {
         .withSourceConfiguration(replicationInput.getSourceConfiguration())
         .withState(replicationInput.getState())
         .withOperationSequence(replicationInput.getOperationSequence())
-        .withWorkspaceId(replicationInput.getWorkspaceId()));
+        .withWorkspaceId(replicationInput.getWorkspaceId())
+        .withConnectionContext(new ConnectionContext()));
   }
 
   public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {
@@ -162,6 +164,7 @@ public class TestConfigHelpers {
 
     final ReplicationInput replicationInput = new ReplicationInput()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
+        .withConnectionId(connectionId)
         .withPrefix(standardSync.getPrefix())
         .withSourceId(sourceId)
         .withDestinationId(destinationId)

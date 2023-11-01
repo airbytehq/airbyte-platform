@@ -201,7 +201,7 @@ Add environment variables to configure minio
 */}}
 {{- define "airbyte.minio.endpoint" -}}
 {{- if .Values.global.logs.minio.enabled -}}
-    {{- printf "http://%s:%d" "airbyte-minio-svc" 9000 -}}
+    {{- .Values.minio.endpoint -}}
 {{- else if .Values.global.logs.externalMinio.endpoint -}}
     {{- .Values.global.logs.externalMinio.endpoint -}}
 {{- else if .Values.global.logs.externalMinio.enabled -}}
@@ -258,6 +258,13 @@ Returns the Airbyte PodSweeper Image
 Returns the Airbyte Worker Image
 */}}
 {{- define "airbyte.workerImage" -}}
+{{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
+{{- end -}}
+
+{{/*
+Returns the Airbyte Workload Launcher Image
+*/}}
+{{- define "airbyte.workloadLauncherImage" -}}
 {{- include "common.images.image" (dict "imageRoot" .Values.worker.image "global" .Values.global) -}}
 {{- end -}}
 

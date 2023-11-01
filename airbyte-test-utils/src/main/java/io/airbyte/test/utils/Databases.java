@@ -27,7 +27,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 /**
  * Collection of Acceptance test database queries to simplify test set up.
  */
-@SuppressWarnings({"MissingJavadocMethod"})
 public class Databases {
 
   private static final String COLUMN_NAME_DATA = "_airbyte_data";
@@ -92,7 +91,7 @@ public class Databases {
         context -> {
           final Result<Record> fetch =
               context.fetch(
-                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname == '" + schema + "'");
+                  "SELECT tablename, schemaname FROM pg_catalog.pg_tables WHERE schemaname = '" + schema + "'");
           return fetch.stream()
               .map(record -> {
                 final var schemaName = (String) record.get("schemaname");
@@ -131,65 +130,6 @@ public class Databases {
         .map(Jsons::deserialize)
         .map(Jsons::jsonNode)
         .collect(Collectors.toList());
-  }
-
-  public static void truncateConfigDatabase(Database configDatabase) throws SQLException {
-    configDatabase.query(ctx -> ctx
-        .execute(
-            """
-            TRUNCATE TABLE
-              active_declarative_manifest,
-              actor,
-              actor_catalog,
-              actor_catalog_fetch_event,
-              actor_definition,
-              actor_definition_breaking_change,
-              actor_definition_version,
-              actor_definition_workspace_grant,
-              actor_definition_config_injection,
-              actor_oauth_parameter,
-              connection,
-              connection_operation,
-              connector_builder_project,
-              declarative_manifest,
-              notification_configuration,
-              operation,
-              organization,
-              permission,
-              schema_management,
-              state,
-              stream_reset,
-              \"user\",
-              user_invitation,
-              sso_config,
-              organization_email_domain,
-              workspace,
-              workspace_service_account
-            """));
-  }
-
-  public static void truncateJobsDatabase(Database jobsDatabase) throws SQLException {
-    jobsDatabase.query(ctx -> ctx.execute(
-        """
-        TRUNCATE TABLE
-        jobs
-        CASCADE
-        """));
-  }
-
-  public static void truncateCloudDatabase(Database cloudDatabase) throws SQLException {
-    cloudDatabase.query(ctx -> ctx.execute(
-        """
-        TRUNCATE TABLE
-          airbyte_cloud_migrations,
-          airbyte_configs,
-          cloud_workspace,
-          credit_cache,
-          credit_consumption,
-          permission,
-          "user",
-          user_payment_account
-        """));
   }
 
 }

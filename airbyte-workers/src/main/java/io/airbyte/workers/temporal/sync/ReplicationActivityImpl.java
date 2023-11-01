@@ -21,15 +21,17 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
+import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogTransforms;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.temporal.utils.PayloadChecker;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
@@ -40,11 +42,13 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.State;
+import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
+import io.airbyte.featureflag.ResetBackfillState;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -55,6 +59,8 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.Worker;
+import io.airbyte.workers.helpers.BackfillHelper;
+import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -65,8 +71,10 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
@@ -88,7 +96,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
@@ -100,7 +107,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final LogConfigs logConfigs,
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
-                                 final TemporalUtils temporalUtils,
                                  final AirbyteApiClient airbyteApiClient,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
@@ -111,7 +117,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
@@ -157,7 +162,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final ReplicationInput hydratedReplicationInput = getHydratedReplicationInput(replicationActivityInput);
@@ -193,7 +198,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-
+          List<StreamDescriptor> streamsToBackfill = List.of();
+          if (replicationActivityInput.getSchemaRefreshOutput() != null) {
+            streamsToBackfill = BackfillHelper
+                .getStreamsToBackfill(replicationActivityInput.getSchemaRefreshOutput().getAppliedDiff(), hydratedReplicationInput.getCatalog());
+          }
+          BackfillHelper.markBackfilledStreams(streamsToBackfill, standardSyncOutput);
+          LOGGER.info("sync summary after backfill: {}", standardSyncOutput);
           return standardSyncOutput;
         },
         context);
@@ -227,7 +238,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
 
-    return PayloadChecker.validatePayloadSize(temporalUtils.withBackgroundHeartbeat(
+    return PayloadChecker.validatePayloadSize(HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var hydratedSyncInput = getHydratedSyncInput(syncInput);
@@ -262,7 +273,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           } else {
             LOGGER.info("Sync summary length: {}", standardSyncOutputString.length());
           }
-
           return standardSyncOutput;
         },
         context));
@@ -298,7 +308,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       updateCatalogForReset(replicationActivityInput, catalog);
     }
     // Retrieve the state.
-    final State state = retrieveState(replicationActivityInput);
+    State state = retrieveState(replicationActivityInput);
+    if (replicationActivityInput.getSchemaRefreshOutput() != null) {
+      state = getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(),
+          replicationActivityInput.getWorkspaceId(), replicationActivityInput.getConnectionId(), catalog);
+    }
     // Hydrate the secrets.
     final var fullSourceConfig = secretsHydrator.hydrate(replicationActivityInput.getSourceConfiguration());
     final var fullDestinationConfig = secretsHydrator.hydrate(replicationActivityInput.getDestinationConfiguration());
@@ -322,6 +336,29 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         .withState(state);
   }
 
+  private State getUpdatedStateForBackfill(State state,
+                                           RefreshSchemaActivityOutput schemaRefreshOutput,
+                                           final UUID workspaceId,
+                                           final UUID connectionId,
+                                           final ConfiguredAirbyteCatalog catalog)
+      throws Exception {
+    if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
+      final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
+      LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
+      State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
+      // persist the state
+      // this will be behind a separate feature flag since it's a destructive operation.
+      if (resetState != null && featureFlagClient.boolVariation(ResetBackfillState.INSTANCE, new Workspace(workspaceId))) {
+        LOGGER.debug("Resetting state for connection: {}", connectionId);
+        persistState(resetState, connectionId);
+      }
+
+      return resetState;
+    }
+    // No schema refresh output, so we just return the original state.
+    return state;
+  }
+
   @NotNull
   private ConfiguredAirbyteCatalog retrieveCatalog(ReplicationActivityInput replicationActivityInput) throws Exception {
     final ConnectionRead connectionInfo =
@@ -335,6 +372,17 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     }
     final ConfiguredAirbyteCatalog catalog = CatalogClientConverters.toConfiguredAirbyteProtocol(connectionInfo.getSyncCatalog());
     return catalog;
+  }
+
+  private void persistState(final State resetState, final UUID connectionId) throws Exception {
+    final StateWrapper stateWrapper = StateMessageHelper.getTypedState(resetState.getState()).get();
+    final ConnectionState connectionState = StateConverter.toClient(connectionId, stateWrapper);
+
+    AirbyteApiClient.retryWithJitterThrows(
+        () -> airbyteApiClient.getStateApi().createOrUpdateState(new ConnectionStateCreateOrUpdate()
+            .connectionId(connectionId)
+            .connectionState(connectionState)),
+        "create or update the state");
   }
 
   private State retrieveState(ReplicationActivityInput replicationActivityInput) throws Exception {

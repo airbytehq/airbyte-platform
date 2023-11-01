@@ -2,7 +2,7 @@ import { useGetWorkspace } from "core/api";
 import { PermissionRead } from "core/request/AirbyteClient";
 
 export const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
-export const RbacRoleHierarchy = ["ADMIN", "EDITOR", "READER"] as const;
+export const RbacRoleHierarchy = ["ADMIN", "EDITOR", "READER", "MEMBER"] as const;
 export type RbacResource = (typeof RbacResourceHierarchy)[number];
 export type RbacRole = (typeof RbacRoleHierarchy)[number];
 

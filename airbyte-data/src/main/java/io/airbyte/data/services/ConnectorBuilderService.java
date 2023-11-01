@@ -5,7 +5,6 @@
 package io.airbyte.data.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -28,8 +27,6 @@ public interface ConnectorBuilderService {
 
   Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(UUID workspaceId) throws IOException;
 
-  ConnectorBuilderProjectVersionedManifest buildConnectorBuilderProjectVersionedManifest();
-
   boolean deleteBuilderProject(UUID builderProjectId) throws IOException;
 
   void writeBuilderProjectDraft(UUID projectId, UUID workspaceId, String name, JsonNode manifestDraft) throws IOException;
@@ -47,8 +44,6 @@ public interface ConnectorBuilderService {
                                                 ActorDefinitionConfigInjection configInjection,
                                                 ConnectorSpecification connectorSpecification)
       throws IOException;
-
-  void upsertActiveDeclarativeManifest(ActiveDeclarativeManifest activeDeclarativeManifest);
 
   void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
                                          Long version,

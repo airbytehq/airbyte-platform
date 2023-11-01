@@ -111,6 +111,10 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     if (sourceDiscoverSchemaRead == null) {
       return;
     }
+    if (!sourceDiscoverSchemaRead.getJobInfo().getSucceeded()) {
+      log.warn("Failed to refresh schema; proceeding with sync.");
+      return;
+    }
     final UUID workspaceId = AirbyteApiClient.retryWithJitterThrows(
         () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId(),
         "Get the workspace by connection Id");
@@ -148,7 +152,10 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     if (sourceDiscoverSchemaRead == null) {
       return new RefreshSchemaActivityOutput(null);
     }
-
+    if (!sourceDiscoverSchemaRead.getJobInfo().getSucceeded()) {
+      log.warn("Failed to refresh schema; proceeding with sync.");
+      return new RefreshSchemaActivityOutput(null);
+    }
     final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
 
     if (autoPropagationIsEnabledForWorkspace) {

@@ -13,7 +13,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.temporal.HeartbeatUtils;
 import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
@@ -26,6 +26,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -34,7 +35,6 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
-import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -66,9 +66,9 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final String airbyteVersion;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
-  private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final FeatureFlagClient featureFlagClient;
+  private final MetricClient metricClient;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
@@ -80,9 +80,9 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        @Value("${airbyte.version}") final String airbyteVersion,
                                        @Value("${micronaut.server.port}") final Integer serverPort,
                                        final AirbyteConfigValidator airbyteConfigValidator,
-                                       final TemporalUtils temporalUtils,
                                        final AirbyteApiClient airbyteApiClient,
-                                       final FeatureFlagClient featureFlagClient) {
+                                       final FeatureFlagClient featureFlagClient,
+                                       final MetricClient metricClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -93,9 +93,9 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.airbyteVersion = airbyteVersion;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
-    this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.featureFlagClient = featureFlagClient;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -111,7 +111,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
             destinationLauncherConfig.getDockerImage()));
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);
-    return temporalUtils.withBackgroundHeartbeat(
+    return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
           final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
@@ -157,11 +157,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),
         resourceRequirements,
-        new DbtTransformationRunner(
-            processFactory, new DefaultNormalizationRunner(
-                processFactory,
-                destinationLauncherConfig.getNormalizationDockerImage(),
-                destinationLauncherConfig.getNormalizationIntegrationType())),
+        new DbtTransformationRunner(processFactory, destinationLauncherConfig.getDockerImage()),
         () -> {});
   }
 
@@ -181,7 +177,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         workerConfigs,
         containerOrchestratorConfig.get(),
         serverPort,
-        featureFlagClient);
+        featureFlagClient,
+        metricClient);
   }
 
 }

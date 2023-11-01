@@ -5,14 +5,16 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
-import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
-import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_MEMBER;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.UserApi;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
 import io.airbyte.api.model.generated.UserAuthIdRequestBody;
 import io.airbyte.api.model.generated.UserCreate;
+import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse;
 import io.airbyte.api.model.generated.UserIdRequestBody;
 import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.UserUpdate;
@@ -33,7 +35,6 @@ import io.micronaut.security.rules.SecurityRule;
  * User related APIs. TODO: migrate all User endpoints (including some endpoints in WebBackend API)
  * from Cloud to OSS.
  */
-@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/users")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class UserApiController implements UserApi {
@@ -89,7 +90,7 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/list_by_organization_id")
-  @Secured({READER})
+  @Secured({ORGANIZATION_MEMBER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OrganizationUserReadList listUsersInOrganization(OrganizationIdRequestBody organizationIdRequestBody) {
@@ -97,16 +98,15 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/list_by_workspace_id")
-  @Secured({READER})
+  @Secured({WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceUserReadList listUsersInWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.listUsersInWorkspace(workspaceIdRequestBody));
   }
 
-  // TODO: Update permission to instance admin once the permission PR is merged.
   @Post("/list_instance_admins")
-  @Secured({READER})
+  @Secured({ADMIN}) // instance admin only
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public UserWithPermissionInfoReadList listInstanceAdminUsers() {
@@ -114,10 +114,11 @@ public class UserApiController implements UserApi {
   }
 
   @Post("/get_or_create_by_auth_id")
-  @Secured({AUTHENTICATED_USER})
+  @SecuredUser
+  @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public UserRead getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
+  public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getOrCreateUserByAuthId(userAuthIdRequestBody));
   }
 
