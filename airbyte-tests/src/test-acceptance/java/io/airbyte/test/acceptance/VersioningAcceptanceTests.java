@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.BeforeAll;
@@ -33,16 +34,17 @@ class VersioningAcceptanceTests {
 
   private static AirbyteApiClient2 apiClient2;
   private static UUID workspaceId;
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
-  static void init() throws IOException {
+  static void init() throws IOException, URISyntaxException {
     RetryPolicy<okhttp3.Response> policy = RetryPolicy.<okhttp3.Response>builder()
         .handle(Throwable.class)
         .withMaxAttempts(5)
         .withBackoff(Duration.ofSeconds(1), Duration.ofSeconds(10)).build();
 
     OkHttpClient client = new OkHttpClient.Builder().readTimeout(Duration.ofSeconds(20)).build();
-    apiClient2 = new AirbyteApiClient2("http://localhost:8001/api", policy, client);
+    apiClient2 = new AirbyteApiClient2(String.format("%s/api", AIRBYTE_SERVER_HOST), policy, client);
 
     workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
   }

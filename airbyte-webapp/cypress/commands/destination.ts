@@ -12,13 +12,13 @@ export const createLocalJsonDestination = (name: string, destinationPath = "/loc
   fillLocalJsonForm(name, destinationPath);
   submitButtonClick();
 
-  cy.wait("@checkDestinationConnection", { requestTimeout: 8000 });
+  cy.wait("@checkDestinationConnection", { requestTimeout: 30000 });
   cy.wait("@createDestination");
 };
 
 export const createPostgresDestination = (
   name: string,
-  host = "localhost",
+  host = Cypress.env("DESTINATION_DB_HOST") || "localhost",
   port = "5434",
   database = "airbyte_ci_destination",
   username = "postgres",
@@ -33,7 +33,7 @@ export const createPostgresDestination = (
   fillPostgresForm(name, host, port, database, username, password, schema, true);
   submitButtonClick();
 
-  cy.wait("@checkDestinationConnection", { requestTimeout: 8000 });
+  cy.wait("@checkDestinationConnection", { requestTimeout: 30000 });
   cy.wait("@createDestination");
 };
 

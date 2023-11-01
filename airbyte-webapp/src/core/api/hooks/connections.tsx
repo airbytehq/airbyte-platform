@@ -334,7 +334,7 @@ export const useConnectionList = (
   return useQuery(queryKey, queryFn, {
     refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
     suspense: true,
-  }).data;
+  }).data as ConnectionListTransformed;
 };
 
 export const useGetConnectionState = (connectionId: string) => {

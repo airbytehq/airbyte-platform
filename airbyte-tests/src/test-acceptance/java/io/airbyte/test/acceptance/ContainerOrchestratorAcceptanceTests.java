@@ -27,8 +27,10 @@ import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -61,19 +63,22 @@ import org.slf4j.MDC;
 class ContainerOrchestratorAcceptanceTests {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContainerOrchestratorAcceptanceTests.class);
-  private static final String AIRBYTE_WORKER = "airbyte-worker";
-  private static final String DEFAULT = "default";
+  private static final String AIRBYTE_WORKER = Optional.ofNullable(System.getenv("AIRBYTE_WORKER_DEPLOYMENT_NAME")).orElse("airbyte-worker");
+  private static final String NAMESPACE = Optional.ofNullable(System.getenv("NAMESPACE")).orElse("default");
 
   private static AcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static KubernetesClient kubernetesClient;
 
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
+
   @BeforeAll
   static void init() throws URISyntaxException, IOException, InterruptedException, ApiException {
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
     apiClient = new AirbyteApiClient(
-        new ApiClient().setScheme("http")
-            .setHost("localhost")
-            .setPort(8001)
+        new ApiClient().setScheme(url.getScheme())
+            .setHost(url.getHost())
+            .setPort(url.getPort())
             .setBasePath("/api"));
     // work in whatever default workspace is present.
     UUID workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();
@@ -136,10 +141,10 @@ class ContainerOrchestratorAcceptanceTests {
     waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
     LOGGER.info("Scaling down worker...");
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(0, true);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
 
     LOGGER.info("Scaling up worker...");
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(1);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
 
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
   }
@@ -170,8 +175,8 @@ class ContainerOrchestratorAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitWhileJobHasStatus(apiClient.getJobsApi(), connectionSyncRead.getJob(), Set.of(JobStatus.PENDING));
 
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(0, true);
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(1);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
 
     final var resp = apiClient.getJobsApi().cancelJob(new JobIdRequestBody().id(connectionSyncRead.getJob().getId()));
     assertEquals(JobStatus.CANCELLED, resp.getJob().getStatus());
@@ -209,7 +214,7 @@ class ContainerOrchestratorAcceptanceTests {
     Thread.sleep(1000);
 
     LOGGER.info("Scale down workers...");
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(0, true);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(0, true);
 
     LOGGER.info("Starting background cancellation request...");
     final var pool = Executors.newSingleThreadExecutor();
@@ -229,7 +234,7 @@ class ContainerOrchestratorAcceptanceTests {
     Thread.sleep(2000);
 
     LOGGER.info("Scaling up workers...");
-    kubernetesClient.apps().deployments().inNamespace(DEFAULT).withName(AIRBYTE_WORKER).scale(1);
+    kubernetesClient.apps().deployments().inNamespace(NAMESPACE).withName(AIRBYTE_WORKER).scale(1);
 
     LOGGER.info("Waiting for cancellation to go into effect...");
     assertEquals(JobStatus.CANCELLED, resp.get().getJob().getStatus());

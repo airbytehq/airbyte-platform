@@ -1,10 +1,10 @@
 import { ConnectionStatus, WebBackendConnectionRead } from "@src/core/api/generated/AirbyteClient.schemas";
-import { WebBackendConnectionCreate, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
+import { DestinationRead, SourceRead, WebBackendConnectionCreate } from "@src/core/api/types/AirbyteClient";
 
 import {
+  enterConnectionName,
   selectSchedule,
   setupDestinationNamespaceSourceFormat,
-  enterConnectionName,
 } from "pages/connection/connectionFormPageObject";
 import { openCreateConnection } from "pages/destinationPage";
 
@@ -137,7 +137,10 @@ export const createNewConnectionViaApi = (
   let connectionRequestBody: WebBackendConnectionCreate;
 
   const myConnection = requestWorkspaceId().then(() => {
-    requestSourceDiscoverSchema({ sourceId: source.sourceId, disable_cache: true }).then(({ catalog, catalogId }) => {
+    requestSourceDiscoverSchema({
+      sourceId: source.sourceId,
+      disable_cache: true,
+    }).then(({ catalog, catalogId }) => {
       if (options.enableAllStreams) {
         catalog?.streams.forEach((stream) => {
           if (stream.config) {

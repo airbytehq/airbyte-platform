@@ -46,6 +46,7 @@ import io.airbyte.test.utils.Databases;
 import io.airbyte.test.utils.SchemaTableNamePair;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -129,17 +130,20 @@ class CdcAcceptanceTests {
 
   private AcceptanceTestHarness testHarness;
 
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
+
   @BeforeAll
-  static void init() throws ApiException {
+  static void init() throws ApiException, URISyntaxException {
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
     apiClient = new AirbyteApiClient(
-        new ApiClient().setScheme("http")
-            .setHost("localhost")
-            .setPort(8001)
+        new ApiClient().setScheme(url.getScheme())
+            .setHost(url.getHost())
+            .setPort(url.getPort())
             .setBasePath("/api"));
     webBackendApi = new WebBackendApi(
-        new ApiClient().setScheme("http")
-            .setHost("localhost")
-            .setPort(8001)
+        new ApiClient().setScheme(url.getScheme())
+            .setHost(url.getHost())
+            .setPort(url.getPort())
             .setBasePath("/api"));
     // work in whatever default workspace is present.
     workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().get(0).getWorkspaceId();

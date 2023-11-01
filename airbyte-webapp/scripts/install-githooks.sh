@@ -1,5 +1,6 @@
-#! /bin/sh
+#!/usr/bin/env bash
 
+[[ $(git rev-parse --is-inside-work-tree > /dev/null 2>&1) ]] || exit 0
 # Get the current core.hooksPath config
 hooksDir="$(git config core.hooksPath)"
 

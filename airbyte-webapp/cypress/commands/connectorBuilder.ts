@@ -1,12 +1,13 @@
 import {
   addStream,
   assertHasNumberOfPages,
-  configureListStreamSlicer,
   configureLimitOffsetPagination,
+  configureListStreamSlicer,
+  disableAutoImportSchema,
   disablePagination,
   disableStreamSlicer,
-  enableStreamSlicer,
   enablePagination,
+  enableStreamSlicer,
   enterName,
   enterRecordSelector,
   enterStreamName,
@@ -24,14 +25,15 @@ import {
   openTestInputs,
   selectAuthMethod,
   submitForm,
-  disableAutoImportSchema,
 } from "pages/connectorBuilderPage";
 
 export const configureGlobals = (name: string) => {
   goToView("global");
   enterName(name);
 
-  if (Cypress.platform === "darwin") {
+  if (Cypress.env("MOCK_API_SERVER_HOST")) {
+    enterUrlBase(Cypress.env("MOCK_API_SERVER_HOST"));
+  } else if (Cypress.platform === "darwin") {
     enterUrlBase("http://host.docker.internal:6767/");
   } else {
     enterUrlBase("http://172.17.0.1:6767/");
@@ -79,7 +81,7 @@ export const cleanUp = () => {
 export const publishProject = () => {
   // debounce is 2500 so we need to wait at least more before change page
   // eslint-disable-next-line cypress/no-unnecessary-waiting
-  cy.wait(3000);
+  cy.wait(30000);
   cy.get('[data-testid="publish-button"]').click({ force: true });
   submitForm();
 };

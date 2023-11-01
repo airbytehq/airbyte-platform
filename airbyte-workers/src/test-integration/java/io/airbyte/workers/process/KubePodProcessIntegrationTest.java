@@ -84,8 +84,10 @@ class KubePodProcessIntegrationTest {
   private static final int RANDOM_FILE_LINE_LENGTH = 100;
 
   private static final boolean IS_MINIKUBE = Boolean.parseBoolean(Optional.ofNullable(System.getenv("IS_MINIKUBE")).orElse("false"));
+  private static final String KUBE_PROCESS_RUNNER_HOST = Optional.ofNullable(System.getenv("KUBE_PROCESS_RUNNER_HOST")).orElse("");
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final String NAMESPACE = Optional.ofNullable(System.getenv("NAMESPACE")).orElse("default");
   private static List<Integer> openPorts;
   @Value("${micronaut.server.port}")
   private Integer heartbeatPort;
@@ -107,7 +109,7 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), "default", "airbyte-admin", fabricClient,
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), NAMESPACE, "airbyte-admin", fabricClient,
         heartbeatUrl, getHost());
   }
 
@@ -262,8 +264,8 @@ class KubePodProcessIntegrationTest {
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("echo \"h\\\"i\"; sleep 1; echo hi2");
     final var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-    assertEquals("h\"i\nhi2\n", output);
     process.waitFor();
+    assertEquals("h\"i\nhi2\n", output);
 
     // the pod should be dead and in a good state
     assertFalse(process.isAlive());
@@ -276,8 +278,8 @@ class KubePodProcessIntegrationTest {
     // start a finite process
     final Process process = getProcess("echo ENV_VAR_1=$ENV_VAR_1");
     final var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-    assertEquals("ENV_VAR_1=ENV_VALUE_1\n", output);
     process.waitFor();
+    assertEquals("ENV_VAR_1=ENV_VALUE_1\n", output);
 
     // the pod should be dead and in a good state
     assertFalse(process.isAlive());
@@ -304,6 +306,7 @@ class KubePodProcessIntegrationTest {
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final var uuid = UUID.randomUUID();
     final Process process = getProcess(Map.of("uuid", uuid.toString()), "sleep 1 && exit 10");
+    process.waitFor();
 
     final var pod = fabricClient.pods().list().getItems().stream().filter(p -> p.getMetadata() != null && p.getMetadata().getLabels() != null)
         .filter(p -> p.getMetadata().getLabels().containsKey("uuid") && p.getMetadata().getLabels().get("uuid").equals(uuid.toString()))
@@ -313,8 +316,6 @@ class KubePodProcessIntegrationTest {
     podInformer.addEventHandler(new ExitCodeWatcher(pod.getMetadata().getName(), pod.getMetadata().getNamespace(), exitCode -> {
       fabricClient.pods().delete(pod);
     }, () -> {}));
-
-    process.waitFor();
 
     // the pod should be dead with the correct error code
     assertFalse(process.isAlive());
@@ -354,7 +355,7 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), "default", "airbyte-admin", fabricClient,
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), new TestClient(), NAMESPACE, "airbyte-admin", fabricClient,
         heartbeatUrl, getHost());
 
     // start an infinite process
@@ -470,7 +471,8 @@ class KubePodProcessIntegrationTest {
 
   private static String getHost() {
     try {
-      return (IS_MINIKUBE ? Inet4Address.getLocalHost().getHostAddress() : "host.docker.internal");
+      return !KUBE_PROCESS_RUNNER_HOST.equals("") ? KUBE_PROCESS_RUNNER_HOST
+          : (IS_MINIKUBE ? Inet4Address.getLocalHost().getHostAddress() : "host.docker.internal");
     } catch (final UnknownHostException e) {
       throw new RuntimeException(e);
     }
