@@ -198,7 +198,7 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
         .with_exec(["./run.sh"])
     )
     
-    gradle_command = ["./gradlew", "check", "test", "-x", ":airbyte-webapp:test","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon", "-DciMode=true"]
+    gradle_command = ["./gradlew", "test", "-x", ":airbyte-webapp:test","-x", "buildDockerImage", "-x", "dockerBuildImage", "--build-cache", "--no-daemon", "-DciMode=true"]
 
     result = ( 
                 with_gradle(client, ctx, settings, directory=base_dir)

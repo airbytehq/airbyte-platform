@@ -36,14 +36,19 @@ plugins {
 
 gradleEnterprise {
     buildScan {
-        uploadInBackground = System.getenv("CI") == null
         termsOfServiceUrl = "https://gradle.com/terms-of-service"
         termsOfServiceAgree = "yes"
+    }
+}
+
+gradleEnterprise {
+    buildScan {
         buildScanPublished { PublishedBuildScan scan ->
             file("scan-journal.log") << "${new Date()} - ${scan.buildScanId} - ${scan.buildScanUri}\n"
         }
     }
 }
+
 
 ext.isCiServer = System.getenv().containsKey("CI")
 
