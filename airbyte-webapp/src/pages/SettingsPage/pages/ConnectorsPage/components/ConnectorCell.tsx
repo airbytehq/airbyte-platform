@@ -38,7 +38,7 @@ export const ConnectorCell: React.FC<ConnectorCellProps> = React.memo(
           <SvgIcon svg={img} />
         </div>
         <div>{connectorName}</div>
-        <SupportLevelBadge size="small" tooltip={false} supportLevel={supportLevel} custom={custom} />
+        <SupportLevelBadge tooltip={false} supportLevel={supportLevel} custom={custom} />
       </FlexContainer>
     );
   }

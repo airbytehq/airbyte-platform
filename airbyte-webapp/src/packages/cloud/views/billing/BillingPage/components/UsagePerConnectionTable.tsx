@@ -82,7 +82,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.sourceSupportLevel}
                 custom={props.row.original.connection.sourceCustom}
-                size="small"
               />
             </FlexContainer>
           </Link>
@@ -132,7 +131,6 @@ export const UsagePerConnectionTable: React.FC = () => {
               <SupportLevelBadge
                 supportLevel={props.row.original.connection.destinationSupportLevel}
                 custom={props.row.original.connection.destinationCustom}
-                size="small"
               />
             </FlexContainer>
           </Link>

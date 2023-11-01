@@ -15,6 +15,7 @@ export enum FeatureItem {
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   KeycloakAuthentication = "KEYCLOAK_AUTHENTICATION",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
+  EnterpriseBranding = "ENTERPRISE_BRANDING",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",

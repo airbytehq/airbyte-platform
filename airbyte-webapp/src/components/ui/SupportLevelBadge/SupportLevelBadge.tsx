@@ -1,42 +1,27 @@
-import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
 
 import { SupportLevel } from "core/request/AirbyteClient";
 
-import styles from "./SupportLevelBadge.module.scss";
-import { Text } from "../Text";
+import { Badge } from "../Badge";
 import { Tooltip } from "../Tooltip";
-
-type IconSize = "small" | "medium";
 
 interface SupportLevelBadgeProps {
   supportLevel?: SupportLevel;
   custom?: boolean;
-  size?: IconSize;
   tooltip?: boolean;
 }
 
 export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   supportLevel,
   custom = false,
-  size = "medium",
   tooltip = true,
 }) => {
   if (!supportLevel || (!custom && supportLevel === SupportLevel.none)) {
     return null;
   }
 
-  const badge = (
-    <Text
-      className={classNames(styles.badge, {
-        [styles["badge--certified"]]: !custom && supportLevel === "certified",
-        [styles["badge--community"]]: !custom && supportLevel === "community",
-        [styles["badge--custom"]]: custom,
-        [styles["badge--small"]]: size === "small",
-        [styles["badge--medium"]]: size === "medium",
-      })}
-      bold
-    >
+  const badgeComponent = (
+    <Badge variant={supportLevel === "certified" ? "blue" : "gray"}>
       <FormattedMessage
         id={
           custom
@@ -46,18 +31,11 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
             : "connector.supportLevel.community"
         }
       />
-    </Text>
+    </Badge>
   );
 
   return tooltip ? (
-    <Tooltip
-      control={badge}
-      containerClassName={classNames({
-        [styles.smallTooltip]: size === "small",
-        [styles.mediumTooltip]: size === "medium",
-      })}
-      placement="top"
-    >
+    <Tooltip control={badgeComponent} placement="top">
       <FormattedMessage
         id={
           custom
@@ -69,6 +47,6 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
       />
     </Tooltip>
   ) : (
-    badge
+    badgeComponent
   );
 };

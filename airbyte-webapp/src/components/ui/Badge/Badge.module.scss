@@ -2,26 +2,27 @@
 @use "scss/variables";
 
 .badge {
+  font-size: variables.$font-size-xs;
   border-radius: variables.$border-radius-pill;
   text-transform: uppercase;
   padding: variables.$spacing-xs variables.$spacing-sm;
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 500;
 
-  &--certified {
+  &--blue {
     color: colors.$blue-600;
     background-color: colors.$blue-50;
   }
 
-  &--community,
-  &--custom {
-    color: colors.$grey-800;
+  &--gray {
+    color: colors.$grey-900;
     background-color: colors.$grey-100;
   }
 
-  &--small {
-    font-size: 8px;
-  }
-
-  &--medium {
-    font-size: 9px;
+  &--green {
+    color: colors.$green-800;
+    background-color: colors.$green-50;
   }
 }
