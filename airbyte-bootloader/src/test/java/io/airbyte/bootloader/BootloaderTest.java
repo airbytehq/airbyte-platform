@@ -90,7 +90,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.24.009";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.50.33.001";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.50.4.001";
   private static final String CDK_VERSION = "1.2.3";
 
