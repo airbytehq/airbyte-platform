@@ -9,6 +9,8 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
 
 airbyte:
+  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data-plane-id: ${DATA_PLANE_ID}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -20,8 +22,6 @@ airbyte:
     service-account:
       credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
       email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  data-plane-id: ${DATA_PLANE_ID:}
-  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:

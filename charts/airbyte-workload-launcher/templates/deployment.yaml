@@ -66,6 +66,8 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_VERSION
+        - name: DATA_PLANE_ID
+          value: "local"
         - name: CONFIG_ROOT
           valueFrom:
             configMapKeyRef:
