@@ -8,8 +8,8 @@ import { HistoricalOverview } from "area/connection/components";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
+import { ConnectionStatusMessages } from "./ConnectionStatusMessages";
 import { ConnectionStatusOverview } from "./ConnectionStatusOverview";
-import { ErrorMessage } from "./ErrorMessage";
 
 export const ConnectionStatusCard: React.FC = () => {
   const { connection } = useConnectionEditService();
@@ -29,7 +29,7 @@ export const ConnectionStatusCard: React.FC = () => {
         </FlexContainer>
       }
     >
-      <ErrorMessage />
+      <ConnectionStatusMessages />
       {showHistoricalOverview && <HistoricalOverview />}
     </Card>
   );

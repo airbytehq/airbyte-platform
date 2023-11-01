@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
-import { Message, MessageProps, MessageType, isHigherSeverity } from "components/ui/Message";
+import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_LEVELS } from "components/ui/Message";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
@@ -21,7 +21,7 @@ import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
-import styles from "./ErrorMessage.module.scss";
+import styles from "./ConnectionStatusMessages.module.scss";
 
 const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   const latestAttempt = job?.attempts?.slice(-1)[0];
@@ -56,6 +56,7 @@ const reduceToHighestSeverityMessage = (messages: MessageProps[]): MessageProps[
 /**
  * Get the error message to display for a given actor definition version
  * @param actorDefinitionVersion The actor definition version to get the error message for
+ * @param connectorBreakingChangeDeadlinesEnabled
  * @returns An array containing id of the message to display and the type of error
  */
 const getBreakingChangeErrorMessage = (
@@ -75,7 +76,7 @@ const getBreakingChangeErrorMessage = (
     : { errorMessageId: "connectionForm.breakingChange.deprecated.message", errorType: "warning" };
 };
 
-export const ErrorMessage: React.FC = () => {
+export const ConnectionStatusMessages: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
 
@@ -86,6 +87,7 @@ export const ErrorMessage: React.FC = () => {
   const sourceActorDefinitionVersion = useSourceDefinitionVersion(connection.sourceId);
   const destinationActorDefinitionVersion = useDestinationDefinitionVersion(connection.destinationId);
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
+  const [typeCount, setTypeCount] = useState<Partial<Record<MessageType, number>>>({});
 
   const errorMessagesToDisplay = useMemo<MessageProps[]>(() => {
     const errorMessages: MessageProps[] = [];
@@ -122,15 +124,14 @@ export const ErrorMessage: React.FC = () => {
 
     // If we have schema changes, show the correct message
     if (hasBreakingSchemaChange) {
-      const schemaChangeWarning = {
+      errorMessages.push({
         text: formatMessage({
           id: "connection.schemaChange.breaking",
         }),
         onAction: () => navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         actionBtnText: formatMessage({ id: "connection.schemaChange.reviewAction" }),
         type: "error",
-      } as const;
-      errorMessages.push(schemaChangeWarning);
+      });
     }
 
     // Warn the user of any breaking changes in the source definition
@@ -141,7 +142,7 @@ export const ErrorMessage: React.FC = () => {
         connectorBreakingChangeDeadlinesEnabled
       );
 
-      const sourceDefinitionWarning = {
+      breakingChangeErrorMessages.push({
         text: formatMessage(
           { id: errorMessageId },
           {
@@ -152,7 +153,6 @@ export const ErrorMessage: React.FC = () => {
             upgrade_deadline: getHumanReadableUpgradeDeadline(sourceActorDefinitionVersion),
           }
         ),
-        dataTestId: `breaking-change-${errorType}-connection-banner`,
         onAction: () =>
           navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${connection.sourceId}`),
         actionBtnText: formatMessage({
@@ -163,9 +163,8 @@ export const ErrorMessage: React.FC = () => {
         },
         type: errorType,
         iconOverride: "warning",
-      } as const;
-
-      breakingChangeErrorMessages.push(sourceDefinitionWarning);
+        "data-testid": `breaking-change-${errorType}-connection-banner`,
+      });
     }
 
     // Warn the user of any breaking changes in the destination definition
@@ -175,7 +174,7 @@ export const ErrorMessage: React.FC = () => {
         connectorBreakingChangeDeadlinesEnabled
       );
 
-      const destinationDefinitionWarning = {
+      breakingChangeErrorMessages.push({
         text: formatMessage(
           { id: errorMessageId },
           {
@@ -186,7 +185,6 @@ export const ErrorMessage: React.FC = () => {
             upgrade_deadline: getHumanReadableUpgradeDeadline(destinationActorDefinitionVersion),
           }
         ),
-        dataTestId: `breaking-change-${errorType}-connection-banner`,
         onAction: () =>
           navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${connection.destinationId}`),
         actionBtnText: formatMessage({
@@ -197,9 +195,8 @@ export const ErrorMessage: React.FC = () => {
         },
         type: errorType,
         iconOverride: "warning",
-      } as const;
-
-      breakingChangeErrorMessages.push(destinationDefinitionWarning);
+        "data-testid": `breaking-change-${errorType}-connection-banner`,
+      });
     }
 
     // If we have both source and destination breaking changes, with different error levels, we only
@@ -207,7 +204,24 @@ export const ErrorMessage: React.FC = () => {
     const onlyHighLevelBreakingChangeErrorMessages = reduceToHighestSeverityMessage(breakingChangeErrorMessages);
     errorMessages.push(...onlyHighLevelBreakingChangeErrorMessages);
 
-    return errorMessages;
+    // count the number of messages for each "type" and set the state
+    setTypeCount(
+      errorMessages.reduce<Partial<Record<MessageType, number>>>((acc, curr) => {
+        if (curr.type) {
+          acc[curr.type] = (acc[curr.type] || 0) + 1;
+        }
+        return acc;
+      }, {})
+    );
+
+    // sort messages by severity level
+    return errorMessages.sort((msg1, msg2) => {
+      // since MessageProps.type is optional, we need to check for undefined
+      if (!(msg1.type && msg2.type)) {
+        return 0;
+      }
+      return MESSAGE_SEVERITY_LEVELS[msg2?.type] - MESSAGE_SEVERITY_LEVELS[msg1?.type];
+    });
   }, [
     formatMessage,
     hasBreakingSchemaChange,
@@ -229,7 +243,12 @@ export const ErrorMessage: React.FC = () => {
   if (errorMessagesToDisplay.length > 0) {
     return (
       <Box p="lg">
-        <FlexContainer direction="column">
+        <FlexContainer
+          direction="column"
+          data-error-count={typeCount.error}
+          data-warning-count={typeCount.warning}
+          data-notification-count={typeCount.info}
+        >
           {errorMessagesToDisplay.map((message, index) => (
             <Message key={index} className={styles.error} {...message} />
           ))}
