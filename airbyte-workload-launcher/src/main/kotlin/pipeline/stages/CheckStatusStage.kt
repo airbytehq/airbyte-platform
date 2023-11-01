@@ -3,11 +3,10 @@ package io.airbyte.workload.launcher.pipeline.stages
 import io.airbyte.workload.api.client2.generated.WorkloadApi
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest
-import io.airbyte.workload.launcher.client.KubeClient
 import io.airbyte.workload.launcher.pipeline.LaunchStage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 private val LOGGER = KotlinLogging.logger {}
@@ -15,11 +14,10 @@ private val LOGGER = KotlinLogging.logger {}
 @Singleton
 class CheckStatusStage(
   private val workloadApi: WorkloadApi,
-  private val kubeClient: KubeClient,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
+  private val kubeClient: KubePodClient,
 ) : LaunchStage {
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    return if (kubeClient.podsExistForWorkload(input.msg.workloadId, namespace)) {
+    return if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
       LOGGER.info {
         "Found pods running for workload ${input.msg.workloadId}, setting status as running and skip flag as true"
       }

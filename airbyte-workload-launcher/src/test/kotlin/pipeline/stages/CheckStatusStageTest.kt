@@ -3,10 +3,10 @@ package pipeline.stages
 import io.airbyte.workload.api.client2.generated.WorkloadApi
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest
-import io.airbyte.workload.launcher.client.KubeClient
 import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
+import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -24,7 +24,7 @@ class CheckStatusStageTest {
       WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
     val workloadApi: WorkloadApi = mockk()
-    val kubernetesClient: KubeClient = mockk()
+    val kubernetesClient: KubePodClient = mockk()
 
     every {
       workloadApi.workloadStatusUpdate(
@@ -33,11 +33,11 @@ class CheckStatusStageTest {
     } returns Unit
 
     every {
-      kubernetesClient.podsExistForWorkload(workloadId, namespace)
+      kubernetesClient.podsExistForWorkload(workloadId)
     } returns true
 
     val checkStatusStage: CheckStatusStage =
-      spyk(CheckStatusStage(workloadApi, kubernetesClient, namespace))
+      spyk(CheckStatusStage(workloadApi, kubernetesClient))
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
@@ -56,13 +56,13 @@ class CheckStatusStageTest {
       WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
     val workloadApi: WorkloadApi = mockk()
-    val kubernetesClient: KubeClient = mockk()
+    val kubernetesClient: KubePodClient = mockk()
 
     every {
-      kubernetesClient.podsExistForWorkload(workloadId, namespace)
+      kubernetesClient.podsExistForWorkload(workloadId)
     } returns false
 
-    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient, namespace)
+    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient)
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
@@ -81,7 +81,7 @@ class CheckStatusStageTest {
       WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
 
     val workloadApi: WorkloadApi = mockk()
-    val kubernetesClient: KubeClient = mockk()
+    val kubernetesClient: KubePodClient = mockk()
 
     every {
       workloadApi.workloadStatusUpdate(
@@ -90,10 +90,10 @@ class CheckStatusStageTest {
     } throws ClientErrorException(400)
 
     every {
-      kubernetesClient.podsExistForWorkload(workloadId, namespace)
+      kubernetesClient.podsExistForWorkload(workloadId)
     } returns true
 
-    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient, namespace)
+    val checkStatusStage: CheckStatusStage = CheckStatusStage(workloadApi, kubernetesClient)
 
     val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)

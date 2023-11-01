@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.java.jwt)
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))
+    implementation(project(":airbyte-commons-micronaut"))
     implementation(project(":airbyte-commons-with-dependencies"))
     implementation(project(":airbyte-commons-micronaut"))
     implementation(project(":airbyte-commons-worker"))
