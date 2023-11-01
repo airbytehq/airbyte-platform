@@ -310,11 +310,11 @@ tasks.named("compileKotlin") {
 }
 
 dependencies {
-    annotationProcessor("io.micronaut.openapi:micronaut-openapi:4.10.0")
-    kapt("io.micronaut.openapi:micronaut-openapi:4.10.0")
+    annotationProcessor libs.micronaut.openapi
+    kapt libs.micronaut.openapi
 
-    compileOnly("io.swagger.core.v3:swagger-annotations:2.2.16")
-    kapt("io.swagger.core.v3:swagger-annotations:2.2.16")
+    compileOnly libs.v3.swagger.annotations
+    kapt libs.v3.swagger.annotations
 
     implementation libs.commons.io
     implementation libs.failsafe.okhttp

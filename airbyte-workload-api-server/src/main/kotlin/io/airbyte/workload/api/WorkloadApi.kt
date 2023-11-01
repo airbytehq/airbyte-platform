@@ -37,63 +37,28 @@ open class WorkloadApi {
       ApiResponse(
         responseCode = "204",
         description = "Success",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "400",
         description = "Invalid argument, most likely an invalid dataplane id.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Object with given id was not found.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = NotFoundKnownExceptionInfo::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "409",
         description = "Workload has already been claimed.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
   open fun workloadCancel(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = WorkloadCancelRequest::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
     ) workloadCancelRequest: WorkloadCancelRequest,
   ) {
     TODO()
@@ -111,51 +76,23 @@ open class WorkloadApi {
         description =
           "Returns a boolean denoting whether claim was successful. True if claim was successful, " +
             "False if workload has already been claimed.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = ClaimResponse::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = ClaimResponse::class))],
       ),
       ApiResponse(
         responseCode = "400",
         description = "Invalid argument, most likely an invalid dataplane id.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Object with given id was not found.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = NotFoundKnownExceptionInfo::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
       ),
     ],
   )
   open fun workloadClaim(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = WorkloadClaimRequest::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
     ) workloadClaimRequest: WorkloadClaimRequest,
   ): ClaimResponse {
     TODO()
@@ -169,39 +106,18 @@ open class WorkloadApi {
       ApiResponse(
         responseCode = "200",
         description = "Successfully retrieved organizations by given user id.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Workload::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Workload::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Object with given id was not found.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = NotFoundKnownExceptionInfo::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
       ),
     ],
   )
   open fun workloadGet(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = String::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = String::class))],
     ) workloadId: String,
   ): Workload {
     TODO()
@@ -218,50 +134,24 @@ open class WorkloadApi {
         responseCode = "204",
         description = "Successfully heartbeated",
         content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
+          Content(schema = Schema(implementation = Void::class)),
         ],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Object with given id was not found.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = NotFoundKnownExceptionInfo::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload should stop because it is no longer expected to be running.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
   open fun workloadHeartbeat(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = WorkloadHeartbeatRequest::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
     TODO()
@@ -277,39 +167,18 @@ open class WorkloadApi {
       ApiResponse(
         responseCode = "204",
         description = "Success",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = WorkloadListResponse::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
       ),
       ApiResponse(
         responseCode = "400",
         description = "Invalid argument.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
   open fun workloadList(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = WorkloadListRequest::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
     TODO()
@@ -325,39 +194,18 @@ open class WorkloadApi {
       ApiResponse(
         responseCode = "204",
         description = "Successfully updated the workload.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = Void::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Object with given id was not found.",
-        content = [
-          Content(
-            schema =
-              Schema(
-                implementation = NotFoundKnownExceptionInfo::class,
-              ),
-          ),
-        ],
+        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
       ),
     ],
   )
   open fun workloadStatusUpdate(
     @RequestBody(
-      content = [
-        Content(
-          schema =
-            Schema(
-              implementation = WorkloadStatusUpdateRequest::class,
-            ),
-        ),
-      ],
+      content = [Content(schema = Schema(implementation = WorkloadStatusUpdateRequest::class))],
     ) workloadStatusUpdateRequest: WorkloadStatusUpdateRequest,
   ) {
     TODO()
