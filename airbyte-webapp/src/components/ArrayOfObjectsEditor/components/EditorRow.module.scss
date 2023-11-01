@@ -9,10 +9,15 @@
 .body {
   color: colors.$dark-blue;
   padding: variables.$spacing-xs variables.$spacing-md;
+  min-width: 0;
 }
 
 .name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tooltipContainer {
+  width: 100%;
 }
