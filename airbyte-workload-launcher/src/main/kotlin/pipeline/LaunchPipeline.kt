@@ -40,7 +40,7 @@ class LaunchPipeline(
   }
 
   private fun handleError(e: Throwable): Mono<LaunchStageIO> {
-    logger.error(e) { ("Error: $e") }
+    logger.error(e) { ("Pipeline Error: $e") }
     if (e is StageError) {
       statusUpdater.reportFailure(e)
     }
