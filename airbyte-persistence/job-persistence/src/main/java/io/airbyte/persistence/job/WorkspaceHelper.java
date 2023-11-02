@@ -45,7 +45,6 @@ public class WorkspaceHelper {
   private final LoadingCache<Long, UUID> jobToWorkspaceCache;
 
   private final LoadingCache<UUID, UUID> workspaceToOrganizationCache;
-  private final LoadingCache<UUID, Boolean> organizationToPbACache;
 
   public WorkspaceHelper(final ConfigRepository configRepository, final JobPersistence jobPersistence) {
 
@@ -104,15 +103,6 @@ public class WorkspaceHelper {
         } else {
           throw new IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.getConfigType() + " job was requested!");
         }
-      }
-
-    });
-
-    this.organizationToPbACache = getExpiringCache(new CacheLoader<>() {
-
-      @Override
-      public Boolean load(UUID organizationId) throws Exception {
-        return configRepository.getOrganization(organizationId).get().getPba();
       }
 
     });
