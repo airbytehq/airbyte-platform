@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback } from "react";
+import React, { Suspense, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Form } from "components/forms";
@@ -27,6 +27,7 @@ import { SyncCatalogHookFormField } from "../ConnectionForm/SyncCatalogHookFormF
 import { mapFormValuesToOperations } from "../ConnectionForm/utils";
 import { DataResidencyHookFormCard } from "../CreateConnectionForm/DataResidencyHookFormCard";
 import { SchemaError } from "../CreateConnectionForm/SchemaError";
+import { useAnalyticsTrackFunctions } from "../CreateConnectionForm/useAnalyticsTrackFunctions";
 
 const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
@@ -107,11 +108,20 @@ const CreateConnectionFormInner: React.FC = () => {
 export const CreateConnectionHookForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const { trackFailure } = useAnalyticsTrackFunctions();
 
   const { schema, isLoading, schemaErrorStatus, catalogId, onDiscoverSchema } = useDiscoverSchema(
     source.sourceId,
     true
   );
+
+  useEffect(() => {
+    if (schemaErrorStatus) {
+      trackFailure(source, destination, schemaErrorStatus);
+    }
+    // we need to track the schemaErrorStatus changes only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaErrorStatus]);
 
   const partialConnection = {
     syncCatalog: schema,
