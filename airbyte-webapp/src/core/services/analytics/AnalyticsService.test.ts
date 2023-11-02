@@ -3,6 +3,12 @@ import { config } from "config";
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
 
+jest.mock("config", () => ({
+  config: {
+    version: "1.0.0",
+  },
+}));
+
 describe("AnalyticsService", () => {
   beforeEach(() => {
     window.analytics = {
