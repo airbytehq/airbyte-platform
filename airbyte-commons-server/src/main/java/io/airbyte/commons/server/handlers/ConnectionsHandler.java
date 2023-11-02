@@ -922,6 +922,7 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+    LOGGER.info("Applying schema change for connection '{}' only", request.getConnectionId());
     final ConnectionRead connection = buildConnectionRead(request.getConnectionId());
     final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
         getConnectionAirbyteCatalog(request.getConnectionId());

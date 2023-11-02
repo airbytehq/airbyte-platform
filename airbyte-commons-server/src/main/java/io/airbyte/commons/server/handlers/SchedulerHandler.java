@@ -420,6 +420,8 @@ public class SchedulerHandler {
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
       throws IOException, JsonValidationException, ConfigNotFoundException {
+    LOGGER.info("Applying schema changes for source '{}' in workspace '{}'",
+        sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId());
     if (sourceAutoPropagateChange.getSourceId() == null) {
       return;
     }
