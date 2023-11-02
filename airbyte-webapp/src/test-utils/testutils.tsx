@@ -77,6 +77,16 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   </ThemeProvider>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFunction = (...args: any[]) => any;
+
+/**
+ * Casts a function to be jest mocked. This does not actually mock the function.
+ * It's just a helper function in case you need to tell TypeScript that a reference
+ * is already mocked.
+ */
+export const mocked = <T extends AnyFunction>(input: T): jest.MockedFunction<T> => input as jest.MockedFunction<T>;
+
 export const useMockIntersectionObserver = () => {
   // IntersectionObserver isn't available in test environment but is used by the dialog component
   const mockIntersectionObserver = jest.fn();

@@ -29,6 +29,7 @@ export const CloudWorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
+  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
 
   const {
     data: workspacesData,
@@ -36,18 +37,26 @@ export const CloudWorkspacesPage: React.FC = () => {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
+    isFetching,
   } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, searchValue);
 
-  const { organizationsMemberOnly, hasWorkspace } = useOrganizationsToCreateWorkspaces();
+  const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
   const { logout } = useAuthService();
 
+  const showNoWorkspacesContent =
+    !isFetching &&
+    !organizationsToCreateIn.length &&
+    organizationsMemberOnly.length > 0 &&
+    !workspaces.length &&
+    isSearchEmpty;
+
   useDebounce(
     () => {
-      setSearchValue(searchValue);
       refetch();
+      setIsSearchEmpty(searchValue === "");
     },
     250,
     [searchValue]
@@ -66,7 +75,7 @@ export const CloudWorkspacesPage: React.FC = () => {
       <Heading as="h1" size="lg" centered>
         <FormattedMessage id="workspaces.title" />
       </Heading>
-      {organizationsMemberOnly?.length > 0 && !hasWorkspace ? (
+      {showNoWorkspacesContent ? (
         <NoWorkspacePermissionsContent organizations={organizationsMemberOnly} />
       ) : (
         <>
@@ -97,7 +106,7 @@ export const CloudWorkspacesPage: React.FC = () => {
 
 const NoWorkspacePermissionsContent: React.FC<{ organizations: OrganizationRead[] }> = ({ organizations }) => {
   return (
-    <Box m="2xl" p="2xl">
+    <Box m="2xl" p="2xl" data-testid="noWorkspacePermissionsBanner">
       <FlexContainer direction="column" gap="2xl">
         <OctaviaThinking className={styles.cloudWorkspacesPage__illustration} />
         <div>
