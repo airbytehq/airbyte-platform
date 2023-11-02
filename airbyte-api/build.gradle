@@ -361,3 +361,9 @@ tasks.withType(JavaCompile).configureEach {
             '-parameters'
     ]
 }
+
+airbyte {
+    spotless {
+        excludes = ["src/main/openapi/workload-openapi.yaml"]
+    }
+}
