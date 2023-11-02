@@ -1,8 +1,8 @@
 package io.airbyte.workload.api.domain
 
-import io.swagger.annotations.ApiModelProperty
+import io.swagger.v3.oas.annotations.media.Schema
 
 class WorkloadHeartbeatRequest(
-  @ApiModelProperty(required = true)
+  @Schema(required = true)
   var workloadId: String = "",
 )

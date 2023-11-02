@@ -10,6 +10,7 @@ paths:
     get:
       tags:
         - workload
+      summary: Get a workload by id
       operationId: workloadGet
       responses:
         "200":
@@ -28,6 +29,7 @@ paths:
     put:
       tags:
         - workload
+      summary: Cancel the execution of a workload
       operationId: workloadCancel
       requestBody:
         content:
@@ -63,6 +65,7 @@ paths:
     put:
       tags:
         - workload
+      summary: Claim the execution of a workload
       operationId: workloadClaim
       requestBody:
         content:
@@ -94,6 +97,7 @@ paths:
     put:
       tags:
         - workload
+      summary: Heartbeat from a workload
       operationId: workloadHeartbeat
       requestBody:
         content:
@@ -125,6 +129,7 @@ paths:
     post:
       tags:
         - workload
+      summary: Get workloads according to the filters.
       operationId: workloadList
       requestBody:
         content:
@@ -148,6 +153,7 @@ paths:
     put:
       tags:
         - workload
+      summary: Update the status of a workload
       operationId: workloadStatusUpdate
       requestBody:
         content:

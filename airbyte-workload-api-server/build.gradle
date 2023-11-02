@@ -27,14 +27,13 @@ dependencies {
     implementation libs.bundles.micronaut.data.jdbc
     implementation libs.log4j.impl
     implementation libs.micronaut.jaxrs.server
-    implementation libs.micronaut.problem.json
     implementation libs.micronaut.security
 
-    implementation libs.sentry.java
-    implementation libs.swagger.annotations
+    implementation libs.v3.swagger.annotations
     implementation libs.javax.ws.rs.api
 
     runtimeOnly libs.javax.databind
+    runtimeOnly project(':airbyte-commons')
 
     testImplementation libs.bundles.micronaut.test
     testAnnotationProcessor platform(libs.micronaut.bom)
@@ -58,7 +57,7 @@ rootProject.file('.env.dev').withInputStream { env.load(it) }
 
 airbyte {
     application {
-        mainClass = 'io.airbyte.api.server.ApplicationKt'
+        mainClass = 'io.airbyte.workload.server.Application'
         defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
         localEnvVars = env + [
                 "AIRBYTE_ROLE"          : System.getenv("AIRBYTE_ROLE") ?: "undefined",

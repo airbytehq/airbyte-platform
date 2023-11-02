@@ -1,0 +1,62 @@
+micronaut:
+  application:
+    name: airbyte-workload-api-server
+  executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
+  security:
+    authentication-provider-strategy: ALL
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
+  server:
+    port: 8007
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins-regex:
+            - ^.*$
+    netty:
+      aggregator:
+        max-content-length: 52428800 # 50MB
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+
+endpoints:
+  beans:
+    enabled: true
+    sensitive: false
+  env:
+    enabled: true
+    sensitive: false
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: true
+  loggers:
+    enabled: true
+    sensitive: false
+  refresh:
+    enabled: false
+    sensitive: true
+  routes:
+    enabled: true
+    sensitive: false
+  threaddump:
+    enabled: true
+    sensitive: true
+
+logger:
+  levels:
+    #   Uncomment to help resolve issues with conditional beans
+    # io.micronaut.context.condition: DEBUG
+#   Uncomment to help resolve issues with security beans
+#      io.micronaut.security: DEBUG
+#   Uncomment to help resolve issues with micronaut data
+#      com.zaxxer.hikari.HikariConfig: DEBUG
+#      com.zaxxer.hikari: TRACE

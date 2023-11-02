@@ -10,13 +10,12 @@ import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
 import io.micronaut.http.annotation.Controller
-import io.swagger.annotations.ApiOperation
+import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
-import io.swagger.v3.oas.annotations.tags.Tag
 import javax.ws.rs.Consumes
 import javax.ws.rs.GET
 import javax.ws.rs.POST
@@ -25,13 +24,12 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
-@Tag(name = "workload")
 open class WorkloadApi {
   @PUT
   @Path("/cancel")
   @Consumes("application/json")
   @Produces("application/json")
-  @ApiOperation(value = "Cancel the execution of a workload", notes = "", tags = ["workload"])
+  @Operation(summary = "Cancel the execution of a workload", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -68,7 +66,7 @@ open class WorkloadApi {
   @Path("/claim")
   @Consumes("application/json")
   @Produces("application/json")
-  @ApiOperation(value = "Claim the execution of a workload", notes = "", tags = ["workload"])
+  @Operation(summary = "Claim the execution of a workload", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -100,7 +98,7 @@ open class WorkloadApi {
 
   @GET
   @Produces("application/json")
-  @ApiOperation(value = "Get a workload by id", notes = "", tags = ["workload"])
+  @Operation(summary = "Get a workload by id", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -127,7 +125,7 @@ open class WorkloadApi {
   @Path("/heartbeat")
   @Consumes("application/json")
   @Produces("application/json")
-  @ApiOperation(value = "Heartbeat from a workload", notes = "", tags = ["workload"])
+  @Operation(summary = "Heartbeat from a workload", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -161,7 +159,7 @@ open class WorkloadApi {
   @Path("/list")
   @Consumes("application/json")
   @Produces("application/json")
-  @ApiOperation(value = "Get workloads according to the filters.", notes = "", tags = ["workload"])
+  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
@@ -188,7 +186,7 @@ open class WorkloadApi {
   @Path("/status")
   @Consumes("application/json")
   @Produces("application/json")
-  @ApiOperation(value = "Update the status of a workload", notes = "", tags = ["workload"])
+  @Operation(summary = "Update the status of a workload", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
