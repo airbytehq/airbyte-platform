@@ -10,21 +10,21 @@ spec:
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
-        {{- if .Values.extraSelectorLabels }}
-        {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
-        {{- end }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
   strategy:
     type: {{ .Values.deploymentStrategyType }}
   template:
     metadata:
       labels:
         {{- include "airbyte.selectorLabels" . | nindent 8 }}
-          {{- if .Values.extraSelectorLabels }}
-          {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
-          {{- end }}
-          {{- if .Values.podLabels }}
+        {{- if .Values.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.podLabels }}
           {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
-          {{- end }}
+        {{- end }}
       {{- if .Values.podAnnotations }}
       annotations:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
@@ -35,7 +35,7 @@ spec:
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
           {{- printf "- name: %s" .name | nindent 8 }}
-          {{- end }}
+        {{- end }}
       {{- end }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
@@ -51,108 +51,108 @@ spec:
       {{- toYaml .Values.extraInitContainers | nindent 6 }}
       {{- end }}
       containers:
-        - name: airbyte-workload-api-server
-          image: {{ printf "%s:%s" .Values.image.repository (include "airbyte-workload-api-server.imageTag" .) }}
-          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
-          env:
-            - name: INTERNAL_API_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: INTERNAL_API_HOST
-            - name: AIRBYTE_API_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Release.Name }}-airbyte-env
-                  key: AIRBYTE_API_HOST
-          {{- if .Values.debug.enabled }}
-          - name: JAVA_TOOL_OPTIONS
-            value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
-          {{- end}}
-          {{- if eq .Values.global.deploymentMode "oss"  }}
-          - name: AIRBYTE_VERSION
-            valueFrom:
-              configMapKeyRef:
-                name: {{ .Release.Name }}-airbyte-env
-                key: AIRBYTE_VERSION
-          {{- end }}
+      - name: airbyte-workload-api-server
+        image: {{ printf "%s:%s" .Values.image.repository (include "airbyte-workload-api-server.imageTag" .) }}
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        env:
+        - name: INTERNAL_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: INTERNAL_API_HOST
+        - name: AIRBYTE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_API_HOST
+        {{- if .Values.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
+        {{- if eq .Values.global.deploymentMode "oss"  }}
+        - name: AIRBYTE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_VERSION
+        {{- end }}
 
-          # Values from secret
-          {{- if .Values.secrets }}
-          {{- range $k, $v := .Values.secrets }}
-          - name: {{ $k }}
-            valueFrom:
-              secretKeyRef:
-                name: server-secrets
-                key: {{ $k }}
-          {{- end }}
-          {{- end }}
+        # Values from secret
+        {{- if .Values.secrets }}
+        {{- range $k, $v := .Values.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: server-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
 
-          # Values from env
-          {{- if or .Values.env_vars .Values.global.env_vars }}
-          {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
-          - name: {{ $k }}
-            value: {{ $v | quote }}
-          {{- end }}
-          {{- end }}
+        # Values from env
+        {{- if or .Values.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
 
-          # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
-          {{- if .Values.extraEnv }}
-          {{- toYaml .Values.extraEnv | nindent 8 }}
-          {{- end }}
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.extraEnv }}
+        {{- toYaml .Values.extraEnv | nindent 8 }}
+        {{- end }}
 
-          {{- if .Values.livenessProbe.enabled }}
-          livenessProbe:
-            httpGet:
-              path: /health/liveness
-              port: heartbeat
-            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
-            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
-            successThreshold: {{ .Values.livenessProbe.successThreshold }}
-            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
-          {{- end }}
-          {{- if .Values.readinessProbe.enabled }}
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-            successThreshold: {{ .Values.readinessProbe.successThreshold }}
-            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
-          {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
 
-          ports:
-            - name: heartbeat
-              containerPort: 8007
-              protocol: TCP
-          {{- if .Values.debug.enabled }}
-          - name: debug
-            containerPort: {{ .Values.debug.remoteDebugPort }}
-            protocol: TCP
-          {{- end}}
-          {{- if .Values.resources }}
-          resources: {{- toYaml .Values.resources | nindent 10 }}
-          {{- end }}
-          {{- if .Values.containerSecurityContext }}
-          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
-          {{- end }}
-          volumeMounts:
-          {{- if .Values.extraVolumeMounts }}
+        ports:
+        - name: http
+          containerPort: 8007
+          protocol: TCP
+        {{- if .Values.debug.enabled }}
+        - name: debug 
+          containerPort: {{ .Values.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        {{- if .Values.resources }}
+        resources: {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.extraVolumeMounts }}
           {{ toYaml .Values.extraVolumeMounts | nindent 8 }}
-          {{- end }}
-          {{- if .Values.global.extraVolumeMounts }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
           {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
-          {{- end }}
+        {{- end }}
       {{- if .Values.extraContainers }}
-      {{ toYaml .Values.extraContainers | nindent 6 }}
+        {{ toYaml .Values.extraContainers | nindent 6 }}
       {{- end }}
       {{- if .Values.global.extraContainers }}
-      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
       volumes:
       {{- if .Values.extraVolumes }}
-  {{ toYaml .Values.extraVolumes | nindent 6 }}
-  {{- end }}
+{{ toYaml .Values.extraVolumes | nindent 6 }}
+      {{- end }}
