@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 

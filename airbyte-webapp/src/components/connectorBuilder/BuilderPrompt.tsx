@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { ReactComponent as BuilderPromptIcon } from "./builder-prompt-icon.svg";
+import BuilderPromptIcon from "./builder-prompt-icon.svg?react";
 import styles from "./BuilderPrompt.module.scss";
 
 interface BuilderPromptProps {

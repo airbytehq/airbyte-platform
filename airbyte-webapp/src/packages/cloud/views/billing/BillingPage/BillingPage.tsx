@@ -17,7 +17,7 @@ import styles from "./BillingPage.module.scss";
 import { CreditsUsage } from "./components/CreditsUsage";
 import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
 import { RemainingCredits } from "./components/RemainingCredits";
-import { ReactComponent as FilesIcon } from "./filesIcon.svg";
+import FilesIcon from "./filesIcon.svg?react";
 
 const StripePortalLink: React.FC = () => {
   return (

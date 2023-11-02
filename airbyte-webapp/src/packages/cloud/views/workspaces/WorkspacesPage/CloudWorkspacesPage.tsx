@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
 
-import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -23,7 +23,7 @@ import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 
 import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 import styles from "./CloudWorkspacesPage.module.scss";
-import { ReactComponent as OctaviaThinking } from "./octavia-thinking-no-gears.svg";
+import OctaviaThinking from "./octavia-thinking-no-gears.svg?react";
 
 export const CloudWorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());

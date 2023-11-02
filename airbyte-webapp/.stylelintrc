@@ -17,6 +17,7 @@
     "value-keyword-case": null,
     "color-no-hex": true,
     "hue-degree-notation": "number",
+    "declaration-block-no-redundant-longhand-properties": null,
     "airbyte/no-color-variables-in-rgba": true,
     "airbyte/no-use-renaming": true
   },

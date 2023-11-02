@@ -15,7 +15,7 @@ import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
 
-import { ReactComponent as BuilderIcon } from "./builder-icon.svg";
+import BuilderIcon from "./builder-icon.svg?react";
 import CreateConnectorModal from "./CreateConnectorModal";
 
 interface IProps {

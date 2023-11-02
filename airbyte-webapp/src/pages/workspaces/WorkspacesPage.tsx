@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { HeadTitle } from "components/common/HeadTitle";
-import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";

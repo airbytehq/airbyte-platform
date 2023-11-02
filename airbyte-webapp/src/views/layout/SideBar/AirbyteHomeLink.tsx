@@ -10,7 +10,7 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./AirbyteHomeLink.module.scss";
-import { ReactComponent as AirbyteLogo } from "./airbyteLogo.svg";
+import AirbyteLogo from "./airbyteLogo.svg?react";
 
 export const AirbyteHomeLink: React.FC = () => {
   const { formatMessage } = useIntl();

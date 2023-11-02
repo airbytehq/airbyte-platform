@@ -19,7 +19,7 @@ import { Text } from "components/ui/Text";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import { ReactComponent as DragHandleIcon } from "./drag-handle.svg";
+import DragHandleIcon from "./drag-handle.svg?react";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
 import { BuilderFormInput, orderInputs, useBuilderWatch } from "../types";
