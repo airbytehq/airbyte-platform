@@ -70,7 +70,7 @@ global:
     ##  logs.s3.bucketRegion Region of the bucket (must be empty if using minio)
     s3:
       enabled: false
-      bucket: airbyte-dev-logs
+      bucket: ""
       bucketRegion: ""
 
     ## Google Cloud Storage (GCS) Log Location Configuration
