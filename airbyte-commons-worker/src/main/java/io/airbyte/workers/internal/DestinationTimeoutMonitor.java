@@ -18,13 +18,13 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +50,8 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
   private static final Duration TIMEOUT = Duration.ofHours(2);
 
-  private volatile Optional<Long> currentAcceptCallStartTime = Optional.empty();
-  private volatile Optional<Long> currentNotifyEndOfInputCallStartTime = Optional.empty();
+  private AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
+  private AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
   private final FeatureFlagClient featureFlagClient;
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;
@@ -151,7 +151,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * {@link io.airbyte.workers.internal.AirbyteDestination#accept} call.
    */
   public void startAcceptTimer() {
-    currentAcceptCallStartTime = Optional.of(System.currentTimeMillis());
+    currentAcceptCallStartTime.set(System.currentTimeMillis());
   }
 
   /**
@@ -160,7 +160,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * sense if there's a previous call to {@link #startAcceptTimer}.
    */
   public void resetAcceptTimer() {
-    currentAcceptCallStartTime = Optional.empty();
+    currentAcceptCallStartTime.set(null);
   }
 
   /**
@@ -177,7 +177,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * first {@link io.airbyte.workers.internal.AirbyteDestination#notifyEndOfInput} call.
    */
   public void startNotifyEndOfInputTimer() {
-    currentNotifyEndOfInputCallStartTime = Optional.of(System.currentTimeMillis());
+    currentNotifyEndOfInputCallStartTime.set(System.currentTimeMillis());
   }
 
   /**
@@ -186,7 +186,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * makes sense if there's a previous call to {@link #startNotifyEndOfInputTimer}.
    */
   public void resetNotifyEndOfInputTimer() {
-    currentNotifyEndOfInputCallStartTime = Optional.empty();
+    currentNotifyEndOfInputCallStartTime.set(null);
   }
 
   private void onTimeout(final CompletableFuture<Void> runnableFuture) {
@@ -228,8 +228,13 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnAccept() {
-    if (currentAcceptCallStartTime.isPresent()) {
-      if (System.currentTimeMillis() - currentAcceptCallStartTime.get() > timeout.toMillis()) {
+    Long startTime = currentAcceptCallStartTime.get();
+
+    if (startTime != null) {
+      // by the time we get here, currentAcceptCallStartTime might have already been reset.
+      // this won't be a problem since we are not getting the start time from currentAcceptCallStartTime
+      // but from startTime
+      if (System.currentTimeMillis() - startTime > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on accept call");
         metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
@@ -240,8 +245,13 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnNotifyEndOfInput() {
-    if (currentNotifyEndOfInputCallStartTime.isPresent()) {
-      if (System.currentTimeMillis() - currentNotifyEndOfInputCallStartTime.get() > timeout.toMillis()) {
+    Long startTime = currentNotifyEndOfInputCallStartTime.get();
+
+    if (startTime != null) {
+      // by the time we get here, currentNotifyEndOfInputCallStartTime might have already been reset.
+      // this won't be a problem since we are not getting the start time from
+      // currentNotifyEndOfInputCallStartTime but from startTime
+      if (System.currentTimeMillis() - startTime > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on notifyEndOfInput call");
         metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT, 1,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
