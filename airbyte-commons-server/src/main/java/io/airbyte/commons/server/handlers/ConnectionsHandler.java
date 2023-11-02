@@ -40,6 +40,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
@@ -984,12 +985,20 @@ public class ConnectionsHandler {
 
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
-      final Map<String, Object> payload = new HashMap<>();
-      payload.put("workspace_id", workspaceId);
-      payload.put("connection_id", connectionId);
-      payload.put("event_date", Instant.now());
-      payload.put("changes", propagateResult.appliedDiff().getTransforms());
-      trackingClient.track(workspaceId, "schema-changes", payload);
+      final String changeEventTimeline = Instant.now().toString();
+      for (final StreamTransform streamTransform : propagateResult.appliedDiff().getTransforms()) {
+        final Map<String, Object> payload = new HashMap<>();
+        payload.put("workspace_id", workspaceId);
+        payload.put("connection_id", connectionId);
+        payload.put("schema_change_event_date", changeEventTimeline);
+        payload.put("stream_change_type", streamTransform.getTransformType().toString());
+        payload.put("stream_namespace", streamTransform.getStreamDescriptor().getNamespace());
+        payload.put("stream_name", streamTransform.getStreamDescriptor().getName());
+        if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
+          payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
+        }
+        trackingClient.track(workspaceId, "Schema Changes", payload);
+      }
     } catch (final Exception e) {
       LOGGER.error("Error while sending tracking event for schema change", e);
     }
