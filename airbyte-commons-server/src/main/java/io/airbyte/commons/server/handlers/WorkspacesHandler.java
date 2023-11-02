@@ -112,6 +112,29 @@ public class WorkspacesHandler {
     this.slugify = new Slugify();
   }
 
+  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
+    final WorkspaceRead result = new WorkspaceRead()
+        .workspaceId(workspace.getWorkspaceId())
+        .customerId(workspace.getCustomerId())
+        .email(workspace.getEmail())
+        .name(workspace.getName())
+        .slug(workspace.getSlug())
+        .initialSetupComplete(workspace.getInitialSetupComplete())
+        .displaySetupWizard(workspace.getDisplaySetupWizard())
+        .anonymousDataCollection(workspace.getAnonymousDataCollection())
+        .news(workspace.getNews())
+        .securityUpdates(workspace.getSecurityUpdates())
+        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
+        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
+        .organizationId(workspace.getOrganizationId());
+    // Add read-only webhook configs.
+    if (workspace.getWebhookOperationConfigs() != null) {
+      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
+    }
+    return result;
+  }
+
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
       throws JsonValidationException, IOException, ValueConflictKnownException {
 
@@ -313,20 +336,20 @@ public class WorkspacesHandler {
   }
 
   public WorkspaceReadList listWorkspacesInOrganization(final ListWorkspacesInOrganizationRequestBody request) throws IOException {
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByOrganizationIdPaginated(
               new ResourcesByOrganizationQueryPaginated(request.getOrganizationId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByOrganizationId(request.getOrganizationId(), false, keyword)
+          .listWorkspacesByOrganizationId(request.getOrganizationId(), false, nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -335,19 +358,19 @@ public class WorkspacesHandler {
   }
 
   private WorkspaceReadList listWorkspacesByInstanceAdminUser(final ListWorkspacesByUserRequestBody request) throws IOException {
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByInstanceAdminUserPaginated(
               false, request.getPagination().getPageSize(), request.getPagination().getRowOffset(),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listWorkspacesByInstanceAdminUser(false, keyword)
+          .listWorkspacesByInstanceAdminUser(false, nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -363,20 +386,20 @@ public class WorkspacesHandler {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<WorkspaceRead> standardWorkspaces;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<WorkspaceRead> standardWorkspaces;
     if (request.getPagination() != null) {
       standardWorkspaces = workspacePersistence
           .listWorkspacesByUserIdPaginated(
               new ResourcesByUserQueryPaginated(request.getUserId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-              keyword)
+              nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
     } else {
       standardWorkspaces = workspacePersistence
-          .listActiveWorkspacesByUserId(request.getUserId(), keyword)
+          .listActiveWorkspacesByUserId(request.getUserId(), nameContains)
           .stream()
           .map(WorkspacesHandler::buildWorkspaceRead)
           .collect(Collectors.toList());
@@ -464,29 +487,6 @@ public class WorkspacesHandler {
     }
 
     return resolvedSlug;
-  }
-
-  private static WorkspaceRead buildWorkspaceRead(final StandardWorkspace workspace) {
-    final WorkspaceRead result = new WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .news(workspace.getNews())
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
-        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
-        .organizationId(workspace.getOrganizationId());
-    // Add read-only webhook configs.
-    if (workspace.getWebhookOperationConfigs() != null) {
-      result.setWebhookConfigs(WorkspaceWebhookConfigsConverter.toApiReads(workspace.getWebhookOperationConfigs()));
-    }
-    return result;
   }
 
   private void validateWorkspacePatch(final StandardWorkspace persistedWorkspace, final WorkspaceUpdate workspacePatch) {

@@ -6404,7 +6404,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     OrganizationUserReadList:
       type: object
@@ -8504,7 +8504,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     ListWorkspacesByUserRequestBody:
       type: object
@@ -8516,7 +8516,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     WorkspaceUserRead:
       type: object

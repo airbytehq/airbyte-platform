@@ -149,7 +149,7 @@ export const useListUsersInWorkspace = (workspaceId: string) => {
   return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
-export const useListWorkspacesInfinite = (pageSize: number, keyword?: string) => {
+export const useListWorkspacesInfinite = (pageSize: number, nameContains?: string) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
 
@@ -158,7 +158,7 @@ export const useListWorkspacesInfinite = (pageSize: number, keyword?: string) =>
     async ({ pageParam = 0 }: { pageParam?: number }) => {
       return {
         data: await listWorkspacesByUser(
-          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, keyword },
+          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, nameContains },
           requestOptions
         ),
         pageParam,

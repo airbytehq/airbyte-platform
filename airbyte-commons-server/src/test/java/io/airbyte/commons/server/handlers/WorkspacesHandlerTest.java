@@ -67,17 +67,23 @@ import org.mockito.ArgumentCaptor;
 
 class WorkspacesHandlerTest {
 
+  public static final String UPDATED = "updated";
   private static final String FAILURE_NOTIFICATION_WEBHOOK = "http://airbyte.notifications/failure";
   private static final String NEW_WORKSPACE = "new workspace";
   private static final String TEST_NAME = "test-name";
   private static final UUID ORGANIZAION_ID = UUID.randomUUID();
-
   private static final String TEST_AUTH_TOKEN = "test-auth-token";
   private static final UUID WEBHOOK_CONFIG_ID = UUID.randomUUID();
   private static final JsonNode PERSISTED_WEBHOOK_CONFIGS = Jsons.deserialize(
       String.format("{\"webhookConfigs\": [{\"id\": \"%s\", \"name\": \"%s\", \"authToken\": {\"_secret\": \"a-secret_v1\"}}]}",
           WEBHOOK_CONFIG_ID, TEST_NAME));
-  public static final String UPDATED = "updated";
+  private static final String TEST_EMAIL = "test@airbyte.io";
+  private static final String TEST_WORKSPACE_NAME = "test workspace";
+  private static final String TEST_WORKSPACE_SLUG = "test-workspace";
+  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_AUTO =
+      io.airbyte.api.model.generated.Geography.AUTO;
+  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_US =
+      io.airbyte.api.model.generated.Geography.US;
   private ConfigRepository configRepository;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private ConnectionsHandler connectionsHandler;
@@ -86,15 +92,6 @@ class WorkspacesHandlerTest {
   private Supplier<UUID> uuidSupplier;
   private StandardWorkspace workspace;
   private WorkspacesHandler workspacesHandler;
-
-  private static final String TEST_EMAIL = "test@airbyte.io";
-  private static final String TEST_WORKSPACE_NAME = "test workspace";
-  private static final String TEST_WORKSPACE_SLUG = "test-workspace";
-
-  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_AUTO =
-      io.airbyte.api.model.generated.Geography.AUTO;
-  private static final io.airbyte.api.model.generated.Geography GEOGRAPHY_US =
-      io.airbyte.api.model.generated.Geography.US;
   private SecretPersistence secretPersistence;
 
   private PermissionPersistence permissionPersistence;
@@ -738,25 +735,25 @@ class WorkspacesHandlerTest {
   void testListWorkspacesInOrgNoKeyword() throws Exception {
     final ListWorkspacesInOrganizationRequestBody request =
         new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZAION_ID).pagination(new Pagination().pageSize(100).rowOffset(0));
-    List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
+    final List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
     when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
         Optional.empty()))
             .thenReturn(expectedWorkspaces);
-    WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
+    final WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
     assertEquals(2, result.getWorkspaces().size());
   }
 
   @Test
   void testListWorkspacesInOrgWithKeyword() throws Exception {
     final ListWorkspacesInOrganizationRequestBody request = new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZAION_ID)
-        .keyword("keyword").pagination(new Pagination().pageSize(100).rowOffset(0));
-    List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
+        .nameContains("nameContains").pagination(new Pagination().pageSize(100).rowOffset(0));
+    final List<StandardWorkspace> expectedWorkspaces = List.of(generateWorkspace(), generateWorkspace());
 
     when(workspacePersistence.listWorkspacesByOrganizationIdPaginated(new ResourcesByOrganizationQueryPaginated(ORGANIZAION_ID, false, 100, 0),
-        Optional.of("keyword")))
+        Optional.of("nameContains")))
             .thenReturn(expectedWorkspaces);
-    WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
+    final WorkspaceReadList result = workspacesHandler.listWorkspacesInOrganization(request);
     assertEquals(2, result.getWorkspaces().size());
   }
 
