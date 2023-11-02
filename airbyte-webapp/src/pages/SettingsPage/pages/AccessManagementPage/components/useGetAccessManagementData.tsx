@@ -53,9 +53,8 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
 };
 
 export interface AccessUsers {
-  workspace?: WorkspaceUserRead[];
-  organization?: OrganizationUserRead[];
-  instance?: WorkspaceUserRead[];
+  workspace?: { users: WorkspaceUserRead[]; usersToAdd: OrganizationUserRead[] };
+  organization?: { users: OrganizationUserRead[]; usersToAdd: [] };
 }
 
 export const useGetWorkspaceAccessUsers = (): AccessUsers => {
@@ -64,8 +63,18 @@ export const useGetWorkspaceAccessUsers = (): AccessUsers => {
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
 
   return {
-    workspace: workspaceUsers,
-    organization: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
+    workspace: {
+      users: workspaceUsers,
+      usersToAdd: organizationUsers.filter(
+        (user) =>
+          user.permissionType === "organization_member" &&
+          !workspaceUsers.find((workspaceUser) => workspaceUser.userId === user.userId)
+      ),
+    },
+    organization: {
+      users: organizationUsers.filter((user) => user.permissionType !== "organization_member"),
+      usersToAdd: [],
+    },
   };
 };
 
@@ -74,6 +83,6 @@ export const useGetOrganizationAccessUsers = (): AccessUsers => {
   const organizationUsers = useListUsersInOrganization(workspace.organizationId ?? "").users;
 
   return {
-    organization: organizationUsers,
+    organization: { users: organizationUsers, usersToAdd: [] },
   };
 };

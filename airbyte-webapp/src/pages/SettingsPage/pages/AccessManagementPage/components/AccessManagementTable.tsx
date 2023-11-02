@@ -2,9 +2,12 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Badge } from "components/ui/Badge";
+import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 
 import { OrganizationUserRead, WorkspaceUserRead } from "core/request/AirbyteClient";
+import { useCurrentUser } from "core/services/auth";
 
 import { RoleManagementControl } from "./RoleManagementControl";
 import { RoleToolTip } from "./RoleToolTip";
@@ -16,6 +19,7 @@ export const AccessManagementTable: React.FC<{
   pageResourceType: ResourceType;
   pageResourceName: string;
 }> = ({ users, tableResourceType, pageResourceType, pageResourceName }) => {
+  const { userId } = useCurrentUser();
   const columnHelper = createColumnHelper<WorkspaceUserRead | OrganizationUserRead>();
   const [activeEditRow, setActiveEditRow] = useState<string | undefined>(undefined);
 
@@ -23,7 +27,18 @@ export const AccessManagementTable: React.FC<{
     () => [
       columnHelper.accessor("name", {
         header: () => <FormattedMessage id="settings.accessManagement.table.column.fullname" />,
-        cell: (props) => props.cell.getValue(),
+        cell: (props) => {
+          return (
+            <FlexContainer direction="row" alignItems="baseline">
+              {props.cell.getValue()}
+              {props.row.original.userId === userId && (
+                <Badge variant="grey">
+                  <FormattedMessage id="settings.accessManagement.youHint" />
+                </Badge>
+              )}
+            </FlexContainer>
+          );
+        },
         sortingFn: "alphanumeric",
         meta: { responsive: true },
       }),
@@ -57,7 +72,7 @@ export const AccessManagementTable: React.FC<{
         sortingFn: "alphanumeric",
       }),
     ],
-    [activeEditRow, columnHelper, pageResourceName, pageResourceType, tableResourceType]
+    [activeEditRow, columnHelper, pageResourceName, pageResourceType, tableResourceType, userId]
   );
 
   return <Table data={users} columns={columns} variant="white" />;

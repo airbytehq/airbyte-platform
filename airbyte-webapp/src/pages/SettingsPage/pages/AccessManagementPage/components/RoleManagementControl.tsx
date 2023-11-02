@@ -74,8 +74,10 @@ export const RoleManagementControl: React.FC<RoleManagementControlProps> = ({
   }
 
   const onSubmitRoleChangeClick = async (values: PermissionUpdate) => {
-    await updatePermissions(values);
-    setActiveEditRow(undefined);
+    const permission = await updatePermissions(values);
+    if (permission) {
+      setActiveEditRow(undefined);
+    }
   };
 
   const onRemoveUserClick = () => {

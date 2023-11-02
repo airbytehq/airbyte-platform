@@ -30,19 +30,19 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
       <FlexContainer direction="column" gap="xl" className={styles.pageContent}>
         {Object.keys(accessUsers).map((key) => {
           const resourceType = key as keyof typeof accessUsers;
-          const users = accessUsers[resourceType];
+          const data = accessUsers[resourceType];
+          const users = data?.users ?? [];
+          const usersToAdd = data?.usersToAdd ?? [];
 
           return (
-            users &&
-            users.length > 0 && (
-              <AccessManagementCard
-                users={users}
-                tableResourceType={resourceType}
-                key={resourceType}
-                pageResourceType={pageResourceType}
-                pageResourceName={resourceName}
-              />
-            )
+            <AccessManagementCard
+              users={users}
+              usersToAdd={usersToAdd}
+              tableResourceType={resourceType}
+              key={resourceType}
+              pageResourceType={pageResourceType}
+              pageResourceName={resourceName}
+            />
           );
         })}
       </FlexContainer>

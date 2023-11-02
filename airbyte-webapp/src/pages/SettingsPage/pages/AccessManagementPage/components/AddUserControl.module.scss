@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.addUserControl__dropdown {
+  padding-bottom: 0;
+  width: variables.$width-wide-menu;
+}
+
+.addUserControl__buttonName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
