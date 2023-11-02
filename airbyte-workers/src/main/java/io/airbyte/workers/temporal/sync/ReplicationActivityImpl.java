@@ -166,7 +166,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         cancellationCallback,
         () -> {
           final ReplicationInput hydratedReplicationInput = getHydratedReplicationInput(replicationActivityInput);
-          LOGGER.info("replicationInput: {}", hydratedReplicationInput);
           final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
               orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
                   hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
