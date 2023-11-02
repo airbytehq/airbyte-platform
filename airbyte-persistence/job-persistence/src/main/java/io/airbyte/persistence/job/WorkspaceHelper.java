@@ -45,6 +45,7 @@ public class WorkspaceHelper {
   private final LoadingCache<Long, UUID> jobToWorkspaceCache;
 
   private final LoadingCache<UUID, UUID> workspaceToOrganizationCache;
+  private final LoadingCache<UUID, Boolean> organizationToPbACache;
 
   public WorkspaceHelper(final ConfigRepository configRepository, final JobPersistence jobPersistence) {
 
@@ -107,6 +108,15 @@ public class WorkspaceHelper {
 
     });
 
+    this.organizationToPbACache = getExpiringCache(new CacheLoader<>() {
+
+      @Override
+      public Boolean load(UUID organizationId) throws Exception {
+        return configRepository.getOrganization(organizationId).get().getPba();
+      }
+
+    });
+
     this.workspaceToOrganizationCache = getExpiringCache(new CacheLoader<>() {
 
       @Override
@@ -152,6 +162,7 @@ public class WorkspaceHelper {
     return swallowExecutionException(() -> jobToWorkspaceCache.get(jobId));
   }
 
+  // ORGANIZATION ID
   public UUID getOrganizationForWorkspace(final UUID workspaceId) {
     return swallowExecutionException(() -> workspaceToOrganizationCache.get(workspaceId));
   }
@@ -178,7 +189,7 @@ public class WorkspaceHelper {
    * Get workspace id from source and destination. Verify that the source and destination are from the
    * same workspace. Always compares source and destination workspaces even if there are errors while
    * fetching them.
-   *
+   * <p>
    * I don't know why we want this.
    *
    * @param sourceId source id
