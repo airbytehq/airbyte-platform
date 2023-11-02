@@ -265,14 +265,11 @@ create table "public"."schema_management" (
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
   "scope_id" uuid,
-  "scope_type" "public"."resource_scope" not null default cast('global' as resource_scope),
   "secret_persistence_config_coordinate" varchar(256),
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "secret_persistence_config_pkey"
-    primary key ("id"),
-  constraint "secret_persistence_config_scope_id_scope_type_secret_persis_key"
-    unique ("scope_id", "scope_type", "secret_persistence_config_coordinate")
+    primary key ("id")
 );
 create table "public"."sso_config" (
   "id" uuid not null,
