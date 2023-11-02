@@ -78,12 +78,6 @@ dependencies:
   '@types/path-browserify':
     specifier: ^1.0.1
     version: 1.0.1
-  '@types/react-virtualized-auto-sizer':
-    specifier: ^1.0.2
-    version: 1.0.2
-  '@types/react-window':
-    specifier: ^1.8.7
-    version: 1.8.7
   '@types/segment-analytics':
     specifier: ^0.0.36
     version: 0.0.36
@@ -210,18 +204,12 @@ dependencies:
   react-use:
     specifier: ^17.4.0
     version: 17.4.0(react-dom@18.2.0)(react@18.2.0)
-  react-virtualized-auto-sizer:
-    specifier: ^1.0.20
-    version: 1.0.20(react-dom@18.2.0)(react@18.2.0)
   react-virtuoso:
     specifier: ^4.6.2
     version: 4.6.2(react-dom@18.2.0)(react@18.2.0)
   react-widgets:
     specifier: ^4.6.1
     version: 4.6.1(react-dom@18.2.0)(react@18.2.0)
-  react-window:
-    specifier: ^1.8.9
-    version: 1.8.9(react-dom@18.2.0)(react@18.2.0)
   recharts:
     specifier: ^2.1.13
     version: 2.3.2(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
@@ -7221,23 +7209,11 @@ packages:
       '@types/react': 18.2.34
     dev: false
 
-  /@types/react-virtualized-auto-sizer@1.0.2:
-    resolution: {integrity: sha512-UKIhAsnn1GknB0ewLXmwiGPVhU9m58gq56HcS1+G9L+TUtwgLMJoCREH0k303t3ZdDhNWt8TyxWE9iLYzWSnew==}
-    dependencies:
-      '@types/react': 18.2.34
-    dev: false
-
   /@types/react-widgets@4.4.10:
     resolution: {integrity: sha512-KkwqTPYh8ZgF/tQqkBTRCteTMMmuFuHhweomIk3sululnAy6cXAqXoNMSK1uupRbcwhpghKBR0EdQeORvcjQ6Q==}
     dependencies:
       '@types/react': 18.2.34
     dev: true
-
-  /@types/react-window@1.8.7:
-    resolution: {integrity: sha512-FpPHEhmGVOBKomuR4LD2nvua1Ajcw6PfnfbDysuCwwPae3JNulcq3+uZIpQNbDN2AI1z+Y4tKj2xQ4ELiQ4QDw==}
-    dependencies:
-      '@types/react': 18.2.34
-    dev: false
 
   /@types/react@18.2.34:
     resolution: {integrity: sha512-U6eW/alrRk37FU/MS2RYMjx0Va2JGIVXELTODaTIYgvWGCV4Y4TfTUzG8DdmpDNIT0Xpj/R7GfyHOJJrDttcvg==}
@@ -13882,10 +13858,6 @@ packages:
     engines: {node: '>= 0.6'}
     dev: true
 
-  /memoize-one@5.2.1:
-    resolution: {integrity: sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==}
-    dev: false
-
   /memoize-one@6.0.0:
     resolution: {integrity: sha512-rkpe71W0N0c0Xz6QD0eJETuWAJGnJ9afsl1srmwPrI+yBCkge5EycXXbYRyvL29zZVUWQCY7InPRCv3GDXuZNw==}
     dev: false
@@ -16128,16 +16100,6 @@ packages:
       tslib: 2.4.1
     dev: false
 
-  /react-virtualized-auto-sizer@1.0.20(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-OdIyHwj4S4wyhbKHOKM1wLSj/UDXm839Z3Cvfg2a9j+He6yDa6i5p0qQvEiCnyQlGO/HyfSnigQwuxvYalaAXA==}
-    peerDependencies:
-      react: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0-rc
-      react-dom: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0-rc
-    dependencies:
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-    dev: false
-
   /react-virtualized@9.22.3(patch_hash=wem7zdhrj6jola7ic3qcehiqii)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-MKovKMxWTcwPSxE1kK1HcheQTWfuCxAuBoSTf2gwyMM21NdX/PXUhnoP8Uc5dRKd+nKm8v41R36OellhdCpkrw==}
     peerDependencies:
@@ -16184,19 +16146,6 @@ packages:
       react-transition-group: 2.9.0(react-dom@18.2.0)(react@18.2.0)
       uncontrollable: 7.2.1(react@18.2.0)
       warning: 3.0.0
-    dev: false
-
-  /react-window@1.8.9(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-+Eqx/fj1Aa5WnhRfj9dJg4VYATGwIUP2ItwItiJ6zboKWA6EX3lYDAXfGF2hyNqplEprhbtjbipiADEcwQ823Q==}
-    engines: {node: '>8.0.0'}
-    peerDependencies:
-      react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
-      react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
-    dependencies:
-      '@babel/runtime': 7.20.7
-      memoize-one: 5.2.1
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
     dev: false
 
   /react@18.2.0:
