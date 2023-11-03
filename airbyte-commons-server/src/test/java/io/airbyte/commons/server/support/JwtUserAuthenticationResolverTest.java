@@ -21,11 +21,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class JwtUserResolverTest {
+class JwtUserAuthenticationResolverTest {
 
   private SecurityService securityService;
 
-  private JwtUserResolver jwtUserResolver;
+  private JwtUserAuthenticationResolver jwtUserAuthenticationResolver;
 
   private static final String EMAIL = "email@email.com";
   private static final String USER_NAME = "userName";
@@ -34,7 +34,7 @@ class JwtUserResolverTest {
   @BeforeEach
   void setup() {
     securityService = mock(SecurityService.class);
-    jwtUserResolver = new JwtUserResolver(Optional.of(securityService));
+    jwtUserAuthenticationResolver = new JwtUserAuthenticationResolver(Optional.of(securityService));
   }
 
   @Test
@@ -46,7 +46,7 @@ class JwtUserResolverTest {
             Map.of(JWT_USER_EMAIL, EMAIL, JWT_USER_NAME, USER_NAME, JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final User userRead = jwtUserResolver.resolveUser();
+    final User userRead = jwtUserAuthenticationResolver.resolveUser(AUTH_USER_ID);
 
     final User expectedUserRead = new User().withAuthUserId(AUTH_USER_ID).withEmail(EMAIL).withName(USER_NAME).withAuthProvider(
         AuthProvider.GOOGLE_IDENTITY_PLATFORM);
@@ -55,7 +55,7 @@ class JwtUserResolverTest {
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
     // request
     // without realm.
-    final String ssoRealm = jwtUserResolver.resolveSsoRealm();
+    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
     assertNull(ssoRealm);
   }
 
@@ -66,7 +66,7 @@ class JwtUserResolverTest {
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final String ssoRealm = jwtUserResolver.resolveSsoRealm();
+    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
     assertNull(ssoRealm);
   }
 
@@ -76,7 +76,7 @@ class JwtUserResolverTest {
     Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_SSO_REALM, "airbyte")));
     when(securityService.getAuthentication()).thenReturn(authentication);
-    final String ssoRealm = jwtUserResolver.resolveSsoRealm();
+    final String ssoRealm = jwtUserAuthenticationResolver.resolveSsoRealm();
     assertEquals("airbyte", ssoRealm);
   }
 

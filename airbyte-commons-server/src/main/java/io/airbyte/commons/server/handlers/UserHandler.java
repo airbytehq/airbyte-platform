@@ -27,7 +27,7 @@ import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.support.JwtUserResolver;
+import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -65,7 +65,7 @@ public class UserHandler {
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
 
-  private final Optional<JwtUserResolver> jwtUserResolver;
+  private final Optional<UserAuthenticationResolver> userAuthenticationResolver;
   private final Optional<InitialUserConfiguration> initialUserConfiguration;
 
   @VisibleForTesting
@@ -76,7 +76,7 @@ public class UserHandler {
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      final Supplier<UUID> uuidGenerator,
-                     final Optional<JwtUserResolver> jwtUserResolver,
+                     final Optional<UserAuthenticationResolver> userAuthenticationResolver,
                      final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
@@ -84,7 +84,7 @@ public class UserHandler {
     this.permissionPersistence = permissionPersistence;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
-    this.jwtUserResolver = jwtUserResolver;
+    this.userAuthenticationResolver = userAuthenticationResolver;
     this.initialUserConfiguration = initialUserConfiguration;
   }
 
@@ -332,10 +332,11 @@ public class UserHandler {
   }
 
   private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) throws ConfigNotFoundException {
-    if (jwtUserResolver.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.USER, userAuthIdRequestBody.getAuthUserId());
+    final String authUserId = userAuthIdRequestBody.getAuthUserId();
+    if (userAuthenticationResolver.isEmpty()) {
+      throw new ConfigNotFoundException(ConfigSchema.USER, authUserId);
     }
-    final User incomingJwtUser = jwtUserResolver.get().resolveUser();
+    final User incomingJwtUser = userAuthenticationResolver.get().resolveUser(authUserId);
     if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
@@ -398,7 +399,7 @@ public class UserHandler {
   }
 
   private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException, ConfigNotFoundException {
-    final String ssoRealm = jwtUserResolver.orElseThrow().resolveSsoRealm();
+    final String ssoRealm = userAuthenticationResolver.orElseThrow().resolveSsoRealm();
     if (ssoRealm != null) {
       final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
       if (attachedOrganization.isPresent()) {

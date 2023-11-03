@@ -33,7 +33,7 @@ import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.server.support.JwtUserResolver;
+import io.airbyte.commons.server.support.JwtUserAuthenticationResolver;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
@@ -76,7 +76,7 @@ class UserHandlerTest {
   WorkspacesHandler workspacesHandler;
   OrganizationPersistence organizationPersistence;
   OrganizationsHandler organizationsHandler;
-  JwtUserResolver jwtUserResolver;
+  JwtUserAuthenticationResolver jwtUserAuthenticationResolver;
   InitialUserConfiguration initialUserConfiguration;
 
   private static final UUID USER_ID = UUID.randomUUID();
@@ -103,11 +103,11 @@ class UserHandlerTest {
     organizationPersistence = mock(OrganizationPersistence.class);
     organizationsHandler = mock(OrganizationsHandler.class);
     uuidSupplier = mock(Supplier.class);
-    jwtUserResolver = mock(JwtUserResolver.class);
+    jwtUserAuthenticationResolver = mock(JwtUserAuthenticationResolver.class);
     initialUserConfiguration = mock(InitialUserConfiguration.class);
 
     userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-        uuidSupplier, Optional.of(jwtUserResolver), Optional.of(initialUserConfiguration));
+        uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.of(initialUserConfiguration));
   }
 
   @Test
@@ -252,7 +252,7 @@ class UserHandlerTest {
         newUser = new User().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
         defaultWorkspace = new WorkspaceRead().workspaceId(WORKSPACE_ID);
         when(userPersistence.getUserByAuthId(anyString())).thenReturn(Optional.empty());
-        when(jwtUserResolver.resolveUser()).thenReturn(newUser);
+        when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newUser);
         when(uuidSupplier.get()).thenReturn(NEW_USER_ID);
         when(userPersistence.getUser(NEW_USER_ID)).thenReturn(Optional.of(newUser));
         when(workspacesHandler.createDefaultWorkspaceForUser(any(), any())).thenReturn(defaultWorkspace);
@@ -269,7 +269,7 @@ class UserHandlerTest {
 
         newUser.setAuthProvider(authProvider);
 
-        when(jwtUserResolver.resolveSsoRealm()).thenReturn(ssoRealm);
+        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn(ssoRealm);
         if (ssoRealm != null) {
           when(organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(Optional.of(ORGANIZATION));
         }
@@ -282,7 +282,7 @@ class UserHandlerTest {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
           userHandler = new UserHandler(userPersistence, permissionPersistence, organizationPersistence, permissionHandler, workspacesHandler,
-              uuidSupplier, Optional.of(jwtUserResolver), Optional.empty());
+              uuidSupplier, Optional.of(jwtUserAuthenticationResolver), Optional.empty());
         }
 
         if (isFirstOrgUser) {
@@ -312,7 +312,7 @@ class UserHandlerTest {
 
       @Test
       void testNewSsoUserWithoutOrgThrows() throws IOException {
-        when(jwtUserResolver.resolveSsoRealm()).thenReturn("realm");
+        when(jwtUserAuthenticationResolver.resolveSsoRealm()).thenReturn("realm");
         when(organizationPersistence.getOrganizationBySsoConfigRealm("realm")).thenReturn(Optional.empty());
         assertThrows(ConfigNotFoundException.class, () -> userHandler.getOrCreateUserByAuthId(
             new UserAuthIdRequestBody().authUserId(NEW_AUTH_USER_ID)));
