@@ -218,7 +218,7 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
 function createUserManager(realm: string) {
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set("realm", realm);
-  const redirect_uri = `${window.location.origin}?${searchParams.toString()}`;
+  const redirect_uri = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
   const userManager = new UserManager({
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     authority: `${config.keycloakBaseUrl}/auth/realms/${realm}`,
