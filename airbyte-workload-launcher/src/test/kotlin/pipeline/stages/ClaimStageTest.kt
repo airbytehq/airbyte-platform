@@ -70,8 +70,8 @@ class ClaimStageTest {
 
   @Test
   fun `propagates error if claim request error`() {
-    val workloadId: String = "1"
-    val dataplaneId: String = "US"
+    val workloadId = "1"
+    val dataplaneId = "US"
 
     val workloadClaimRequest: WorkloadClaimRequest =
       WorkloadClaimRequest(

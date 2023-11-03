@@ -18,7 +18,6 @@ import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.discovery.event.ServiceReadyEvent
 import io.temporal.worker.WorkerFactory
 import jakarta.inject.Singleton
-import kotlin.concurrent.thread
 
 private val logger = KotlinLogging.logger {}
 
@@ -32,9 +31,7 @@ class StartupApplicationEventListener(
   ApplicationEventListener<ServiceReadyEvent> {
   override fun onApplicationEvent(event: ServiceReadyEvent?) {
     // TODO this might slowdown start quite a bit, should be reworked
-    thread {
-      rehydrateAndProcessClaimed()
-    }.join()
+    rehydrateAndProcessClaimed()
 
     workerFactory.start()
   }

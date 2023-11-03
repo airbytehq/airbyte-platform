@@ -13,8 +13,8 @@ public final class Metadata {
   /**
    * General Metadata.
    */
-  static final String JOB_LABEL_KEY = "job_id";
-  static final String ATTEMPT_LABEL_KEY = "attempt_id";
+  public static final String JOB_LABEL_KEY = "job_id";
+  public static final String ATTEMPT_LABEL_KEY = "attempt_id";
   static final String WORKSPACE_LABEL_KEY = "workspace_id";
   static final String WORKER_POD_LABEL_KEY = "airbyte";
   static final String WORKER_POD_LABEL_VALUE = "job-pod";

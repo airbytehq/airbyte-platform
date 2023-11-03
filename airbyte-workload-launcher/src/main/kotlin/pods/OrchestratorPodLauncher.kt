@@ -29,9 +29,13 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
+import kotlin.jvm.optionals.getOrDefault
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Atomic operations on the raw Kube api. Domain level information should be opaque to this layer.
+ */
 @Singleton
 class OrchestratorPodLauncher(
   private val kubernetesClient: KubernetesClient,
@@ -157,6 +161,7 @@ class OrchestratorPodLauncher(
         .withVolumeMounts(volumeMounts)
         .build()
 
+    // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
     val podToCreate =
@@ -181,15 +186,16 @@ class OrchestratorPodLauncher(
         .build()
 
     // should only create after the kubernetes API creates the pod
-    val createdPod =
-      kubernetesClient.pods()
-        .inNamespace(kubePodInfo.namespace)
-        .resource(podToCreate)
-        .serverSideApply()
-
-    kubernetesClient.pods()
+    return kubernetesClient.pods()
       .inNamespace(kubePodInfo.namespace)
-      .withName(kubePodInfo.name)
+      .resource(podToCreate)
+      .serverSideApply()
+  }
+
+  fun waitForPodsWithLabels(labels: Map<String, String>) {
+    kubernetesClient.pods()
+      .inNamespace(namespace)
+      .withLabels(labels)
       .waitUntilCondition(
         { p: Pod ->
           (
@@ -197,27 +203,33 @@ class OrchestratorPodLauncher(
               p.status.initContainerStatuses[0].state.waiting == null
           )
         },
-        5,
-        TimeUnit.MINUTES,
+        TIMEOUT_VALUE,
+        TIMEOUT_UNITS,
       )
 
-    val podStatus =
+    val pods =
       kubernetesClient.pods()
-        .inNamespace(kubePodInfo.namespace)
-        .withName(kubePodInfo.name)
-        .get()
-        .status
+        .inNamespace(namespace)
+        .withLabels(labels)
+        .list()
+        .items
 
-    val containerState =
-      podStatus
-        .initContainerStatuses[0]
-        .state
-
-    if (containerState.running == null) {
-      throw RuntimeException("Pod was not running, state was: $containerState")
+    if (pods.isEmpty()) {
+      throw RuntimeException("No pods found for labels: $labels. Nothing to wait for.")
     }
 
-    return createdPod
+    val allPodsContainersRunning =
+      kubernetesClient.pods()
+        .inNamespace(namespace)
+        .withLabels(labels)
+        .list()
+        .items
+        .stream()
+        .allMatch { it.status.initContainerStatuses.stream().findFirst().map { it.state.running != null }.getOrDefault(false) }
+
+    if (!allPodsContainersRunning) {
+      throw RuntimeException("All pods' containers for labels: $labels were not running after: $TIMEOUT_VALUE $TIMEOUT_UNITS")
+    }
   }
 
   fun copyFilesToKubeConfigVolumeMain(
@@ -284,5 +296,11 @@ class OrchestratorPodLauncher(
       logger.warn(e) { "Could not find pods running for $labels, presuming no pods are running" }
       return false
     }
+  }
+
+  // TODO: We need to make sure the wait times are the same for the orchestrator wait code
+  companion object {
+    const val TIMEOUT_VALUE = 5L
+    val TIMEOUT_UNITS = TimeUnit.MINUTES
   }
 }

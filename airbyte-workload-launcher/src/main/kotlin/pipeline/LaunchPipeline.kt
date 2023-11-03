@@ -9,7 +9,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
-import java.util.function.Consumer
 
 private val logger = KotlinLogging.logger {}
 
@@ -20,13 +19,13 @@ class LaunchPipeline(
   private val build: BuildInputStage,
   private val launch: LaunchPodStage,
   private val statusUpdater: StatusUpdater,
-) : Consumer<LauncherInput> {
+) {
   // todo: This is for when we get to back pressure: if we want backpressure on the Mono,
   //  we will need to create a scheduler that is used by all Monos to ensure that we have
   //  a max concurrent capacity. See the Schedulers class for details. We can even define
   //  an executor service via Micronaut configuration and inject that to pass to the
   //  scheduler (see the fromExecutorService method on Schedulers).
-  override fun accept(msg: LauncherInput) {
+  fun accept(msg: LauncherInput) {
     LaunchStageIO(msg)
       .toMono()
       .flatMap(claim)
@@ -39,7 +38,7 @@ class LaunchPipeline(
   }
 
   private fun handleError(e: Throwable): Mono<LaunchStageIO> {
-    logger.error(e) { ("Pipeline Error: $e") }
+    logger.error(e) { ("Pipeline Error") }
     if (e is StageError) {
       statusUpdater.reportFailure(e)
     }
