@@ -972,7 +972,7 @@ abstract class ReplicationWorkerTest {
   }
 
   @Test
-  void testDestinationTimeout() throws Exception {
+  void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
         .thenReturn(new ReplicationFeatureFlags(true));
 
@@ -1017,6 +1017,106 @@ abstract class ReplicationWorkerTest {
     verify(metricClient, never()).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), anyLong(), any(MetricAttribute.class));
 
     assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.DESTINATION, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.DESTINATION_TIMEOUT, actual.getFailures().get(0).getFailureType());
+  }
+
+  @Test
+  void testDestinationNotifyEndOfInputTimeout() throws Exception {
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
+        .thenReturn(new ReplicationFeatureFlags(true));
+
+    destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
+        featureFlagClient,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        metricClient,
+        Duration.ofSeconds(1),
+        Duration.ofSeconds(1)));
+
+    destination = new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor);
+
+    final AtomicBoolean notifyEndOfInputCallIsStuck = new AtomicBoolean(true);
+    doAnswer(invocation -> {
+      // replication is hanging on notifyEndOfInput call
+      while (notifyEndOfInputCallIsStuck.get()) {
+        Thread.sleep(1000);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
+
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
+
+    doAnswer(invocation -> {
+      try {
+        invocation.callRealMethod();
+      } finally {
+        // replication stops hanging on notifyEndOfInput call
+        notifyEndOfInputCallIsStuck.set(false);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).runWithTimeoutThread(any());
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
+
+    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+
+    assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.DESTINATION, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.DESTINATION_TIMEOUT, actual.getFailures().get(0).getFailureType());
+  }
+
+  @Test
+  void testDestinationTimeoutWithCloseFailure() throws Exception {
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
+        .thenReturn(new ReplicationFeatureFlags(true));
+
+    destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
+        featureFlagClient,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        metricClient,
+        Duration.ofSeconds(1),
+        Duration.ofSeconds(1)));
+
+    destination = spy(new SimpleTimeoutMonitoredDestination(destinationTimeoutMonitor));
+
+    doAnswer(invocation -> {
+      throw new RuntimeException("close failed");
+    })
+        .when(destination).close();
+
+    final AtomicBoolean notifyEndOfInputCallIsStuck = new AtomicBoolean(true);
+    doAnswer(invocation -> {
+      // replication is hanging on notifyEndOfInput call
+      while (notifyEndOfInputCallIsStuck.get()) {
+        Thread.sleep(1000);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).resetNotifyEndOfInputTimer();
+
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
+
+    doAnswer(invocation -> {
+      try {
+        invocation.callRealMethod();
+      } finally {
+        // replication stops hanging on notifyEndOfInput call
+        notifyEndOfInputCallIsStuck.set(false);
+      }
+      return null;
+    }).when(destinationTimeoutMonitor).runWithTimeoutThread(any());
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    final ReplicationOutput actual = worker.run(replicationInput, jobRoot);
+
+    verify(metricClient).count(eq(WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT), eq(1L), any(MetricAttribute.class));
+    verify(metricClient, never()).count(eq(WORKER_DESTINATION_ACCEPT_TIMEOUT), anyLong(), any(MetricAttribute.class));
+
     assertEquals(FailureOrigin.DESTINATION, actual.getFailures().get(0).getFailureOrigin());
     assertEquals(FailureReason.FailureType.DESTINATION_TIMEOUT, actual.getFailures().get(0).getFailureType());
   }

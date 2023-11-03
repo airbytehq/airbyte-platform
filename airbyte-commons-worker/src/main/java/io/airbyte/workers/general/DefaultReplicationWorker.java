@@ -173,9 +173,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       throws Exception {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
+    final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
-    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source) {
+    try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source; destinationTimeoutMonitor; destinationWithCloseTimeout) {
       replicationWorkerHelper.startDestination(destination, replicationInput, jobRoot);
       replicationWorkerHelper.startSource(source, replicationInput, jobRoot);
 
@@ -237,7 +238,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Sync worker failed.", e);
     } finally {
-      closeDestination(mdc, flags);
       executors.shutdownNow();
 
       try {
@@ -252,22 +252,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         Thread.currentThread().interrupt();
       }
     }
-  }
-
-  private void closeDestination(final Map<String, String> mdc, final ReplicationFeatureFlags flags) throws Exception {
-    if (flags.isDestinationTimeoutEnabled()) {
-      runAsyncWithTimeout(() -> {
-        try {
-          destination.close();
-        } catch (final Exception e) {
-          throw new RuntimeException(e);
-        }
-      }, mdc).join();
-    } else {
-      destination.close();
-    }
-
-    destinationTimeoutMonitor.close();
   }
 
   private void attachHeartbeatCheck(
@@ -472,6 +456,35 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // Preserve the interrupt flag if we were interrupted
       Thread.currentThread().interrupt();
     }
+  }
+
+  private class CloseableWithTimeout implements AutoCloseable {
+
+    AutoCloseable autoCloseable;
+    private final Map<String, String> mdc;
+    private final ReplicationFeatureFlags flags;
+
+    public CloseableWithTimeout(AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+      this.autoCloseable = autoCloseable;
+      this.mdc = mdc;
+      this.flags = flags;
+    }
+
+    @Override
+    public void close() throws Exception {
+      if (flags.isDestinationTimeoutEnabled()) {
+        runAsyncWithTimeout(() -> {
+          try {
+            autoCloseable.close();
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        }, mdc).join();
+      } else {
+        autoCloseable.close();
+      }
+    }
+
   }
 
 }

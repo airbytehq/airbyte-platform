@@ -157,9 +157,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
+      final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
       // note: resources are closed in the opposite order in which they are declared. thus source will be
       // closed first (which is what we want).
-      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source) {
+      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source; destinationTimeoutMonitor; destinationWithCloseTimeout) {
         scheduledExecutors.scheduleAtFixedRate(this::reportObservabilityMetrics, 0, observabilityMetricsPeriodInSeconds, TimeUnit.SECONDS);
 
         CompletableFuture.allOf(
@@ -184,8 +185,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         replicationWorkerHelper.trackFailure(e);
         replicationWorkerHelper.markFailed();
       } finally {
-        // not closing in try-with-resources block since we want to monitor timeouts when closing
-        closeDestination(mdc, flags);
         executors.shutdownNow();
         scheduledExecutors.shutdownNow();
 
@@ -220,22 +219,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       throw new WorkerException("Sync failed", e);
     }
 
-  }
-
-  private void closeDestination(final Map<String, String> mdc, final ReplicationFeatureFlags flags) throws Exception {
-    if (flags.isDestinationTimeoutEnabled()) {
-      runAsyncWithTimeout(() -> {
-        try {
-          destination.close();
-        } catch (final Exception e) {
-          throw new RuntimeException(e);
-        }
-      }, mdc).join();
-    } else {
-      destination.close();
-    }
-
-    destinationTimeoutMonitor.close();
   }
 
   private void reportObservabilityMetrics() {
@@ -519,6 +502,35 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try (final var t = readFromDestStopwatch.start()) {
       return destination.isFinished();
     }
+  }
+
+  private class CloseableWithTimeout implements AutoCloseable {
+
+    AutoCloseable autoCloseable;
+    private final Map<String, String> mdc;
+    private final ReplicationFeatureFlags flags;
+
+    public CloseableWithTimeout(AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+      this.autoCloseable = autoCloseable;
+      this.mdc = mdc;
+      this.flags = flags;
+    }
+
+    @Override
+    public void close() throws Exception {
+      if (flags.isDestinationTimeoutEnabled()) {
+        runAsyncWithTimeout(() -> {
+          try {
+            autoCloseable.close();
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        }, mdc).join();
+      } else {
+        autoCloseable.close();
+      }
+    }
+
   }
 
 }
