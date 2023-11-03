@@ -251,7 +251,11 @@ create table "public"."permission" (
   "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
   constraint "permission_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "permission_unique_user_organization"
+    unique ("user_id", "organization_id"),
+  constraint "permission_unique_user_workspace"
+    unique ("user_id", "workspace_id")
 );
 create table "public"."schema_management" (
   "id" uuid not null,

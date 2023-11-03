@@ -393,14 +393,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withUserId(userId)
         .withPermissionType(PermissionType.WORKSPACE_OWNER));
 
-    // create an org permission that should grant access to workspace 2
-    permissionPersistence.writePermission(new Permission()
-        .withPermissionId(UUID.randomUUID())
-        .withOrganizationId(MockData.ORGANIZATION_ID_2)
-        .withUserId(userId)
-        .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
-
-    // create an org permission that should grant access to workspace 3
+    // create an org permission that should grant access to workspace 2 and 3
     permissionPersistence.writePermission(new Permission()
         .withPermissionId(UUID.randomUUID())
         .withOrganizationId(MockData.ORGANIZATION_ID_2)
