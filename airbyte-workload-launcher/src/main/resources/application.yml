@@ -22,6 +22,9 @@ airbyte:
     service-account:
       credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
       email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  workload-launcher:
+    queue: ${WORKLOAD_LAUNCHER_QUEUE_NAME:launcher-queue}
+    workload-start-timeout: PT10M
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:
@@ -163,6 +166,22 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 logger:
   levels:

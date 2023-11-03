@@ -3,8 +3,8 @@ package io.airbyte.workload.launcher.pipeline.stages
 import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.secrets.hydration.SecretsHydrator
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
 import io.mockk.mockk
@@ -32,7 +32,7 @@ class BuildInputStageTest {
         secretsHydrator,
         deserializer,
       )
-    val io = LaunchStageIO(msg = LauncherInputMessage("1", msgStr))
+    val io = LaunchStageIO(msg = LauncherInput("1", msgStr))
 
     val result = stage.applyStage(io)
 

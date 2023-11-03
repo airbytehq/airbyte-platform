@@ -2,8 +2,6 @@ package io.airbyte.commons.temporal.queue
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.temporal.annotations.TemporalActivityStub
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import io.temporal.workflow.WorkflowInterface
@@ -93,20 +91,16 @@ class QueueActivityImpl<T : Any>(private val messageConsumer: MessageConsumer<T>
 }
 
 /**
- * Generic temporal queue workflow implementation.
- *
- * This is open to simplify initialization when starting a workflow because temporal requires a type reference.
+ * Generic temporal queue workflow base implementation.
  */
-open class QueueWorkflowImpl<T : Any> : QueueWorkflow<T> {
+abstract class QueueWorkflowBase<T : Any> : QueueWorkflow<T> {
   /**
    * The consumer activity.
    *
-   * This is lateinit because the TemporalActivityStub will initialize the value post creation using activities
-   * from the dependency injection container.
+   * It is abstract at this level to let the workflow implementation class decide how to implement the actual field. For example, this enables the use
+   * of @TemporalActivityStub to enable dependency injection for the activties.
    */
-  @VisibleForTesting
-  @TemporalActivityStub(activityOptionsBeanName = "queueActivityOptions")
-  protected lateinit var activity: QueueActivity<T>
+  protected abstract val activity: QueueActivity<T>
 
   override fun publish(message: Message<T>) {
     activity.consume(message)

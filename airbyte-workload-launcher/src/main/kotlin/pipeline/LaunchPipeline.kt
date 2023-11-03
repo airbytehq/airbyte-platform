@@ -1,7 +1,6 @@
 package io.airbyte.workload.launcher.pipeline
 
 import io.airbyte.workload.launcher.client.StatusUpdater
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.stages.BuildInputStage
 import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
 import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
@@ -21,13 +20,13 @@ class LaunchPipeline(
   private val build: BuildInputStage,
   private val launch: LaunchPodStage,
   private val statusUpdater: StatusUpdater,
-) : Consumer<LauncherInputMessage> {
+) : Consumer<LauncherInput> {
   // todo: This is for when we get to back pressure: if we want backpressure on the Mono,
   //  we will need to create a scheduler that is used by all Monos to ensure that we have
   //  a max concurrent capacity. See the Schedulers class for details. We can even define
   //  an executor service via Micronaut configuration and inject that to pass to the
   //  scheduler (see the fromExecutorService method on Schedulers).
-  override fun accept(msg: LauncherInputMessage) {
+  override fun accept(msg: LauncherInput) {
     LaunchStageIO(msg)
       .toMono()
       .flatMap(claim)

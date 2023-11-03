@@ -1,8 +1,8 @@
 package pipeline.stages
 
 import io.airbyte.workload.launcher.client.StatusUpdater
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
@@ -32,7 +32,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
 
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify { statusUpdater.updateStatusToRunning(workloadId) }
@@ -53,7 +53,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
 
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify(exactly = 0) { statusUpdater.updateStatusToRunning(workloadId) }
@@ -80,7 +80,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
 
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
 
     assertThrows<ClientErrorException> { checkStatusStage.applyStage(originalInput) }
   }

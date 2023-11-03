@@ -1,0 +1,57 @@
+package io.airbyte.workload.launcher.config
+
+import io.airbyte.commons.temporal.TemporalConstants
+import io.airbyte.commons.temporal.queue.QueueActivity
+import io.airbyte.commons.temporal.queue.QueueActivityImpl
+import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.micronaut.temporal.TemporalProxyHelper
+import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.launcher.pipeline.LauncherMessageConsumer
+import io.airbyte.workload.launcher.pipeline.LauncherWorkflowImpl
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
+import io.temporal.activity.ActivityOptions
+import io.temporal.client.WorkflowClient
+import io.temporal.worker.WorkerFactory
+import jakarta.inject.Named
+import jakarta.inject.Singleton
+import java.time.Duration
+
+@Factory
+class TemporalBeanFactory {
+  @Singleton
+  fun workloadApi(): WorkloadApi {
+    return WorkloadApi()
+  }
+
+  @Singleton
+  @Named("queueActivityOptions")
+  fun specActivityOptions(
+    @Property(name = "airbyte.workload-launcher.workload-start-timeout") workloadStartTimeout: Duration,
+  ): ActivityOptions {
+    return ActivityOptions.newBuilder()
+      .setScheduleToCloseTimeout(workloadStartTimeout)
+      .setRetryOptions(TemporalConstants.NO_RETRY)
+      .build()
+  }
+
+  @Singleton
+  @Named("starterActivities")
+  fun workloadStarterActivities(launcherMessageConsumer: LauncherMessageConsumer): QueueActivity<LauncherInputMessage> {
+    return QueueActivityImpl(launcherMessageConsumer)
+  }
+
+  @Singleton
+  fun workloadStarterWorkerFactory(
+    workflowClient: WorkflowClient,
+    temporalProxyHelper: TemporalProxyHelper,
+    @Property(name = "airbyte.workload-launcher.queue") starterQueue: String,
+    @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
+  ): WorkerFactory {
+    val workerFactory = WorkerFactory.newInstance(workflowClient)
+    val worker = workerFactory.newWorker(starterQueue)
+    worker.registerActivitiesImplementations(workloadStarterActivities)
+    worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
+    return workerFactory
+  }
+}

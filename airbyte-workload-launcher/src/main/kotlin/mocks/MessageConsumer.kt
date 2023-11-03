@@ -2,6 +2,7 @@ package io.airbyte.workload.launcher.mocks
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.MoreResources
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import jakarta.inject.Singleton
 import java.lang.Thread.sleep
@@ -24,7 +25,7 @@ class MessageConsumer(private val deserializer: PayloadDeserializer) {
       pikachu,
     )
 
-  fun read(): LauncherInputMessage {
+  fun read(): LauncherInput {
     // simulate a slow publish-interval for now
     sleep(30000)
     // cycle messages (is there a Kotlin-y way to do this?)
@@ -35,7 +36,7 @@ class MessageConsumer(private val deserializer: PayloadDeserializer) {
     val id = mockJobId.getAndIncrement().toString()
     val mocked = mockJobIdFor(input, id)
 
-    return LauncherInputMessage("workload-$id", mocked)
+    return LauncherInput("workload-$id", mocked)
   }
 
   private fun mockJobIdFor(

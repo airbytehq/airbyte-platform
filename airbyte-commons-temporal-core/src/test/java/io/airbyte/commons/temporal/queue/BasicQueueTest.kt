@@ -35,7 +35,9 @@ class TestConsumer : MessageConsumer<TestQueueInput> {
 }
 
 // Test implementation, this is required to map the activities and for registering an implementation with temporal.
-class TestWorkflowImpl : QueueWorkflowImpl<TestQueueInput>() {
+class TestWorkflowImpl : QueueWorkflowBase<TestQueueInput>() {
+  override lateinit var activity: QueueActivity<TestQueueInput>
+
   init {
     initializeActivity<QueueActivity<TestQueueInput>>()
   }

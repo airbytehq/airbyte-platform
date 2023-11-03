@@ -4,15 +4,15 @@ import io.airbyte.workload.api.client2.model.generated.Workload
 import io.airbyte.workload.api.client2.model.generated.WorkloadListRequest
 import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
-import io.airbyte.workload.launcher.PipelineRunner
 import io.airbyte.workload.launcher.StartupApplicationEventListener
 import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.temporal.worker.WorkerFactory
 import org.junit.jupiter.api.Test
 
 class PipelineStartupTest {
@@ -20,14 +20,14 @@ class PipelineStartupTest {
   fun `should process claimed workloads`() {
     val workloadId = "1"
     val dataplaneId = "US"
-    val launcherInputMessage = LauncherInputMessage(workloadId, "workload-input")
+    val launcherInput = LauncherInput(workloadId, "workload-input")
 
     val workloadApiClient: WorkloadApiClient = mockk()
-    val pipelineRunner: PipelineRunner = mockk()
+    val workerFactory: WorkerFactory = mockk()
     val launchPipeline: LaunchPipeline = mockk()
 
     every {
-      launchPipeline.accept(launcherInputMessage)
+      launchPipeline.accept(launcherInput)
     } returns Unit
 
     val workloadListRequest =
@@ -50,9 +50,9 @@ class PipelineStartupTest {
     val startupApplicationEventListener =
       spyk(
         StartupApplicationEventListener(
-          pipelineRunner,
           workloadApiClient,
           launchPipeline,
+          workerFactory,
           dataplaneId,
         ),
       )
@@ -61,6 +61,6 @@ class PipelineStartupTest {
 
     verify { workloadApiClient.workloadList(workloadListRequest) }
     verify { startupApplicationEventListener.convertToInputMessage(workload) }
-    verify { launchPipeline.accept(launcherInputMessage) }
+    verify { launchPipeline.accept(launcherInput) }
   }
 }

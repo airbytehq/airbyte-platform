@@ -3,8 +3,8 @@ package pipeline.stages
 import io.airbyte.workload.api.client2.model.generated.ClaimResponse
 import io.airbyte.workload.api.client2.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
 import io.mockk.every
 import io.mockk.mockk
@@ -33,7 +33,7 @@ class ClaimStageTest {
     } returns ClaimResponse(true)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -60,7 +60,7 @@ class ClaimStageTest {
     } returns ClaimResponse(false)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -87,7 +87,7 @@ class ClaimStageTest {
     } throws ClientErrorException(400)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
 
     assertThrows<ClientErrorException> { claimStage.applyStage(originalInput) }
 
