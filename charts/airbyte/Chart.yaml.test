@@ -81,3 +81,7 @@ dependencies:
     name: keycloak-setup
     repository: "file://../airbyte-keycloak-setup"
     version: "*"
+  - condition: airbyte-workload-api-server.enabled
+    name: airbyte-workload-api-server
+    repository: "file://../airbyte-workload-api-server"
+    version: "*"

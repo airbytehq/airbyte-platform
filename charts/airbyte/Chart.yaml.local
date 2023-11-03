@@ -83,3 +83,7 @@ dependencies:
     name: connector-builder-server
     repository: "file://../airbyte-connector-builder-server"
     version: "*"
+  - condition: airbyte-workload-api-server.enabled
+    name: airbyte-workload-api-server
+    repository: "file://../airbyte-workload-api-server"
+    version: "*"

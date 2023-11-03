@@ -38,5 +38,8 @@ dependencies:
 - name: keycloak-setup
   repository: https://airbytehq.github.io/helm-charts/
   version: 0.49.16
-digest: sha256:e4dd5366ffba28fd584e28a14a03dfa373617e4f92145898dc5353f60cd7428d
-generated: "2023-11-02T20:41:36.941861277Z"
+- name: airbyte-workload-api-server
+  repository: https://airbytehq.github.io/helm-charts/
+  version: 0.49.16
+digest: sha256:dcc64b85a80efa79c2163acb9fb218bd69becb759fcdbc0f94461999cddb9e05
+generated: "2023-11-02T13:58:08.821203-07:00"
