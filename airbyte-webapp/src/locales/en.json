@@ -528,8 +528,6 @@
   "connection.copyLogLink": "Copy link to log",
   "connection.connectionDeletedView": "This connection has been deleted. You can’t make any changes or run syncs.",
   "connection.startSync": "Sync now",
-  "connection.syncInProgress": "Syncing...",
-  "connection.resetInProgress": "Resetting...",
   "connection.startSyncError": "Failed to start sync",
   "connection.cancelSync": "Cancel Sync",
   "connection.cancelReset": "Cancel Reset",
