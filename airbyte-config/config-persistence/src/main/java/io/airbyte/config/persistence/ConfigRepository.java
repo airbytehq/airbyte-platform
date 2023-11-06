@@ -259,7 +259,7 @@ public class ConfigRepository {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId.toString());
     }
   }
@@ -292,7 +292,7 @@ public class ConfigRepository {
   public StandardWorkspace getWorkspaceBySlug(final String slug, final boolean includeTombstone) throws IOException, ConfigNotFoundException {
     try {
       return workspaceService.getWorkspaceBySlug(slug, includeTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, slug);
     }
   }
@@ -358,7 +358,7 @@ public class ConfigRepository {
   }
 
   /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }.
+   * MUST NOT ACCEPT SECRETS - Should only be called from the config-secrets module.
    * <p>
    * Write a StandardWorkspace to the database.
    *
@@ -396,7 +396,7 @@ public class ConfigRepository {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return sourceService.getStandardSourceDefinition(sourceDefinitionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -435,7 +435,7 @@ public class ConfigRepository {
   public StandardWorkspace getStandardWorkspaceFromConnection(final UUID connectionId, final boolean isTombstone) throws ConfigNotFoundException {
     try {
       return workspaceService.getStandardWorkspaceFromConnection(connectionId, isTombstone);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, connectionId.toString());
     }
   }
@@ -538,7 +538,7 @@ public class ConfigRepository {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     try {
       sourceService.updateStandardSourceDefinition(sourceDefinition);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -569,7 +569,7 @@ public class ConfigRepository {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return destinationService.getStandardDestinationDefinition(destinationDefinitionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -660,7 +660,7 @@ public class ConfigRepository {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     try {
       destinationService.updateStandardDestinationDefinition(destinationDefinition);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -872,8 +872,8 @@ public class ConfigRepository {
   }
 
   /**
-   * Returns source with a given id. Does not contain secrets. To hydrate with secrets see { @link
-   * SecretsRepositoryReader#getSourceConnectionWithSecrets(final UUID sourceId) }.
+   * Returns source with a given id. Does not contain secrets. To hydrate with secrets see the
+   * config-secrets module.
    *
    * @param sourceId - id of source to fetch.
    * @return sources
@@ -885,13 +885,13 @@ public class ConfigRepository {
   public SourceConnection getSourceConnection(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
     try {
       return sourceService.getSourceConnection(sourceId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 
   /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
+   * MUST NOT ACCEPT SECRETS - Should only be called from the config-secrets module.
    * <p>
    * Write a SourceConnection to the database. The configuration of the Source will be a partial
    * configuration (no secrets, just pointer to the secrets store).
@@ -919,14 +919,14 @@ public class ConfigRepository {
   public boolean deleteSource(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
     try {
       return sourceService.deleteSource(sourceId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 
   /**
-   * Returns all sources in the database. Does not contain secrets. To hydrate with secrets see
-   * { @link SecretsRepositoryReader#listSourceConnectionWithSecrets() }.
+   * Returns all sources in the database. Does not contain secrets. To hydrate with secrets see the
+   * config-secrets module.
    *
    * @return sources
    * @throws IOException - you never know when you IO
@@ -966,8 +966,8 @@ public class ConfigRepository {
   }
 
   /**
-   * Returns destination with a given id. Does not contain secrets. To hydrate with secrets see
-   * { @link SecretsRepositoryReader#getDestinationConnectionWithSecrets(final UUID destinationId) }.
+   * Returns destination with a given id. Does not contain secrets. To hydrate with secrets see the
+   * config-secrets module.
    *
    * @param destinationId - id of destination to fetch.
    * @return destinations
@@ -980,13 +980,13 @@ public class ConfigRepository {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return destinationService.getDestinationConnection(destinationId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 
   /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
+   * MUST NOT ACCEPT SECRETS - Should only be called from the config-secrets module.
    * <p>
    * Write a DestinationConnection to the database. The configuration of the Destination will be a
    * partial configuration (no secrets, just pointer to the secrets store).
@@ -1002,7 +1002,7 @@ public class ConfigRepository {
 
   /**
    * Returns all destinations in the database. Does not contain secrets. To hydrate with secrets see
-   * { @link SecretsRepositoryReader#listDestinationConnectionWithSecrets() }.
+   * the config-secrets module.
    *
    * @return destinations
    * @throws IOException - you never know when you IO
@@ -1033,7 +1033,7 @@ public class ConfigRepository {
    */
   @Deprecated
   public List<DestinationConnection> listWorkspacesDestinationConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    var query = new io.airbyte.data.services.shared.ResourcesQueryPaginated(
+    final var query = new io.airbyte.data.services.shared.ResourcesQueryPaginated(
         resourcesQueryPaginated.workspaceIds,
         resourcesQueryPaginated.includeDeleted,
         resourcesQueryPaginated.pageSize,
@@ -1115,7 +1115,7 @@ public class ConfigRepository {
   public StandardSync getStandardSync(final UUID connectionId) throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return connectionService.getStandardSync(connectionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1176,7 +1176,7 @@ public class ConfigRepository {
    */
   @Deprecated
   public List<StandardSync> listWorkspaceStandardSyncs(final StandardSyncQuery standardSyncQuery) throws IOException {
-    var query = new io.airbyte.data.services.shared.StandardSyncQuery(
+    final var query = new io.airbyte.data.services.shared.StandardSyncQuery(
         standardSyncQuery.workspaceId(),
         standardSyncQuery.sourceId(),
         standardSyncQuery.destinationId(),
@@ -1223,7 +1223,7 @@ public class ConfigRepository {
   @Deprecated
   public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated)
       throws IOException {
-    var query = new io.airbyte.data.services.shared.StandardSyncsQueryPaginated(
+    final var query = new io.airbyte.data.services.shared.StandardSyncsQueryPaginated(
         standardSyncsQueryPaginated.workspaceIds(),
         standardSyncsQueryPaginated.sourceId(),
         standardSyncsQueryPaginated.destinationId(),
@@ -1290,7 +1290,7 @@ public class ConfigRepository {
   public StandardSyncOperation getStandardSyncOperation(final UUID operationId) throws JsonValidationException, IOException, ConfigNotFoundException {
     try {
       return operationService.getStandardSyncOperation(operationId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1486,7 +1486,7 @@ public class ConfigRepository {
       throws IOException, ConfigNotFoundException {
     try {
       return catalogService.getActorCatalogById(actorCatalogId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1638,7 +1638,7 @@ public class ConfigRepository {
     // scoping by workspace id.
     try {
       return workspaceService.getWorkspaceServiceAccountNoSecrets(workspaceId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(ConfigSchema.WORKSPACE_SERVICE_ACCOUNT, workspaceId.toString());
     }
   }
@@ -1666,7 +1666,7 @@ public class ConfigRepository {
   public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
     try {
       return connectionService.getAllStreamsForConnection(connectionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1685,7 +1685,7 @@ public class ConfigRepository {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     try {
       return connectionService.getConfiguredCatalogForConnection(connectionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1764,7 +1764,7 @@ public class ConfigRepository {
       throws IOException, ConfigNotFoundException {
     try {
       return connectorBuilderService.getConnectorBuilderProject(builderProjectId, fetchManifestDraft);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -1786,7 +1786,7 @@ public class ConfigRepository {
       throws ConfigNotFoundException, IOException {
     try {
       return connectorBuilderService.getVersionedConnectorBuilderProject(builderProjectId, version);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -2054,7 +2054,7 @@ public class ConfigRepository {
       throws IOException, ConfigNotFoundException {
     try {
       return connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(actorDefinitionId, version);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -2073,7 +2073,7 @@ public class ConfigRepository {
       throws IOException, ConfigNotFoundException {
     try {
       return connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
@@ -2151,7 +2151,7 @@ public class ConfigRepository {
   public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
     try {
       return actorDefinitionService.getActorDefinitionVersion(actorDefinitionVersionId);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }

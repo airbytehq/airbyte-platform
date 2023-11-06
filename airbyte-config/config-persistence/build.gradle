@@ -26,21 +26,15 @@ dependencies {
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-metrics:metrics-lib')
-
     implementation libs.bundles.apache
     implementation libs.google.cloud.storage
-
     implementation libs.commons.io
-    implementation 'com.google.cloud:google-cloud-secretmanager:2.0.5'
-    implementation 'com.bettercloud:vault-java-driver:5.1.0'
-    implementation 'com.amazonaws.secretsmanager:aws-secretsmanager-caching-java:1.0.2'
 
     testImplementation 'org.hamcrest:hamcrest-all:1.3'
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.flyway.core
     testImplementation libs.mockito.inline
     testImplementation project(':airbyte-test-utils')
-    testImplementation "org.testcontainers:vault:1.18.3"
 
     integrationTestImplementation project(':airbyte-config:config-persistence')
 
