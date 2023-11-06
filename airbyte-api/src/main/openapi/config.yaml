@@ -3590,7 +3590,44 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
+  /v1/secrets_persistence_config/get:
+    post:
+      tags:
+        - secrets_persistence_config
+      summary: Get secrets persistence config
+      operationId: getSecretsPersistenceConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretPersistenceConfig"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secrets_persistence_config/create_or_update:
+    post:
+      tags:
+        - secrets_persistence_config
+      summary: Create or update secrets persistence config
+      operationId: createOrUpdateSecretsPersistenceConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrUpdateSecretsPersistenceConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
@@ -8689,6 +8726,47 @@ components:
         taskQueueName:
           description: Name of the temporal task queue.
           type: string
+    CreateOrUpdateSecretsPersistenceConfigRequestBody:
+      description: Object representing a secret persistence configuration create/update request
+      required:
+        - secretPersistenceType
+        - configuration
+        - scope
+        - scopeId
+      properties:
+        secretPersistenceType:
+          $ref: "#/components/schemas/SecretPersistenceType"
+        configuration:
+          type: object
+        scope:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    SecretPersistenceConfig:
+      description: Object representing a secret persistence configuration
+      required:
+        - secretPersistenceType
+        - configuration
+        - scopeType
+        - scopeId
+      properties:
+        secretPersistenceType:
+          $ref: "#/components/schemas/SecretPersistenceType"
+        configuration:
+          type: object
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    SecretPersistenceType:
+      type: string
+      enum:
+        - testing
+        - google
+        - vault
+        - aws
 
   responses:
     NotFoundResponse:

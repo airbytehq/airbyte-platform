@@ -18,6 +18,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUI
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SECRET_PERSISTENCE_CONFIG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -49,6 +50,9 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
+import io.airbyte.config.ScopeType;
+import io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType;
+import io.airbyte.config.SecretPersistenceCoordinate;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -499,6 +503,16 @@ public class DbConverter {
                         .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
                     : null)
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow());
+  }
+
+  public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {
+    return new SecretPersistenceCoordinate()
+        .withCoordinate(record.get(SECRET_PERSISTENCE_CONFIG.SECRET_PERSISTENCE_CONFIG_COORDINATE))
+        .withScopeId(record.get(SECRET_PERSISTENCE_CONFIG.SCOPE_ID))
+        .withScopeType(
+            Enums.toEnum(record.get(SECRET_PERSISTENCE_CONFIG.SCOPE_TYPE, String.class), ScopeType.class).orElseThrow())
+        .withSecretPersistenceType(
+            Enums.toEnum(record.get(SECRET_PERSISTENCE_CONFIG.SECRET_PERSISTENCE_TYPE, String.class), SecretPersistenceType.class).orElseThrow());
   }
 
 }

@@ -269,11 +269,15 @@ create table "public"."schema_management" (
 create table "public"."secret_persistence_config" (
   "id" uuid not null,
   "scope_id" uuid,
+  "scope_type" "public"."secret_persistence_scope_type" not null default cast('organization' as secret_persistence_scope_type),
   "secret_persistence_config_coordinate" varchar(256),
+  "secret_persistence_type" "public"."secret_persistence_type" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "secret_persistence_config_pkey"
-    primary key ("id")
+    primary key ("id"),
+  constraint "secret_persistence_config_scope_id_scope_type_key"
+    unique ("scope_id", "scope_type")
 );
 create table "public"."sso_config" (
   "id" uuid not null,

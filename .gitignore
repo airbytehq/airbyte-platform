@@ -19,6 +19,7 @@ acceptance_tests_logs/
 
 # Secrets
 secrets
+!airbyte-config/config-secrets/src/main/kotlin/secrets
 updated_configurations
 !airbyte-integrations/connector-templates/**/secrets
 
