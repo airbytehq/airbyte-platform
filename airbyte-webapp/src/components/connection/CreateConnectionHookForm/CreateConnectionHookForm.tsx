@@ -123,6 +123,10 @@ export const CreateConnectionHookForm: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemaErrorStatus]);
 
+  if (!schema) {
+    return <LoadingSchema />;
+  }
+
   const partialConnection = {
     syncCatalog: schema,
     destination,

@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
@@ -11,7 +11,7 @@ import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
-import { DestinationRead, SourceRead, SupportLevel } from "core/request/AirbyteClient";
+import { SupportLevel } from "core/request/AirbyteClient";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { useGetSource } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
@@ -33,7 +33,7 @@ interface ConnectionSteps {
   configureConnection: StepStatus;
 }
 
-const calculateStepStatuses = (source?: SourceRead, destination?: DestinationRead): ConnectionSteps | undefined => {
+const calculateStepStatuses = (source: string | null, destination: string | null): ConnectionSteps | undefined => {
   if (!source && !destination) {
     return {
       defineSource: ACTIVE,
@@ -89,13 +89,38 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
   );
 };
 
-// todo: these can pull from params once that PR is here
-const SourceBlock: React.FC<{ source?: SourceRead }> = ({ source }) => {
+interface ConnectorBrandingProps {
+  icon?: string;
+  name?: string;
+  supportLevel?: SupportLevel;
+  custom?: boolean;
+}
+
+const ConnectorBranding: React.FC<ConnectorBrandingProps> = ({ icon, name, supportLevel, custom }) => {
+  return (
+    <FlexContainer alignItems="center" gap="sm">
+      <ConnectorIcon icon={icon} />
+      <Text>{name}</Text>
+      <SupportLevelBadge supportLevel={supportLevel} custom={custom} />
+    </FlexContainer>
+  );
+};
+
+const SourceBlock: React.FC<{ sourceId: string }> = ({ sourceId }) => {
+  return (
+    <Suspense fallback={<ConnectorPlaceholder />}>
+      <SourceBlockContent sourceId={sourceId} />
+    </Suspense>
+  );
+};
+
+const SourceBlockContent: React.FC<{ sourceId: string }> = ({ sourceId }) => {
+  const source = useGetSource(sourceId);
   const sourceDefinition = useSourceDefinition(source?.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source?.sourceId);
 
   return (
-    <ConnectorPlaceholder
+    <ConnectorBranding
       icon={source?.icon}
       name={source?.name}
       supportLevel={sourceDefinitionVersion?.supportLevel}
@@ -104,12 +129,25 @@ const SourceBlock: React.FC<{ source?: SourceRead }> = ({ source }) => {
   );
 };
 
-const DestinationBlock: React.FC<{ destination?: DestinationRead }> = ({ destination }) => {
+const DestinationBlock: React.FC<{ destinationId: string }> = ({ destinationId }) => {
+  return (
+    <Suspense fallback={<ConnectorPlaceholder />}>
+      <DestinationBlockContent destinationId={destinationId} />
+    </Suspense>
+  );
+};
+
+const DestinationBlockContent: React.FC<{ destinationId: string }> = ({ destinationId }) => {
+  const destination = useGetDestination(destinationId);
   const destinationDefinition = useDestinationDefinition(destination?.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination?.destinationId);
 
+  if (!destination) {
+    return <ConnectorPlaceholder />;
+  }
+
   return (
-    <ConnectorPlaceholder
+    <ConnectorBranding
       icon={destination?.icon}
       name={destination?.name}
       supportLevel={destinationDefinitionVersion?.supportLevel}
@@ -118,17 +156,11 @@ const DestinationBlock: React.FC<{ destination?: DestinationRead }> = ({ destina
   );
 };
 
-const ConnectorPlaceholder: React.FC<{
-  icon?: string;
-  name?: string;
-  supportLevel?: SupportLevel;
-  custom?: boolean;
-}> = ({ icon, name, supportLevel, custom }) => {
+const ConnectorPlaceholder: React.FC = () => {
   return (
     <FlexContainer alignItems="center" gap="sm">
-      {icon ? <ConnectorIcon icon={icon} /> : <div className={styles.iconPlaceholder} />}
-      {name ? <Text>{name}</Text> : <div className={styles.namePlaceholder} />}
-      {supportLevel && <SupportLevelBadge supportLevel={supportLevel} custom={custom} />}
+      <div className={styles.iconPlaceholder} />
+      <div className={styles.namePlaceholder} />
     </FlexContainer>
   );
 };
@@ -140,9 +172,7 @@ export const CreateConnectionTitleBlock: React.FC = () => {
   const sourceId = searchParams.get(SOURCEID_PARAM);
   const destinationId = searchParams.get(DESTINATIONID_PARAM);
 
-  const source = useGetSource(sourceId);
-  const destination = useGetDestination(destinationId);
-  const stepStatuses = calculateStepStatuses(source, destination);
+  const stepStatuses = calculateStepStatuses(sourceId, destinationId);
   if (!stepStatuses) {
     // this should not be a possible state, but we'll handle it just in case
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}`} />;
@@ -151,11 +181,11 @@ export const CreateConnectionTitleBlock: React.FC = () => {
   return (
     <Box pb="lg">
       <FlexContainer direction="column" gap="xl">
-        {(source || destination) && (
+        {(sourceId || destinationId) && (
           <FlexContainer alignItems="center">
-            <SourceBlock source={source} />
+            {sourceId ? <SourceBlock sourceId={sourceId} /> : <ConnectorPlaceholder />}
             <Icon type="arrowRight" />
-            <DestinationBlock destination={destination} />
+            {destinationId ? <DestinationBlock destinationId={destinationId} /> : <ConnectorPlaceholder />}
           </FlexContainer>
         )}
         <FlexContainer gap="lg" alignItems="center">

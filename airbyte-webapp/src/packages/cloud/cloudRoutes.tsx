@@ -173,7 +173,8 @@ export const Routing: React.FC = () => {
   useAnalyticsIdentifyUser(user?.userId, userTraits);
 
   if (!inited) {
-    return <LoadingPage />;
+    // Using <LoadingPage /> here causes flickering, because Suspense will immediately render it again
+    return null;
   }
 
   return (

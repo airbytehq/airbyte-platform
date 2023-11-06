@@ -170,13 +170,13 @@ const useDiscoverSchema = (
   disableCache?: boolean
 ): {
   isLoading: boolean;
-  schema: SyncSchema;
+  schema: SyncSchema | undefined;
   schemaErrorStatus: SchemaError;
   catalogId: string | undefined;
   onDiscoverSchema: () => Promise<void>;
 } => {
   const service = useSourceService();
-  const [schema, setSchema] = useState<SyncSchema>({ streams: [] });
+  const [schema, setSchema] = useState<SyncSchema | undefined>(undefined);
   const [catalogId, setCatalogId] = useState<string | undefined>("");
   const [isLoading, setIsLoading] = useState(false);
   const [schemaErrorStatus, setSchemaErrorStatus] = useState<SchemaError>(null);
