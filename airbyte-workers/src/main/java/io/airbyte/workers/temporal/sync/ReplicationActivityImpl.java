@@ -45,7 +45,7 @@ import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.ResetBackfillState;
@@ -335,8 +335,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         .withState(state);
   }
 
-  private State getUpdatedStateForBackfill(State state,
-                                           RefreshSchemaActivityOutput schemaRefreshOutput,
+  private State getUpdatedStateForBackfill(final State state,
+                                           final RefreshSchemaActivityOutput schemaRefreshOutput,
                                            final UUID workspaceId,
                                            final UUID connectionId,
                                            final ConfiguredAirbyteCatalog catalog)
@@ -344,7 +344,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     if (schemaRefreshOutput != null && schemaRefreshOutput.getAppliedDiff() != null) {
       final var streamsToBackfill = BackfillHelper.getStreamsToBackfill(schemaRefreshOutput.getAppliedDiff(), catalog);
       LOGGER.debug("Backfilling streams: {}", String.join(", ", streamsToBackfill.stream().map(StreamDescriptor::getName).toList()));
-      State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
+      final State resetState = BackfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill);
       // persist the state
       // this will be behind a separate feature flag since it's a destructive operation.
       if (resetState != null && featureFlagClient.boolVariation(ResetBackfillState.INSTANCE, new Workspace(workspaceId))) {
@@ -359,7 +359,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   @NotNull
-  private ConfiguredAirbyteCatalog retrieveCatalog(ReplicationActivityInput replicationActivityInput) throws Exception {
+  private ConfiguredAirbyteCatalog retrieveCatalog(final ReplicationActivityInput replicationActivityInput) throws Exception {
     final ConnectionRead connectionInfo =
         AirbyteApiClient
             .retryWithJitterThrows(
@@ -384,7 +384,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         "create or update the state");
   }
 
-  private State retrieveState(ReplicationActivityInput replicationActivityInput) throws Exception {
+  private State retrieveState(final ReplicationActivityInput replicationActivityInput) throws Exception {
     final ConnectionState connectionState = AirbyteApiClient.retryWithJitterThrows(
         () -> airbyteApiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
         "retrieve the state");
@@ -395,7 +395,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     return state;
   }
 
-  private void updateCatalogForReset(ReplicationActivityInput replicationActivityInput, ConfiguredAirbyteCatalog catalog) throws Exception {
+  private void updateCatalogForReset(final ReplicationActivityInput replicationActivityInput, final ConfiguredAirbyteCatalog catalog)
+      throws Exception {
     final JobOptionalRead jobInfo = AirbyteApiClient.retryWithJitterThrows(
         () -> airbyteApiClient.getJobsApi().getLastReplicationJob(
             new ConnectionIdRequestBody().connectionId(replicationActivityInput.getConnectionId())),
@@ -411,7 +412,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
   // Simple converter from StandardSyncInput to ReplicationInput.
   // TODO: remove when the workflow version that passes a StandardSyncInput is removed.
-  private ReplicationInput getReplicationInputFromSyncInput(StandardSyncInput hydratedSyncInput,
+  private ReplicationInput getReplicationInputFromSyncInput(final StandardSyncInput hydratedSyncInput,
                                                             final JobRunConfig jobRunConfig,
                                                             final IntegrationLauncherConfig sourceLauncherConfig,
                                                             final IntegrationLauncherConfig destinationLauncherConfig) {

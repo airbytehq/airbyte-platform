@@ -30,7 +30,7 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;

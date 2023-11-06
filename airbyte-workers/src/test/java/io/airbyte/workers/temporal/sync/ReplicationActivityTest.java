@@ -40,7 +40,7 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;

@@ -27,7 +27,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;

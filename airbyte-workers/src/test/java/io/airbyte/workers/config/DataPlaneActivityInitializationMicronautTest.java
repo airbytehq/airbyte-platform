@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.temporal.config.WorkerMode;
-import io.airbyte.config.persistence.split_secrets.SecretPersistence;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;

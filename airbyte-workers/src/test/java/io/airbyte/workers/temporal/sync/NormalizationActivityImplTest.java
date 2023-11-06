@@ -22,7 +22,7 @@ import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
@@ -55,20 +55,20 @@ class NormalizationActivityImplTest {
   private static WorkerConfigsProvider mWorkerConfigsProvider;
   private static ProcessFactory mProcessFactory;
   private static SecretsHydrator mSecretsHydrator;
-  private static Path WORKSPACE_ROOT = Path.of("/unused/path");
-  private static Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
+  private static final Path WORKSPACE_ROOT = Path.of("/unused/path");
+  private static final Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
   private static CloudStorageConfigs mCloudStorageConfigs;
   private static LogConfigs LOG_CONFIGS;
-  private static String AIRBYTE_VERSION = "1.0";
-  private static Integer SERVER_PORT = 8888;
+  private static final String AIRBYTE_VERSION = "1.0";
+  private static final Integer SERVER_PORT = 8888;
   private static AirbyteConfigValidator mAirbyteConfigValidator;
   private static AirbyteApiClient mAirbyteApiClient;
   private static ConnectionApi mConnectionApi;
   private static FeatureFlagClient mFeatureFlagClient;
   private static NormalizationActivityImpl normalizationActivityImpl;
   private static NormalizationActivity normalizationActivity;
-  private static JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
-  private static IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
+  private static final IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
       .withDockerImage("unused")
       .withNormalizationDockerImage("unused:unused");
   private static WorkerConfigs mWorkerConfigs;

@@ -13,7 +13,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;

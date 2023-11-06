@@ -23,7 +23,7 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;

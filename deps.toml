@@ -76,6 +76,7 @@ failsafe-okhttp = { module = "dev.failsafe:failsafe-okhttp", version.ref = "fail
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.12.0" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 glassfish = { module = "org.glassfish.jersey:jackson-bom", version.ref = "glassfish_version" }
+google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version = "1.4.0" }
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.17.2" }
 google-cloud-storage-secretmanager = { module = "com.google.cloud:google-cloud-secretmanager", version = "2.0.5" }
 guava = { module = "com.google.guava:guava", version = "31.1-jre" }

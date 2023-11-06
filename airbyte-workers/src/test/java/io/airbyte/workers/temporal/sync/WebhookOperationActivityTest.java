@@ -13,7 +13,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -52,7 +52,7 @@ class WebhookOperationActivityTest {
         .withWebhookConfigId(WEBHOOK_ID);
     // TODO(mfsiega-airbyte): make these matchers more specific.
     when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
-    boolean success = webhookActivity.invokeWebhook(input);
+    final boolean success = webhookActivity.invokeWebhook(input);
     assertTrue(success);
   }
 
