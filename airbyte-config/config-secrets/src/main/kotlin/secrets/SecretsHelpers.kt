@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
@@ -394,7 +395,8 @@ object SecretsHelpers {
     return secretBasePrefix + secretBaseId + "_secret_" + uuidSupplier.get()
   }
 
-  private fun getSecretCoordinate(
+  @VisibleForTesting
+  fun getSecretCoordinate(
     secretBasePrefix: String,
     newSecret: String,
     secretReader: ReadOnlySecretPersistence,
@@ -409,12 +411,14 @@ object SecretsHelpers {
         SecretCoordinate.fromFullCoordinate(oldSecretFullCoordinate)
       coordinateBase = oldCoordinate.coordinateBase
       val oldSecretValue: String = secretReader.read(oldCoordinate)
-      version =
-        if (oldSecretValue == newSecret) {
-          oldCoordinate.version
-        } else {
-          oldCoordinate.version + 1
-        }
+      if (oldSecretValue.isNotEmpty()) {
+        version =
+          if (oldSecretValue == newSecret) {
+            oldCoordinate.version
+          } else {
+            oldCoordinate.version + 1
+          }
+      }
     }
     if (coordinateBase == null) {
       // IMPORTANT: format of this cannot be changed without introducing migrations for secrets

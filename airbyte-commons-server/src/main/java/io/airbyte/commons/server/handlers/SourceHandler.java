@@ -36,10 +36,9 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
-import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import secrets.JsonSecretsProcessor;
 
 /**
  * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -113,9 +113,7 @@ public class SourceHandler {
         integrationSchemaValidation,
         connectionsHandler,
         UUID::randomUUID,
-        JsonSecretsProcessor.builder()
-            .copySecrets(true)
-            .build(),
+        new JsonSecretsProcessor(true),
         new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
         oAuthConfigSupplier,
         actorDefinitionVersionHelper, featureFlagClient);
@@ -489,7 +487,7 @@ public class SourceHandler {
 
   @VisibleForTesting
   JsonNode hydrateOAuthResponseSecret(final String secretId) {
-    final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
+    final SecretCoordinate secretCoordinate = SecretCoordinate.Companion.fromFullCoordinate(secretId);
     final JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());

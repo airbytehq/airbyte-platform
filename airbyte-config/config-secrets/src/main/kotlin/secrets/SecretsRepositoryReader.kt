@@ -32,7 +32,7 @@ private const val SECRET_KEY = "_secret"
 @Singleton
 @Requires(bean = ConfigRepository::class)
 @Requires(bean = SecretsHydrator::class)
-class SecretsRepositoryReader(
+open class SecretsRepositoryReader(
   private val configRepository: ConfigRepository,
   private val secretsHydrator: SecretsHydrator,
 ) {

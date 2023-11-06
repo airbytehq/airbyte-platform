@@ -51,6 +51,7 @@ dependencies {
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-config:specs')
     implementation project(':airbyte-data')
     implementation project(":airbyte-featureflag")
@@ -71,6 +72,10 @@ dependencies {
     implementation libs.google.cloud.storage
 
     runtimeOnly libs.javax.databind
+
+    // Required for local database secret hydration
+    runtimeOnly(libs.hikaricp)
+    runtimeOnly(libs.h2.database)
 
     testImplementation libs.bundles.micronaut.test
     testAnnotationProcessor platform(libs.micronaut.bom)

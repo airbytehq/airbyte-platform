@@ -19,7 +19,6 @@ import io.airbyte.protocol.models.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.ConfigurationReader
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.io.IOException
@@ -35,9 +34,9 @@ private val logger = KotlinLogging.logger {}
  * Database.
  */
 @Singleton
-@Requires(bean = ConfigurationReader::class)
+@Requires(bean = ConfigRepository::class)
 @Requires(bean = SecretPersistence::class)
-class SecretsRepositoryWriter(
+open class SecretsRepositoryWriter(
   private val configRepository: ConfigRepository,
   private val validator: JsonSchemaValidator,
   private val secretPersistence: SecretPersistence,

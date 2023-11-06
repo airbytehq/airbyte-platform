@@ -14,14 +14,14 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
+import secrets.JsonSecretsProcessor;
 
 /**
  * Abstraction to manage the updating the configuration of a source or a destination. Helps with
@@ -38,9 +38,7 @@ public class ConfigurationUpdate {
   public ConfigurationUpdate(final ConfigRepository configRepository,
                              final SecretsRepositoryReader secretsRepositoryReader,
                              final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    this(configRepository, secretsRepositoryReader, JsonSecretsProcessor.builder()
-        .copySecrets(true)
-        .build(), actorDefinitionVersionHelper);
+    this(configRepository, secretsRepositoryReader, new JsonSecretsProcessor(true), actorDefinitionVersionHelper);
   }
 
   public ConfigurationUpdate(final ConfigRepository configRepository,

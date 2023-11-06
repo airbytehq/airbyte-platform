@@ -17,7 +17,6 @@ import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -44,6 +43,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import secrets.JsonSecretsProcessor;
 
 /**
  * Bean factory for the airbyte server micronaut app.
@@ -142,10 +142,8 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public JsonSecretsProcessor jsonSecretsProcessor(final FeatureFlags featureFlags) {
-    return JsonSecretsProcessor.builder()
-        .copySecrets(false)
-        .build();
+  public JsonSecretsProcessor jsonSecretsProcessor() {
+    return new JsonSecretsProcessor(false);
   }
 
   @Singleton

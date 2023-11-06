@@ -41,10 +41,10 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
-import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
+import io.airbyte.config.secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretsHelpers;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled;
@@ -505,7 +505,7 @@ public class OAuthHandler {
    * Generate OAuthSecretCoordinates. Always assume V1 and do not support secret updates
    */
   private SecretCoordinate generateOAuthSecretCoordinate(final UUID workspaceId) {
-    final String coordinateBase = SecretsHelpers.getCoordinatorBase("airbyte_oauth_workspace_", workspaceId, UUID::randomUUID);
+    final String coordinateBase = SecretsHelpers.INSTANCE.getCoordinatorBase("airbyte_oauth_workspace_", workspaceId, UUID::randomUUID);
     return new SecretCoordinate(coordinateBase, 1);
   }
 

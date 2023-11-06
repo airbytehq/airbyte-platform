@@ -50,9 +50,10 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.config.persistence.split_secrets.SecretPersistence;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
+import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
@@ -105,7 +106,7 @@ class WorkspacesHandlerTest {
 
     secretPersistence = mock(SecretPersistence.class);
     permissionPersistence = mock(PermissionPersistence.class);
-    secretsRepositoryWriter = new SecretsRepositoryWriter(configRepository, Optional.of(secretPersistence), Optional.empty());
+    secretsRepositoryWriter = new SecretsRepositoryWriter(configRepository, new JsonSchemaValidator(), secretPersistence);
     connectionsHandler = mock(ConnectionsHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     sourceHandler = mock(SourceHandler.class);
@@ -228,6 +229,8 @@ class WorkspacesHandlerTest {
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
         .organizationId(ORGANIZAION_ID);
+
+    when(secretPersistence.read(any())).thenReturn("");
 
     final WorkspaceRead actualRead = workspacesHandler.createWorkspace(workspaceCreate);
     final WorkspaceRead expectedRead = new WorkspaceRead()
@@ -530,6 +533,8 @@ class WorkspacesHandlerTest {
     when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(workspace)
         .thenReturn(expectedWorkspace);
+
+    when(secretPersistence.read(any())).thenReturn("");
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspace(workspaceUpdate);
 

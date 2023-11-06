@@ -21,6 +21,8 @@ dependencies {
     api(libs.guava)
     api(libs.bundles.secret.hydration)
     api(libs.airbyte.protocol)
+    api(libs.jakarta.transaction.api)
+    api(libs.micronaut.data.tx)
     api(project(":airbyte-commons"))
 
     /*

@@ -11,7 +11,8 @@ import io.micronaut.data.repository.PageableRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-@JdbcRepository(dialect = Dialect.POSTGRES)
+@JdbcRepository(dialect = Dialect.POSTGRES,
+                dataSource = "config")
 public interface RetryStatesRepository extends PageableRepository<RetryState, UUID> {
 
   Optional<RetryState> findByJobId(final Long jobId);

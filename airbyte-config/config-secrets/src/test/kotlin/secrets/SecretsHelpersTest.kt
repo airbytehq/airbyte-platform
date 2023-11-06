@@ -26,6 +26,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
+import java.util.UUID
 import java.util.function.Consumer
 import java.util.regex.Pattern
 import java.util.stream.Stream
@@ -215,6 +216,42 @@ internal class SecretsHelpersTest {
       )
     Assertions.assertEquals(testCase.updatedPartialConfigAfterUpdate2, updatedSplit2.partialConfig)
     Assertions.assertEquals(testCase.secretMapAfterUpdate2, updatedSplit2.getCoordinateToPayload())
+  }
+
+  @Test
+  fun testGetSecretCoordinateEmptyOldSecret() {
+    val secretPersistence: ReadOnlySecretPersistence = mockk()
+    every { secretPersistence.read(any()) } returns ""
+
+    val secretCoordinate =
+      SecretsHelpers.getSecretCoordinate(
+        "secretBasePrefix",
+        "newSecret",
+        secretPersistence,
+        UUID.randomUUID(),
+        { UUID.randomUUID() },
+        "oldSecretFullCoordinate_v2",
+      )
+    Assertions.assertEquals("oldSecretFullCoordinate", secretCoordinate.coordinateBase)
+    Assertions.assertEquals(1L, secretCoordinate.version)
+  }
+
+  @Test
+  fun testGetSecretCoordinateNonEmptyOldSecret() {
+    val secretPersistence: ReadOnlySecretPersistence = mockk()
+    every { secretPersistence.read(any()) } returns "nonempty"
+
+    val secretCoordinate =
+      SecretsHelpers.getSecretCoordinate(
+        "secretBasePrefix",
+        "newSecret",
+        secretPersistence,
+        UUID.randomUUID(),
+        { UUID.randomUUID() },
+        "oldSecretFullCoordinate_v2",
+      )
+    Assertions.assertEquals("oldSecretFullCoordinate", secretCoordinate.coordinateBase)
+    Assertions.assertEquals(3L, secretCoordinate.version)
   }
 
   @ParameterizedTest

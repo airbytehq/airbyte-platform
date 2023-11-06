@@ -45,8 +45,8 @@ import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQue
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.WorkspacePersistence;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

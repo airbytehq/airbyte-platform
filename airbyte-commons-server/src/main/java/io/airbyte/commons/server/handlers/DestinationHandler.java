@@ -31,9 +31,8 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -45,6 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import secrets.JsonSecretsProcessor;
 
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -102,9 +102,7 @@ public class DestinationHandler {
         integrationSchemaValidation,
         connectionsHandler,
         UUID::randomUUID,
-        JsonSecretsProcessor.builder()
-            .copySecrets(true)
-            .build(),
+        new JsonSecretsProcessor(true),
         new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
         oAuthConfigSupplier,
         actorDefinitionVersionHelper);
