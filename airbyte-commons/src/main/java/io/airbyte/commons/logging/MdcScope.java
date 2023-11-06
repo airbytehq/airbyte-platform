@@ -32,7 +32,7 @@ public class MdcScope implements AutoCloseable {
 
   private final Map<String, String> originalContextMap;
 
-  public MdcScope(final Map<String, String> keyValuesToAdd) {
+  private MdcScope(final Map<String, String> keyValuesToAdd) {
     originalContextMap = MDC.getCopyOfContextMap();
 
     keyValuesToAdd.forEach(MDC::put);
@@ -51,6 +51,7 @@ public class MdcScope implements AutoCloseable {
     private Optional<String> maybeLogPrefix = Optional.empty();
     private Optional<Color> maybePrefixColor = Optional.empty();
     private boolean simple = true;
+    private final Map<String, String> extraMdcEntries = new HashMap<>();
 
     /**
      * Set the prefix for log lines in this scope.
@@ -90,14 +91,18 @@ public class MdcScope implements AutoCloseable {
       return this;
     }
 
+    public Builder setExtraMdcEntries(final Map<String, String> keyValuesToAdd) {
+      this.extraMdcEntries.putAll(keyValuesToAdd);
+
+      return this;
+    }
+
     /**
      * Build the MdcScope.
      *
      * @return the MdcScope
      */
     public MdcScope build() {
-      final Map<String, String> extraMdcEntries = new HashMap<>();
-
       maybeLogPrefix.ifPresent(logPrefix -> {
         final String potentiallyColoredLog = maybePrefixColor
             .map(color -> LoggingHelper.applyColor(color, logPrefix))

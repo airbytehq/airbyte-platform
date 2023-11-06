@@ -55,6 +55,6 @@ class StartupApplicationEventListener(
   @VisibleForTesting
   fun convertToInputMessage(workload: Workload): LauncherInput {
     // TODO(Subodh): Add proper input once the format is decided
-    return LauncherInput(workload.id, "workload-input")
+    return LauncherInput(workload.id, "workload-input", "log-path.txt")
   }
 }

@@ -20,7 +20,7 @@ class PipelineStartupTest {
   fun `should process claimed workloads`() {
     val workloadId = "1"
     val dataplaneId = "US"
-    val launcherInput = LauncherInput(workloadId, "workload-input")
+    val launcherInput = LauncherInput(workloadId, "workload-input", "log-path.txt")
 
     val workloadApiClient: WorkloadApiClient = mockk()
     val workerFactory: WorkerFactory = mockk()
