@@ -6,7 +6,6 @@ package io.airbyte.cron.config;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
@@ -21,18 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 @Factory
 @Slf4j
 public class ApplicationBeanFactory {
-
-  /**
-   * Json secrets process.
-   *
-   * @return json secrets process
-   */
-  @Singleton
-  public JsonSecretsProcessor jsonSecretsProcessor() {
-    return JsonSecretsProcessor.builder()
-        .copySecrets(false)
-        .build();
-  }
 
   @Singleton
   public MetricClient metricClient() {

@@ -9,7 +9,7 @@ dependencies {
     implementation libs.lombok
     implementation libs.commons.io
 
-    implementation 'com.auth0:java-jwt:3.19.2'
+    implementation libs.java.jwt
     implementation libs.bundles.kubernetes.client
     implementation libs.sentry.java
     implementation libs.bundles.temporal
