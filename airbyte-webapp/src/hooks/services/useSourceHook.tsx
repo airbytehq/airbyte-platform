@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useConfig } from "config";
@@ -186,8 +187,10 @@ const useDiscoverSchema = (
     setSchemaErrorStatus(null);
     try {
       const data = await service.discoverSchema(sourceId || "", disableCache);
-      setSchema(data.catalog);
-      setCatalogId(data.catalogId);
+      flushSync(() => {
+        setSchema(data.catalog);
+        setCatalogId(data.catalogId);
+      });
     } catch (e) {
       setSchemaErrorStatus(e);
     } finally {
