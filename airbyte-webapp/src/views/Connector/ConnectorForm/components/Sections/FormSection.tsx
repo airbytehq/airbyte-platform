@@ -6,9 +6,9 @@ import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
+import { ArrayOfObjectsSection } from "area/connector/components/ArrayOfObjectsSection";
 import { FormBlock, GroupDetails } from "core/form/types";
 
-import { ArraySection } from "./ArraySection";
 import { AuthSection } from "./auth/AuthSection";
 import { ConditionSection } from "./ConditionSection";
 import styles from "./FormSection.module.scss";
@@ -29,7 +29,7 @@ const FormNode: React.FC<FormNodeProps> = ({ sectionPath, formField, disabled })
   } else if (formField._type === "formCondition") {
     return <ConditionSection path={sectionPath} formField={formField} disabled={disabled} />;
   } else if (formField._type === "objectArray") {
-    return <ArraySection path={sectionPath} formField={formField} disabled={disabled} />;
+    return <ArrayOfObjectsSection path={sectionPath} formField={formField} disabled={disabled} />;
   } else if (formField.const !== undefined) {
     return null;
   }

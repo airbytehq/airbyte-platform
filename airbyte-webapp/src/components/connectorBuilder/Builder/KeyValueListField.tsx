@@ -6,10 +6,10 @@ import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { getLabelAndTooltip } from "./manifestHelpers";
-import { RemoveButton } from "./RemoveButton";
 
 interface KeyValueInputProps {
   path: string;

@@ -25,14 +25,12 @@ const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
   return (
     // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
     <div>
-      <div className={styles.container}>
+      <div className={styles.container} data-testid={name}>
         <div className={styles.title}>
           <div className={styles.label}>{label}</div>
           <div className={classNames(styles.control, controlClassName)}>{control}</div>
         </div>
-        <div className={classNames(styles.content, { [styles["content--error"]]: error })} data-testid={name}>
-          {children}
-        </div>
+        <div className={classNames(styles.content, { [styles["content--error"]]: error })}>{children}</div>
       </div>
       {error && (
         <PropertyError>

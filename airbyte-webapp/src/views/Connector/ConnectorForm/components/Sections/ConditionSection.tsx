@@ -85,7 +85,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
               options={options}
               onChange={onOptionChange}
               value={currentlySelectedCondition}
-              name={formField.path}
+              name={path}
               isDisabled={disabled || formField.readOnly}
               error={error !== undefined}
             />
