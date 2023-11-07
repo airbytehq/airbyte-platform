@@ -402,7 +402,8 @@ public class ConnectionsHandler {
       eventRunner.createConnectionManagerWorkflow(connectionId);
     } catch (final Exception e) {
       LOGGER.error("Start of the connection manager workflow failed", e);
-      configRepository.deleteStandardSync(standardSync.getConnectionId());
+      // deprecate the newly created connection and also delete the newly created workflow.
+      deleteConnection(connectionId);
       throw e;
     }
 
