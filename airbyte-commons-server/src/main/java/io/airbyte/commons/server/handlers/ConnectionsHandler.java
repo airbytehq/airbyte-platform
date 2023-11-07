@@ -941,7 +941,7 @@ public class ConnectionsHandler {
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
             .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
     final CatalogDiff appliedDiff;
-    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, request.getWorkspaceId(), connection, featureFlagClient)) {
+    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
           request.getWorkspaceId(),

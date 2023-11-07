@@ -105,10 +105,8 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -1328,8 +1326,6 @@ class SchedulerHandlerTest {
         io.airbyte.protocol.models.AirbyteCatalog.class);
     final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceVersion);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any()))
-        .thenReturn(false);
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(catalogDiff1, actual.getCatalogDiff());
     assertEquals(expectedActorCatalog, actual.getCatalog());
@@ -1642,8 +1638,6 @@ class SchedulerHandlerTest {
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
-
     schedulerHandler.applySchemaChangeForSource(request);
 
     verify(connectionsHandler).updateConnection(
@@ -1682,8 +1676,6 @@ class SchedulerHandlerTest {
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
-
     schedulerHandler.applySchemaChangeForSource(request);
 
     verify(connectionsHandler).updateConnection(
@@ -1721,8 +1713,6 @@ class SchedulerHandlerTest {
         .workspaceId(workspaceId)
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
-
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
 
     schedulerHandler.applySchemaChangeForSource(request);
 
@@ -1764,8 +1754,6 @@ class SchedulerHandlerTest {
         .catalogId(discoveredSourceId)
         .catalog(catalogWithNewColumnAndStream);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
-
     schedulerHandler.applySchemaChangeForSource(request);
 
     verify(connectionsHandler).updateConnection(
@@ -1804,8 +1792,6 @@ class SchedulerHandlerTest {
         .catalogId(discoveredSourceId)
         .catalog(catalogWithDiff);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
-
     schedulerHandler.applySchemaChangeForSource(request);
 
     verify(connectionsHandler, times(0)).updateConnection(any());
@@ -1829,10 +1815,6 @@ class SchedulerHandlerTest {
     schedulerHandler.applySchemaChangeForSource(request);
     verifyNoInteractions(connectionsHandler);
 
-    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(false);
-    request = getMockedSourceAutoPropagateChange();
-    schedulerHandler.applySchemaChangeForSource(request);
-    verifyNoInteractions(connectionsHandler);
   }
 
   private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {

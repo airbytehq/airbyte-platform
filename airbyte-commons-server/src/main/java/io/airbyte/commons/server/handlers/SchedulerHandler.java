@@ -83,7 +83,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
 import io.airbyte.featureflag.Workspace;
@@ -434,12 +433,6 @@ public class SchedulerHandler {
       return;
     }
 
-    final boolean autoPropagationIsEnabledForWorkspace =
-        featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
-    if (!autoPropagationIsEnabledForWorkspace) {
-      return;
-    }
-
     StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(sourceAutoPropagateChange.getWorkspaceId(), true);
     SourceConnection source = configRepository.getSourceConnection(sourceAutoPropagateChange.getSourceId());
     NotificationSettings notificationSettings = workspace.getNotificationSettings();
@@ -465,7 +458,7 @@ public class SchedulerHandler {
                   .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
               .getSupportedDestinationSyncModes();
 
-      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead, featureFlagClient)) {
+      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, connectionRead)) {
         UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
             sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
