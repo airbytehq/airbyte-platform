@@ -14,6 +14,7 @@ import io.airbyte.api.generated.PermissionApi;
 import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionReadList;
@@ -98,6 +99,16 @@ public class PermissionApiController implements PermissionApi {
 
     ApiHelper.execute(() -> {
       permissionHandler.deletePermission(permissionIdRequestBody);
+      return null;
+    });
+  }
+
+  @Secured({ORGANIZATION_ADMIN, WORKSPACE_ADMIN})
+  @Post("/delete_user_from_workspace")
+  @Override
+  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody permissionDeleteUserFromWorkspaceRequestBody) {
+    ApiHelper.execute(() -> {
+      permissionHandler.deleteUserFromWorkspace(permissionDeleteUserFromWorkspaceRequestBody);
       return null;
     });
   }

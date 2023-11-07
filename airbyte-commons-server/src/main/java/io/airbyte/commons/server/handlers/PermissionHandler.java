@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionReadList;
@@ -397,6 +398,19 @@ public class PermissionHandler {
         throw new IOException(e);
       }
     }
+  }
+
+  /**
+   * Delete all permission records that match a particular userId and workspaceId
+   */
+  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody deleteUserFromWorkspaceRequestBody) throws IOException {
+    final UUID userId = deleteUserFromWorkspaceRequestBody.getUserIdToRemove();
+    final UUID workspaceId = deleteUserFromWorkspaceRequestBody.getWorkspaceId();
+
+    // delete all workspace-level permissions that match the userId and workspaceId
+    permissionPersistence.listPermissionsByUser(userId).stream()
+        .filter(permission -> permission.getWorkspaceId() != null && permission.getWorkspaceId().equals(workspaceId))
+        .forEach(permission -> Exceptions.toRuntime(() -> permissionPersistence.deletePermissionById(permission.getPermissionId())));
   }
 
 }

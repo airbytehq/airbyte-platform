@@ -3649,6 +3649,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/delete_user_from_workspace:
+    post:
+      tags:
+        - permission
+      summary: Deletes all workspace-level permissions for a particular user and workspace
+      operationId: deleteUserFromWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionDeleteUserFromWorkspaceRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/list_by_user:
     post:
       tags:
@@ -6506,6 +6527,20 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    PermissionDeleteUserFromWorkspaceRequestBody:
+      type: object
+      required:
+        - userIdToRemove
+        - workspaceId
+      properties:
+        userIdToRemove:
+          type: string
+          format: uuid
+          description: The user ID for which to remove workspace permissions
+        workspaceId:
+          type: string
+          format: uuid
+          description: The workspace ID from which to remove all workspace-level permissions for the indicated user
     PermissionRead:
       type: object
       required:

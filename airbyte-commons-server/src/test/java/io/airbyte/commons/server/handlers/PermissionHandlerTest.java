@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionUpdate;
@@ -591,6 +593,75 @@ class PermissionHandlerTest {
           .permissionType(Enums.convertTo(targetPermissionType, io.airbyte.api.model.generated.PermissionType.class))
           .userId(USER_ID)
           .organizationId(ORGANIZATION_ID);
+    }
+
+  }
+
+  @Nested
+  class DeleteUserFromWorkspace {
+
+    private static final UUID WORKSPACE_ID = UUID.randomUUID();
+    private static final UUID USER_ID = UUID.randomUUID();
+
+    @Test
+    void testDeleteUserFromWorkspace() throws IOException {
+      // should be deleted
+      final Permission workspacePermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      // should not be deleted, different workspace
+      final Permission otherWorkspacePermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(UUID.randomUUID())
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      // should not be deleted, org permission
+      final Permission orgPermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
+      // should not be deleted, different user
+      final Permission otherUserPermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(UUID.randomUUID())
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(
+          List.of(workspacePermission, otherWorkspacePermission, orgPermission));
+
+      permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userIdToRemove(USER_ID).workspaceId(WORKSPACE_ID));
+
+      // verify the intended permission was deleted
+      verify(permissionPersistence).deletePermissionById(workspacePermission.getPermissionId());
+
+      // verify the other permissions were not deleted
+      verify(permissionPersistence, never()).deletePermissionById(otherWorkspacePermission.getPermissionId());
+      verify(permissionPersistence, never()).deletePermissionById(otherUserPermission.getPermissionId());
+      verify(permissionPersistence, never()).deletePermissionById(orgPermission.getPermissionId());
+    }
+
+    @Test
+    void testDeleteUserFromWorkspaceThrows() throws IOException {
+      final Permission permission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(permission));
+
+      doThrow(new IOException()).when(permissionPersistence).deletePermissionById(permission.getPermissionId());
+
+      assertThrows(RuntimeException.class, () -> permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody()
+          .userIdToRemove(USER_ID)
+          .workspaceId(WORKSPACE_ID)));
     }
 
   }
