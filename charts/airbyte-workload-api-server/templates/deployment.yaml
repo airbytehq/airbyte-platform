@@ -51,8 +51,8 @@ spec:
       {{- toYaml .Values.extraInitContainers | nindent 6 }}
       {{- end }}
       containers:
-      - name: airbyte-workload-api-server
-        image: {{ printf "%s:%s" .Values.image.repository (include "airbyte-workload-api-server.imageTag" .) }}
+      - name: airbyte-workload-api-server-container
+        image: {{ printf "%s:%s" .Values.image.repository (include "workload-api.imageTag" .) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         - name: INTERNAL_API_HOST

@@ -61,7 +61,7 @@ Define db secret
 {{/*
 Define imageTag
 */}}
-{{- define "airbyte-workload-api-server.imageTag" -}}
+{{- define "workload-api.imageTag" -}}
 {{- if .Values.image.tag }}
     {{- printf "%s" .Values.image.tag }}
 {{- else if ((.Values.global.image).tag) }}

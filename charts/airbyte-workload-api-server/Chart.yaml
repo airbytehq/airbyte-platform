@@ -1,6 +1,6 @@
 apiVersion: v2
-name: airbyte-workload-api-server
-description: Helm chart to deploy airbyte-api-server
+name: workload-api
+description: Helm chart to deploy the workload-api service
 
 # A chart can be either an 'application' or a 'library' chart.
 #

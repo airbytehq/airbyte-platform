@@ -1821,26 +1821,26 @@ keycloak:
 keycloak-setup:
   enabled: false
 
-airbyte-workload-api-server:
+workload-api:
   enabled: false
-  ##  airbyte-api-server.replicaCount Number of airbyte-api-server replicas
+  ##  workload-api.replicaCount Number of airbyte-api-server replicas
   replicaCount: 1
 
-  ##  airbyte-api-server.image.repository The repository to use for the airbyte airbyte-api-server image.
-  ##  airbyte-api-server.image.pullPolicy the pull policy to use for the airbyte airbyte-api-server image
-  ##  airbyte-api-server.image.tag The airbyte airbyte-api-server image tag. Defaults to the chart's AppVersion
+  ##  workload-api.image.repository The repository to use for the airbyte-workload-api-server image.
+  ##  workload-api.image.pullPolicy the pull policy to use for the airbyte-workload-api-server image
+  ##  workload-api.image.tag The airbyte-workload-api-server image tag. Defaults to the chart's AppVersion
   image:
     repository: airbyte/airbyte-workload-api-server
     pullPolicy: IfNotPresent
 
   ## Configure extra options for the server containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ##  server.livenessProbe.enabled Enable livenessProbe on the server
-  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##  workload-api.livenessProbe.enabled Enable livenessProbe on the server
+  ##  workload-api.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ##  workload-api.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ##  workload-api.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ##  workload-api.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ##  workload-api.livenessProbe.successThreshold Success threshold for livenessProbe
   ##
   livenessProbe:
     enabled: true
@@ -1850,12 +1850,12 @@ airbyte-workload-api-server:
     failureThreshold: 3
     successThreshold: 1
 
-  ##  server.readinessProbe.enabled Enable readinessProbe on the server
-  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##  workload-api.readinessProbe.enabled Enable readinessProbe on the server
+  ##  workload-api.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ##  workload-api.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ##  workload-api.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ##  workload-api.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ##  workload-api.readinessProbe.successThreshold Success threshold for readinessProbe
   ##
   readinessProbe:
     enabled: true
@@ -1865,14 +1865,14 @@ airbyte-workload-api-server:
     failureThreshold: 3
     successThreshold: 1
 
-  ## airbyte-api-server resource requests and limits
+  ## airbyte-workload-api-server resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ##  airbyte-api-server.resources.limits [object] The resources limits for the airbyte-api-server container
-  ##  airbyte-api-server.resources.requests [object] The requested resources for the airbyte-api-server container
+  ##  workload-api.resources.limits [object] The resources limits for the airbyte-workload-api-server container
+  ##  workload-api.resources.requests [object] The requested resources for the airbyte-workload-api-server container
   resources:
     ## Example:
     ## limits:
@@ -1886,7 +1886,7 @@ airbyte-workload-api-server:
     requests: {}
 
 
-  ##  airbyte-api-server.log.level The log level to log at.
+  ##  airbyte-workload-api-server.log.level The log level to log at.
   log:
     level: "INFO"
 
@@ -1895,13 +1895,13 @@ airbyte-workload-api-server:
   service:
     port: 80
 
-  ## Configure the ingress resource that allows you to access the Airbyte API.
+  ## Configure the ingress resource that allows you to access the Airbyte Workload API.
   ## ref: http://kubernetes.io/docs/user-guide/ingress/
-  ##  webapp.ingress.enabled Set to true to enable ingress record generation
-  ##  webapp.ingress.className Specifies ingressClassName for clusters >= 1.18+
-  ##  webapp.ingress.annotations [object] Ingress annotations done as key:value pairs
-  ##  webapp.ingress.hosts The list of hostnames to be covered with this ingress record.
-  ##  webapp.ingress.tls [array] Custom ingress TLS configuration
+  ##  workload-api.ingress.enabled Set to true to enable ingress record generation
+  ##  workload-api.ingress.className Specifies ingressClassName for clusters >= 1.18+
+  ##  workload-api.ingress.annotations [object] Ingress annotations done as key:value pairs
+  ##  workload-api.ingress.hosts The list of hostnames to be covered with this ingress record.
+  ##  workload-api.ingress.tls [array] Custom ingress TLS configuration
   ingress:
     enabled: false
     className: ""
