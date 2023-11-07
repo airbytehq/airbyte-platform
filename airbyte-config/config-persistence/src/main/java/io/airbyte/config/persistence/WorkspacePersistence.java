@@ -25,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WorkspacePersistence {
 
+  public static final String DEFAULT_WORKSPACE_NAME = "Default Workspace";
+
   private final ExceptionWrappingDatabase database;
 
   public WorkspacePersistence(final Database database) {

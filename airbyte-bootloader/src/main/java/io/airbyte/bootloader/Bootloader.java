@@ -14,6 +14,8 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
+import io.airbyte.config.persistence.UserPersistence;
+import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.init.DatabaseInitializer;
 import io.airbyte.db.instance.DatabaseMigrator;
@@ -183,8 +185,9 @@ public class Bootloader {
     final UUID workspaceId = UUID.randomUUID();
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
-        .withCustomerId(UUID.randomUUID())
-        .withName(workspaceId.toString())
+        // attach this new workspace to the default User which should always exist at this point.
+        .withCustomerId(UserPersistence.DEFAULT_USER_ID)
+        .withName(WorkspacePersistence.DEFAULT_WORKSPACE_NAME)
         .withSlug(workspaceId.toString())
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
