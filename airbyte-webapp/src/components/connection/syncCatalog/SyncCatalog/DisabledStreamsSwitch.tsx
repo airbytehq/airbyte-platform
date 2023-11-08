@@ -1,4 +1,4 @@
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
@@ -12,6 +12,7 @@ interface DisabledStreamsSwitchProps {
 }
 
 export const DisabledStreamsSwitch: React.FC<DisabledStreamsSwitchProps> = ({ checked, onChange }) => {
+  const { formatMessage } = useIntl();
   return (
     <FlexContainer alignItems="center" className={styles.label} gap="sm">
       <Switch
@@ -22,9 +23,7 @@ export const DisabledStreamsSwitch: React.FC<DisabledStreamsSwitchProps> = ({ ch
         id="toggle-disabled-streams"
       />
       <label htmlFor="toggle-disabled-streams">
-        <Text color="grey">
-          <FormattedMessage id="form.hideDisabledStreams" />
-        </Text>
+        <Text color="grey">{formatMessage({ id: "form.hideDisabledStreams" })}</Text>
       </label>
     </FlexContainer>
   );

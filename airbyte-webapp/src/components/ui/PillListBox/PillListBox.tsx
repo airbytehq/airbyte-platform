@@ -13,19 +13,18 @@ export const PillListBox = <T,>({ active, variant, hasError, pillClassName, ...r
   const CustomPillButton: React.FC = useMemo(
     () =>
       // eslint-disable-next-line react/display-name
-      <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) =>
-        (
-          <PillButton
-            active={active}
-            variant={variant}
-            disabled={isDisabled}
-            hasError={hasError}
-            pillClassName={pillClassName}
-            data-testid="pill-select-button"
-          >
-            {selectedOption ? selectedOption.label : formatMessage({ id: "form.selectValue" })}
-          </PillButton>
-        ),
+      <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => (
+        <PillButton
+          active={active}
+          variant={variant}
+          disabled={isDisabled}
+          hasError={hasError}
+          pillClassName={pillClassName}
+          data-testid="pill-select-button"
+        >
+          {selectedOption ? selectedOption.label : formatMessage({ id: "form.selectValue" })}
+        </PillButton>
+      ),
     [active, formatMessage, hasError, pillClassName, variant]
   );
   CustomPillButton.displayName = "CustomPillButton";

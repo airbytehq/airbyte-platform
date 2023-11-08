@@ -127,7 +127,7 @@ const useDeleteDestination = () => {
             ({
               destinations:
                 lst?.destinations.filter((conn) => conn.destinationId !== ctx.destination.destinationId) ?? [],
-            } as DestinationList)
+            }) as DestinationList
         );
 
         const connectionIds = ctx.connectionsWithDestination.map((item) => item.connectionId);

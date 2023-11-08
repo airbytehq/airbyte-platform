@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import React from "react";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
 import { Switch } from "components/ui/Switch";
@@ -19,6 +19,7 @@ interface EnabledControlProps {
 
 export const EnabledControl: React.FC<EnabledControlProps> = ({ disabled }) => {
   const analyticsService = useAnalyticsService();
+  const { formatMessage } = useIntl();
 
   const { connection, updateConnection, connectionUpdating } = useConnectionEditService();
 
@@ -57,7 +58,7 @@ export const EnabledControl: React.FC<EnabledControlProps> = ({ disabled }) => {
         htmlFor="toggle-enabled-source"
         className={classNames(styles.label, { [styles.disabled]: isSwitchDisabled })}
       >
-        <FormattedMessage id={connection.status === ConnectionStatus.active ? "tables.enabled" : "tables.disabled"} />
+        {formatMessage({ id: connection.status === ConnectionStatus.active ? "tables.enabled" : "tables.disabled" })}
       </label>
       <Switch
         disabled={isSwitchDisabled}

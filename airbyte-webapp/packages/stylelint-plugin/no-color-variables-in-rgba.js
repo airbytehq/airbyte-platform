@@ -6,7 +6,7 @@ const messages = ruleMessages(ruleName, {
     `A color variable can't be used within an rgba() function. Explanation: ${LINK_TO_STYLEGUIDE}`,
 });
 const LINK_TO_STYLEGUIDE =
-  "https://github.com/airbytehq/airbyte/blob/master/airbyte-webapp/STYLEGUIDE.md#color-variables-cannot-be-used-inside-of-rgba-functions";
+  "https://github.com/airbytehq/airbyte-platform/blob/master/airbyte-webapp/STYLEGUIDE.md#color-variables-cannot-be-used-inside-of-rgba-functions";
 
 module.exports.ruleName = ruleName;
 module.exports.messages = messages;

@@ -25,9 +25,10 @@ const [streamSyncSwitch, destinationStreamNameCell, destinationNamespaceCell, dr
 export class StreamRowPageObject {
   private readonly stream: string;
 
-  constructor(private readonly namespace: string, private readonly streamName: string) {
-    this.namespace = namespace;
-    this.streamName = streamName;
+  constructor(
+    private readonly namespace: string,
+    private readonly streamName: string
+  ) {
     this.stream = streamTableRow(namespace, streamName);
   }
 

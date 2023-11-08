@@ -20,6 +20,7 @@ export const testRedirectParamParsing = (initialPath: string, wait?: boolean) =>
     .should("eq", expectedRedirectPath);
 
   // wait for cookie banner to disappear
+  // eslint-disable-next-line cypress/no-unnecessary-waiting
   wait && cy.wait(6000);
 
   // check login redirect parameter after navigating to sign up page

@@ -109,5 +109,4 @@ export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, un
       </Suspense>
     </Tooltip>
   );
-  return null;
 };

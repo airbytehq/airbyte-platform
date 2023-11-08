@@ -26,7 +26,7 @@ interface WrapperProps {
 
 export async function render<
   Q extends Queries = typeof queries,
-  Container extends Element | DocumentFragment = HTMLElement
+  Container extends Element | DocumentFragment = HTMLElement,
 >(
   ui: React.ReactNode,
   renderOptions?: RenderOptions<Q, Container>,

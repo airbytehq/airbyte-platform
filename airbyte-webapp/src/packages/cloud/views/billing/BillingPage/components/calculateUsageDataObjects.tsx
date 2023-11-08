@@ -97,29 +97,32 @@ export const calculateFreeAndPaidUsageByConnection = (
   if (filteredConsumptionData.length === 0) {
     return [];
   }
-  const usagePerConnection = filteredConsumptionData.reduce((allConsumption, consumption) => {
-    const { connection } = consumption;
+  const usagePerConnection = filteredConsumptionData.reduce(
+    (allConsumption, consumption) => {
+      const { connection } = consumption;
 
-    // if this connection isn't in our list yet, add it
-    // also, generate an array for the usage array
-    if (!allConsumption[connection.connectionId]) {
-      allConsumption[connection.connectionId] = {
-        connection,
-        totalFreeUsage: consumption.freeUsage,
-        totalBilledCost: consumption.billedCost,
-        totalUsage: consumption.freeUsage + consumption.billedCost,
-        usage: generateArrayForTimeWindow(timeWindow),
-      };
-    } else {
-      allConsumption[connection.connectionId].totalFreeUsage += consumption.freeUsage;
-      allConsumption[connection.connectionId].totalBilledCost += consumption.billedCost;
-      allConsumption[connection.connectionId].totalUsage += consumption.freeUsage + consumption.billedCost;
-    }
+      // if this connection isn't in our list yet, add it
+      // also, generate an array for the usage array
+      if (!allConsumption[connection.connectionId]) {
+        allConsumption[connection.connectionId] = {
+          connection,
+          totalFreeUsage: consumption.freeUsage,
+          totalBilledCost: consumption.billedCost,
+          totalUsage: consumption.freeUsage + consumption.billedCost,
+          usage: generateArrayForTimeWindow(timeWindow),
+        };
+      } else {
+        allConsumption[connection.connectionId].totalFreeUsage += consumption.freeUsage;
+        allConsumption[connection.connectionId].totalBilledCost += consumption.billedCost;
+        allConsumption[connection.connectionId].totalUsage += consumption.freeUsage + consumption.billedCost;
+      }
 
-    mergeUsageData(allConsumption[connection.connectionId].usage, consumption);
+      mergeUsageData(allConsumption[connection.connectionId].usage, consumption);
 
-    return allConsumption;
-  }, {} as Record<string, ConnectionFreeAndPaidUsage>);
+      return allConsumption;
+    },
+    {} as Record<string, ConnectionFreeAndPaidUsage>
+  );
 
   const array = Object.values(usagePerConnection);
   return array;

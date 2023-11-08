@@ -786,7 +786,10 @@ function assertType<T extends { type: string }>(
 export class ManifestCompatibilityError extends Error {
   __type = "connectorBuilder.manifestCompatibility";
 
-  constructor(public streamName: string | undefined, public message: string) {
+  constructor(
+    public streamName: string | undefined,
+    public message: string
+  ) {
     const errorMessage = `${streamName ? `Stream ${streamName}: ` : ""}${message}`;
     super(errorMessage);
     this.message = errorMessage;

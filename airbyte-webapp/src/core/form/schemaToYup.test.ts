@@ -155,7 +155,7 @@ describe("yup schema validations", () => {
           redirect_uri: "test",
         },
       });
-    }).toThrowError("form.empty.error");
+    }).toThrow("form.empty.error");
   });
 
   it("does not enforce additional contraints if the condition is selected", () => {
@@ -170,7 +170,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).not.toThrowError();
+    }).not.toThrow();
   });
 
   it("enforces additional contraints only if the condition is selected", () => {
@@ -184,7 +184,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).toThrowError(FORM_PATTERN_ERROR);
+    }).toThrow(FORM_PATTERN_ERROR);
   });
 
   it("strips out properties belonging to other conditions", () => {

@@ -21,7 +21,7 @@ const getConnectorTypeId = (connectorSpec: DestinationSnippetRead | SourceSnippe
 // TODO: types in next methods look a bit ugly
 export function getEntityTableData<
   S extends "source" | "destination",
-  SoD extends S extends "source" ? SourceRead : DestinationRead
+  SoD extends S extends "source" ? SourceRead : DestinationRead,
 >(entities: SoD[], connections: WebBackendConnectionListItem[], type: S): EntityTableDataItem[] {
   const connectType = type === "source" ? "destination" : "source";
 

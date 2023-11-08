@@ -131,7 +131,7 @@ const useDeleteSource = () => {
           (lst: SourceList | undefined) =>
             ({
               sources: lst?.sources.filter((conn) => conn.sourceId !== ctx.source.sourceId) ?? [],
-            } as SourceList)
+            }) as SourceList
         );
 
         const connectionIds = ctx.connectionsWithSource.map((item) => item.connectionId);
