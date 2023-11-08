@@ -1,12 +1,15 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useNavigate } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SyncSchema } from "core/domain/catalog";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
+import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
+import { RoutePaths } from "pages/routePaths";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
@@ -232,9 +235,11 @@ export const useDeleteConnection = () => {
 };
 
 export const useUpdateConnection = () => {
-  const { registerNotification } = useNotificationService();
-  const requestOptions = useRequestOptions();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  const { registerNotification } = useNotificationService();
 
   return useMutation(
     (connectionUpdate: WebBackendConnectionUpdate) => webBackendUpdateConnection(connectionUpdate, requestOptions),
@@ -254,6 +259,17 @@ export const useUpdateConnection = () => {
         }));
       },
       onError: (error: Error) => {
+        // catch error when credits are not enough to enable the connection
+        if (error.message.toLowerCase().includes("negative credit balance")) {
+          return registerNotification({
+            id: "update-connection-credits-problem-error",
+            type: "error",
+            text: <FormattedMessage id="connection.enable.creditsProblem" />,
+            actionBtnText: <FormattedMessage id="connection.enable.creditsProblem.cta" />,
+            onAction: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${CloudRoutes.Billing}`),
+          });
+        }
+
         // If there is not user-facing message in the API response, we should fall back to a generic message
         const fallbackKey = error.message && error.message === "common.error" ? "connection.updateFailed" : undefined;
         registerNotification({

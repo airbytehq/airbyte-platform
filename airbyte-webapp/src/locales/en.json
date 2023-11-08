@@ -493,6 +493,8 @@
   "connection.updateSchema.namespace": "Namespace",
   "connection.updateSchema.dataType": "Data type",
   "connection.updateSchema.noDiff": "No changes were detected in the source schema.",
+  "connection.enable.creditsProblem": "You're out of credits! Add more to re-enable your sync.",
+  "connection.enable.creditsProblem.cta": "Add credits",
 
   "connection.catalogTree.sourceDefined": "'<source defined>",
   "connection.catalogTree.sourceSchema": "'<source schema>",
