@@ -422,6 +422,7 @@ public class SchedulerHandler {
     LOGGER.info("Applying schema changes for source '{}' in workspace '{}'",
         sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId());
     if (sourceAutoPropagateChange.getSourceId() == null) {
+      LOGGER.warn("Missing required field sourceId for applying schema change.");
       return;
     }
 
@@ -430,6 +431,9 @@ public class SchedulerHandler {
         || sourceAutoPropagateChange.getCatalog() == null) {
       MetricClientFactory.getMetricClient().count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT, 1,
           new MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.getSourceId().toString()));
+      LOGGER.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
+          sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId(), sourceAutoPropagateChange.getCatalogId(),
+          sourceAutoPropagateChange.getCatalog());
       return;
     }
 
@@ -470,13 +474,16 @@ public class SchedulerHandler {
         connectionsHandler.updateConnection(updateObject);
         connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject.getConnectionId(), result);
+        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
         boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
         if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
           notifySchemaPropagated(notificationSettings, diff, connectionRead.getConnectionId(), source,
               workspace.getEmail(), result);
         }
-        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+      } else {
+        LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
       }
     }
