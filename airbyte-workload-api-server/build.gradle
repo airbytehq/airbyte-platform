@@ -68,7 +68,7 @@ airbyte {
                 "MICRONAUT_ENVIRONMENTS"        : "control-plane",
                 "SERVICE_NAME"                  : project.name,
                 "TRACKING_STRATEGY"             : env.TRACKING_STRATEGY,
-                "WORKLOAD_API_BEARER_SECRET"    : "ItsASecret"
+                "WORKLOAD_API_BEARER_TOKEN"     : "ItsASecret"
         ] as Map<String, String>
     }
     docker {

@@ -34,6 +34,23 @@ class WorkloadTokenValidatorTest {
   }
 
   @Test
+  internal fun `test that a valid token with a newline is successfully authenticated`() {
+    val expectedToken = "the expected token value"
+    val httpRequest: HttpRequest<*> = mockk()
+    val validator = WorkloadTokenValidator(expectedToken)
+
+    val responsePublisher: Publisher<Authentication> =
+      validator.validateToken(
+        Base64.getEncoder().encodeToString("$expectedToken\n".toByteArray()),
+        httpRequest,
+      )
+
+    StepVerifier.create(responsePublisher)
+      .expectNextMatches { a: Authentication -> matchSuccessfulResponse(a) }
+      .verifyComplete()
+  }
+
+  @Test
   internal fun `test that an invalid token is rejected`() {
     val expectedToken = "the expected token value"
     val invalidToken = "not the expected token"
