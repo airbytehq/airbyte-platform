@@ -102,14 +102,18 @@ public class PermissionHandler {
     return result;
   }
 
-  private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
+  private Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
     final Optional<Permission> permission =
         permissionPersistence.getPermission(permissionId);
     if (permission.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.PERMISSION, permissionId);
     }
+    return permission.get();
+  }
 
-    return buildPermissionRead(permission.get());
+  private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
+    final Permission permission = getPermissionById(permissionId);
+    return buildPermissionRead(permission);
   }
 
   private static PermissionRead buildPermissionRead(final Permission permission) {
@@ -194,9 +198,14 @@ public class PermissionHandler {
       throw new JsonValidationException("Cannot update permission record to INSTANCE_ADMIN.");
     }
 
+    final Permission existingPermission = getPermissionById(permissionUpdate.getPermissionId());
+
     final Permission updatedPermission = new Permission()
         .withPermissionId(permissionUpdate.getPermissionId())
-        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class));
+        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class))
+        .withOrganizationId(existingPermission.getOrganizationId()) // cannot be updated
+        .withWorkspaceId(existingPermission.getWorkspaceId()) // cannot be updated
+        .withUserId(existingPermission.getUserId()); // cannot be updated
     try {
       permissionPersistence.writePermission(updatedPermission);
     } catch (final DataAccessException e) {

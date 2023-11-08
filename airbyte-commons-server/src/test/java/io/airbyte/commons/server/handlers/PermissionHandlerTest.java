@@ -128,17 +128,25 @@ class PermissionHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
-    @Test
-    void updatesPermission() throws Exception {
-      // mock the updated Permission that will be returned by the persistence layer when
-      // building a response
+    @BeforeEach
+    void setup() throws IOException {
       when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
           .thenReturn(Optional.of(new Permission()
               .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withPermissionType(PermissionType.WORKSPACE_READER)
               .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
               .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
 
+      when(permissionPersistence.getPermission(PERMISSION_ORGANIZATION_ADMIN.getPermissionId()))
+          .thenReturn(Optional.of(new Permission()
+              .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+              .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+              .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId())
+              .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId())));
+    }
+
+    @Test
+    void updatesPermission() throws Exception {
       final PermissionUpdate update = new PermissionUpdate()
           .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
           .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN); // changing to workspace_admin
@@ -149,11 +157,23 @@ class PermissionHandlerTest {
           .userId(PERMISSION_WORKSPACE_READER.getUserId())
           .workspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId());
 
+      // after the update, getPermission will be called to build the response, so we need to mock it with
+      // the updated permission type
+      when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
+          .thenReturn(Optional.of(new Permission()
+              .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN) // updated
+              .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
+              .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
+
       final PermissionRead actualPermissionRead = permissionHandler.updatePermission(update);
 
       verify(permissionPersistence).writePermission(new Permission()
           .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-          .withPermissionType(PermissionType.WORKSPACE_ADMIN));
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+          .withUserId(PERMISSION_WORKSPACE_READER.getUserId())
+          .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
+          .withOrganizationId(null));
       assertEquals(expectedPermissionRead, actualPermissionRead);
     }
 
@@ -173,6 +193,38 @@ class PermissionHandlerTest {
 
       doThrow(new DataAccessException(BLOCKED, new SQLOperationNotAllowedException(BLOCKED))).when(permissionPersistence).writePermission(any());
       assertThrows(OperationNotAllowedException.class, () -> permissionHandler.updatePermission(update));
+    }
+
+    @Test
+    void workspacePermissionUpdatesDoNotModifyIdFields()
+        throws JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException, IOException {
+      final PermissionUpdate workspacePermissionUpdate = new PermissionUpdate()
+          .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_EDITOR); // changing to workspace_editor
+
+      permissionHandler.updatePermission(workspacePermissionUpdate);
+
+      verify(permissionPersistence).writePermission(new Permission()
+          .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+          .withPermissionType(PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId()) // workspace ID preserved from original permission
+          .withUserId(PERMISSION_WORKSPACE_READER.getUserId())); // user ID preserved from original permission
+    }
+
+    @Test
+    void organizationPermissionUpdatesDoNotModifyIdFields()
+        throws JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException, IOException {
+      final PermissionUpdate orgPermissionUpdate = new PermissionUpdate()
+          .permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_EDITOR); // changing to organization_editor
+
+      permissionHandler.updatePermission(orgPermissionUpdate);
+
+      verify(permissionPersistence).writePermission(new Permission()
+          .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR)
+          .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId()) // organization ID preserved from original permission
+          .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId())); // user ID preserved from original permission
     }
 
   }
