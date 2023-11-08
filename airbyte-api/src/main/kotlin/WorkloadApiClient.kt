@@ -30,6 +30,7 @@ import okhttp3.Response
  * </ol>
  * <p>
  */
+@SuppressWarnings("Parameter")
 class WorkloadApiClient {
   @JvmOverloads
   constructor(

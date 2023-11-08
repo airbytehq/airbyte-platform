@@ -50,8 +50,8 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
   private static final Duration TIMEOUT = Duration.ofHours(2);
 
-  private AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
-  private AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
+  private final AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
+  private final AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
   private final FeatureFlagClient featureFlagClient;
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;

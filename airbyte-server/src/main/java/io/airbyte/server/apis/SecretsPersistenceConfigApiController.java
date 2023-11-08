@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
-@SuppressWarnings("MissingJavadocType")
+@SuppressWarnings({"MissingJavadocType", "PreserveStackTrace"})
 @Controller("/api/v1/secrets_persistence_config")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @Slf4j
@@ -60,6 +60,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
   @Post("/create_or_update")
   @Secured({ADMIN})
   @SecuredWorkspace
+  @SuppressWarnings("MissingSwitchDefault")
   public void createOrUpdateSecretsPersistenceConfig(@Body final CreateOrUpdateSecretsPersistenceConfigRequestBody requestBody) {
 
     ApiHelper.execute(() -> {

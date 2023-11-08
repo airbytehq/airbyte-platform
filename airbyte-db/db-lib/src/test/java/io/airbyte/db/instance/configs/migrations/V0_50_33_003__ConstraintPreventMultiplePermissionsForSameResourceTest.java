@@ -24,7 +24,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_50_33_003__ConstraintPreventMultiplePermissionsForSameResourceTest extends AbstractConfigsDatabaseTest {
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+class V0_50_33_003__ConstraintPreventMultiplePermissionsForSameResourceTest extends AbstractConfigsDatabaseTest {
 
   static final Table<?> PERMISSION_TABLE = DSL.table("permission");
   static final Field<UUID> USER_ID_FIELD = DSL.field("user_id", UUID.class);
