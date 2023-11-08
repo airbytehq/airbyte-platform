@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
@@ -44,6 +45,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
@@ -71,6 +73,7 @@ public class WorkspacesHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final ConfigRepository configRepository;
   private final WorkspacePersistence workspacePersistence;
+  private final OrganizationPersistence organizationPersistence;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final PermissionPersistence permissionPersistence;
   private final ConnectionsHandler connectionsHandler;
@@ -82,12 +85,13 @@ public class WorkspacesHandler {
   @Inject
   public WorkspacesHandler(final ConfigRepository configRepository,
                            final WorkspacePersistence workspacePersistence,
+                           final OrganizationPersistence organizationPersistence,
                            final SecretsRepositoryWriter secretsRepositoryWriter,
                            final PermissionPersistence permissionPersistence,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler) {
-    this(configRepository, workspacePersistence, secretsRepositoryWriter, permissionPersistence,
+    this(configRepository, workspacePersistence, organizationPersistence, secretsRepositoryWriter, permissionPersistence,
         connectionsHandler, destinationHandler,
         sourceHandler, UUID::randomUUID);
   }
@@ -95,6 +99,7 @@ public class WorkspacesHandler {
   @VisibleForTesting
   WorkspacesHandler(final ConfigRepository configRepository,
                     final WorkspacePersistence workspacePersistence,
+                    final OrganizationPersistence organizationPersistence,
                     final SecretsRepositoryWriter secretsRepositoryWriter,
                     final PermissionPersistence permissionPersistence,
                     final ConnectionsHandler connectionsHandler,
@@ -103,6 +108,7 @@ public class WorkspacesHandler {
                     final Supplier<UUID> uuidSupplier) {
     this.configRepository = configRepository;
     this.workspacePersistence = workspacePersistence;
+    this.organizationPersistence = organizationPersistence;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.permissionPersistence = permissionPersistence;
     this.connectionsHandler = connectionsHandler;
@@ -323,6 +329,16 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
+  public WorkspaceOrganizationInfoRead getWorkspaceOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody)
+      throws IOException, ConfigNotFoundException {
+    final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
+    final Optional<Organization> organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId);
+    if (organization.isEmpty()) {
+      throw new ConfigNotFoundException("ORGANIZATION_FOR_WORKSPACE", workspaceId.toString());
+    }
+    return buildWorkspaceOrganizationInfoRead(organization.get());
+  }
+
   @SuppressWarnings("unused")
   public WorkspaceRead getWorkspaceBySlug(final SlugRequestBody slugRequestBody) throws IOException, ConfigNotFoundException {
     // for now we assume there is one workspace and it has a default uuid.
@@ -464,6 +480,14 @@ public class WorkspacesHandler {
   private WorkspaceRead buildWorkspaceReadFromId(final UUID workspaceId) throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, false);
     return buildWorkspaceRead(workspace);
+  }
+
+  private WorkspaceOrganizationInfoRead buildWorkspaceOrganizationInfoRead(final Organization organization) {
+    return new WorkspaceOrganizationInfoRead()
+        .organizationId(organization.getOrganizationId())
+        .organizationName(organization.getName())
+        .pba(organization.getPba())
+        .sso(organization.getSsoRealm() != null && !organization.getSsoRealm().isEmpty());
   }
 
   private String generateUniqueSlug(final String workspaceName) throws IOException {

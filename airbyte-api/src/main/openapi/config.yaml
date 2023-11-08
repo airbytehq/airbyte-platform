@@ -283,6 +283,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_organization_info:
+    post:
+      tags:
+        - workspace
+      summary: Retrieve a workspace's basic organization info that is accessible for all workspace members, regardless of organization membership.
+      operationId: getOrganizationInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceOrganizationInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/update:
     post:
       tags:
@@ -4442,6 +4465,24 @@ components:
             $ref: "#/components/schemas/WebhookConfigRead"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    WorkspaceOrganizationInfoRead:
+      type: object
+      description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
+      required:
+        - organizationId
+        - organizationName
+        - pba
+        - sso
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        pba:
+          type: boolean
+        sso:
+          type: boolean
     WebhookConfigRead:
       type: object
       description: the readable info for a webhook config; omits sensitive info e.g. auth token

@@ -12,9 +12,14 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.SsoConfig;
+import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.validation.json.JsonValidationException;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,12 +33,14 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   private OrganizationPersistence organizationPersistence;
   private UserPersistence userPersistence;
   private PermissionPersistence permissionPersistence;
+  private WorkspaceService workspaceService;
 
   @BeforeEach
   void beforeEach() throws Exception {
     permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);
     organizationPersistence = new OrganizationPersistence(database);
+    workspaceService = new WorkspaceServiceJooqImpl(database);
     truncateAllTables();
 
     for (final Organization organization : MockData.organizations()) {
@@ -92,6 +99,28 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   void getOrganization_notExist() throws Exception {
     Optional<Organization> result = organizationPersistence.getOrganization(UUID.randomUUID());
     assertFalse(result.isPresent());
+  }
+
+  @Test
+  void getOrganizationByWorkspaceId() throws IOException, JsonValidationException {
+    // write a workspace that belongs to org 1
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+    workspace.setOrganizationId(MockData.ORGANIZATION_ID_1);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    final Optional<Organization> result = organizationPersistence.getOrganizationByWorkspaceId(MockData.WORKSPACE_ID_1);
+    assertTrue(result.isPresent());
+    assertEquals(MockData.ORGANIZATION_ID_1, result.get().getOrganizationId());
+  }
+
+  @Test
+  void getOrganizationByWorkspaceId_notInAnOrg() throws IOException, JsonValidationException {
+    // write a workspace that does not belong to an org
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    final Optional<Organization> result = organizationPersistence.getOrganizationByWorkspaceId(MockData.WORKSPACE_ID_1);
+    assertTrue(result.isEmpty());
   }
 
   @Test

@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
@@ -61,6 +62,15 @@ public class WorkspaceApiController implements WorkspaceApi {
       workspacesHandler.deleteWorkspace(workspaceIdRequestBody);
       return null;
     });
+  }
+
+  @Post("/get_organization_info")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceOrganizationInfoRead getOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> workspacesHandler.getWorkspaceOrganizationInfo(workspaceIdRequestBody));
   }
 
   @Post("/get")

@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
@@ -59,6 +60,22 @@ public class OrganizationPersistence {
         .from(ORGANIZATION)
         .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
         .where(ORGANIZATION.ID.eq(organizationId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
+  public Optional<Organization> getOrganizationByWorkspaceId(final UUID workspaceId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .join(WORKSPACE)
+        .on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+        .where(WORKSPACE.ID.eq(workspaceId)).fetch());
 
     if (result.isEmpty()) {
       return Optional.empty();
