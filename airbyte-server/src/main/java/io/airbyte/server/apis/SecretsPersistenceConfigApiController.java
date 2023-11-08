@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
-@SuppressWarnings({"MissingJavadocType", "PreserveStackTrace"})
+@SuppressWarnings("PMD.PreserveStackTrace")
 @Controller("/api/v1/secrets_persistence_config")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @Slf4j

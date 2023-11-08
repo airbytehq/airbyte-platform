@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @MicronautTest
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class StreamStatusesRepositoryTest {
 
   private static final String DATA_SOURCE_NAME = "config";

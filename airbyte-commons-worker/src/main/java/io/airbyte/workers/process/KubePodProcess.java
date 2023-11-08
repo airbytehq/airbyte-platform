@@ -355,8 +355,8 @@ public class KubePodProcess implements KubePod {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
     client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName())
-        .waitUntilCondition(p -> !p.getStatus().getInitContainerStatuses().isEmpty() &&
-            p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT_MINS,
+        .waitUntilCondition(p -> !p.getStatus().getInitContainerStatuses().isEmpty()
+            && p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT_MINS,
             TimeUnit.MINUTES);
     LOGGER.info("Init container ready..");
   }

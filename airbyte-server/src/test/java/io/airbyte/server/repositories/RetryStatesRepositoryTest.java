@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @MicronautTest
-@SuppressWarnings("AvoidDuplicateLiterals")
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RetryStatesRepositoryTest {
 
   private static final String DATA_SOURCE_NAME = "config";
