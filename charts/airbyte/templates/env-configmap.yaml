@@ -25,6 +25,7 @@ data:
   GCS_LOG_BUCKET: {{ .Values.global.logs.gcs.bucket | quote }}
   GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.gcpLogCredentialsPath" . | quote }}
   INTERNAL_API_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
+  WORKLOAD_API_HOST: {{ .Release.Name }}-airbyte-workload-api-svc:{{ index .Values "workload-api" "service" "port" }}
 {{- if eq .Values.global.edition "pro" }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}

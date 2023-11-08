@@ -1823,6 +1823,9 @@ keycloak-setup:
 
 workload-api:
   enabled: false
+
+  bearerToken: token
+
   ##  workload-api.replicaCount Number of airbyte-api-server replicas
   replicaCount: 1
 

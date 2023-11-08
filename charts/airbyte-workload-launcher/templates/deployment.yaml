@@ -138,6 +138,11 @@ spec:
               fieldPath: metadata.namespace
         - name: JOB_KUBE_SERVICEACCOUNT
           value: {{ .Values.global.serviceAccountName }}
+        - name: WORKLOAD_API_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+              key: {{ .Values.global.database.secretValue | default "WORKLOAD_API_BEARER_TOKEN" }}
         {{- if $.Values.global.jobs.kube.annotations }}
         - name: JOB_KUBE_ANNOTATIONS
           valueFrom:
@@ -360,7 +365,7 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKER_STATE_STORAGE_TYPE
-        {{- if eq .Values.global.edition "pro" }}
+       {{- if eq .Values.global.edition "pro" }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
@@ -368,6 +373,11 @@ spec:
         {{- end }}
 
         {{- end }}
+        - name: WORKLOAD_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_HOST
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}
