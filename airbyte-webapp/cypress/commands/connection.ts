@@ -79,7 +79,8 @@ export const startManualSync = () => {
 };
 
 export const startManualReset = () => {
-  cy.get("[data-testid='manual-reset-button']").click();
+  cy.get("[data-testid='job-history-dropdown-menu']").click();
+  cy.get("[data-testid='reset-data-dropdown-option']").click();
   cy.get("[data-id='reset']").click();
 };
 

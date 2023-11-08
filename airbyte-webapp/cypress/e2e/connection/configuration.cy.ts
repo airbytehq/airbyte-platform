@@ -133,13 +133,21 @@ describe("Connection Configuration", () => {
 
         // reset & verify the button enters and exits its disabled state as the status updates
         startManualReset();
-        cy.get("[data-testid='manual-reset-button']").should("be.disabled");
+
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+        cy.get("[data-testid='reset-data-dropdown-option']").should("be.disabled");
+
         cy.get("[data-testid='connection-status-text']")
           .contains("Pending", {
             timeout: 30000,
           })
           .should("exist");
-        cy.get("[data-testid='manual-reset-button']").should("not.be.disabled");
+
+        cy.get("[data-testid='job-history-dropdown-menu']").should("not.be.disabled");
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+        cy.get("[data-testid='reset-data-dropdown-option']").should("not.be.disabled");
       });
     });
   });
@@ -475,6 +483,7 @@ describe("Connection Configuration", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           getSyncEnabledSwitch().should("be.disabled");
+          cy.get("[data-testid='job-history-dropdown-menu']").click();
           cy.contains("Reset your data").should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
         });
@@ -570,6 +579,7 @@ describe("Connection Configuration", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
         cy.contains(/Sync \d+ enabled streams?/).should("be.disabled");
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
         cy.contains("Reset your data").should("be.disabled");
       });
     });
