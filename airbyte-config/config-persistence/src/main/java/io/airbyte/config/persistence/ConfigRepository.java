@@ -436,7 +436,7 @@ public class ConfigRepository {
     try {
       return workspaceService.getStandardWorkspaceFromConnection(connectionId, isTombstone);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, connectionId.toString());
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
   }
 
