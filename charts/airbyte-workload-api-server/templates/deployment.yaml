@@ -90,6 +90,11 @@ spec:
             secretKeyRef:
               name: {{ .Release.Name }}-airbyte-secrets
               key: DATABASE_USER
+        - name: TEMPORAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TEMPORAL_HOST
         - name: WORKLOAD_API_BEARER_TOKEN
           valueFrom:
             secretKeyRef:

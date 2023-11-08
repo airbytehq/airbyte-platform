@@ -69,6 +69,24 @@ datasources:
     password: ${DATABASE_PASSWORD}
     leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
 
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  self-hosted:
+    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+  sdk:
+    timeouts:
+      max-time-to-connect: 120s
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
+
 logger:
   levels:
     #   Uncomment to help resolve issues with conditional beans

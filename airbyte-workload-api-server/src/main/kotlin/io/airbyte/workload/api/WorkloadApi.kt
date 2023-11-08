@@ -5,6 +5,7 @@ import io.airbyte.workload.api.domain.NotFoundKnownExceptionInfo
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
+import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
@@ -27,7 +28,7 @@ import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-open class WorkloadApi {
+open class WorkloadApi(private val workloadService: WorkloadService) {
   @PUT
   @Path("/cancel")
   @Consumes("application/json")
@@ -122,6 +123,26 @@ open class WorkloadApi {
     ) workloadId: String,
   ): Workload {
     TODO()
+  }
+
+  @PUT
+  @Produces("application/json")
+  @Operation(summary = "Create a workload", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Created a workload",
+        content = [Content(schema = Schema(implementation = Workload::class))],
+      ),
+    ],
+  )
+  open fun workloadPut(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
+    ) request: WorkloadCreateRequest,
+  ) {
+    workloadService.create(request.workloadId, request.workloadInput)
   }
 
   @PUT

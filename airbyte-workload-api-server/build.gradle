@@ -24,18 +24,23 @@ dependencies {
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
     implementation libs.bundles.micronaut.data.jdbc
+    implementation libs.bundles.temporal
+    implementation libs.kotlin.logging
     implementation libs.log4j.impl
     implementation libs.micronaut.jaxrs.server
     implementation libs.micronaut.security
+    implementation libs.reactor.core
     implementation libs.v3.swagger.annotations
     implementation libs.javax.ws.rs.api
-    implementation libs.reactor.core
-    implementation libs.kotlin.logging
+
+    implementation(project(":airbyte-commons"))
+    implementation(project(":airbyte-commons-temporal-core"))
+    implementation(project(":airbyte-config:config-models"))
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-db:jooq')
+    implementation(project(":airbyte-metrics:metrics-lib"))
 
     runtimeOnly libs.javax.databind
-    runtimeOnly project(':airbyte-commons')
 
     testImplementation libs.bundles.micronaut.test
     testAnnotationProcessor platform(libs.micronaut.bom)

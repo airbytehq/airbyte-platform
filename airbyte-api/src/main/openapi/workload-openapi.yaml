@@ -25,6 +25,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
+    put:
+      tags:
+      - workload
+      summary: Create a workload
+      operationId: workloadPut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadCreateRequest'
+      responses:
+        "200":
+          description: Created a workload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workload'
   /api/v1/workload/cancel:
     put:
       tags:
@@ -255,6 +272,16 @@ components:
         workload-id:
           type: string
         dataplane-id:
+          type: string
+    WorkloadCreateRequest:
+      required:
+      - workload-id
+      - workload-input
+      type: object
+      properties:
+        workload-id:
+          type: string
+        workload-input:
           type: string
     WorkloadHeartbeatRequest:
       required:
