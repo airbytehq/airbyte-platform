@@ -7,7 +7,11 @@ micronaut:
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
   security:
     authentication-provider-strategy: ALL
-    enabled: ${API_AUTHORIZATION_ENABLED:false}
+    enabled: true
+    token:
+      jwt:
+        bearer:
+          secret: ${WORKLOAD_API_BEARER_TOKEN:}
   server:
     port: 8007
     cors:

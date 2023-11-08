@@ -21,17 +21,16 @@ dependencies {
     annotationProcessor libs.micronaut.jaxrs.processor
 
     implementation libs.bundles.jackson
-
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
     implementation libs.bundles.micronaut.data.jdbc
     implementation libs.log4j.impl
     implementation libs.micronaut.jaxrs.server
     implementation libs.micronaut.security
-
     implementation libs.v3.swagger.annotations
     implementation libs.javax.ws.rs.api
-
+    implementation libs.reactor.core
+    implementation libs.kotlin.logging
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-db:jooq')
 
@@ -48,7 +47,8 @@ dependencies {
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
     testImplementation libs.mockito.inline
-
+    testImplementation libs.reactor.test
+    testImplementation libs.mockk
 }
 
 kapt {
@@ -63,11 +63,12 @@ airbyte {
         mainClass = 'io.airbyte.workload.server.Application'
         defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
         localEnvVars = env + [
-                "AIRBYTE_ROLE"          : System.getenv("AIRBYTE_ROLE") ?: "undefined",
-                "AIRBYTE_VERSION"       : env.VERSION,
-                "MICRONAUT_ENVIRONMENTS": "control-plane",
-                "SERVICE_NAME"          : project.name,
-                "TRACKING_STRATEGY"     : env.TRACKING_STRATEGY
+                "AIRBYTE_ROLE"                  : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION"               : env.VERSION,
+                "MICRONAUT_ENVIRONMENTS"        : "control-plane",
+                "SERVICE_NAME"                  : project.name,
+                "TRACKING_STRATEGY"             : env.TRACKING_STRATEGY,
+                "WORKLOAD_API_BEARER_SECRET"    : "ItsASecret"
         ] as Map<String, String>
     }
     docker {

@@ -16,12 +16,13 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
   workload-api:
-    basepath: ${WORKLOAD_API_BASE_PATH:}
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-    service-account:
-      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
-      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-launcher:
     queue: ${WORKLOAD_LAUNCHER_QUEUE_NAME:launcher-queue}
     workload-start-timeout: PT10M
@@ -132,6 +133,7 @@ airbyte:
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
+
 datadog:
   agent:
     host: ${DD_AGENT_HOST:}

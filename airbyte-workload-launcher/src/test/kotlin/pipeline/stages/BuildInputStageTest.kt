@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages
 
 import com.fasterxml.jackson.databind.node.POJONode

@@ -1,9 +1,12 @@
-package pipeline.stages
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.workload.launcher.pipeline.stages
 
 import io.airbyte.workload.launcher.client.StatusUpdater
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.LauncherInput
-import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk

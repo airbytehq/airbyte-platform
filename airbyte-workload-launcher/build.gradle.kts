@@ -20,7 +20,6 @@ dependencies {
     implementation(libs.failsafe.okhttp)
     implementation(libs.google.cloud.storage)
     implementation(libs.guava)
-    implementation(libs.java.jwt)
     implementation(libs.kotlin.logging)
     implementation(libs.micronaut.jackson.databind)
     implementation(libs.micronaut.jooq)
@@ -73,7 +72,9 @@ airbyte {
     application {
         mainClass.set("io.airbyte.workload.launcher.ApplicationKt")
         defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0", "-Dmicronaut.environments=test"))
-        localEnvVars.putAll((env.toMutableMap() + mutableMapOf("AIRBYTE_VERSION" to env["VERSION"])) as Map<String,String>)
+        localEnvVars.putAll((env.toMutableMap() +
+                mutableMapOf("AIRBYTE_VERSION" to env["VERSION"],
+                             "DATA_PLANE_ID" to "local")) as Map<String,String>)
     }
     docker {
         imageName.set("workload-launcher")

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.client
 
 import dev.failsafe.RetryPolicy
@@ -13,16 +17,20 @@ import java.io.IOException
 import java.time.Duration
 
 @Factory
-class ApiClientFactory {
+class WorkloadApiClientFactory {
   @Singleton
-  fun airbyteApiClient(
-    @Value("\${airbyte.workload-api.basepath}") airbyteWorloadApiBasePath: String,
-    jwtAuthenticationInterceptor: JwtAuthenticationInterceptor,
+  fun workloadApiClient(
+    @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
+    @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
+    @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
+    @Value("\${airbyte.workload-api.retries.delay-seconds}") retryDelaySeconds: Long,
+    @Value("\${airbyte.workload-api.retries.max}") maxRetries: Int,
+    authenticationInterceptor: AuthenticationInterceptor,
   ): AirbyteApiClient2 {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    builder.addInterceptor(jwtAuthenticationInterceptor)
-    builder.readTimeout(Duration.ofSeconds(300))
-    builder.connectTimeout(Duration.ofSeconds(30))
+    builder.addInterceptor(authenticationInterceptor)
+    builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
+    builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
 
     val okHttpClient: OkHttpClient = builder.build()
 
@@ -37,10 +45,10 @@ class ApiClientFactory {
             ServerException::class.java,
           ),
         )
-        .withDelay(Duration.ofSeconds(2))
-        .withMaxRetries(5)
+        .withDelay(Duration.ofSeconds(retryDelaySeconds))
+        .withMaxRetries(maxRetries)
         .build()
 
-    return AirbyteApiClient2(airbyteWorloadApiBasePath, retryPolicy, okHttpClient)
+    return AirbyteApiClient2(workloadApiBasePath, retryPolicy, okHttpClient)
   }
 }

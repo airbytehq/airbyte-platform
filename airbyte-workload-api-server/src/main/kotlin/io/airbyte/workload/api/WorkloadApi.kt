@@ -10,6 +10,8 @@ import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
 import io.micronaut.http.annotation.Controller
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -24,6 +26,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
+@Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkloadApi {
   @PUT
   @Path("/cancel")
