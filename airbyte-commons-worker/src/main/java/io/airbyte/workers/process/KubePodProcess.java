@@ -37,7 +37,6 @@ import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.readiness.Readiness;
 import java.io.IOException;
@@ -144,8 +143,6 @@ public class KubePodProcess implements KubePod {
   private static final Duration INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(configs.getJobInitRetryTimeoutMinutes());
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
-
-  public static final long INIT_CONTAINER_CREATION_TIMEOUT_MINS = 5;
 
   public static final long INIT_CONTAINER_STARTUP_TIMEOUT_MINS = 5;
 
@@ -357,12 +354,9 @@ public class KubePodProcess implements KubePod {
   private static void waitForInitPodToRun(final KubernetesClient client, final Pod podDefinition) throws InterruptedException {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
-    final PodResource pod =
-        client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName());
-    pod.waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().size() != 0, INIT_CONTAINER_CREATION_TIMEOUT_MINS, TimeUnit.MINUTES);
-    LOGGER.info("Init container present..");
     client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName())
-        .waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT_MINS,
+        .waitUntilCondition(p -> !p.getStatus().getInitContainerStatuses().isEmpty() &&
+            p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT_MINS,
             TimeUnit.MINUTES);
     LOGGER.info("Init container ready..");
   }
