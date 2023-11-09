@@ -167,7 +167,9 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           null,
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags, Collections.emptyMap());
+          featureFlags,
+          Collections.emptyMap(),
+          Collections.emptyMap());
 
       final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
           airbyteApiClient.getSourceApi(),

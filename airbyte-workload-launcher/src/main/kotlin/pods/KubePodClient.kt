@@ -2,6 +2,8 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workload.launcher.model.setDestinationLabels
+import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
 import io.fabric8.kubernetes.api.model.Pod
 import jakarta.inject.Singleton
@@ -14,21 +16,30 @@ import java.lang.RuntimeException
 @Singleton
 class KubePodClient(
   private val orchestratorLauncher: OrchestratorPodLauncher,
+  private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
 ) {
   object Constants {
     const val WORKLOAD_ID = "workload_id"
+    const val MUTEX_KEY = "mutex_key"
   }
 
   fun podsExistForWorkload(workloadId: String): Boolean {
-    return orchestratorLauncher.podsExistForLabels(mapOf(Pair(WORKLOAD_ID, workloadId)))
+    return orchestratorLauncher.podsExist(mapOf(Pair(WORKLOAD_ID, workloadId)))
   }
 
   fun launchReplication(
     input: ReplicationInput,
     workloadId: String,
   ) {
-    val kubeInput = mapper.toKubeInput(input, workloadId)
+    val passThroughLabels = labeler.getSharedLabels(input, workloadId)
+
+    val inputWithLabels =
+      input
+        .setSourceLabels(passThroughLabels)
+        .setDestinationLabels(passThroughLabels)
+
+    val kubeInput = mapper.toKubeInput(inputWithLabels, workloadId)
 
     val pod: Pod
     try {
@@ -86,5 +97,17 @@ class KubePodClient(
         e,
       )
     }
+  }
+
+  fun deleteMutexPods(input: ReplicationInput) {
+    val labels = labeler.getMutexLabels(input)
+
+    orchestratorLauncher.deletePods(labels)
+  }
+
+  fun deleteWorkload(workloadId: String) {
+    val labels = labeler.getWorkloadLabels(workloadId)
+
+    orchestratorLauncher.deletePods(labels)
   }
 }

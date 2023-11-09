@@ -15,6 +15,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
+import io.fabric8.kubernetes.api.model.StatusDetails
 import io.fabric8.kubernetes.api.model.Volume
 import io.fabric8.kubernetes.api.model.VolumeBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
@@ -275,7 +276,7 @@ class OrchestratorPodLauncher(
     }
   }
 
-  fun podsExistForLabels(labels: Map<String, String>): Boolean {
+  fun podsExist(labels: Map<String, String>): Boolean {
     try {
       return kubernetesClient.pods()
         .inNamespace(namespace)
@@ -296,6 +297,13 @@ class OrchestratorPodLauncher(
       logger.warn(e) { "Could not find pods running for $labels, presuming no pods are running" }
       return false
     }
+  }
+
+  fun deletePods(labels: Map<String, String>): List<StatusDetails> {
+    return kubernetesClient.pods()
+      .inNamespace(namespace)
+      .withLabels(labels)
+      .delete()
   }
 
   // TODO: We need to make sure the wait times are the same for the orchestrator wait code

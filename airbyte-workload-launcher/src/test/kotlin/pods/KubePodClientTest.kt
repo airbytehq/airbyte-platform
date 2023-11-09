@@ -1,9 +1,13 @@
 package io.airbyte.workload.launcher.pods
 
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.process.KubePodInfo
+import io.airbyte.workload.launcher.model.setDestinationLabels
+import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.kubeInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.fabric8.kubernetes.api.model.Pod
 import io.mockk.every
@@ -22,23 +26,33 @@ class KubePodClientTest {
   private lateinit var launcher: OrchestratorPodLauncher
 
   @MockK
-  private lateinit var mapper: PayloadKubeInputMapper
+  private lateinit var labeler: PodLabeler
 
   @MockK
-  private lateinit var input: ReplicationInput
+  private lateinit var mapper: PayloadKubeInputMapper
 
   @MockK
   private lateinit var pod: Pod
 
   private lateinit var client: KubePodClient
 
+  private lateinit var input: ReplicationInput
+
   @BeforeEach
   fun setup() {
     client =
       KubePodClient(
         launcher,
+        labeler,
         mapper,
       )
+
+    input =
+      ReplicationInput()
+        .withSourceLauncherConfig(IntegrationLauncherConfig())
+        .withDestinationLauncherConfig(IntegrationLauncherConfig())
+
+    every { labeler.getSharedLabels(any(), any()) } returns mapOf()
 
     every { mapper.toKubeInput(input, workloadId) } returns kubeInput
 
@@ -67,6 +81,18 @@ class KubePodClientTest {
     verify { launcher.waitForPodsWithLabels(kubeInput.sourceLabels) }
 
     verify { launcher.waitForPodsWithLabels(kubeInput.destinationLabels) }
+  }
+
+  @Test
+  fun `launchReplication sets pass-through labels for propagation to source and destination`() {
+    every { labeler.getSharedLabels(any(), any()) } returns sharedLabels
+    every { mapper.toKubeInput(input, workloadId) } returns kubeInput
+
+    client.launchReplication(input, workloadId)
+
+    val inputWithLabels = input.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
+
+    verify { mapper.toKubeInput(inputWithLabels, workloadId) }
   }
 
   @Test
@@ -126,5 +152,6 @@ class KubePodClientTest {
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
       )
     val workloadId = "workload-id"
+    val sharedLabels = mapOf("arbitrary" to "label", "literally" to "anything")
   }
 }

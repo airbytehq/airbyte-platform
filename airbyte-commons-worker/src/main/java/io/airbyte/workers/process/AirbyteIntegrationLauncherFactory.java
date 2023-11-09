@@ -80,8 +80,8 @@ public class AirbyteIntegrationLauncherFactory {
         // jobs into isolated pool to run.
         launcherConfig.getIsCustomConnector(),
         featureFlags,
-        Optional.ofNullable(launcherConfig.getAdditionalEnvironmentVariables())
-            .orElse(Collections.emptyMap()));
+        launcherConfig.getAdditionalEnvironmentVariables() == null ? Collections.emptyMap() : launcherConfig.getAdditionalEnvironmentVariables(),
+        launcherConfig.getAdditionalLabels() == null ? Collections.emptyMap() : launcherConfig.getAdditionalLabels());
   }
 
   /**

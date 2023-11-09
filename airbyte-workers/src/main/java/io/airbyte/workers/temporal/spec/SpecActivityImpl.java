@@ -143,6 +143,7 @@ public class SpecActivityImpl implements SpecActivity {
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
           featureFlags,
+          Collections.emptyMap(),
           Collections.emptyMap());
 
       return new DefaultGetSpecWorker(integrationLauncher, streamFactory);

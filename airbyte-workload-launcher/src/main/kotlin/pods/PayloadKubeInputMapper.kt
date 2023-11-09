@@ -6,11 +6,6 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.Metadata.ATTEMPT_LABEL_KEY
-import io.airbyte.workers.process.Metadata.JOB_LABEL_KEY
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
@@ -20,7 +15,6 @@ import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
 import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -32,6 +26,7 @@ import jakarta.inject.Singleton
 @Singleton
 class PayloadKubeInputMapper(
   private val serializer: ObjectSerializer,
+  private val labeler: PodLabeler,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val kubeContainerInfo: KubeContainerInfo,
   @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
@@ -59,31 +54,10 @@ class PayloadKubeInputMapper(
 
     val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
 
-    val orchestratorLabels =
-      mapOf(
-        WORKLOAD_ID to workloadId,
-      )
-
-    // TODO: We should not be checking job/attempt ids and instead be passing the workload ID through
-    val sourceLabels =
-      mapOf(
-        SYNC_STEP_KEY to READ_STEP,
-        JOB_LABEL_KEY to jobId,
-        ATTEMPT_LABEL_KEY to attemptId.toString(),
-      )
-
-    // TODO: We should not be checking job/attempt ids and instead be passing the workload ID through
-    val destinationLabels =
-      mapOf(
-        SYNC_STEP_KEY to WRITE_STEP,
-        JOB_LABEL_KEY to jobId,
-        ATTEMPT_LABEL_KEY to attemptId.toString(),
-      )
-
     return OrchestratorKubeInput(
-      orchestratorLabels,
-      sourceLabels,
-      destinationLabels,
+      labeler.getOrchestratorLabels(input, workloadId),
+      labeler.getSourceLabels(input, workloadId),
+      labeler.getDestinationLabels(input, workloadId),
       nodeSelectors,
       orchestratorPodInfo,
       fileMap,

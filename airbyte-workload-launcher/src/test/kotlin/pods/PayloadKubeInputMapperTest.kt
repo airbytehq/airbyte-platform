@@ -7,11 +7,6 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
-import io.airbyte.workers.process.Metadata.ATTEMPT_LABEL_KEY
-import io.airbyte.workers.process.Metadata.JOB_LABEL_KEY
-import io.airbyte.workers.process.Metadata.READ_STEP
-import io.airbyte.workers.process.Metadata.SYNC_STEP_KEY
-import io.airbyte.workers.process.Metadata.WRITE_STEP
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
@@ -20,7 +15,6 @@ import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
 import io.airbyte.workload.launcher.model.getOrchestratorResourceReqs
 import io.airbyte.workload.launcher.model.usesCustomConnector
-import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
 import io.airbyte.workload.launcher.serde.ObjectSerializer
 import io.mockk.every
 import io.mockk.mockk
@@ -33,6 +27,7 @@ class PayloadKubeInputMapperTest {
   @ValueSource(booleans = [true, false])
   fun `builds a kube input from a replication input`(customConnector: Boolean) {
     val serializer: ObjectSerializer = mockk()
+    val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
     val envMap: Map<String, String> = mapOf()
@@ -42,6 +37,7 @@ class PayloadKubeInputMapperTest {
     val mapper =
       PayloadKubeInputMapper(
         serializer,
+        labeler,
         namespace,
         containerInfo,
         envMap,
@@ -67,11 +63,18 @@ class PayloadKubeInputMapperTest {
     val mockSerializedOutput = "Serialized Obj."
     every { serializer.serialize<Any>(any()) } returns mockSerializedOutput
 
+    val orchestratorLabels = mapOf("orchestrator" to "labels")
+    val sourceLabels = mapOf("source" to "labels")
+    val destinationLabels = mapOf("dest" to "labels")
+    every { labeler.getOrchestratorLabels(input, workloadId) } returns orchestratorLabels
+    every { labeler.getSourceLabels(input, workloadId) } returns sourceLabels
+    every { labeler.getDestinationLabels(input, workloadId) } returns destinationLabels
+
     val result = mapper.toKubeInput(input, workloadId)
 
-    assert(result.orchestratorLabels == mapOf(WORKLOAD_ID to workloadId))
-    assert(result.sourceLabels == mapOf(SYNC_STEP_KEY to READ_STEP, JOB_LABEL_KEY to jobId, ATTEMPT_LABEL_KEY to attemptId.toString()))
-    assert(result.destinationLabels == mapOf(SYNC_STEP_KEY to WRITE_STEP, JOB_LABEL_KEY to jobId, ATTEMPT_LABEL_KEY to attemptId.toString()))
+    assert(result.orchestratorLabels == orchestratorLabels)
+    assert(result.sourceLabels == sourceLabels)
+    assert(result.destinationLabels == destinationLabels)
     assert(result.nodeSelectors == if (customConnector) customSelectors else selectors)
     assert(result.kubePodInfo == KubePodInfo(namespace, "orchestrator-repl-job-415-attempt-7654", containerInfo))
     assert(

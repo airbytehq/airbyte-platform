@@ -18,3 +18,21 @@ fun ReplicationInput.getOrchestratorResourceReqs(): ResourceRequirements? {
 fun ReplicationInput.usesCustomConnector(): Boolean {
   return this.sourceLauncherConfig.isCustomConnector || this.destinationLauncherConfig.isCustomConnector
 }
+
+fun ReplicationInput.setSourceLabels(labels: Map<String, String>): ReplicationInput {
+  return this.apply {
+    sourceLauncherConfig =
+      sourceLauncherConfig.apply {
+        additionalLabels = labels
+      }
+  }
+}
+
+fun ReplicationInput.setDestinationLabels(labels: Map<String, String>): ReplicationInput {
+  return this.apply {
+    destinationLauncherConfig =
+      destinationLauncherConfig.apply {
+        additionalLabels = labels
+      }
+  }
+}
