@@ -146,7 +146,7 @@ public class KubePodProcess implements KubePod {
 
   public static final long INIT_CONTAINER_STARTUP_TIMEOUT_MINS = 5;
 
-  public static final long INIT_CONTAINER_TERMINATION_TIMEOUT_MINS = 5;
+  public static final long INIT_CONTAINER_TERMINATION_TIMEOUT_MINS = 2;
 
   public static final long POD_READY_TIMEOUT_MINS = 2;
 
