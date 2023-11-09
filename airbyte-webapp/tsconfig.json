@@ -33,7 +33,7 @@
         "options": {
           "rendererOptions": {
             "sass": {
-              "loadPaths": ["./src"]
+              "loadPaths": ["./src", "."]
             }
           }
         }
