@@ -10,7 +10,7 @@ ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
 COPY requirements.txt requirements.txt
 RUN ${PIP} install -r requirements.txt
 
-ARG VERSION=dev
+ARG VERSION=0.50.34
 
 ENV APPLICATION airbyte-connector-builder-server
 ENV VERSION ${VERSION}
