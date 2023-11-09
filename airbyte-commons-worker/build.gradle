@@ -52,6 +52,7 @@ dependencies {
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-featureflag')
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-metrics:metrics-lib')

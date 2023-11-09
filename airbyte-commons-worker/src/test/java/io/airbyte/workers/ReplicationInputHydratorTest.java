@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.sync;
+package io.airbyte.workers;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,12 +33,10 @@ import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.Configs;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -56,7 +54,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Tests for the replication activity specifically.
  */
-class ReplicationActivityTest {
+class ReplicationInputHydratorTest {
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID SOURCE_ID = UUID.randomUUID();
@@ -137,17 +135,12 @@ class ReplicationActivityTest {
     when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE);
   }
 
-  private ReplicationActivityImpl getDefaultReplicationActivityForTest() {
-    return new ReplicationActivityImpl(
+  private ReplicationInputHydrator getReplicationInputHydrator() {
+    return new ReplicationInputHydrator(
+        airbyteApiClient.getConnectionApi(),
+        airbyteApiClient.getJobsApi(),
+        airbyteApiClient.getStateApi(),
         secretsHydrator,
-        null, // unused
-        Configs.WorkerEnvironment.DOCKER, // unused
-        LogConfigs.EMPTY, // unused,
-        "airbyte-version-unused",
-        null, // unused
-        airbyteApiClient,
-        null, // unused
-        null, // unused,
         featureFlagClient);
   }
 
@@ -177,10 +170,10 @@ class ReplicationActivityTest {
   @Test
   void testGenerateReplicationInputRetrievesInputs() throws Exception {
     // Verify that we get the state and catalog from the API.
-    final ReplicationActivityImpl replicationActivity = getDefaultReplicationActivityForTest();
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
 
     final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
-    final var replicationInput = replicationActivity.getHydratedReplicationInput(replicationActivityInput);
+    final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
     assertEquals(EXPECTED_STATE, replicationInput.getState());
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(TEST_STREAM_NAME, replicationInput.getCatalog().getStreams().get(0).getStream().getName());
@@ -189,7 +182,7 @@ class ReplicationActivityTest {
   @Test
   void testGenerateReplicationInputHandlesResets() throws Exception {
     // Verify that if the sync is a reset, we retrieve the job info and handle the streams accordingly.
-    final ReplicationActivityImpl replicationActivity = getDefaultReplicationActivityForTest();
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
     input.setIsReset(true);
     when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
@@ -198,7 +191,7 @@ class ReplicationActivityTest {
     when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
         .connectionId(CONNECTION_ID)
         .syncCatalog(SYNC_CATALOG));
-    final var replicationInput = replicationActivity.getHydratedReplicationInput(input);
+    final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(io.airbyte.protocol.models.SyncMode.FULL_REFRESH, replicationInput.getCatalog().getStreams().get(0).getSyncMode());
   }
@@ -206,12 +199,11 @@ class ReplicationActivityTest {
   @Test
   void testGenerateReplicationInputHandlesBackfills() throws Exception {
     // Verify that if we have input from the schema refresh activity, that we clear state accordingly to
-    // prepare for
-    // backfills.
-    final ReplicationActivityImpl replicationActivity = getDefaultReplicationActivityForTest();
+    // prepare for backfills.
+    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
     final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
     input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CATALOG_DIFF));
-    final var replicationInput = replicationActivity.getHydratedReplicationInput(input);
+    final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
   }
