@@ -10,7 +10,7 @@ import { FlexItem } from "components/ui/Flex";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceAsync, useListCloudWorkspacesAsync } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { useAuthService } from "core/services/auth";
@@ -39,6 +39,7 @@ import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/componen
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
+  const organization = useCurrentOrganizationInfo();
   const cloudWorkspace = useGetCloudWorkspaceAsync(workspace.workspaceId);
   const { data: workspaces, isLoading } = useListCloudWorkspacesAsync();
 
@@ -75,6 +76,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 testId="creditsButton"
                 withNotification={
                   cloudWorkspace &&
+                  (!organization || !organization.pba) &&
                   (!cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD)
                 }
               />

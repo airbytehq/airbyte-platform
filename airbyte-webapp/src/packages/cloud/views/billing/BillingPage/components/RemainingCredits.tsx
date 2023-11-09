@@ -149,7 +149,7 @@ export const RemainingCredits: React.FC = () => {
                   id="credits.autoRechargeEnabled"
                   values={{
                     contact: (node: React.ReactNode) => (
-                      <Link opensInNewTab to="mailto:natalie@airbyte.io" variant="primary">
+                      <Link opensInNewTab to="mailto:billing@airbyte.io" variant="primary">
                         {node}
                       </Link>
                     ),

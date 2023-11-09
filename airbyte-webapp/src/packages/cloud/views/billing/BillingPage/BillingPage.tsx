@@ -10,12 +10,14 @@ import { PageHeader } from "components/ui/PageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { useCurrentOrganizationInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 
 import styles from "./BillingPage.module.scss";
 import { CreditsUsage } from "./components/CreditsUsage";
 import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
+import { PbaBillingBanner } from "./components/PbaBillingBanner";
 import { RemainingCredits } from "./components/RemainingCredits";
 import FilesIcon from "./filesIcon.svg?react";
 
@@ -34,8 +36,10 @@ const StripePortalLink: React.FC = () => {
     </a>
   );
 };
+
 export const BillingPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CREDITS);
+  const organization = useCurrentOrganizationInfo();
 
   return (
     <MainPageWithScroll
@@ -52,7 +56,11 @@ export const BillingPage: React.FC = () => {
       }
     >
       <FlexContainer direction="column" className={styles.content}>
-        <RemainingCredits />
+        {organization?.pba ? (
+          <PbaBillingBanner organizationName={organization.organizationName} />
+        ) : (
+          <RemainingCredits />
+        )}
         <React.Suspense
           fallback={
             <div className={styles.creditUsageLoading}>
