@@ -202,7 +202,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         variant="white"
         columns={columns}
         data={freeAndPaidUsageByConnection}
-        initialSortBy={[{ id: "totalUsage", desc: false }]}
+        initialSortBy={[{ id: "totalUsage", desc: true }]}
       />
     </div>
   );
