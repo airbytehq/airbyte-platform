@@ -192,6 +192,7 @@ micronaut-kotlin-extensions = { module = "io.micronaut.kotlin:micronaut-kotlin-e
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
+micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "2.6.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "5.3.2" }
@@ -215,7 +216,7 @@ micronaut-annotation = ["jakarta-inject", "micronaut-inject-java", "micronaut-op
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation", "micronaut-openapi"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
-micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
+micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog", "micronaut-micrometer-registry-statsd"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]

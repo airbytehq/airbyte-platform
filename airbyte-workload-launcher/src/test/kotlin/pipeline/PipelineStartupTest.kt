@@ -16,6 +16,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.temporal.worker.WorkerFactory
 import org.junit.jupiter.api.Test
+import pipeline.SharedMocks.Companion.metricPublisher
 
 class PipelineStartupTest {
   @Test
@@ -56,6 +57,7 @@ class PipelineStartupTest {
           launchPipeline,
           workerFactory,
           dataplaneId,
+          metricPublisher,
         ),
       )
 

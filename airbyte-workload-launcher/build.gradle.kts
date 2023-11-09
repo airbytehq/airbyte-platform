@@ -28,6 +28,7 @@ dependencies {
     implementation(libs.reactor.core)
     implementation(libs.reactor.kotlin.extensions)
     implementation(libs.slf4j.api)
+    implementation(libs.bundles.micronaut.metrics)
     implementation(platform(libs.micronaut.bom))
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))

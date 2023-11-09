@@ -6,7 +6,7 @@ package io.airbyte.metrics.lib;
 
 /**
  * Interface representing metrics collected an Airbyte Application. This interface is present as
- * Java doesn't support enum inheritance as of Java 17.
+ * Java doesn't support enum inheritance as of Java 17. Not a registry, rather metric metadata/info
  */
 public interface MetricsRegistry {
 

@@ -13,6 +13,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import pipeline.SharedMocks.Companion.metricPublisher
 import javax.ws.rs.ClientErrorException
 
 class CheckStatusStageTest {
@@ -33,7 +34,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForWorkload(workloadId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
+    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
@@ -54,7 +55,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForWorkload(workloadId)
     } returns false
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
+    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
@@ -81,7 +82,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForWorkload(workloadId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient)
+    val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
 

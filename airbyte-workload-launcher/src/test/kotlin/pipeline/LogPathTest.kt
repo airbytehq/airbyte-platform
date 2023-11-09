@@ -14,6 +14,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
+import pipeline.SharedMocks.Companion.metricPublisher
 import reactor.kotlin.core.publisher.toMono
 import java.io.File
 
@@ -23,6 +24,7 @@ class LogPathTest {
   @Test
   fun `should write stage and success logs to file`() {
     val workloadId = "1"
+    val dataplaneId = "dataplane_id"
 
     val logFile: File = File.createTempFile("log-path-1", ".txt")
     val launcherInputMessage: LauncherInput =
@@ -36,7 +38,7 @@ class LogPathTest {
     val statusUpdater: StatusUpdater = mockk()
 
     val launchPipeline: LaunchPipeline =
-      LaunchPipeline(claim, check, build, launch, statusUpdater)
+      LaunchPipeline(dataplaneId, claim, check, build, launch, statusUpdater, metricPublisher)
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, false)
@@ -45,6 +47,7 @@ class LogPathTest {
   @Test
   fun `should write stage and failure logs to file`() {
     val workloadId = "1"
+    val dataplaneId = "dataplane_id"
 
     val logFile: File = File.createTempFile("log-path-1", ".txt")
     val launcherInputMessage: LauncherInput =
@@ -64,7 +67,7 @@ class LogPathTest {
         }
       }
     val launchPipeline: LaunchPipeline =
-      LaunchPipeline(claim, check, build, launch, statusUpdater)
+      LaunchPipeline(dataplaneId, claim, check, build, launch, statusUpdater, metricPublisher)
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, true)

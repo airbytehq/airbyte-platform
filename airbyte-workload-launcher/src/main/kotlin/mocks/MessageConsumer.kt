@@ -52,4 +52,8 @@ class MessageConsumer(private val deserializer: PayloadDeserializer) {
 
     return Jsons.serialize(parsed)
   }
+
+  fun size(): Long {
+    return inputs.size.toLong()
+  }
 }

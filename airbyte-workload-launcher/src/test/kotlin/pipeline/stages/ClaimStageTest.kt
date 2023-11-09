@@ -14,6 +14,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import pipeline.SharedMocks.Companion.metricPublisher
 import javax.ws.rs.ClientErrorException
 
 class ClaimStageTest {
@@ -35,7 +36,7 @@ class ClaimStageTest {
       )
     } returns ClaimResponse(true)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
@@ -62,7 +63,7 @@ class ClaimStageTest {
       )
     } returns ClaimResponse(false)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
@@ -89,7 +90,7 @@ class ClaimStageTest {
       )
     } throws ClientErrorException(400)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
     val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
 
     assertThrows<ClientErrorException> { claimStage.applyStage(originalInput) }

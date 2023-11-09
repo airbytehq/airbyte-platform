@@ -25,7 +25,8 @@ public enum MetricEmittingApps implements MetricEmittingApp {
   METRICS_REPORTER("metrics-reporter"),
   ORCHESTRATOR("orchestrator"),
   SERVER("server"),
-  WORKER("worker");
+  WORKER("worker"),
+  WORKLOAD_LAUNCHER("workload-launcher");
 
   private final String applicationName;
 
