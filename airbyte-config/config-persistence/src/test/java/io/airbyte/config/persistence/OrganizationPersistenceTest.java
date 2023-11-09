@@ -132,11 +132,24 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void updateOrganization() throws Exception {
-    String updatedName = "new name";
-    Organization organizationUpdate = new Organization().withOrganizationId(MockData.ORGANIZATION_ID_1).withName(updatedName);
-    organizationPersistence.updateOrganization(organizationUpdate);
-    Optional<Organization> result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1);
-    assertEquals(updatedName, result.get().getName());
+    final Organization updatedOrganization = MockData.organizations().get(0);
+
+    updatedOrganization.setName("new name");
+    updatedOrganization.setEmail("newemail@airbyte.io");
+    updatedOrganization.setPba(!updatedOrganization.getPba());
+    updatedOrganization.setOrgLevelBilling(!updatedOrganization.getOrgLevelBilling());
+    updatedOrganization.setUserId(MockData.CREATOR_USER_ID_5);
+
+    organizationPersistence.updateOrganization(updatedOrganization);
+
+    final Organization result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1).orElseThrow();
+
+    assertEquals(updatedOrganization.getOrganizationId(), result.getOrganizationId());
+    assertEquals(updatedOrganization.getName(), result.getName());
+    assertEquals(updatedOrganization.getEmail(), result.getEmail());
+    assertEquals(updatedOrganization.getPba(), result.getPba());
+    assertEquals(updatedOrganization.getOrgLevelBilling(), result.getOrgLevelBilling());
+    assertEquals(updatedOrganization.getUserId(), result.getUserId());
   }
 
   @ParameterizedTest

@@ -110,7 +110,7 @@ public class OrganizationPersistence {
    * @return updated organization
    * @throws IOException - when interaction with DB failed
    */
-  public Organization updateOrganization(Organization organization) throws IOException {
+  public Organization updateOrganization(final Organization organization) throws IOException {
     database.transaction(ctx -> {
       try {
         updateOrganizationInDB(ctx, organization);
@@ -217,7 +217,7 @@ public class OrganizationPersistence {
     return Optional.of(createSsoConfigFromRecord(result.get(0)));
   }
 
-  private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {
+  private void updateOrganizationInDB(final DSLContext ctx, final Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -229,6 +229,10 @@ public class OrganizationPersistence {
     }
     ctx.update(ORGANIZATION)
         .set(ORGANIZATION.NAME, organization.getName())
+        .set(ORGANIZATION.EMAIL, organization.getEmail())
+        .set(ORGANIZATION.USER_ID, organization.getUserId())
+        .set(ORGANIZATION.PBA, organization.getPba())
+        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
         .execute();
