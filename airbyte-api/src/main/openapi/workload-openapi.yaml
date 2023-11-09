@@ -6,42 +6,6 @@ info:
 servers:
 - url: http://localhost:8007/api
 paths:
-  /api/v1/workload:
-    get:
-      tags:
-      - workload
-      summary: Get a workload by id
-      operationId: workloadGet
-      responses:
-        "200":
-          description: Successfully retrieved organizations by given user id.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workload'
-        "404":
-          description: Object with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
-    put:
-      tags:
-      - workload
-      summary: Create a workload
-      operationId: workloadPut
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkloadCreateRequest'
-      responses:
-        "200":
-          description: Created a workload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Workload'
   /api/v1/workload/cancel:
     put:
       tags:
@@ -67,11 +31,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Void'
         "404":
-          description: Object with given id was not found.
+          description: Workload with given id was not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
+                $ref: '#/components/schemas/Void'
         "409":
           description: Workload has already been claimed.
           content:
@@ -97,18 +61,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClaimResponse'
-        "400":
-          description: "Invalid argument, most likely an invalid dataplane id."
+        "404":
+          description: Workload with given id was not found.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Void'
-        "404":
-          description: Object with given id was not found.
+        "410":
+          description: "Workload is in terminal state, it cannot be claimed."
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
+                $ref: '#/components/schemas/Void'
+  /api/v1/workload/create:
+    post:
+      tags:
+      - workload
+      summary: Create a workload
+      operationId: workloadCreate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadCreateRequest'
+      responses:
+        "204":
+          description: Successfully created workload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadListResponse'
+        "304":
+          description: Workload with given workload id already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Void'
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -128,11 +116,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Void'
         "404":
-          description: Object with given id was not found.
+          description: Workload with given id was not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
+                $ref: '#/components/schemas/Void'
         "410":
           description: Workload should stop because it is no longer expected to be
             running.
@@ -152,18 +140,12 @@ paths:
             schema:
               $ref: '#/components/schemas/WorkloadListRequest'
       responses:
-        "204":
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkloadListResponse'
-        "400":
-          description: Invalid argument.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/status:
     put:
       tags:
@@ -183,11 +165,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/Void'
         "404":
-          description: Object with given id was not found.
+          description: Workload with given id was not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotFoundKnownExceptionInfo'
+                $ref: '#/components/schemas/Void'
+  /api/v1/workload/{workloadId}:
+    get:
+      tags:
+      - workload
+      summary: Get a workload by id
+      operationId: workloadGet
+      parameters:
+      - name: workloadId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successfully retrieved workload by given workload id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workload'
+        "404":
+          description: Workload with given id was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Void'
 components:
   schemas:
     ClaimResponse:
@@ -197,32 +204,6 @@ components:
       properties:
         claimed:
           type: boolean
-    NotFoundKnownExceptionInfo:
-      required:
-      - message
-      type: object
-      properties:
-        id:
-          type: string
-          nullable: true
-        message:
-          type: string
-        exception-class-name:
-          type: string
-          nullable: true
-        exception-stack:
-          type: array
-          nullable: true
-          items:
-            type: string
-        root-cause-exception-class-name:
-          type: string
-          nullable: true
-        root-cause-exception-stack:
-          type: array
-          nullable: true
-          items:
-            type: string
     Void:
       type: object
     Workload:
@@ -281,6 +262,11 @@ components:
       properties:
         workload-id:
           type: string
+        labels:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/WorkloadLabel'
         workload-input:
           type: string
     WorkloadHeartbeatRequest:

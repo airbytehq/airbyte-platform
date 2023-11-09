@@ -9,8 +9,8 @@ import jakarta.inject.Singleton
  * Should be merged with the controller when ready.
  */
 @Singleton
-class WorkloadService(private val messageProducer: TemporalMessageProducer<LauncherInputMessage>) {
-  fun create(
+open class WorkloadService(private val messageProducer: TemporalMessageProducer<LauncherInputMessage>) {
+  open fun create(
     workloadId: String,
     workloadInput: String,
   ) {

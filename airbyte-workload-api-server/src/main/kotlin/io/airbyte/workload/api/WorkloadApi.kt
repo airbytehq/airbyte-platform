@@ -1,7 +1,6 @@
 package io.airbyte.workload.api
 
 import io.airbyte.workload.api.domain.ClaimResponse
-import io.airbyte.workload.api.domain.NotFoundKnownExceptionInfo
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -10,7 +9,10 @@ import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
+import io.airbyte.workload.handler.WorkloadHandler
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Status
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.swagger.v3.oas.annotations.Operation
@@ -24,13 +26,51 @@ import javax.ws.rs.GET
 import javax.ws.rs.POST
 import javax.ws.rs.PUT
 import javax.ws.rs.Path
+import javax.ws.rs.PathParam
 import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-open class WorkloadApi(private val workloadService: WorkloadService) {
+open class WorkloadApi(
+  private val workloadHandler: WorkloadHandler,
+  private val workloadService: WorkloadService,
+) {
+  @POST
+  @Path("/create")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Create a workload", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Successfully created workload",
+        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "304",
+        description = "Workload with given workload id already exists.",
+        content = [Content(schema = Schema(implementation = Void::class))],
+      ),
+    ],
+  )
+  open fun workloadCreate(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
+    ) workloadCreateRequest: WorkloadCreateRequest,
+  ) {
+    workloadHandler.createWorkload(
+      workloadCreateRequest.workloadId,
+      workloadCreateRequest.labels,
+    )
+
+    workloadService.create(workloadCreateRequest.workloadId, workloadCreateRequest.workloadInput)
+  }
+
   @PUT
   @Path("/cancel")
+  @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
   @Operation(summary = "Cancel the execution of a workload", tags = ["workload"])
@@ -48,8 +88,8 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       ),
       ApiResponse(
         responseCode = "404",
-        description = "Object with given id was not found.",
-        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "409",
@@ -81,14 +121,14 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
         content = [Content(schema = Schema(implementation = ClaimResponse::class))],
       ),
       ApiResponse(
-        responseCode = "400",
-        description = "Invalid argument, most likely an invalid dataplane id.",
+        responseCode = "404",
+        description = "Workload with given id was not found.",
         content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
-        responseCode = "404",
-        description = "Object with given id was not found.",
-        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
+        responseCode = "410",
+        description = "Workload is in terminal state, it cannot be claimed.",
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -97,56 +137,37 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
     ) workloadClaimRequest: WorkloadClaimRequest,
   ): ClaimResponse {
-    TODO()
+    val claimed = workloadHandler.claimWorkload(workloadClaimRequest.workloadId, workloadClaimRequest.dataplaneId)
+    return ClaimResponse(claimed)
   }
 
   @GET
+  @Path("/{workloadId}")
   @Produces("application/json")
   @Operation(summary = "Get a workload by id", tags = ["workload"])
   @ApiResponses(
     value = [
       ApiResponse(
         responseCode = "200",
-        description = "Successfully retrieved organizations by given user id.",
+        description = "Successfully retrieved workload by given workload id.",
         content = [Content(schema = Schema(implementation = Workload::class))],
       ),
       ApiResponse(
         responseCode = "404",
-        description = "Object with given id was not found.",
-        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
   open fun workloadGet(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = String::class))],
-    ) workloadId: String,
+    @PathParam("workloadId") workloadId: String,
   ): Workload {
-    TODO()
-  }
-
-  @PUT
-  @Produces("application/json")
-  @Operation(summary = "Create a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Created a workload",
-        content = [Content(schema = Schema(implementation = Workload::class))],
-      ),
-    ],
-  )
-  open fun workloadPut(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
-    ) request: WorkloadCreateRequest,
-  ) {
-    workloadService.create(request.workloadId, request.workloadInput)
+    return workloadHandler.getWorkload(workloadId)
   }
 
   @PUT
   @Path("/heartbeat")
+  @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
   @Operation(summary = "Heartbeat from a workload", tags = ["workload"])
@@ -161,8 +182,8 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       ),
       ApiResponse(
         responseCode = "404",
-        description = "Object with given id was not found.",
-        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "410",
@@ -176,7 +197,7 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
-    TODO()
+    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId)
   }
 
   @POST
@@ -187,14 +208,9 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
   @ApiResponses(
     value = [
       ApiResponse(
-        responseCode = "204",
+        responseCode = "200",
         description = "Success",
         content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "400",
-        description = "Invalid argument.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -203,11 +219,18 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
-    TODO()
+    return WorkloadListResponse(
+      workloadHandler.getWorkloads(
+        workloadListRequest.dataplane,
+        workloadListRequest.status,
+        workloadListRequest.updatedBefore,
+      ),
+    )
   }
 
   @PUT
   @Path("/status")
+  @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
   @Operation(summary = "Update the status of a workload", tags = ["workload"])
@@ -220,8 +243,8 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       ),
       ApiResponse(
         responseCode = "404",
-        description = "Object with given id was not found.",
-        content = [Content(schema = Schema(implementation = NotFoundKnownExceptionInfo::class))],
+        description = "Workload with given id was not found.",
+        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -230,6 +253,6 @@ open class WorkloadApi(private val workloadService: WorkloadService) {
       content = [Content(schema = Schema(implementation = WorkloadStatusUpdateRequest::class))],
     ) workloadStatusUpdateRequest: WorkloadStatusUpdateRequest,
   ) {
-    TODO()
+    workloadHandler.updateWorkload(workloadStatusUpdateRequest.workloadId, workloadStatusUpdateRequest.status)
   }
 }

@@ -13,7 +13,10 @@ import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
@@ -93,148 +96,208 @@ internal class WorkloadRepositoryTest {
   }
 
   @Test
-  fun testInsert() {
+  fun `test db insertion`() {
     val label1 =
       WorkloadLabel(
-        null,
-        "key1",
-        "value1",
-        null,
+        id = null,
+        key = "key1",
+        value = "value1",
+        workload = null,
       )
     val label2 =
       WorkloadLabel(
-        null,
-        "key2",
-        "value2",
-        null,
+        id = null,
+        key = "key2",
+        value = "value2",
+        workload = null,
       )
     val objects = ArrayList<WorkloadLabel>()
     objects.add(label1)
     objects.add(label2)
     val workload =
       Workload(
-        workloadId,
-        null,
-        WorkloadStatus.pending,
-        null,
-        null,
-        null,
+        id = workloadId,
+        dataplaneId = null,
+        status = WorkloadStatus.pending,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
         objects,
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(workloadId)
-    Assertions.assertTrue(persistedWorkload.isPresent)
-    Assertions.assertNull(persistedWorkload.get().dataplaneId)
-    Assertions.assertEquals(WorkloadStatus.pending, persistedWorkload.get().status)
-    Assertions.assertNotNull(persistedWorkload.get().createdAt)
-    Assertions.assertNotNull(persistedWorkload.get().updatedAt)
-    Assertions.assertNull(persistedWorkload.get().lastHeartbeatAt)
-    Assertions.assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
+    assertTrue(persistedWorkload.isPresent)
+    assertNull(persistedWorkload.get().dataplaneId)
+    assertEquals(WorkloadStatus.pending, persistedWorkload.get().status)
+    assertNotNull(persistedWorkload.get().createdAt)
+    assertNotNull(persistedWorkload.get().updatedAt)
+    assertNull(persistedWorkload.get().lastHeartbeatAt)
+    assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
+
     val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
     workloadLabels.sortWith(Comparator.comparing(WorkloadLabel::key))
-    Assertions.assertEquals("key1", workloadLabels[0].key)
-    Assertions.assertEquals("value1", workloadLabels[0].value)
-    Assertions.assertNotNull(workloadLabels[0].id)
-    Assertions.assertEquals("key2", workloadLabels[1].key)
-    Assertions.assertEquals("value2", workloadLabels[1].value)
-    Assertions.assertNotNull(workloadLabels[1].id)
+    assertEquals("key1", workloadLabels[0].key)
+    assertEquals("value1", workloadLabels[0].value)
+    assertNotNull(workloadLabels[0].id)
+    assertEquals("key2", workloadLabels[1].key)
+    assertEquals("value2", workloadLabels[1].value)
+    assertNotNull(workloadLabels[1].id)
   }
 
   @Test
-  fun testHeartbeatUpdate() {
+  fun `test status update`() {
     val workload =
       Workload(
-        workloadId,
-        null,
-        WorkloadStatus.pending,
-        null,
-        null,
-        null,
-        null,
+        id = workloadId,
+        dataplaneId = null,
+        status = WorkloadStatus.pending,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
+        workloadLabels = null,
+      )
+    workloadRepo.save(workload)
+    workloadRepo.update(workloadId, WorkloadStatus.running)
+    var persistedWorkload = workloadRepo.findById(workloadId)
+    assertTrue(persistedWorkload.isPresent)
+    assertEquals(WorkloadStatus.running, persistedWorkload.get().status)
+
+    workloadRepo.update(workloadId, WorkloadStatus.failure)
+    persistedWorkload = workloadRepo.findById(workloadId)
+    assertTrue(persistedWorkload.isPresent)
+    assertEquals(WorkloadStatus.failure, persistedWorkload.get().status)
+  }
+
+  @Test
+  fun `test heartbeat update`() {
+    val workload =
+      Workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = WorkloadStatus.pending,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
+        workloadLabels = null,
       )
     workloadRepo.save(workload)
     val now = OffsetDateTime.now()
     workloadRepo.update(workloadId, WorkloadStatus.running, now)
     var persistedWorkload = workloadRepo.findById(workloadId)
-    Assertions.assertTrue(persistedWorkload.isPresent)
+    assertTrue(persistedWorkload.isPresent)
     // Using .toEpochSecond() here because of dagger, it is passing locally but there is nano second errors on dagger
-    Assertions.assertEquals(now.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
-    Assertions.assertEquals(WorkloadStatus.running, persistedWorkload.get().status)
+    assertEquals(now.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
+    assertEquals(WorkloadStatus.running, persistedWorkload.get().status)
+
     val nowPlusOneMinute = now.plus(1, ChronoUnit.MINUTES)
     workloadRepo.update(workloadId, WorkloadStatus.running, nowPlusOneMinute)
     persistedWorkload = workloadRepo.findById(workloadId)
-    Assertions.assertTrue(persistedWorkload.isPresent)
-    Assertions.assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
+    assertTrue(persistedWorkload.isPresent)
+    assertEquals(nowPlusOneMinute.toEpochSecond(), persistedWorkload.get().lastHeartbeatAt?.toEpochSecond())
   }
 
   @Test
-  fun testSearch() {
+  fun `test dataplane update`() {
+    val workload =
+      Workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = WorkloadStatus.pending,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
+        workloadLabels = null,
+      )
+    workloadRepo.save(workload)
+    workloadRepo.update(workloadId, "dataplaneId1", WorkloadStatus.running)
+    var persistedWorkload = workloadRepo.findById(workloadId)
+    assertTrue(persistedWorkload.isPresent)
+    assertEquals("dataplaneId1", persistedWorkload.get().dataplaneId)
+
+    workloadRepo.update(workloadId, "dataplaneId2", WorkloadStatus.running)
+    persistedWorkload = workloadRepo.findById(workloadId)
+    assertTrue(persistedWorkload.isPresent)
+    assertEquals("dataplaneId2", persistedWorkload.get().dataplaneId)
+  }
+
+  @Test
+  fun `test search`() {
     val workload1 =
       Workload(
-        "workload1",
-        "dataplane1",
-        WorkloadStatus.failure,
-        null,
-        null,
-        null,
-        null,
+        id = "workload1",
+        dataplaneId = "dataplane1",
+        status = WorkloadStatus.failure,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
+        workloadLabels = null,
       )
     val workload2 =
       Workload(
-        "workload2",
-        "dataplane2",
-        WorkloadStatus.success,
-        null,
-        null,
-        null,
-        null,
+        id = "workload2",
+        dataplaneId = "dataplane2",
+        status = WorkloadStatus.success,
+        createdAt = null,
+        updatedAt = null,
+        lastHeartbeatAt = null,
+        workloadLabels = null,
       )
     workloadRepo.save(workload1)
     workloadRepo.save(workload2)
     val now = OffsetDateTime.now()
     val resulSearch1 = sortedSearch(null, null, now.plusDays(1))
-    Assertions.assertEquals(2, resulSearch1.size)
-    Assertions.assertEquals("workload1", resulSearch1[0].id)
-    Assertions.assertEquals("workload2", resulSearch1[1].id)
+    assertEquals(2, resulSearch1.size)
+    assertEquals("workload1", resulSearch1[0].id)
+    assertEquals("workload2", resulSearch1[1].id)
+
     val resultSearch2 = sortedSearch(null, java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success), null)
-    Assertions.assertEquals(2, resultSearch2.size)
-    Assertions.assertEquals("workload1", resultSearch2[0].id)
-    Assertions.assertEquals("workload2", resultSearch2[1].id)
+    assertEquals(2, resultSearch2.size)
+    assertEquals("workload1", resultSearch2[0].id)
+    assertEquals("workload2", resultSearch2[1].id)
+
     val resultSearch3 = sortedSearch(listOf("dataplane1", "dataplane2"), null, null)
-    Assertions.assertEquals(2, resultSearch3.size)
-    Assertions.assertEquals("workload1", resultSearch3[0].id)
-    Assertions.assertEquals("workload2", resultSearch3[1].id)
+    assertEquals(2, resultSearch3.size)
+    assertEquals("workload1", resultSearch3[0].id)
+    assertEquals("workload2", resultSearch3[1].id)
+
     val resultSearch4 =
       sortedSearch(
         listOf("dataplane1", "dataplane2"),
         java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success),
         now.plusDays(1),
       )
-    Assertions.assertEquals(2, resultSearch4.size)
-    Assertions.assertEquals("workload1", resultSearch4[0].id)
-    Assertions.assertEquals("workload2", resultSearch4[1].id)
+    assertEquals(2, resultSearch4.size)
+    assertEquals("workload1", resultSearch4[0].id)
+    assertEquals("workload2", resultSearch4[1].id)
+
     val resultSearch5 = sortedSearch(null, java.util.List.of(WorkloadStatus.failure), now.plusDays(1))
-    Assertions.assertEquals(1, resultSearch5.size)
-    Assertions.assertEquals("workload1", resultSearch5[0].id)
+    assertEquals(1, resultSearch5.size)
+    assertEquals("workload1", resultSearch5[0].id)
+
     val resultSearch6 = sortedSearch(listOf("dataplane1"), null, now.plusDays(1))
-    Assertions.assertEquals(1, resultSearch6.size)
-    Assertions.assertEquals("workload1", resultSearch6[0].id)
+    assertEquals(1, resultSearch6.size)
+    assertEquals("workload1", resultSearch6[0].id)
+
     val resultSearch7 = sortedSearch(listOf("dataplane1", "dataplane2"), java.util.List.of(WorkloadStatus.failure), null)
-    Assertions.assertEquals(1, resultSearch7.size)
-    Assertions.assertEquals("workload1", resultSearch7[0].id)
+    assertEquals(1, resultSearch7.size)
+    assertEquals("workload1", resultSearch7[0].id)
+
     val resultSearch8 = sortedSearch(listOf("dataplane1"), java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success), now.plusDays(1))
-    Assertions.assertEquals(1, resultSearch8.size)
-    Assertions.assertEquals("workload1", resultSearch8[0].id)
+    assertEquals(1, resultSearch8.size)
+    assertEquals("workload1", resultSearch8[0].id)
+
     val resultSearch9 =
       sortedSearch(
         listOf("dataplane1", "dataplane2"),
         java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success),
         now.minusDays(1),
       )
-    Assertions.assertEquals(0, resultSearch9.size)
+    assertEquals(0, resultSearch9.size)
+
     val resultSearch10 = sortedSearch(listOf("dataplane1", "dataplane2"), java.util.List.of(WorkloadStatus.claimed), now.plusDays(1))
-    Assertions.assertEquals(0, resultSearch10.size)
+    assertEquals(0, resultSearch10.size)
+
     val resultSearch11 = sortedSearch(listOf("fakeDataplane"), java.util.List.of(WorkloadStatus.failure, WorkloadStatus.success), now.plusDays(1))
-    Assertions.assertEquals(0, resultSearch11.size)
+    assertEquals(0, resultSearch11.size)
   }
 }

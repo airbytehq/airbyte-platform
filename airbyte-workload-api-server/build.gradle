@@ -24,14 +24,15 @@ dependencies {
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
     implementation libs.bundles.micronaut.data.jdbc
+    implementation libs.jakarta.transaction.api
     implementation libs.bundles.temporal
-    implementation libs.kotlin.logging
     implementation libs.log4j.impl
     implementation libs.micronaut.jaxrs.server
     implementation libs.micronaut.security
-    implementation libs.reactor.core
     implementation libs.v3.swagger.annotations
     implementation libs.javax.ws.rs.api
+    implementation libs.reactor.core
+    implementation libs.kotlin.logging
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-temporal-core"))

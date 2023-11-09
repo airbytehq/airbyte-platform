@@ -1,3 +1,7 @@
+micronaut:
+  security:
+    enabled: false
+
 airbyte:
   flyway:
     workload:
