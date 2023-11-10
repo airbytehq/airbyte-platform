@@ -17,6 +17,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
@@ -29,6 +30,7 @@ import io.airbyte.api.model.generated.UserStatus;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
+import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
@@ -221,9 +223,13 @@ class UserHandlerTest {
       private static final String NEW_AUTH_USER_ID = "new_auth_user_id";
       private static final UUID NEW_USER_ID = UUID.randomUUID();
       private static final String NEW_EMAIL = "new@gmail.com";
+      private static final String EXISTING_AUTH_USER_ID = "existing_auth_user_id";
+      private static final UUID EXISTING_USER_ID = UUID.randomUUID();
+      private static final String EXISTING_EMAIL = "existing@gmail.com";
       private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
       private User newUser;
+      private User existingUser;
       private WorkspaceRead defaultWorkspace;
 
       // this class provides the arguments for the parameterized test below, by returning all
@@ -237,12 +243,17 @@ class UserHandlerTest {
           List<String> initialUserEmails = Arrays.asList(null, "", "other@gmail.com", NEW_EMAIL);
           List<Boolean> initialUserConfigPresent = Arrays.asList(true, false);
           List<Boolean> isFirstOrgUser = Arrays.asList(true, false);
+          List<Boolean> isDefaultWorkspaceForOrgPresent = Arrays.asList(true, false);
 
-          // return all permutations of auth provider, sso realm, and initial user email that we want to test
+          // return all permutations of the above input lists so that we can test all combinations.
           return authProviders.stream()
-              .flatMap(authProvider -> ssoRealms.stream().flatMap(ssoRealm -> initialUserEmails.stream().flatMap(email -> initialUserConfigPresent
-                  .stream().flatMap(initialUserPresent -> isFirstOrgUser.stream()
-                      .flatMap(firstOrgUser -> Stream.of(Arguments.of(authProvider, ssoRealm, email, initialUserPresent, firstOrgUser)))))));
+              .flatMap(
+                  authProvider -> ssoRealms.stream()
+                      .flatMap(
+                          ssoRealm -> initialUserEmails.stream()
+                              .flatMap(email -> initialUserConfigPresent.stream().flatMap(initialUserPresent -> isFirstOrgUser.stream()
+                                  .flatMap(firstOrgUser -> isDefaultWorkspaceForOrgPresent.stream().flatMap(orgWorkspacePresent -> Stream
+                                      .of(Arguments.of(authProvider, ssoRealm, email, initialUserPresent, firstOrgUser, orgWorkspacePresent))))))));
         }
 
       }
@@ -250,6 +261,7 @@ class UserHandlerTest {
       @BeforeEach
       void setUp() throws IOException, JsonValidationException, ConfigNotFoundException {
         newUser = new User().withUserId(NEW_USER_ID).withEmail(NEW_EMAIL).withAuthUserId(NEW_AUTH_USER_ID);
+        existingUser = new User().withUserId(EXISTING_USER_ID).withEmail(EXISTING_EMAIL).withAuthUserId(EXISTING_AUTH_USER_ID.toString());
         defaultWorkspace = new WorkspaceRead().workspaceId(WORKSPACE_ID);
         when(userPersistence.getUserByAuthId(anyString())).thenReturn(Optional.empty());
         when(jwtUserAuthenticationResolver.resolveUser(NEW_AUTH_USER_ID)).thenReturn(newUser);
@@ -264,7 +276,8 @@ class UserHandlerTest {
                                final String ssoRealm,
                                final String initialUserEmail,
                                final boolean initialUserPresent,
-                               final boolean isFirstOrgUser)
+                               final boolean isFirstOrgUser,
+                               final boolean isDefaultWorkspaceForOrgPresent)
           throws Exception {
 
         newUser.setAuthProvider(authProvider);
@@ -288,8 +301,21 @@ class UserHandlerTest {
         if (isFirstOrgUser) {
           when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId())).thenReturn(List.of());
         } else {
+          // add a pre-existing admin user for the org if this isn't the first user
+          final var existingUserPermission = new UserPermission()
+              .withUser(existingUser)
+              .withPermission(new Permission().withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
           when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
-              .thenReturn(List.of(mock(UserPermission.class)));
+              .thenReturn(List.of(existingUserPermission));
+        }
+
+        if (isDefaultWorkspaceForOrgPresent) {
+          when(workspacesHandler.listWorkspacesInOrganization(
+              new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId()))).thenReturn(
+                  new WorkspaceReadList().workspaces(List.of(defaultWorkspace)));
+        } else {
+          when(workspacesHandler.listWorkspacesInOrganization(any())).thenReturn(new WorkspaceReadList().workspaces(List.of()));
         }
 
         final io.airbyte.api.model.generated.AuthProvider apiAuthProvider =
@@ -307,7 +333,7 @@ class UserHandlerTest {
         verifyUserRead(userRead, apiAuthProvider);
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent);
         verifyOrganizationPermissionCreation(ssoRealm, isFirstOrgUser);
-        verifyDefaultWorkspaceCreation(ssoRealm, isFirstOrgUser, userPersistenceInOrder);
+        verifyDefaultWorkspaceCreation(ssoRealm, isDefaultWorkspaceForOrgPresent, userPersistenceInOrder);
       }
 
       @Test
@@ -325,8 +351,9 @@ class UserHandlerTest {
             && user.getAuthProvider().equals(expectedAuthProvider)));
       }
 
-      private void verifyDefaultWorkspaceCreation(final String ssoRealm, final Boolean isFirstOrgUser, final InOrder inOrder)
+      private void verifyDefaultWorkspaceCreation(final String ssoRealm, final Boolean isDefaultWorkspaceForOrgPresent, final InOrder inOrder)
           throws IOException, JsonValidationException {
+
         boolean workspaceCreated = false;
 
         if (ssoRealm == null) {
@@ -337,15 +364,15 @@ class UserHandlerTest {
           workspaceCreated = true;
 
         } else {
-          if (isFirstOrgUser) {
-            // create a default workspace for the first user in an SSO org
+          if (!isDefaultWorkspaceForOrgPresent) {
+            // create a default workspace for the org if one doesn't yet exist
             verify(workspacesHandler).createDefaultWorkspaceForUser(
                 argThat(user -> user.getUserId().equals(NEW_USER_ID)),
                 argThat(org -> org.orElseThrow().getOrganizationId().equals(ORGANIZATION.getOrganizationId())));
             workspaceCreated = true;
 
           } else {
-            // never create a default workspace for additional users added to the SSO org after the first.
+            // never create an additional workspace for the org if one already exists.
             verify(workspacesHandler, never()).createDefaultWorkspaceForUser(any(), any());
           }
         }

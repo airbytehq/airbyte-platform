@@ -24,6 +24,8 @@ airbyte:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
+  auth:
+    default-realm: ${DEFAULT_REALM:airbyte}
   protocol:
     target:
       range:

@@ -10,6 +10,7 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Geography;
+import io.airbyte.config.SsoConfig;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -52,9 +53,11 @@ public class Bootloader {
   private final DatabaseInitializer jobsDatabaseInitializer;
   private final DatabaseMigrator jobsDatabaseMigrator;
   private final JobPersistence jobPersistence;
+  private final OrganizationPersistence organizationPersistence;
   private final PostLoadExecutor postLoadExecution;
   private final ProtocolVersionChecker protocolVersionChecker;
   private final boolean runMigrationOnStartup;
+  private final String defaultRealm;
 
   public Bootloader(
                     @Value("${airbyte.bootloader.auto-upgrade-connectors}") final boolean autoUpgradeConnectors,
@@ -66,8 +69,10 @@ public class Bootloader {
                     @Named("jobsDatabaseInitializer") final DatabaseInitializer jobsDatabaseInitializer,
                     @Named("jobsDatabaseMigrator") final DatabaseMigrator jobsDatabaseMigrator,
                     final JobPersistence jobPersistence,
+                    final OrganizationPersistence organizationPersistence,
                     final ProtocolVersionChecker protocolVersionChecker,
                     @Value("${airbyte.bootloader.run-migration-on-startup}") final boolean runMigrationOnStartup,
+                    @Value("${airbyte.auth.default-realm}") final String defaultRealm,
                     final PostLoadExecutor postLoadExecution) {
     this.autoUpgradeConnectors = autoUpgradeConnectors;
     this.configRepository = configRepository;
@@ -78,8 +83,10 @@ public class Bootloader {
     this.jobsDatabaseInitializer = jobsDatabaseInitializer;
     this.jobsDatabaseMigrator = jobsDatabaseMigrator;
     this.jobPersistence = jobPersistence;
+    this.organizationPersistence = organizationPersistence;
     this.protocolVersionChecker = protocolVersionChecker;
     this.runMigrationOnStartup = runMigrationOnStartup;
+    this.defaultRealm = defaultRealm;
     this.postLoadExecution = postLoadExecution;
   }
 
@@ -115,6 +122,9 @@ public class Bootloader {
 
     log.info("Creating deployment (if none exists)...");
     createDeploymentIfNoneExists(jobPersistence);
+
+    log.info("assign default organization to sso realm config...");
+    assignDefaultOrgToSsoRealmConfig(organizationPersistence);
 
     final String airbyteVersion = currentAirbyteVersion.serialize();
     log.info("Setting Airbyte version to '{}'...", airbyteVersion);
@@ -174,6 +184,16 @@ public class Bootloader {
       jobPersistence.setDeployment(deploymentId);
       log.info("Created deployment: {}", deploymentId);
     }
+  }
+
+  private void assignDefaultOrgToSsoRealmConfig(final OrganizationPersistence organizationPersistence) throws IOException {
+    if (organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).isPresent()) {
+      log.info("SsoConfig already exists for the default organization.");
+      return;
+    }
+    organizationPersistence.createSsoConfig(new SsoConfig().withSsoConfigId(UUID.randomUUID())
+        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withKeycloakRealm(defaultRealm));
   }
 
   private void createWorkspaceIfNoneExists(final ConfigRepository configRepository) throws JsonValidationException, IOException {

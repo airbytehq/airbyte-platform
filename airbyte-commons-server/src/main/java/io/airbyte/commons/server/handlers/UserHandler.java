@@ -4,8 +4,11 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthProvider;
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
@@ -21,6 +24,7 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoRead;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
+import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
@@ -369,22 +373,39 @@ public class UserHandler {
 
   private void handleSsoUser(final UserRead user, final Organization organization)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final boolean isFirstOrgUser = permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId()).isEmpty();
-    if (isFirstOrgUser) {
-      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.of(organization));
-      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+    // look for any existing user permissions for this organization. exclude the default user that comes
+    // with the Airbyte installation, since we want the first real SSO user to be the org admin.
+    final List<UserPermission> orgPermissionsExcludingDefaultUser =
+        permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId())
+            .stream()
+            .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
+            .toList();
+
+    // If this is the first real user in the org, create a default workspace for them and make them an
+    // org admin.
+    if (orgPermissionsExcludingDefaultUser.isEmpty()) {
       createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_ADMIN);
     } else {
       createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
     }
+
+    // If this organization doesn't have a workspace yet, create one, and set it as the default
+    // workspace for this user.
+    final WorkspaceReadList orgWorkspaces = workspacesHandler.listWorkspacesInOrganization(
+        new ListWorkspacesInOrganizationRequestBody().organizationId(organization.getOrganizationId()));
+
+    if (orgWorkspaces.getWorkspaces().isEmpty()) {
+      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.of(organization));
+      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+    }
   }
 
   private void handleNonSsoUser(final UserRead user) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.empty());
+    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.empty());
     createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
   }
 
-  private WorkspaceRead createDefaultWorkspaceforUser(final UserRead createdUser, final Optional<Organization> organization)
+  private WorkspaceRead createDefaultWorkspaceForUser(final UserRead createdUser, final Optional<Organization> organization)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
     final WorkspaceRead defaultWorkspace = workspacesHandler.createDefaultWorkspaceForUser(createdUser, organization);

@@ -24,6 +24,7 @@ import io.airbyte.config.init.PostLoadExecutor;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
@@ -77,6 +78,7 @@ class BootloaderTest {
   private DataSource configsDataSource;
   private DataSource jobsDataSource;
   private FeatureFlagClient featureFlagClient;
+  private static final String DEFAULT_REALM = "airbyte";
   private static final String DOCKER = "docker";
   private static final String PROTOCOL_VERSION_123 = "1.2.3";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
@@ -157,6 +159,7 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
@@ -174,8 +177,8 @@ class BootloaderTest {
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
-            runMigrationOnStartup, postLoadExecutor);
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+            runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
 
     val jobsMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
@@ -189,6 +192,9 @@ class BootloaderTest {
     assertEquals(new Version(PROTOCOL_VERSION_124), jobsPersistence.getAirbyteProtocolVersionMax().get());
 
     assertNotEquals(Optional.empty(), jobsPersistence.getDeployment());
+
+    assertEquals(DEFAULT_REALM,
+        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().getKeycloakRealm());
   }
 
   @SuppressWarnings("VariableDeclarationUsageDistance")
@@ -229,6 +235,7 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val breakingChangeNotificationHelper = new BreakingChangeNotificationHelper(configRepository, featureFlagClient);
     val actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(configRepository, new NoOpDefinitionVersionOverrideProvider(), featureFlagClient);
@@ -241,13 +248,12 @@ class BootloaderTest {
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
-    val postLoadExecutor =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
+    val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater);
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
-            runMigrationOnStartup, postLoadExecutor);
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+            runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
 
     // starting from no previous version is always legal.
     assertEquals(bootloader.getRequiredVersionUpgrade(null, new AirbyteVersion("0.17.1-alpha")), Optional.empty());
@@ -334,6 +340,7 @@ class BootloaderTest {
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
+    val organizationPersistence = new OrganizationPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val postLoadExecutor = new PostLoadExecutor() {
 
@@ -345,10 +352,12 @@ class BootloaderTest {
     };
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
-            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, protocolVersionChecker,
-            runMigrationOnStartup, postLoadExecutor);
+            mockedFeatureFlags, jobsDatabaseInitializer, jobsDatabaseMigrator, jobsPersistence, organizationPersistence, protocolVersionChecker,
+            runMigrationOnStartup, DEFAULT_REALM, postLoadExecutor);
     bootloader.load();
     assertTrue(testTriggered.get());
+    assertEquals(DEFAULT_REALM,
+        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().getKeycloakRealm());
   }
 
   private Flyway createConfigsFlyway(final DataSource dataSource) {
