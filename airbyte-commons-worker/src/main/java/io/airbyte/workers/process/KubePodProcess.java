@@ -144,11 +144,13 @@ public class KubePodProcess implements KubePod {
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
-  public static final long INIT_CONTAINER_STARTUP_TIMEOUT_MINS = 5;
+  private static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(5);
 
-  public static final long INIT_CONTAINER_TERMINATION_TIMEOUT_MINS = 2;
+  private static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(2);
 
-  public static final long POD_READY_TIMEOUT_MINS = 2;
+  private static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(2);
+
+  public static final Duration FULL_POD_TIMEOUT = INIT_CONTAINER_STARTUP_TIMEOUT.plus(INIT_CONTAINER_TERMINATION_TIMEOUT).plus(POD_READY_TIMEOUT);
 
   private static final ConnectorApmSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorApmSupportHelper();
   private final KubernetesClient fabricClient;
@@ -320,7 +322,7 @@ public class KubePodProcess implements KubePod {
           // exit, causing the `kubectl cp` command to exit with code 137. This check ensures that an error is
           // not thrown in this case if the init container exits successfully.
           if (SUCCESS_FILE_NAME.equals(file.getKey())
-              && waitForInitPodToTerminate(client, podDefinition, INIT_CONTAINER_TERMINATION_TIMEOUT_MINS, TimeUnit.MINUTES) == 0) {
+              && waitForInitPodToTerminate(client, podDefinition, INIT_CONTAINER_TERMINATION_TIMEOUT.toMinutes(), TimeUnit.MINUTES) == 0) {
             LOGGER.info("Init was successful; ignoring non-zero kubectl cp exit code for success indicator file.");
           } else {
             throw new IOException("kubectl cp failed with exit code " + exitCode);
@@ -356,7 +358,7 @@ public class KubePodProcess implements KubePod {
     LOGGER.info("Waiting for init container to be ready before copying files...");
     client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName())
         .waitUntilCondition(p -> !p.getStatus().getInitContainerStatuses().isEmpty()
-            && p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT_MINS,
+            && p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT.toMinutes(),
             TimeUnit.MINUTES);
     LOGGER.info("Init container ready..");
   }
@@ -640,7 +642,7 @@ public class KubePodProcess implements KubePod {
         final boolean isReady = Objects.nonNull(p) && Readiness.getInstance().isReady(p);
         final boolean isTerminal = Objects.nonNull(p) && KubePodResourceHelper.isTerminal(p);
         return isReady || isTerminal;
-      }, POD_READY_TIMEOUT_MINS, TimeUnit.MINUTES);
+      }, POD_READY_TIMEOUT.toMinutes(), TimeUnit.MINUTES);
       MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS,
           System.currentTimeMillis() - start);
 

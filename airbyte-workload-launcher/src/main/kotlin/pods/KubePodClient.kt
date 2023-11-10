@@ -2,12 +2,14 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.process.KubePodProcess.FULL_POD_TIMEOUT
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
 import io.fabric8.kubernetes.api.model.Pod
 import jakarta.inject.Singleton
 import java.lang.RuntimeException
+import java.time.Duration
 
 /**
  * Interface layer between domain and Kube layers.
@@ -59,7 +61,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.waitForPodsWithLabels(kubeInput.orchestratorLabels)
+      orchestratorLauncher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -79,7 +81,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.waitForPodsWithLabels(kubeInput.sourceLabels)
+      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -89,7 +91,7 @@ class KubePodClient(
     }
 
     try {
-      orchestratorLauncher.waitForPodsWithLabels(kubeInput.destinationLabels)
+      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw KubePodInitException(
@@ -109,5 +111,11 @@ class KubePodClient(
     val labels = labeler.getWorkloadLabels(workloadId)
 
     orchestratorLauncher.deletePods(labels)
+  }
+
+  companion object {
+    private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
+    val CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
+    val ORCHESTRATOR_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(5)
   }
 }

@@ -6,6 +6,8 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
+import io.airbyte.workload.launcher.pods.KubePodClient.Companion.CONNECTOR_STARTUP_TIMEOUT_VALUE
+import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.kubeInput
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
@@ -57,8 +59,9 @@ class KubePodClientTest {
     every { mapper.toKubeInput(input, workloadId) } returns kubeInput
 
     every { launcher.create(any(), any(), any(), any()) } returns pod
-    every { launcher.waitForPodsWithLabels(any()) } returns Unit
+    every { launcher.waitForPodInit(any(), any()) } returns Unit
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), any()) } returns Unit
+    every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
   }
 
   @Test
@@ -74,13 +77,13 @@ class KubePodClientTest {
       )
     }
 
-    verify { launcher.waitForPodsWithLabels(kubeInput.orchestratorLabels) }
+    verify { launcher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) }
 
     verify { launcher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap) }
 
-    verify { launcher.waitForPodsWithLabels(kubeInput.sourceLabels) }
+    verify { launcher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
 
-    verify { launcher.waitForPodsWithLabels(kubeInput.destinationLabels) }
+    verify { launcher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) }
   }
 
   @Test
@@ -106,7 +109,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates orchestrator wait for init error`() {
-    every { launcher.waitForPodsWithLabels(kubeInput.orchestratorLabels) } throws RuntimeException("bang")
+    every { launcher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
       client.launchReplication(input, workloadId)
@@ -124,7 +127,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates source wait for init error`() {
-    every { launcher.waitForPodsWithLabels(kubeInput.sourceLabels) } throws RuntimeException("bang")
+    every { launcher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
       client.launchReplication(input, workloadId)
@@ -133,7 +136,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication propagates destination wait for init error`() {
-    every { launcher.waitForPodsWithLabels(kubeInput.destinationLabels) } throws RuntimeException("bang")
+    every { launcher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
       client.launchReplication(input, workloadId)

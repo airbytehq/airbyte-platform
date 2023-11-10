@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.api.model.VolumeBuilder
 import io.fabric8.kubernetes.api.model.VolumeMount
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.readiness.Readiness
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
@@ -28,9 +29,11 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.nio.file.Path
+import java.time.Duration
+import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import kotlin.jvm.optionals.getOrDefault
+import kotlin.collections.ArrayList
 
 private val logger = KotlinLogging.logger {}
 
@@ -193,7 +196,10 @@ class OrchestratorPodLauncher(
       .serverSideApply()
   }
 
-  fun waitForPodsWithLabels(labels: Map<String, String>) {
+  fun waitForPodInit(
+    labels: Map<String, String>,
+    waitDuration: Duration,
+  ) {
     kubernetesClient.pods()
       .inNamespace(namespace)
       .withLabels(labels)
@@ -204,8 +210,8 @@ class OrchestratorPodLauncher(
               p.status.initContainerStatuses[0].state.waiting == null
           )
         },
-        TIMEOUT_VALUE,
-        TIMEOUT_UNITS,
+        waitDuration.toMinutes(),
+        TimeUnit.MINUTES,
       )
 
     val pods =
@@ -219,18 +225,35 @@ class OrchestratorPodLauncher(
       throw RuntimeException("No pods found for labels: $labels. Nothing to wait for.")
     }
 
-    val allPodsContainersRunning =
-      kubernetesClient.pods()
-        .inNamespace(namespace)
-        .withLabels(labels)
-        .list()
-        .items
-        .stream()
-        .allMatch { it.status.initContainerStatuses.stream().findFirst().map { it.state.running != null }.getOrDefault(false) }
+    val containerState =
+      pods[0]
+        .status
+        .initContainerStatuses[0]
+        .state
 
-    if (!allPodsContainersRunning) {
-      throw RuntimeException("All pods' containers for labels: $labels were not running after: $TIMEOUT_VALUE $TIMEOUT_UNITS")
+    if (containerState.running == null) {
+      throw RuntimeException(
+        "Init container for Pod with labels: $labels was not in a running state after: ${waitDuration.toMinutes()} ${TimeUnit.MINUTES}. " +
+          "Actual container state: $containerState.",
+      )
     }
+  }
+
+  fun waitForPodReadyOrTerminal(
+    labels: Map<String, String>,
+    waitDuration: Duration,
+  ) {
+    kubernetesClient.pods()
+      .inNamespace(namespace)
+      .withLabels(labels)
+      .waitUntilCondition(
+        { p: Pod? ->
+          Objects.nonNull(p) &&
+            (Readiness.getInstance().isReady(p) || KubePodResourceHelper.isTerminal(p))
+        },
+        waitDuration.toMinutes(),
+        TimeUnit.MINUTES,
+      )
   }
 
   fun copyFilesToKubeConfigVolumeMain(
@@ -304,11 +327,5 @@ class OrchestratorPodLauncher(
       .inNamespace(namespace)
       .withLabels(labels)
       .delete()
-  }
-
-  // TODO: We need to make sure the wait times are the same for the orchestrator wait code
-  companion object {
-    const val TIMEOUT_VALUE = 5L
-    val TIMEOUT_UNITS = TimeUnit.MINUTES
   }
 }
