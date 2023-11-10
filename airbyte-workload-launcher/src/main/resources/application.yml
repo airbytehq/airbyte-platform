@@ -13,10 +13,11 @@ micronaut:
       statsd:
         enabled: true
         flavor: datadog
-        # FIND out the right duration?? Is 1 minute fine?
-        step: PT5S
+        step: PT30S
         host: ${DD_AGENT_HOST:airbyte-datadog}
         port: ${DD_DOGSTATSD_PORT:8125}
+      datadog:
+        enabled: false
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -97,11 +98,12 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
-  internal.api:
-    host: ${INTERNAL_API_HOST}
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+  internal:
+    api:
+      host: ${INTERNAL_API_HOST}
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
   data.plane.service-account:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}

@@ -40,7 +40,11 @@ class StartupApplicationEventListener(
   ApplicationEventListener<ServiceReadyEvent> {
   override fun onApplicationEvent(event: ServiceReadyEvent?) {
     // TODO this might slowdown start quite a bit, should be reworked
-    rehydrateAndProcessClaimed()
+    try {
+      rehydrateAndProcessClaimed()
+    } catch (e: Exception) {
+      logger.error(e) { "rehydrateAndProcessClaimed failed" }
+    }
 
     workerFactory.start()
   }

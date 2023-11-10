@@ -5,6 +5,17 @@ micronaut:
     health:
       type: fixed
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
+  metrics:
+    enabled: false
+    export:
+      statsd:
+        enabled: true
+        flavor: datadog
+        step: PT30S
+        host: ${DD_AGENT_HOST:airbyte-datadog}
+        port: ${DD_DOGSTATSD_PORT:8125}
+      datadog:
+        enabled: false
   security:
     authentication-provider-strategy: ALL
     enabled: true

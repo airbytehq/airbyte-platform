@@ -5,7 +5,6 @@ import io.airbyte.commons.temporal.queue.QueueActivity
 import io.airbyte.commons.temporal.queue.QueueActivityImpl
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
-import io.airbyte.workload.api.client2.generated.WorkloadApi
 import io.airbyte.workload.launcher.pipeline.LauncherMessageConsumer
 import io.airbyte.workload.launcher.pipeline.LauncherWorkflowImpl
 import io.micronaut.context.annotation.Factory
@@ -19,11 +18,6 @@ import java.time.Duration
 
 @Factory
 class TemporalBeanFactory {
-  @Singleton
-  fun workloadApi(): WorkloadApi {
-    return WorkloadApi()
-  }
-
   @Singleton
   @Named("queueActivityOptions")
   fun specActivityOptions(

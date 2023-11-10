@@ -5,9 +5,10 @@
 package io.airbyte.workload.launcher.client
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client2.AirbyteApiClient2
+import io.airbyte.workload.api.client2.generated.WorkloadApi
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -20,13 +21,14 @@ import java.time.Duration
 class WorkloadApiClientFactory {
   @Singleton
   fun workloadApiClient(
+    @Named("internalApiScheme") internalApiScheme: String,
     @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.retries.delay-seconds}") retryDelaySeconds: Long,
     @Value("\${airbyte.workload-api.retries.max}") maxRetries: Int,
     authenticationInterceptor: AuthenticationInterceptor,
-  ): AirbyteApiClient2 {
+  ): WorkloadApi {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
     builder.addInterceptor(authenticationInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
@@ -49,6 +51,6 @@ class WorkloadApiClientFactory {
         .withMaxRetries(maxRetries)
         .build()
 
-    return AirbyteApiClient2(workloadApiBasePath, retryPolicy, okHttpClient)
+    return WorkloadApi("$internalApiScheme://$workloadApiBasePath", okHttpClient, retryPolicy)
   }
 }

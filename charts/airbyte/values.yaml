@@ -1896,7 +1896,7 @@ workload-api:
   nodeSelector: {}
   env_vars: {}
   service:
-    port: 80
+    port: 8007
 
   ## Configure the ingress resource that allows you to access the Airbyte Workload API.
   ## ref: http://kubernetes.io/docs/user-guide/ingress/

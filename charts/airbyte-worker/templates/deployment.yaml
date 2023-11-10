@@ -293,6 +293,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: INTERNAL_API_HOST
+        - name: WORKLOAD_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_HOST
         - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
           valueFrom:
             configMapKeyRef:

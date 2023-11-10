@@ -1811,7 +1811,7 @@ airbyte-workload-api-server:
 
   env_vars: {}
   service:
-    port: 80
+    port: 8007
 
   ## Configure the ingress resource that allows you to access the Airbyte API.
   ## ref: http://kubernetes.io/docs/user-guide/ingress/
