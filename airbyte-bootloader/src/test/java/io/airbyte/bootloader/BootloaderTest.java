@@ -78,7 +78,7 @@ class BootloaderTest {
   private DataSource configsDataSource;
   private DataSource jobsDataSource;
   private FeatureFlagClient featureFlagClient;
-  private static final String DEFAULT_REALM = "airbyte";
+  private static final String DEFAULT_REALM = "default";
   private static final String DOCKER = "docker";
   private static final String PROTOCOL_VERSION_123 = "1.2.3";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
