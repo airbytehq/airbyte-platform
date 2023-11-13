@@ -15,7 +15,7 @@ import {
   WebBackendConnectionReadList,
   WebBackendConnectionRequestBody,
   WebBackendConnectionUpdate,
-} from "@src/core/api/generated/AirbyteClient.schemas";
+} from "@src/core/api/types/AirbyteClient";
 
 import { getWorkspaceId, setWorkspaceId } from "./workspace";
 

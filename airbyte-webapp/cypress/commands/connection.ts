@@ -1,5 +1,10 @@
-import { ConnectionStatus, WebBackendConnectionRead } from "@src/core/api/generated/AirbyteClient.schemas";
-import { DestinationRead, SourceRead, WebBackendConnectionCreate } from "@src/core/api/types/AirbyteClient";
+import {
+  DestinationRead,
+  SourceRead,
+  WebBackendConnectionCreate,
+  ConnectionStatus,
+  WebBackendConnectionRead,
+} from "@src/core/api/types/AirbyteClient";
 
 import {
   enterConnectionName,

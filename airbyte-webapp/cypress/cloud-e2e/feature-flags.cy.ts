@@ -1,4 +1,4 @@
-import { FeatureItem } from "@src/core/services/features";
+import { FeatureItem } from "@src/core/services/features/types";
 
 describe.skip("AllowDBTCloudIntegration", () => {
   beforeEach(() => {
