@@ -46,8 +46,10 @@
     "precloud-test": "echo KNOWN BUG: 'pnpm test' reports failure even on successes because the 'vite preview' server does not shut down gracefully",
     "cloud-test": "START_SERVER_AND_TEST_INSECURE=1 start-server-and-test start:cloud-preview https://localhost:3001 cloud-cypress:run",
     "cloud-test:dev": "START_SERVER_AND_TEST_INSECURE=1 start-server-and-test start:cloud https://localhost:3001 cloud-cypress:open",
+    "precloud-test:stage": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "cloud-test:stage": "cypress run --config-file cypress/cypress.stage-cloud-config.ts",
     "cloud-test:stage:dev": "cypress open --config-file cypress/cypress.stage-cloud-config.ts",
+    "precloud-test:stage:record": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "cloud-test:stage:record": "cypress run --record --key $CYPRESS_KEY --config-file cypress/cypress.stage-cloud-config.ts",
     "cloud-cypress:open": "cypress open --config-file cypress/cypress.cloud-config.ts",
     "cloud-cypress:run": "cypress run --config-file cypress/cypress.cloud-config.ts"
