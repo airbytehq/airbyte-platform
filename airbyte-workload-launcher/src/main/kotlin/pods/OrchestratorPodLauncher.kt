@@ -11,6 +11,7 @@ import io.airbyte.workers.process.KubePodProcess
 import io.airbyte.workers.process.KubePodResourceHelper
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.ContainerPort
+import io.fabric8.kubernetes.api.model.DeletionPropagation
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
@@ -326,6 +327,14 @@ class OrchestratorPodLauncher(
     return kubernetesClient.pods()
       .inNamespace(namespace)
       .withLabels(labels)
-      .delete()
+      .list()
+      .items
+      .flatMap { p ->
+        kubernetesClient.pods()
+          .inNamespace(namespace)
+          .resource(p)
+          .withPropagationPolicy(DeletionPropagation.FOREGROUND)
+          .delete()
+      }
   }
 }

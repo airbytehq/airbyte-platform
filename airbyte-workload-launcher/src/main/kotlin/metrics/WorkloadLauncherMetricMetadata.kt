@@ -40,6 +40,10 @@ enum class WorkloadLauncherMetricMetadata(
     "workload_processed_unsuccessfully",
     "increments when the launcher does not processes a workload successfully",
   ),
+  PODS_DELETED_FOR_MUTEX_KEY(
+    "workload_pods_deleted_for_mutex_key",
+    "existing pods for the provided mutex key were found and deleted",
+  ),
   ;
 
   override fun getApplication(): MetricEmittingApp {

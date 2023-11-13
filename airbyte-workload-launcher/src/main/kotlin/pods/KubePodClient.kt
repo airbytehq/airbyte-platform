@@ -101,16 +101,11 @@ class KubePodClient(
     }
   }
 
-  fun deleteMutexPods(input: ReplicationInput) {
+  fun deleteMutexPods(input: ReplicationInput): Boolean {
     val labels = labeler.getMutexLabels(input)
 
-    orchestratorLauncher.deletePods(labels)
-  }
-
-  fun deleteWorkload(workloadId: String) {
-    val labels = labeler.getWorkloadLabels(workloadId)
-
-    orchestratorLauncher.deletePods(labels)
+    val deleted = orchestratorLauncher.deletePods(labels)
+    return deleted.isNotEmpty()
   }
 
   companion object {

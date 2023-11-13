@@ -8,6 +8,7 @@ import io.airbyte.workload.launcher.client.StatusUpdater
 import io.airbyte.workload.launcher.pipeline.stages.BuildInputStage
 import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
 import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
+import io.airbyte.workload.launcher.pipeline.stages.EnforceMutexStage
 import io.airbyte.workload.launcher.pipeline.stages.LaunchPodStage
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,11 +35,12 @@ class LogPathTest {
     val claim: ClaimStage = claimStage(launchStageIO)
     val check: CheckStatusStage = checkStatusStage(launchStageIO)
     val build: BuildInputStage = buildInputStage(launchStageIO)
+    val mutex: EnforceMutexStage = mutexStage(launchStageIO)
     val launch: LaunchPodStage = launchPodStage(launchStageIO, false)
     val statusUpdater: StatusUpdater = mockk()
 
     val launchPipeline: LaunchPipeline =
-      LaunchPipeline(dataplaneId, claim, check, build, launch, statusUpdater, metricPublisher)
+      LaunchPipeline(dataplaneId, claim, check, build, mutex, launch, statusUpdater, metricPublisher)
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, false)
@@ -57,6 +59,7 @@ class LogPathTest {
     val claim: ClaimStage = claimStage(launchStageIO)
     val check: CheckStatusStage = checkStatusStage(launchStageIO)
     val build: BuildInputStage = buildInputStage(launchStageIO)
+    val mutex: EnforceMutexStage = mutexStage(launchStageIO)
     val launch: LaunchPodStage = launchPodStage(launchStageIO, true)
     val statusUpdater: StatusUpdater =
       mockk {
@@ -67,7 +70,7 @@ class LogPathTest {
         }
       }
     val launchPipeline: LaunchPipeline =
-      LaunchPipeline(dataplaneId, claim, check, build, launch, statusUpdater, metricPublisher)
+      LaunchPipeline(dataplaneId, claim, check, build, mutex, launch, statusUpdater, metricPublisher)
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, true)
@@ -110,6 +113,19 @@ class LogPathTest {
         }
       }
     return claim
+  }
+
+  private fun mutexStage(launchStageIO: LaunchStageIO): EnforceMutexStage {
+    val mutex: EnforceMutexStage =
+      mockk {
+        every {
+          apply(launchStageIO)
+        } answers {
+          LOGGER.info { StageName.MUTEX.name + " for workload " + launchStageIO.msg.workloadId }
+          launchStageIO.toMono()
+        }
+      }
+    return mutex
   }
 
   private fun launchPodStage(

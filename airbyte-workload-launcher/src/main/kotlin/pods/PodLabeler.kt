@@ -61,7 +61,7 @@ class PodLabeler {
   }
 
   // TODO: this should be passed from workload API
-  private fun getMutexKey(input: ReplicationInput): String {
+  fun getMutexKey(input: ReplicationInput): String {
     return input.connectionId.toString()
   }
 }

@@ -14,6 +14,7 @@ import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.stages.BuildInputStage
 import io.airbyte.workload.launcher.pipeline.stages.CheckStatusStage
 import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
+import io.airbyte.workload.launcher.pipeline.stages.EnforceMutexStage
 import io.airbyte.workload.launcher.pipeline.stages.LaunchPodStage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -29,6 +30,7 @@ class LaunchPipeline(
   private val claim: ClaimStage,
   private val check: CheckStatusStage,
   private val build: BuildInputStage,
+  private val mutex: EnforceMutexStage,
   private val launch: LaunchPodStage,
   private val statusUpdater: StatusUpdater,
   private val metricPublisher: CustomMetricPublisher,
@@ -48,6 +50,7 @@ class LaunchPipeline(
         .flatMap(claim)
         .flatMap(check)
         .flatMap(build)
+        .flatMap(mutex)
         .flatMap(launch)
         .onErrorResume(this::handleError)
         // doOnSuccess is always called
