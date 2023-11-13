@@ -1,7 +1,18 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api
 
+import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.queue.TemporalMessageProducer
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.metrics.CustomMetricPublisher
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_PUBLISHER_OPERATION_NAME
+import io.airbyte.workload.metrics.WorkloadApiMetricMetadata
 import jakarta.inject.Singleton
 
 /**
@@ -9,11 +20,20 @@ import jakarta.inject.Singleton
  * Should be merged with the controller when ready.
  */
 @Singleton
-open class WorkloadService(private val messageProducer: TemporalMessageProducer<LauncherInputMessage>) {
-  open fun create(
+open class WorkloadService(
+  private val messageProducer: TemporalMessageProducer<LauncherInputMessage>,
+  private val metricPublisher: CustomMetricPublisher,
+) {
+  @Trace(operationName = WORKLOAD_PUBLISHER_OPERATION_NAME)
+  fun create(
     workloadId: String,
     workloadInput: String,
   ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
     messageProducer.publish("launcher-queue", LauncherInputMessage(workloadId, workloadInput))
+    metricPublisher.count(
+      WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
+      MetricAttribute(WORKLOAD_ID_TAG, workloadId),
+    )
   }
 }

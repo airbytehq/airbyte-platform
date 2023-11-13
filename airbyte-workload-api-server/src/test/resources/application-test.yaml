@@ -1,4 +1,6 @@
 micronaut:
+  metrics:
+    enabled: false
   security:
     enabled: false
 

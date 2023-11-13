@@ -33,6 +33,9 @@ dependencies {
     implementation libs.javax.ws.rs.api
     implementation libs.reactor.core
     implementation libs.kotlin.logging
+    implementation libs.bundles.micronaut.metrics
+    implementation libs.micronaut.micrometer.registry.statsd
+    implementation libs.bundles.datadog
 
     implementation(project(":airbyte-commons"))
     implementation(project(":airbyte-commons-temporal-core"))

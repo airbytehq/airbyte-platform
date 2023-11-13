@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.reactor.kotlin.extensions)
     implementation(libs.slf4j.api)
     implementation(libs.bundles.micronaut.metrics)
+    implementation(libs.micronaut.micrometer.registry.statsd)
     implementation(platform(libs.micronaut.bom))
     implementation(project(":airbyte-api"))
     implementation(project(":airbyte-commons"))

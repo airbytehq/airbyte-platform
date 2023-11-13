@@ -12,6 +12,8 @@ import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.errors.NotModifiedException
 import io.airbyte.workload.handler.ApiWorkload
 import io.airbyte.workload.handler.WorkloadHandler
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
@@ -24,6 +26,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -32,7 +35,12 @@ import org.junit.jupiter.api.assertThrows
 class WorkloadApiTest(
   @Client("/") val client: HttpClient,
 ) {
-  val workloadService = mockk<WorkloadService>()
+  @Singleton
+  fun mockMeterRegistry(): MeterRegistry {
+    return SimpleMeterRegistry()
+  }
+
+  private val workloadService = mockk<WorkloadService>()
 
   @MockBean(WorkloadService::class)
   @Replaces(WorkloadService::class)
@@ -40,7 +48,7 @@ class WorkloadApiTest(
     return workloadService
   }
 
-  val workloadHandler = mockk<WorkloadHandler>()
+  private val workloadHandler = mockk<WorkloadHandler>()
 
   @MockBean(WorkloadHandler::class)
   @Replaces(WorkloadHandler::class)
@@ -48,7 +56,7 @@ class WorkloadApiTest(
     return workloadHandler
   }
 
-  val workloadClientWrapped = mockk<WorkflowClientWrapped>()
+  private val workloadClientWrapped = mockk<WorkflowClientWrapped>()
 
   @MockBean(WorkflowClientWrapped::class)
   @Replaces(WorkflowClientWrapped::class)

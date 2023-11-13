@@ -12,12 +12,10 @@ micronaut:
     export:
       statsd:
         enabled: true
-        flavor: datadog
+        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
         step: PT30S
         host: ${DD_AGENT_HOST:airbyte-datadog}
         port: ${DD_DOGSTATSD_PORT:8125}
-      datadog:
-        enabled: false
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}

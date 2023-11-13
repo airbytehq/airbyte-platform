@@ -1,5 +1,10 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.api
 
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -10,6 +15,8 @@ import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
 import io.airbyte.workload.handler.WorkloadHandler
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
@@ -60,12 +67,13 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
     ) workloadCreateRequest: WorkloadCreateRequest,
   ) {
+    ApmTraceUtils.addTagsToTrace(
+      mutableMapOf(WORKLOAD_ID_TAG to workloadCreateRequest.workloadId) as Map<String, Any>?,
+    )
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
     )
-
-    workloadService.create(workloadCreateRequest.workloadId, workloadCreateRequest.workloadInput)
   }
 
   @PUT
@@ -137,6 +145,12 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
     ) workloadClaimRequest: WorkloadClaimRequest,
   ): ClaimResponse {
+    ApmTraceUtils.addTagsToTrace(
+      mutableMapOf(
+        WORKLOAD_ID_TAG to workloadClaimRequest.workloadId,
+        DATA_PLANE_ID_TAG to workloadClaimRequest.dataplaneId,
+      ) as Map<String, Any>?,
+    )
     val claimed = workloadHandler.claimWorkload(workloadClaimRequest.workloadId, workloadClaimRequest.dataplaneId)
     return ClaimResponse(claimed)
   }
@@ -162,6 +176,7 @@ open class WorkloadApi(
   open fun workloadGet(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
     return workloadHandler.getWorkload(workloadId)
   }
 
@@ -197,6 +212,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
     workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId)
   }
 
@@ -219,6 +235,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(DATA_PLANE_ID_TAG to workloadListRequest.dataplane) as Map<String, Any>?)
     return WorkloadListResponse(
       workloadHandler.getWorkloads(
         workloadListRequest.dataplane,
@@ -253,6 +270,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadStatusUpdateRequest::class))],
     ) workloadStatusUpdateRequest: WorkloadStatusUpdateRequest,
   ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadStatusUpdateRequest.workloadId) as Map<String, Any>?)
     workloadHandler.updateWorkload(workloadStatusUpdateRequest.workloadId, workloadStatusUpdateRequest.status)
   }
 }
