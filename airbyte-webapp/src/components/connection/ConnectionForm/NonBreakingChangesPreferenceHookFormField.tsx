@@ -69,7 +69,7 @@ export const NonBreakingChangesPreferenceHookFormField = () => {
       {showAutoPropagationMessage && (
         <Message
           type="info"
-          text={<FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagtion.message" />}
+          text={<FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.message" />}
         />
       )}
     </HookFormFieldLayout>
