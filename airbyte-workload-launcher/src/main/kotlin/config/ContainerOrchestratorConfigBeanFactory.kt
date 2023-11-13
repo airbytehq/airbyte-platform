@@ -169,8 +169,9 @@ class ContainerOrchestratorConfigBeanFactory {
     envMap[AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = containerOrchestratorApiAuthHeaderName
     envMap[AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = containerOrchestratorApiAuthHeaderValue
     envMap[INTERNAL_API_HOST_ENV_VAR] = containerOrchestratorApiHost
+    envMap[Environment.ENVIRONMENTS_ENV] = WORKER_V2_MICRONAUT_ENV
     if (System.getenv(Environment.ENVIRONMENTS_ENV) != null) {
-      envMap[Environment.ENVIRONMENTS_ENV] = System.getenv(Environment.ENVIRONMENTS_ENV)
+      envMap[Environment.ENVIRONMENTS_ENV] = "${envMap[Environment.ENVIRONMENTS_ENV]},${System.getenv(Environment.ENVIRONMENTS_ENV)}"
     }
     envMap[ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
 
@@ -220,5 +221,7 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
+
+    private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
   }
 }
