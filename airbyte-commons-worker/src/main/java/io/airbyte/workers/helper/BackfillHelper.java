@@ -21,6 +21,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.SyncMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class BackfillHelper {
 
@@ -69,10 +70,17 @@ public class BackfillHelper {
   }
 
   private static boolean shouldBackfillStream(final StreamTransform transform, final ConfiguredAirbyteCatalog catalog) {
+
     final var streamOptional = catalog.getStreams().stream().filter(
-        stream -> stream.getStream().getName().equals(transform.getStreamDescriptor().getName())
-            && stream.getStream().getNamespace().equals(transform.getStreamDescriptor().getNamespace()))
-        .findFirst();
+        stream -> {
+          String streamName = stream.getStream().getName();
+          String streamNamespace = Optional.ofNullable(stream.getStream().getNamespace()).orElse("");
+          String transformNamespace = Optional.ofNullable(transform.getStreamDescriptor().getNamespace()).orElse("");
+
+          return streamName.equals(transform.getStreamDescriptor().getName())
+              && streamNamespace.equals(transformNamespace);
+        }).findFirst();
+
     if (streamOptional.isEmpty()) {
       // This should never happen, and we should eventually throw an error, but for now just return false.
       return false;
