@@ -1,10 +1,9 @@
 import { QueryObserverResult, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { useAuthService, useCurrentUser } from "core/services/auth";
+import { useCurrentUser } from "core/services/auth";
 import { SCOPE_USER } from "services/Scope";
 
-import { useListUsers } from "./users";
 import {
   deleteCloudWorkspace,
   getCloudWorkspace,
@@ -22,6 +21,8 @@ import {
 } from "../../types/CloudApi";
 import { useRequestOptions } from "../../useRequestOptions";
 import { useSuspenseQuery } from "../../useSuspenseQuery";
+import { useListPermissions } from "../permissions";
+import { useCurrentWorkspace } from "../workspaces";
 
 export const workspaceKeys = {
   all: [SCOPE_USER, "cloud_workspaces"] as const,
@@ -188,9 +189,17 @@ export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: Consu
   );
 }
 
+/**
+ * Checks whether a user is in a foreign workspace. A foreign workspace is any workspace the user doesn't
+ * have explicit permissions to via workspace permissions or being part of the organization the workspace is in.
+ */
 export const useIsForeignWorkspace = () => {
-  const { user } = useAuthService();
-  const workspaceUsers = useListUsers();
+  const { userId } = useCurrentUser();
+  const { permissions } = useListPermissions(userId);
+  const { workspaceId, organizationId } = useCurrentWorkspace();
 
-  return !user || !workspaceUsers.users.some((member) => member.userId === user.userId);
+  return !permissions.some(
+    (permission) =>
+      permission.workspaceId === workspaceId || (organizationId && permission.organizationId === organizationId)
+  );
 };

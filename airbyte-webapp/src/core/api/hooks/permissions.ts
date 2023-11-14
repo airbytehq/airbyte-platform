@@ -17,9 +17,17 @@ export const permissionKeys = {
   listByUser: (userId: string) => [...permissionKeys.all, "listByUser", userId] as const,
 };
 
-export const useListPermissions = (userId: string) => {
+export const getListPermissionsQueryKey = (userId: string) => {
+  return permissionKeys.listByUser(userId);
+};
+
+export const useListPermissionsQuery = (userId: string) => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(permissionKeys.listByUser(userId), () => listPermissionsByUser({ userId }, requestOptions));
+  return () => listPermissionsByUser({ userId }, requestOptions);
+};
+
+export const useListPermissions = (userId: string) => {
+  return useSuspenseQuery(getListPermissionsQueryKey(userId), useListPermissionsQuery(userId));
 };
 
 export const useUpdatePermissions = () => {
