@@ -22,16 +22,27 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This migration is being modified after the fact to account for an issue with certain Enterprise
+ * installations that populated their database with a conflicting Keycloak data type of the same
+ * name, `resource_scope`. This data type is not used by Airbyte, and was dropped in migration
+ * V0_50_33_002__DropResourceScopeEnum. Enterprise installations that installed with this
+ * V0_50_24_008 migration present, but without the V0_50_33_002 migration present, will need to
+ * upgrade to the modified versions of these two migrations to proceed.
+ */
 public class V0_50_24_008__CreateSecretPersistenceConfigTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_50_24_008__CreateSecretPersistenceConfigTable.class);
   private static final String SECRET_PERSISTENCE_CONFIG = "secret_persistence_config";
-  private static final String RESOURCE_SCOPE = "resource_scope";
+
+  // the commented code below was present in the original version of this migration.
+  // private static final String RESOURCE_SCOPE = "resource_scope";
 
   private static final Field<UUID> ID_COLUMN = DSL.field("id", SQLDataType.UUID.nullable(false));
 
-  private static final Field<ResourceScope> SCOPE_TYPE_COLUMN = DSL.field("scope_type",
-      SQLDataType.VARCHAR.asEnumDataType(ResourceScope.class).nullable(false).defaultValue(ResourceScope.GLOBAL));
+  // the commented code below was present in the original version of this migration.
+  // private static final Field<ResourceScope> SCOPE_TYPE_COLUMN = DSL.field("scope_type",
+  // SQLDataType.VARCHAR.asEnumDataType(ResourceScope.class).nullable(false).defaultValue(ResourceScope.GLOBAL));
 
   private static final Field<UUID> SCOPE_ID_COLUMN = DSL.field("scope_id", SQLDataType.UUID.nullable(true));
   private static final Field<String> SECRET_PERSISTENCE_CONFIG_COORDINATE_COLUMN = DSL.field("secret_persistence_config_coordinate",
@@ -50,11 +61,13 @@ public class V0_50_24_008__CreateSecretPersistenceConfigTable extends BaseJavaMi
   }
 
   static void addScopeTypeEnum(final DSLContext ctx) {
-    ctx.dropTypeIfExists(RESOURCE_SCOPE).execute();
-    ctx.createType(RESOURCE_SCOPE).asEnum(
-        ResourceScope.WORKSPACE.getLiteral(),
-        ResourceScope.ORGANIZATION.getLiteral(),
-        ResourceScope.GLOBAL.getLiteral()).execute();
+    // the commented code below was present in the original version of this migration.
+
+    // ctx.dropTypeIfExists(RESOURCE_SCOPE).execute();
+    // ctx.createType(RESOURCE_SCOPE).asEnum(
+    // ResourceScope.WORKSPACE.getLiteral(),
+    // ResourceScope.ORGANIZATION.getLiteral(),
+    // ResourceScope.GLOBAL.getLiteral()).execute();
   }
 
   static void createTable(final DSLContext ctx) {
@@ -67,11 +80,13 @@ public class V0_50_24_008__CreateSecretPersistenceConfigTable extends BaseJavaMi
         .columns(
             ID_COLUMN,
             SCOPE_ID_COLUMN,
-            SCOPE_TYPE_COLUMN,
+            // the commented code below was present in the original version of this migration.
+            // SCOPE_TYPE_COLUMN,
             SECRET_PERSISTENCE_CONFIG_COORDINATE_COLUMN,
             createdAt,
             updatedAt)
-        .constraints(unique(SCOPE_ID_COLUMN, SCOPE_TYPE_COLUMN, SECRET_PERSISTENCE_CONFIG_COORDINATE_COLUMN))
+        // the commented code below was present in the original version of this migration.
+        .constraints(unique(SCOPE_ID_COLUMN, /* SCOPE_TYPE_COLUMN , */ SECRET_PERSISTENCE_CONFIG_COORDINATE_COLUMN))
         .primaryKey(ID_COLUMN)
         .execute();
 
