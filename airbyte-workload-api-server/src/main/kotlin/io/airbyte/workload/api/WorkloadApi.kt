@@ -74,6 +74,7 @@ open class WorkloadApi(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
     )
+    workloadService.create(workloadId = workloadCreateRequest.workloadId, workloadInput = workloadCreateRequest.workloadInput)
   }
 
   @PUT

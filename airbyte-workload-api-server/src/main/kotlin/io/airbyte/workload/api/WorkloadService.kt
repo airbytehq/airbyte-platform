@@ -25,7 +25,7 @@ open class WorkloadService(
   private val metricPublisher: CustomMetricPublisher,
 ) {
   @Trace(operationName = WORKLOAD_PUBLISHER_OPERATION_NAME)
-  fun create(
+  open fun create(
     workloadId: String,
     workloadInput: String,
   ) {

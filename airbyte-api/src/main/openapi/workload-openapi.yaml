@@ -213,14 +213,14 @@ components:
       properties:
         id:
           type: string
-        dataplane-id:
+        dataplaneId:
           type: string
           nullable: true
         status:
           nullable: true
           allOf:
           - $ref: '#/components/schemas/WorkloadStatus'
-        last-heartbeat-at:
+        lastHeartbeatAt:
           type: string
           format: date-time
           nullable: true
@@ -246,35 +246,35 @@ components:
           type: string
     WorkloadClaimRequest:
       required:
-      - dataplane-id
-      - workload-id
+      - dataplaneId
+      - workloadId
       type: object
       properties:
-        workload-id:
+        workloadId:
           type: string
-        dataplane-id:
+        dataplaneId:
           type: string
     WorkloadCreateRequest:
       required:
-      - workload-id
-      - workload-input
+      - workloadId
+      - workloadInput
       type: object
       properties:
-        workload-id:
+        workloadId:
           type: string
         labels:
           type: array
           nullable: true
           items:
             $ref: '#/components/schemas/WorkloadLabel'
-        workload-input:
+        workloadInput:
           type: string
     WorkloadHeartbeatRequest:
       required:
-      - workload-id
+      - workloadId
       type: object
       properties:
-        workload-id:
+        workloadId:
           type: string
     WorkloadLabel:
       required:
@@ -299,7 +299,7 @@ components:
           nullable: true
           items:
             $ref: '#/components/schemas/WorkloadStatus'
-        updated-before:
+        updatedBefore:
           type: string
           format: date-time
           nullable: true
@@ -324,10 +324,10 @@ components:
     WorkloadStatusUpdateRequest:
       required:
       - status
-      - workload-id
+      - workloadId
       type: object
       properties:
-        workload-id:
+        workloadId:
           type: string
         status:
           $ref: '#/components/schemas/WorkloadStatus'

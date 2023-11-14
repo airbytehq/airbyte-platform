@@ -4,8 +4,9 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.workload.launcher.client.AuthenticationInterceptor.Companion.BEARER_TOKEN_PREFIX
-import io.airbyte.workload.launcher.client.AuthenticationInterceptor.Companion.USER_AGENT_VALUE
+import io.airbyte.workers.config.AuthenticationInterceptor
+import io.airbyte.workers.config.AuthenticationInterceptor.Companion.BEARER_TOKEN_PREFIX
+import io.airbyte.workers.config.AuthenticationInterceptor.Companion.USER_AGENT_VALUE
 import io.micronaut.http.HttpHeaders
 import io.mockk.every
 import io.mockk.mockk

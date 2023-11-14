@@ -161,3 +161,5 @@ object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-defaul
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
+
+object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)

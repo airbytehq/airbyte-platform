@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.launcher.client
+package io.airbyte.workers.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.workload.api.client2.generated.WorkloadApi

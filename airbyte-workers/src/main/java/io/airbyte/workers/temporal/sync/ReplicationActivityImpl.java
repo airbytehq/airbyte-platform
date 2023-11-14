@@ -32,8 +32,11 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.hydration.SecretsHydrator;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
+import io.airbyte.featureflag.UseWorkloadApi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -47,7 +50,10 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
+import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client2.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -80,6 +86,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final AirbyteApiClient airbyteApiClient;
+  private final WorkloadApi workloadApi;
+  private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
@@ -91,6 +99,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final AirbyteApiClient airbyteApiClient,
+                                 final WorkloadApi workloadApi,
+                                 final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
@@ -106,6 +116,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteVersion = airbyteVersion;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.airbyteApiClient = airbyteApiClient;
+    this.workloadApi = workloadApi;
+    this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
@@ -154,11 +166,18 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         cancellationCallback,
         () -> {
           final ReplicationInput hydratedReplicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
-          final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
-              orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
-                  hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
-                  () -> context);
-          final var worker = workerFactory.get();
+          final Worker<ReplicationInput, ReplicationOutput> worker;
+          if (featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE,
+              new Multi(
+                  List.of(new Workspace(replicationActivityInput.getWorkspaceId()), new Connection(replicationActivityInput.getConnectionId()))))) {
+            worker = new WorkloadApiWorker(workloadApi, workloadIdGenerator, replicationActivityInput);
+          } else {
+            final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
+                orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
+                    hydratedReplicationInput.getDestinationLauncherConfig(), hydratedReplicationInput.getJobRunConfig(), hydratedReplicationInput,
+                    () -> context);
+            worker = workerFactory.get();
+          }
           cancellationCallback.set(worker::cancel);
 
           final TemporalAttemptExecution<ReplicationInput, ReplicationOutput> temporalAttempt =

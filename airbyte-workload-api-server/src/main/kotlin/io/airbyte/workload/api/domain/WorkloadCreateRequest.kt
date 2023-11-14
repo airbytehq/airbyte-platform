@@ -6,5 +6,6 @@ data class WorkloadCreateRequest(
   @Schema(required = true)
   var workloadId: String = "",
   var labels: List<WorkloadLabel>? = null,
+  @Schema(required = true)
   var workloadInput: String = "",
 )
