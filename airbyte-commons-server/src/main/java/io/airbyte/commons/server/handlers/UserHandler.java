@@ -480,26 +480,28 @@ public class UserHandler {
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
-
-    return new WorkspaceUserReadList().users(
-        userPermissions
-            .stream()
-            .map(userPermission -> new WorkspaceUserRead()
-                .userId(userPermission.getUser().getUserId())
-                .email(userPermission.getUser().getEmail())
-                .name(userPermission.getUser().getName())
-                .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
-                .workspaceId(workspaceId)
-                .permissionId(userPermission.getPermission().getPermissionId())
-                .permissionType(
-                    Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
-                        .get()))
-            .collect(Collectors.toList()));
+    // we exclude the default user from this list because we don't want to expose it in the UI
+    return new WorkspaceUserReadList().users(userPermissions
+        .stream()
+        .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
+        .map(userPermission -> new WorkspaceUserRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
+            .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
+            .workspaceId(workspaceId)
+            .permissionId(userPermission.getPermission().getPermissionId())
+            .permissionType(
+                Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
+                    .get()))
+        .collect(Collectors.toList()));
   }
 
   private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
+    // we exclude the default user from this list because we don't want to expose it in the UI
     return new OrganizationUserReadList().users(userPermissions
         .stream()
+        .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
         .map(userPermission -> new OrganizationUserRead()
             .userId(userPermission.getUser().getUserId())
             .email(userPermission.getUser().getEmail())

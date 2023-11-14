@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -142,37 +143,57 @@ class UserHandlerTest {
   @Test
   void testListUsersInOrg() throws Exception {
     final UUID organizationId = UUID.randomUUID();
-    final UUID USER_ID = UUID.randomUUID();
+    final UUID userID = UUID.randomUUID();
 
-    when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(new UserPermission().withUser(
-        new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
-        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.ORGANIZATION_ADMIN))));
+    // expecting the default user to be excluded from the response
+    final UserPermission defaultUserPermission = new UserPermission()
+        .withUser(new User().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
+        .withPermission(new Permission().withPermissionId(UUID.randomUUID()).withPermissionType(PermissionType.ORGANIZATION_ADMIN));
 
-    var expectedListResult =
-        new OrganizationUserReadList()
-            .users(List.of(new OrganizationUserRead().name(USER_NAME).userId(USER_ID).email(USER_EMAIL).organizationId(organizationId)
-                .permissionId(PERMISSION1_ID).permissionType(
-                    io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)));
+    final UserPermission realUserPermission = new UserPermission()
+        .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL))
+        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.ORGANIZATION_ADMIN));
+
+    when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
+
+    // no default user present
+    var expectedListResult = new OrganizationUserReadList().users(List.of(new OrganizationUserRead()
+        .name(USER_NAME)
+        .userId(userID)
+        .email(USER_EMAIL)
+        .organizationId(organizationId)
+        .permissionId(PERMISSION1_ID)
+        .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)));
 
     var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
     assertEquals(expectedListResult, result);
   }
 
   @Test
-  void testListUsersInWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testListUsersInWorkspace() throws IOException {
     final UUID workspaceId = UUID.randomUUID();
-    final UUID USER_ID = UUID.randomUUID();
+    final UUID userID = UUID.randomUUID();
 
-    when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(new UserPermission().withUser(
-        new User().withUserId(USER_ID).withEmail(USER_EMAIL).withName(USER_NAME).withDefaultWorkspaceId(workspaceId))
-        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN))));
+    // expecting the default user to be excluded from the response
+    final UserPermission defaultUserPermission = new UserPermission()
+        .withUser(new User().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
+        .withPermission(new Permission().withPermissionId(UUID.randomUUID()).withPermissionType(PermissionType.WORKSPACE_ADMIN));
 
-    var expectedListResult =
-        new WorkspaceUserReadList().users(List.of(
-            new WorkspaceUserRead().userId(USER_ID).name(USER_NAME).isDefaultWorkspace(true).email(USER_EMAIL).workspaceId(workspaceId)
-                .permissionId(PERMISSION1_ID)
-                .permissionType(
-                    io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
+    final UserPermission realUserPermission = new UserPermission()
+        .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL).withDefaultWorkspaceId(workspaceId))
+        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN));
+
+    when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
+
+    // no default user present
+    var expectedListResult = new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead()
+        .userId(userID)
+        .name(USER_NAME)
+        .isDefaultWorkspace(true)
+        .email(USER_EMAIL)
+        .workspaceId(workspaceId)
+        .permissionId(PERMISSION1_ID)
+        .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
 
     var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
     assertEquals(expectedListResult, result);
