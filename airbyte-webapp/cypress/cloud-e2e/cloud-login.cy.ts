@@ -2,7 +2,7 @@ import { assertOnLoginPage, testRedirectParamParsing } from "@cy/support/login-s
 import { buildRegExp, UUID } from "support/regexp";
 import { testUser } from "support/test-users";
 
-describe.skip("manually logging in and out of airbyte cloud", () => {
+describe("manually logging in and out of airbyte cloud", () => {
   it("can be done by entering credentials, navigating to a workspace's settings page, and clicking the sign out button", () => {
     cy.visit("/");
     // unauthenticated users are redirected to /login

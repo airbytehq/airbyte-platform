@@ -1,4 +1,4 @@
-describe.skip("billing page", () => {
+describe("billing page", () => {
   after(() => {
     cy.logout();
   });
