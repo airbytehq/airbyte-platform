@@ -26,6 +26,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -69,6 +70,8 @@ class WorkloadApiTest(
     every { workloadHandler.createWorkload(any(), any()) } just Runs
     every { workloadService.create(any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any()) }
+    verify(exactly = 1) { workloadService.create(any(), any()) }
   }
 
   @Test
