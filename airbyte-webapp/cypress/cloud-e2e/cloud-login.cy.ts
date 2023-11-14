@@ -9,7 +9,7 @@ describe("manually logging in and out of airbyte cloud", () => {
     assertOnLoginPage();
 
     cy.get("[data-testid='login.email']").type(testUser.email);
-    cy.get("[data-testid='login.password']").type(`${testUser.password}_intentionally_wrong`);
+    cy.get("[data-testid='login.password']").type(testUser.password);
     cy.get("[data-testid='login.submit']").click();
     cy.hasNavigatedTo("/workspaces");
     cy.selectWorkspace();
