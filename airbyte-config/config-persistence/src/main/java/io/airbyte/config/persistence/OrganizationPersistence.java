@@ -217,6 +217,19 @@ public class OrganizationPersistence {
     return Optional.of(createSsoConfigFromRecord(result.get(0)));
   }
 
+  public Optional<SsoConfig> getSsoConfigByRealmName(final String realmName) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(SSO_CONFIG)
+        .where(SSO_CONFIG.KEYCLOAK_REALM.eq(realmName)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createSsoConfigFromRecord(result.get(0)));
+  }
+
   private void updateOrganizationInDB(final DSLContext ctx, final Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 

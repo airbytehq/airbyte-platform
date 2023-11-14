@@ -124,7 +124,7 @@ public class Bootloader {
     createDeploymentIfNoneExists(jobPersistence);
 
     log.info("assign default organization to sso realm config...");
-    assignDefaultOrgToSsoRealmConfig(organizationPersistence);
+    createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence);
 
     final String airbyteVersion = currentAirbyteVersion.serialize();
     log.info("Setting Airbyte version to '{}'...", airbyteVersion);
@@ -186,9 +186,13 @@ public class Bootloader {
     }
   }
 
-  private void assignDefaultOrgToSsoRealmConfig(final OrganizationPersistence organizationPersistence) throws IOException {
+  private void createSsoConfigForDefaultOrgIfNoneExists(final OrganizationPersistence organizationPersistence) throws IOException {
     if (organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).isPresent()) {
       log.info("SsoConfig already exists for the default organization.");
+      return;
+    }
+    if (organizationPersistence.getSsoConfigByRealmName(defaultRealm).isPresent()) {
+      log.info("An SsoConfig with realm {} already exists, so one cannot be created for the default organization.", defaultRealm);
       return;
     }
     organizationPersistence.createSsoConfig(new SsoConfig().withSsoConfigId(UUID.randomUUID())

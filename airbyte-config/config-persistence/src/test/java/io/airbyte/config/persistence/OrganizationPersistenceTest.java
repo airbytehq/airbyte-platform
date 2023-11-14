@@ -131,6 +131,14 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void getSsoConfigByRealmName() throws Exception {
+    final SsoConfig ssoConfig = MockData.ssoConfigs().get(0);
+    final Optional<SsoConfig> result = organizationPersistence.getSsoConfigByRealmName(ssoConfig.getKeycloakRealm());
+    assertTrue(result.isPresent());
+    assertEquals(ssoConfig, result.get());
+  }
+
+  @Test
   void updateOrganization() throws Exception {
     final Organization updatedOrganization = MockData.organizations().get(0);
 
