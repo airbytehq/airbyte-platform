@@ -10,6 +10,8 @@ import io.airbyte.config.EnvConfigs
 import io.airbyte.config.helpers.LogClientSingleton
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.sync.OrchestratorConstants
+import io.airbyte.workload.launcher.config.cloud.CloudLoggingConfig
+import io.airbyte.workload.launcher.config.cloud.CloudStateConfig
 import io.fabric8.kubernetes.api.model.ContainerPort
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -123,7 +125,9 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
-    @Value("\${google.application.credentials}") googleApplicationCredentials: String?,
+    @Value("\${google.application.credentials}") googleApplicationCredentials: String,
+    cloudLoggingConfig: CloudLoggingConfig,
+    cloudStateConfig: CloudStateConfig,
   ): Map<String, String> {
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
@@ -177,10 +181,13 @@ class ContainerOrchestratorConfigBeanFactory {
 
     // Manually add the worker environment
     envMap[WorkerConstants.WORKER_ENVIRONMENT] = Configs.WorkerEnvironment.KUBERNETES.name
+    envMap[LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS] = googleApplicationCredentials
 
-    if (googleApplicationCredentials != null) {
-      envMap[LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS] = googleApplicationCredentials
-    }
+    // Cloud logging configuration
+    envMap.putAll(cloudLoggingConfig.toEnvVarMap())
+
+    // Cloud state configuration
+    envMap.putAll(cloudStateConfig.toEnvVarMap())
 
     // copy over all local values
     val localEnvMap =
@@ -221,7 +228,6 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST"
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
-
     private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
   }
 }
