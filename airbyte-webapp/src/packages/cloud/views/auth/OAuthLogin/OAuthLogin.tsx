@@ -11,7 +11,6 @@ import { Link } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders, AuthOAuthLogin } from "core/services/auth";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 
 import githubLogo from "./assets/github-logo.svg";
@@ -63,8 +62,6 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
   const [searchParams] = useSearchParams();
   const loginRedirect = searchParams.get("loginRedirect");
   const navigate = useNavigate();
-
-  const [showSsoLogin] = useLocalStorage("airbyte_show-sso-login", false);
 
   useUnmount(() => {
     stateSubscription.current?.unsubscribe();
@@ -120,7 +117,7 @@ export const OAuthLogin: React.FC<OAuthLoginProps> = ({ loginWithOAuth }) => {
         <>
           <GoogleButton onClick={() => login("google")} />
           <GitHubButton onClick={() => login("github")} />
-          {showSsoLogin && <SsoButton />}
+          <SsoButton />
         </>
       )}
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
