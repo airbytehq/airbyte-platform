@@ -50,6 +50,8 @@ import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
+import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
+import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -86,9 +88,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final String airbyteVersion;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final AirbyteApiClient airbyteApiClient;
+  private final DocumentStoreClient documentStoreClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
+  private final OrchestratorNameGenerator orchestratorNameGenerator;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
 
@@ -99,9 +103,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  @Value("${airbyte.version}") final String airbyteVersion,
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final AirbyteApiClient airbyteApiClient,
+                                 final DocumentStoreClient documentStoreClient,
                                  final WorkloadApi workloadApi,
                                  final WorkloadIdGenerator workloadIdGenerator,
                                  final OrchestratorHandleFactory orchestratorHandleFactory,
+                                 final OrchestratorNameGenerator orchestratorNameGenerator,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
@@ -116,9 +122,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteVersion = airbyteVersion;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.airbyteApiClient = airbyteApiClient;
+    this.documentStoreClient = documentStoreClient;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
+    this.orchestratorNameGenerator = orchestratorNameGenerator;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
   }
@@ -170,7 +178,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           if (featureFlagClient.boolVariation(UseWorkloadApi.INSTANCE,
               new Multi(
                   List.of(new Workspace(replicationActivityInput.getWorkspaceId()), new Connection(replicationActivityInput.getConnectionId()))))) {
-            worker = new WorkloadApiWorker(workloadApi, workloadIdGenerator, replicationActivityInput);
+            worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, workloadApi, workloadIdGenerator,
+                replicationActivityInput);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),

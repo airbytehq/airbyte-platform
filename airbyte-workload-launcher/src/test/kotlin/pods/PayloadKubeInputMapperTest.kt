@@ -4,6 +4,7 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
@@ -29,6 +30,7 @@ class PayloadKubeInputMapperTest {
     val serializer: ObjectSerializer = mockk()
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
+    val orchestratorNameGenerator = OrchestratorNameGenerator(namespace = namespace)
     val containerInfo = KubeContainerInfo("img-name", "pull-policy")
     val envMap: Map<String, String> = mapOf()
     val selectors = mapOf("test-selector" to "normal")
@@ -38,6 +40,7 @@ class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         serializer,
         labeler,
+        orchestratorNameGenerator,
         namespace,
         containerInfo,
         envMap,

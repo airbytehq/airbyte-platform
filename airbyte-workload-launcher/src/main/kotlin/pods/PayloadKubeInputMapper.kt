@@ -3,13 +3,13 @@ package io.airbyte.workload.launcher.pods
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.orchestrator.OrchestratorNameGenerator
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess.KUBE_POD_INFO
 import io.airbyte.workers.process.KubeContainerInfo
 import io.airbyte.workers.process.KubePodInfo
 import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
 import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.POD_NAME_PREFIX
 import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
 import io.airbyte.workload.launcher.model.getAttemptId
 import io.airbyte.workload.launcher.model.getJobId
@@ -27,6 +27,7 @@ import jakarta.inject.Singleton
 class PayloadKubeInputMapper(
   private val serializer: ObjectSerializer,
   private val labeler: PodLabeler,
+  private val orchestratorNameGenerator: OrchestratorNameGenerator,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("orchestratorKubeContainerInfo") private val kubeContainerInfo: KubeContainerInfo,
   @Named("orchestratorEnvMap") private val envMap: Map<String, String>,
@@ -40,7 +41,7 @@ class PayloadKubeInputMapper(
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
-    val orchestratorPodName = getOrchestratorPodName(jobId, attemptId)
+    val orchestratorPodName = orchestratorNameGenerator.getOrchestratorPodName(jobId, attemptId)
 
     val orchestratorPodInfo =
       KubePodInfo(
@@ -63,13 +64,6 @@ class PayloadKubeInputMapper(
       fileMap,
       orchestratorReqs,
     )
-  }
-
-  private fun getOrchestratorPodName(
-    jobId: String,
-    attemptId: Long,
-  ): String {
-    return "$POD_NAME_PREFIX-job-$jobId-attempt-$attemptId"
   }
 
   private fun getNodeSelectors(input: ReplicationInput): Map<String, String> {

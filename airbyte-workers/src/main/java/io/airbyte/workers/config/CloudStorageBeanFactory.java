@@ -4,15 +4,24 @@
 
 package io.airbyte.workers.config;
 
+import static io.airbyte.workers.config.ContainerOrchestratorConfigBeanFactory.STATE_STORAGE_PREFIX;
+
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.config.storage.CloudStorageConfigs.GcsConfig;
 import io.airbyte.config.storage.CloudStorageConfigs.MinioConfig;
 import io.airbyte.config.storage.CloudStorageConfigs.S3Config;
+import io.airbyte.workers.storage.DockerComposeDocumentStoreClient;
+import io.airbyte.workers.storage.DocumentStoreClient;
+import io.airbyte.workers.storage.StateClients;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * Micronaut bean factory for cloud storage-related singletons.
@@ -93,6 +102,20 @@ public class CloudStorageBeanFactory {
                                                          @Value("${airbyte.cloud.storage.state.s3.secret-access-key}") final String secretAcessKey,
                                                          @Value("${airbyte.cloud.storage.state.s3.region}") final String s3Region) {
     return CloudStorageConfigs.s3(new S3Config(bucketName, awsAccessKey, secretAcessKey, s3Region));
+  }
+
+  @Singleton
+  @Requires(env = Environment.KUBERNETES)
+  public DocumentStoreClient documentStoreClient(@Named("stateStorageConfigs") final Optional<CloudStorageConfigs> cloudStateStorageConfiguration) {
+    return StateClients.create(cloudStateStorageConfiguration.orElse(null), STATE_STORAGE_PREFIX);
+  }
+
+  @Singleton
+  @Requires(notEnv = Environment.KUBERNETES)
+  public DocumentStoreClient documentStoreClient(@Value("${airbyte.workspace.root}") final String workspaceRoot,
+                                                 @Value("${airbyte.workspace.docker-mount}") final String workspaceDockerMount) {
+    return new DockerComposeDocumentStoreClient(
+        StringUtils.isNotEmpty(workspaceDockerMount) ? Path.of(workspaceDockerMount) : Path.of(workspaceRoot));
   }
 
 }
