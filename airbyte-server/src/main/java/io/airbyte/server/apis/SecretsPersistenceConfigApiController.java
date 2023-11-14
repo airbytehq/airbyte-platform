@@ -59,7 +59,6 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
   @Override
   @Post("/create_or_update")
   @Secured({ADMIN})
-  @SecuredWorkspace
   @SuppressWarnings("MissingSwitchDefault")
   public void createOrUpdateSecretsPersistenceConfig(@Body final CreateOrUpdateSecretsPersistenceConfigRequestBody requestBody) {
 

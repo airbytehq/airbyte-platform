@@ -7,6 +7,7 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
@@ -114,7 +115,7 @@ public class PermissionApiController implements PermissionApi {
   }
 
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Post("/list_by_user")
   @Override
   public PermissionReadList listPermissionsByUser(final UserIdRequestBody userIdRequestBody) {

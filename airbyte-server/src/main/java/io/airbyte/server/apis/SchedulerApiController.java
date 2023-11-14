@@ -6,6 +6,8 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.SchedulerApi;
 import io.airbyte.api.model.generated.CheckConnectionRead;
@@ -48,7 +50,7 @@ public class SchedulerApiController implements SchedulerApi {
   }
 
   @Post("/sources/discover_schema")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override

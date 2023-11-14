@@ -9,6 +9,8 @@ package io.airbyte.commons.auth;
  */
 public final class AuthRoleConstants {
 
+  // TODO: replace "ADMIN" with "INSTANCE_ADMIN" and remove "EDITOR", "OWNER", etc
+  // once all @Secured annotations are migrated to the new organizatin/workspace RBAC roles.
   public static final String ADMIN = "ADMIN";
   public static final String AUTHENTICATED_USER = "AUTHENTICATED_USER";
   public static final String EDITOR = "EDITOR";
@@ -24,7 +26,11 @@ public final class AuthRoleConstants {
   public static final String WORKSPACE_ADMIN = "WORKSPACE_ADMIN";
   public static final String WORKSPACE_EDITOR = "WORKSPACE_EDITOR";
   public static final String WORKSPACE_READER = "WORKSPACE_READER";
-  public static final String WORKSPACE_MEMBER = "WORKSPACE_MEMBER";
+
+  // the 'SELF' role is used to secure endpoints that should only be called by the user themselves.
+  // For example, creating an Airbyte User record for a particular authUserId should only be done
+  // by callers that have authenticated as that authUserId.
+  public static final String SELF = "SELF";
 
   private AuthRoleConstants() {}
 

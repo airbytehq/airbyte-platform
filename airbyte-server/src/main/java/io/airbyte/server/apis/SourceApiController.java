@@ -6,7 +6,11 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.SourceApi;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
@@ -52,7 +56,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/apply_schema_changes")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -64,7 +68,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/check_connection")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -73,7 +77,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/check_connection_for_update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -89,7 +93,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/create")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -98,7 +102,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/delete")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -111,7 +115,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/discover_schema")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -120,7 +124,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -129,7 +133,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/most_recent_source_actor_catalog")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -138,7 +142,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/list")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -147,7 +151,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post(uri = "/list_paginated")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -162,7 +166,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -171,7 +175,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/upgrade_version")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
@@ -184,7 +188,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/partial_update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

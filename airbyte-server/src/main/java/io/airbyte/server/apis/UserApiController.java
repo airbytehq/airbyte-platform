@@ -7,6 +7,7 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_MEMBER;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
 import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.UserApi;
@@ -47,7 +48,7 @@ public class UserApiController implements UserApi {
 
   @Post("/create")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Override
   public UserRead createUser(final UserCreate userCreate) {
     return ApiHelper.execute(() -> userHandler.createUser(userCreate));
@@ -55,7 +56,7 @@ public class UserApiController implements UserApi {
 
   @Post("/get")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Override
   public UserRead getUser(final UserIdRequestBody userIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUser(userIdRequestBody));
@@ -63,7 +64,7 @@ public class UserApiController implements UserApi {
 
   @Post("/get_by_auth_id")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Override
   public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody) {
     return ApiHelper.execute(() -> userHandler.getUserByAuthId(userAuthIdRequestBody));
@@ -71,7 +72,7 @@ public class UserApiController implements UserApi {
 
   @Post("/delete")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Override
   public void deleteUser(final UserIdRequestBody userIdRequestBody) {
     ApiHelper.execute(
@@ -83,7 +84,7 @@ public class UserApiController implements UserApi {
 
   @Post("/update")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @Override
   public UserRead updateUser(final UserUpdate userUpdate) {
     return ApiHelper.execute(() -> userHandler.updateUser(userUpdate));
@@ -115,7 +116,7 @@ public class UserApiController implements UserApi {
 
   @Post("/get_or_create_by_auth_id")
   @SecuredUser
-  @Secured({ADMIN})
+  @Secured({ADMIN, SELF})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(@Body final UserAuthIdRequestBody userAuthIdRequestBody) {

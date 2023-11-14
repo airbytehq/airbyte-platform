@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_MEMBER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
 
 import io.airbyte.api.generated.OrganizationApi;
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody;
@@ -68,7 +69,7 @@ public class OrganizationApiController implements OrganizationApi {
 
   @Post("/list_by_user_id")
   @SecuredUser
-  @Secured({READER})
+  @Secured({READER, SELF})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OrganizationReadList listOrganizationsByUser(@Body final ListOrganizationsByUserRequestBody request) {

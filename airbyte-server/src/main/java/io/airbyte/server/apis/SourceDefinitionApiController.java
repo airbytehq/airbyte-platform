@@ -7,7 +7,11 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.SourceDefinitionApi;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
@@ -45,7 +49,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/create_custom")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -79,7 +83,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/get_for_scope")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -88,7 +92,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/get_for_workspace")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -129,7 +133,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   }
 
   @Post("/list_for_workspace")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

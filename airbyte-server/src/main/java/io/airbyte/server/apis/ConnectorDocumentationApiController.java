@@ -4,7 +4,9 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectorDocumentationApi;
 import io.airbyte.api.model.generated.ConnectorDocumentationRead;
@@ -36,7 +38,7 @@ public class ConnectorDocumentationApiController implements ConnectorDocumentati
   @Override
   @Post(uri = "/get")
   @Status(HttpStatus.OK)
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorDocumentationRead getConnectorDocumentation(ConnectorDocumentationRequestBody connectorDocumentationRequestBody) {
