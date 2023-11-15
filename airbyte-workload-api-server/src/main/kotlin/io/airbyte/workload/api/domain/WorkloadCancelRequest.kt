@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 data class WorkloadCancelRequest(
   @Schema(required = true)
-  var workload: MutableList<String> = ArrayList(),
+  var workloadId: String = "",
   @Schema(required = true)
   var reason: String = "",
   @Schema(required = true)

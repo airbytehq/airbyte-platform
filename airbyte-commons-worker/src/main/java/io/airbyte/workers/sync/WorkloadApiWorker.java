@@ -97,7 +97,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   @Override
   public void cancel() {
     try {
-      workloadApi.workloadCancel(new WorkloadCancelRequest(List.of(""), "o//", "wl-api-worker"));
+      // TODO retry with jitter
+      workloadApi.workloadCancel(new WorkloadCancelRequest("", "o//", "wl-api-worker"));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

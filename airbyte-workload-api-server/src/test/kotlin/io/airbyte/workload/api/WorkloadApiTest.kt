@@ -2,6 +2,7 @@ package io.airbyte.workload.api
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.WorkflowClientWrapped
+import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
@@ -12,6 +13,7 @@ import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.errors.NotModifiedException
 import io.airbyte.workload.handler.ApiWorkload
 import io.airbyte.workload.handler.WorkloadHandler
+import io.airbyte.workload.handler.WorkloadHandlerImpl
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.context.annotation.Replaces
@@ -49,7 +51,7 @@ class WorkloadApiTest(
     return workloadService
   }
 
-  private val workloadHandler = mockk<WorkloadHandler>()
+  private val workloadHandler = mockk<WorkloadHandlerImpl>()
 
   @MockBean(WorkloadHandler::class)
   @Replaces(WorkloadHandler::class)
@@ -144,6 +146,24 @@ class WorkloadApiTest(
   fun `test status update workload id not found`() {
     every { workloadHandler.updateWorkload(any(), any()) } throws NotFoundException("test")
     testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/status", Jsons.serialize(WorkloadStatusUpdateRequest())), HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `test cancel success`() {
+    every { workloadHandler.cancelWorkload(any()) } just Runs
+    testEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", Jsons.serialize(WorkloadCancelRequest())), HttpStatus.NO_CONTENT)
+  }
+
+  @Test
+  fun `test cancel workload id not found`() {
+    every { workloadHandler.cancelWorkload(any()) } throws NotFoundException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", Jsons.serialize(WorkloadCancelRequest())), HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `test cancel workload in invalid status`() {
+    every { workloadHandler.cancelWorkload(any()) } throws InvalidStatusTransitionException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", Jsons.serialize(WorkloadCancelRequest())), HttpStatus.GONE)
   }
 
   private fun testEndpointStatus(

@@ -22,11 +22,11 @@ import org.junit.jupiter.params.provider.EnumSource
 import java.time.OffsetDateTime
 import java.util.Optional
 
-class WorkloadHandlerTest {
+class WorkloadHandlerImplTest {
   private val workloadRepository = mockk<WorkloadRepository>()
   private val workloadId = "test"
   private val dataplaneId = "dataplaneId"
-  private val workloadHandler = WorkloadHandler(workloadRepository)
+  private val workloadHandler = WorkloadHandlerImpl(workloadRepository)
 
   @Test
   fun `test get workload`() {
@@ -220,5 +220,70 @@ class WorkloadHandlerTest {
     every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class)) } just Runs
 
     assertTrue(workloadHandler.claimWorkload(workloadId, dataplaneId))
+
+    verify { workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.claimed) }
+  }
+
+  @Test
+  fun `test workload not found when cancelling workload`() {
+    every { workloadRepository.findById(workloadId) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.cancelWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["success", "failure"])
+  fun `test cancel workload in terminal state`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["claimed", "running", "pending"])
+  fun `test successful cancel`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+
+    workloadHandler.cancelWorkload(workloadId)
+    verify { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.cancelled)) }
+  }
+
+  @Test
+  fun `test noop cancel`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.cancelled,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+        ),
+      ),
+    )
+
+    workloadHandler.cancelWorkload(workloadId)
+    verify(exactly = 0) { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.cancelled)) }
   }
 }

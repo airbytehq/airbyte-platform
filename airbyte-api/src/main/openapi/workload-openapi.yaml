@@ -24,20 +24,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Void'
-        "400":
-          description: "Invalid argument, most likely an invalid dataplane id."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "404":
           description: Workload with given id was not found.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Void'
-        "409":
-          description: Workload has already been claimed.
+        "410":
+          description: "Workload is in terminal state, it cannot be cancelled."
           content:
             application/json:
               schema:
@@ -233,13 +227,11 @@ components:
       required:
       - reason
       - source
-      - workload
+      - workloadId
       type: object
       properties:
-        workload:
-          type: array
-          items:
-            type: string
+        workloadId:
+          type: string
         reason:
           type: string
         source:

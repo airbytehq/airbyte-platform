@@ -91,18 +91,13 @@ open class WorkloadApi(
         content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
-        responseCode = "400",
-        description = "Invalid argument, most likely an invalid dataplane id.",
-        content = [Content(schema = Schema(implementation = Void::class))],
-      ),
-      ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
         content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
-        responseCode = "409",
-        description = "Workload has already been claimed.",
+        responseCode = "410",
+        description = "Workload is in terminal state, it cannot be cancelled.",
         content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
@@ -112,7 +107,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
     ) workloadCancelRequest: WorkloadCancelRequest,
   ) {
-    TODO()
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadCancelRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.cancelWorkload(workloadCancelRequest.workloadId)
   }
 
   @PUT
