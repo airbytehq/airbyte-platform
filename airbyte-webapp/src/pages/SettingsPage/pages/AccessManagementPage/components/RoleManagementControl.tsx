@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 import { useDeletePermissions, useUpdatePermissions } from "core/api";
 import { PermissionRead, PermissionType, PermissionUpdate } from "core/request/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
-import { useIntent } from "core/utils/rbac/intent";
+import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RoleManagementControl.module.scss";

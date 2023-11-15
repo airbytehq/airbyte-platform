@@ -17,6 +17,7 @@ export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
   lists: () => [...organizationKeys.all, "list"] as const,
   list: (filters: string[]) => [...organizationKeys.lists(), filters] as const,
+  info: (organizationId = "<none>") => [...organizationKeys.all, "info", organizationId] as const,
   detail: (organizationId = "<none>") => [...organizationKeys.all, "details", organizationId] as const,
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
@@ -29,7 +30,7 @@ export const organizationKeys = {
 export const useCurrentOrganizationInfo = () => {
   const requestOptions = useRequestOptions();
   const workspace = useCurrentWorkspace();
-  return useSuspenseQuery(organizationKeys.detail(workspace.organizationId), () => {
+  return useSuspenseQuery(organizationKeys.info(workspace.organizationId), () => {
     // TODO: Once all workspaces are in an organization this can be removed, but for now
     //       we guard against calling the endpoint if the workspace isn't in an organization
     //       to not cause too many 404 in the getOrganizationInfo endpoint.
