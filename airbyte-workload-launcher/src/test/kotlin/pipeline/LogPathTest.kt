@@ -14,10 +14,11 @@ import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
-import java.io.File
 import org.junit.jupiter.api.Test
 import pipeline.SharedMocks.Companion.metricPublisher
+import pipeline.SharedMocks.Companion.processClaimedScheduler
 import reactor.kotlin.core.publisher.toMono
+import java.io.File
 
 private val LOGGER = KotlinLogging.logger {}
 
@@ -40,7 +41,17 @@ class LogPathTest {
     val statusUpdater: StatusUpdater = mockk()
 
     val launchPipeline =
-      LaunchPipeline(dataplaneId, claim, check, build, mutex, launch, statusUpdater, metricPublisher)
+      LaunchPipeline(
+        dataplaneId,
+        claim,
+        check,
+        build,
+        mutex,
+        launch,
+        statusUpdater,
+        metricPublisher,
+        processClaimedScheduler,
+      )
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, false)
@@ -69,8 +80,18 @@ class LogPathTest {
           LOGGER.info { "Failure for workload " + launchStageIO.msg.workloadId }
         }
       }
-    val launchPipeline: LaunchPipeline =
-      LaunchPipeline(dataplaneId, claim, check, build, mutex, launch, statusUpdater, metricPublisher)
+    val launchPipeline =
+      LaunchPipeline(
+        dataplaneId,
+        claim,
+        check,
+        build,
+        mutex,
+        launch,
+        statusUpdater,
+        metricPublisher,
+        processClaimedScheduler,
+      )
     launchPipeline.accept(launcherInputMessage)
 
     assertLogFileContent(logFile, true)

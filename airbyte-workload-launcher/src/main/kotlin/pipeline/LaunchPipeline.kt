@@ -1,7 +1,6 @@
 package io.airbyte.workload.launcher.pipeline
 
 import datadog.trace.api.Trace
-import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.helpers.LogClientSingleton
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
@@ -17,9 +16,12 @@ import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
 import io.airbyte.workload.launcher.pipeline.stages.EnforceMutexStage
 import io.airbyte.workload.launcher.pipeline.stages.LaunchPodStage
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Scheduler
+import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
 
 private val logger = KotlinLogging.logger {}
@@ -34,17 +36,26 @@ class LaunchPipeline(
   private val launch: LaunchPodStage,
   private val statusUpdater: StatusUpdater,
   private val metricPublisher: CustomMetricPublisher,
+  private val processClaimedScheduler: Scheduler,
 ) {
-  // todo: This is for when we get to back pressure: if we want backpressure on the Mono,
-  //  we will need to create a scheduler that is used by all Monos to ensure that we have
-  //  a max concurrent capacity. See the Schedulers class for details. We can even define
-  //  an executor service via Micronaut configuration and inject that to pass to the
-  //  scheduler (see the fromExecutorService method on Schedulers).
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
+    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+    runPipeline(msg, Schedulers.immediate())
+  }
+
+  @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
+  fun processClaimed(msg: LauncherInput) {
+    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIM_RESUMED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+    runPipeline(msg, processClaimedScheduler)
+  }
+
+  private fun runPipeline(
+    msg: LauncherInput,
+    scheduler: Scheduler,
+  ) {
     addTagsToTrace(msg)
-    setLoggingScopeForWorkload(msg).use {
-      metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+    withLoggingContext(LogClientSingleton.JOB_LOG_PATH_MDC_KEY to msg.logPath) {
       LaunchStageIO(msg)
         .toMono()
         .flatMap(claim)
@@ -53,16 +64,23 @@ class LaunchPipeline(
         .flatMap(mutex)
         .flatMap(launch)
         .onErrorResume(this::handleError)
-        // doOnSuccess is always called
+        // doOnSuccess is always called because we resume errors
         .doOnSuccess { r ->
           if (r == null) {
-            metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_UNSUCCESSFULLY, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+            metricPublisher.count(
+              WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_UNSUCCESSFULLY,
+              MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
+            )
             logger.info { "Completed without launching workload ${msg.workloadId}." }
           } else {
-            metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
+            metricPublisher.count(
+              WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY,
+              MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
+            )
             logger.info { "Success: $r" }
           }
         }
+        .subscribeOn(scheduler)
         .subscribe()
     }
   }
@@ -72,12 +90,6 @@ class LaunchPipeline(
     commonTags[DATA_PLANE_ID_TAG] = dataplaneId
     commonTags[WORKLOAD_ID_TAG] = msg.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags)
-  }
-
-  private fun setLoggingScopeForWorkload(msg: LauncherInput): MdcScope {
-    return MdcScope.Builder()
-      .setExtraMdcEntries(mapOf(LogClientSingleton.JOB_LOG_PATH_MDC_KEY to msg.logPath))
-      .build()
   }
 
   private fun handleError(e: Throwable): Mono<LaunchStageIO> {

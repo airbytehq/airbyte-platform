@@ -68,7 +68,7 @@ class StartupApplicationEventListener(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_ON_RESTART,
         MetricAttribute(WORKLOAD_ID_TAG, it.id),
       )
-      pipe.accept(it.toLauncherInput())
+      pipe.processClaimed(it.toLauncherInput())
     }
   }
 

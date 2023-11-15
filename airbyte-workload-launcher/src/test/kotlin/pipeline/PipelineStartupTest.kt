@@ -32,7 +32,7 @@ class PipelineStartupTest {
     val launchPipeline: LaunchPipeline = mockk()
 
     every {
-      launchPipeline.accept(launcherInput)
+      launchPipeline.processClaimed(launcherInput)
     } returns Unit
 
     val workloadListRequest =
@@ -66,6 +66,6 @@ class PipelineStartupTest {
     startupApplicationEventListener.retrieveAndProcessClaimed()
 
     verify { workloadApiClient.workloadList(workloadListRequest) }
-    verify { launchPipeline.accept(launcherInput) }
+    verify { launchPipeline.processClaimed(launcherInput) }
   }
 }
