@@ -65,6 +65,8 @@ open class WorkloadApi(
       ),
     ],
   )
+  // Since create publishes to a queue, it is prudent to give it its own thread pool.
+  @ExecuteOn("workload")
   open fun workloadCreate(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],

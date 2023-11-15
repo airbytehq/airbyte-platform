@@ -5,6 +5,9 @@ micronaut:
     io:
       type: fixed
       n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
+    workload:
+      type: fixed
+      n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
   metrics:
     enabled: true
     binders:
