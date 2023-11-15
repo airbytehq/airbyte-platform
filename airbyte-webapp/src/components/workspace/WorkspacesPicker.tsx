@@ -8,11 +8,9 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
-import { CloudWorkspaceReadList } from "core/api/types/CloudApi";
-import { WorkspaceReadList } from "core/request/AirbyteClient";
 
 import styles from "./WorkspacesPicker.module.scss";
-import { WorkspacesPickerList } from "./WorkspacesPickerList";
+import { WorkspaceFetcher, WorkspacesPickerList } from "./WorkspacesPickerList";
 
 const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonHTMLAttributes<HTMLButtonElement>>(
   ({ children, ...props }, ref) => {
@@ -26,11 +24,7 @@ const WorkspaceButton = React.forwardRef<HTMLButtonElement | null, React.ButtonH
 
 WorkspaceButton.displayName = "WorkspaceButton";
 
-interface WorkspacePickerProps {
-  workspaces?: WorkspaceReadList | CloudWorkspaceReadList;
-  loading: boolean;
-}
-export const WorkspacesPicker: React.FC<WorkspacePickerProps> = ({ workspaces, loading }) => {
+export const WorkspacesPicker: React.FC<{ useFetchWorkspaces: WorkspaceFetcher }> = ({ useFetchWorkspaces }) => {
   const currentWorkspace = useCurrentWorkspace();
 
   const { x, y, reference, floating, strategy } = useFloating({
@@ -70,7 +64,7 @@ export const WorkspacesPicker: React.FC<WorkspacePickerProps> = ({ workspaces, l
                   {currentWorkspace.name}
                 </Text>
               </Box>
-              <WorkspacesPickerList loading={loading} workspaces={workspaces} closePicker={close} />
+              <WorkspacesPickerList useFetchWorkspaces={useFetchWorkspaces} closePicker={close} />
             </div>
           </Popover.Panel>
         </>

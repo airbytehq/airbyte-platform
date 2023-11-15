@@ -29,16 +29,16 @@ export const CloudWorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
   const [isSearchEmpty, setIsSearchEmpty] = useState(true);
 
   const {
     data: workspacesData,
-    refetch,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
     isFetching,
-  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, searchValue);
+  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
@@ -55,8 +55,8 @@ export const CloudWorkspacesPage: React.FC = () => {
 
   useDebounce(
     () => {
-      refetch();
-      setIsSearchEmpty(searchValue === "");
+      setDebouncedSearchValue(searchValue);
+      setIsSearchEmpty(debouncedSearchValue === "");
     },
     250,
     [searchValue]

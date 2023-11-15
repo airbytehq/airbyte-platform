@@ -27,7 +27,7 @@ import { useCurrentWorkspace } from "../workspaces";
 export const workspaceKeys = {
   all: [SCOPE_USER, "cloud_workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
-  list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
+  list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
   detail: (id: number | string) => [...workspaceKeys.all, "detail", id] as const,
   usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
@@ -77,12 +77,12 @@ export function useCreateCloudWorkspace() {
   );
 }
 
-export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains?: string) => {
+export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains: string) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
 
   return useInfiniteQuery(
-    workspaceKeys.list(`paginated`),
+    workspaceKeys.list({ pageSize: pageSize.toString(), nameContains }),
     async ({ pageParam = 0 }: { pageParam?: number }) => {
       return {
         data: await webBackendListWorkspacesByUserPaginated(
@@ -96,6 +96,7 @@ export const useListCloudWorkspacesInfinite = (pageSize: number, nameContains?: 
       suspense: true,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+      cacheTime: 10000,
     }
   );
 };
