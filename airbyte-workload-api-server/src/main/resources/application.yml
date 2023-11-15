@@ -7,11 +7,19 @@ micronaut:
       n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
   metrics:
     enabled: true
+    binders:
+      netty:
+        bytebuf-allocators:
+          enabled: true
+        channels:
+          enabled: true
+        queues:
+          enabled: true
     export:
       statsd:
         enabled: true
         flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
-        step: PT30S
+        step: PT10S
         host: ${DD_AGENT_HOST:airbyte-datadog}
         port: ${DD_DOGSTATSD_PORT:8125}
   security:
