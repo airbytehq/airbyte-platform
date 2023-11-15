@@ -42,7 +42,7 @@ class LaunchPipeline(
   //  scheduler (see the fromExecutorService method on Schedulers).
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(msg: LauncherInput) {
-    addTagsToTrace()
+    addTagsToTrace(msg)
     setLoggingScopeForWorkload(msg).use {
       metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
       LaunchStageIO(msg)
@@ -68,9 +68,10 @@ class LaunchPipeline(
     }
   }
 
-  private fun addTagsToTrace() {
+  private fun addTagsToTrace(msg: LauncherInput) {
     val commonTags = hashMapOf<String, Any>()
-    commonTags.put(DATA_PLANE_ID_TAG, dataplaneId)
+    commonTags[DATA_PLANE_ID_TAG] = dataplaneId
+    commonTags[WORKLOAD_ID_TAG] = msg.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags)
   }
 
