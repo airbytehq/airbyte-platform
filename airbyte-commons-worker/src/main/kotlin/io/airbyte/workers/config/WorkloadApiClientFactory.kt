@@ -5,6 +5,7 @@
 package io.airbyte.workers.config
 
 import dev.failsafe.RetryPolicy
+import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client2.generated.WorkloadApi
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
@@ -56,6 +57,6 @@ class WorkloadApiClientFactory {
         .withMaxRetries(maxRetries)
         .build()
 
-    return WorkloadApi("$internalApiScheme://$workloadApiBasePath", okHttpClient, retryPolicy)
+    return WorkloadApiClient("$internalApiScheme://$workloadApiBasePath", retryPolicy, okHttpClient).workloadApi
   }
 }

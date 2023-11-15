@@ -297,6 +297,8 @@ dependencies {
     compileOnly libs.v3.swagger.annotations
     kapt libs.v3.swagger.annotations
 
+    implementation platform(libs.micronaut.bom)
+    implementation libs.bundles.micronaut
     implementation libs.commons.io
     implementation libs.failsafe.okhttp
     implementation libs.guava
@@ -315,10 +317,8 @@ dependencies {
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core
     testImplementation libs.junit.pioneer
-
-    implementation platform(libs.micronaut.bom)
-    implementation libs.bundles.micronaut
-
+    testImplementation libs.mockk
+    testImplementation libs.kotlin.test.runner.junit5
 }
 
 sourceSets {

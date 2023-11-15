@@ -32,12 +32,14 @@ import okhttp3.Response
  */
 @SuppressWarnings("Parameter")
 class WorkloadApiClient {
+  var workloadApi: WorkloadApi
+
   @JvmOverloads
   constructor(
     basePath: String,
     policy: RetryPolicy<Response> = RetryPolicy.ofDefaults(),
     httpClient: OkHttpClient = OkHttpClient(),
   ) {
-    val workloadApi = WorkloadApi()
+    workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
   }
 }
