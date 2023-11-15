@@ -159,6 +159,8 @@
   "form.wait": "Please wait a little bit more…",
   "form.optional": "Optional",
   "form.optionalFields": "Optional fields",
+  "form.min.error": "Must be greater than or equal to {min}",
+  "form.max.error": "Must be less than or equal to {max}",
 
   "setupForm.check.loading": "Checking the security of your installation...",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",

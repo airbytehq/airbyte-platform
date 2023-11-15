@@ -2,7 +2,6 @@ import classNames from "classnames";
 import uniq from "lodash/uniq";
 import React from "react";
 import { FieldError, UseFormGetFieldState, useController, useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
 
 import { LabeledSwitch } from "components";
 import { FlexContainer } from "components/ui/Flex";
@@ -24,24 +23,11 @@ interface PropertySectionProps {
   disabled?: boolean;
 }
 
-const ErrorMessage = ({ error, property }: { error?: string; property: FormBaseItem }) => {
+const ErrorMessage = ({ error }: { error?: string }) => {
   if (!error) {
     return null;
   }
-  return (
-    <PropertyError>
-      <FormattedMessage
-        id={error}
-        values={
-          error === FORM_PATTERN_ERROR
-            ? {
-                pattern: getPatternDescriptor(property) ?? property.pattern,
-              }
-            : undefined
-        }
-      />
-    </PropertyError>
-  );
+  return <PropertyError>{error}</PropertyError>;
 };
 
 const FormatBlock = ({
@@ -58,12 +44,12 @@ const FormatBlock = ({
     return null;
   }
 
-  const hasPatternError = isPatternError(fieldMeta.error);
+  const hasError = !!fieldMeta.error;
 
   const patternStatus =
-    value !== undefined && hasPatternError && fieldMeta.isTouched
+    value !== undefined && hasError && fieldMeta.isTouched
       ? "error"
-      : value !== undefined && !hasPatternError && property.pattern !== undefined
+      : value !== undefined && !hasError && property.pattern !== undefined
       ? "success"
       : "none";
 
@@ -115,11 +101,11 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
   const errorMessage = Array.isArray(meta.error) ? (
     <FlexContainer direction="column" gap="none">
       {uniq(meta.error.map((error) => error?.message).filter(Boolean)).map((errorMessage, index) => {
-        return <ErrorMessage key={index} error={errorMessage} property={property} />;
+        return <ErrorMessage key={index} error={errorMessage} />;
       })}
     </FlexContainer>
   ) : (
-    <ErrorMessage error={meta.error?.message} property={property} />
+    <ErrorMessage error={meta.error?.message} />
   );
 
   return (

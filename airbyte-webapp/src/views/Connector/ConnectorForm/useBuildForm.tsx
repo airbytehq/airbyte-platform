@@ -124,7 +124,10 @@ export function useBuildForm(
       throw new FormBuildError("connectorForm.error.topLevelNonObject");
     }
 
-    const validationSchema = useMemo(() => buildYupFormForJsonSchema(jsonSchema, formBlock), [formBlock, jsonSchema]);
+    const validationSchema = useMemo(
+      () => buildYupFormForJsonSchema(jsonSchema, formBlock, formatMessage),
+      [formBlock, formatMessage, jsonSchema]
+    );
 
     const startValues = useMemo<ConnectorFormValues>(() => {
       let baseValues = {

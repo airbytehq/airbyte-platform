@@ -1,3 +1,4 @@
+import { MessageDescriptor } from "react-intl";
 import * as yup from "yup";
 
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
@@ -5,6 +6,10 @@ import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { jsonSchemaToFormBlock } from "./schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "./schemaToYup";
 import { FORM_PATTERN_ERROR } from "./types";
+
+const formatMessage = (message: MessageDescriptor, values?: Record<string, string | number>) => {
+  return `${message.id}${values ? `: ${JSON.stringify(values)}` : ""}`;
+};
 
 // Note: We have to check yup schema with JSON.stringify
 // as exactly same objects throw now equality due to `Received: serializes to the same string` error
@@ -46,7 +51,7 @@ it("should build schema for simple case", () => {
     },
     additionalProperties: false,
   };
-  const yupSchema = buildYupFormForJsonSchema(schema, jsonSchemaToFormBlock(schema));
+  const yupSchema = buildYupFormForJsonSchema(schema, jsonSchemaToFormBlock(schema), formatMessage);
 
   const expectedSchema = yup.object().shape({
     host: yup.string().trim().required("form.empty.error").transform(String),
@@ -116,7 +121,11 @@ const simpleConditionalSchema: AirbyteJSONSchema = {
 };
 
 it("should build correct mixed schema structure for conditional case", () => {
-  const yupSchema = buildYupFormForJsonSchema(simpleConditionalSchema, jsonSchemaToFormBlock(simpleConditionalSchema));
+  const yupSchema = buildYupFormForJsonSchema(
+    simpleConditionalSchema,
+    jsonSchemaToFormBlock(simpleConditionalSchema),
+    formatMessage
+  );
 
   const expectedSchema = yup.object().shape({
     start_date: yup.string().trim().required("form.empty.error").transform(String),
@@ -143,7 +152,12 @@ it("should build correct mixed schema structure for conditional case", () => {
 
 // These tests check whether the built yup schema validates as expected, it is not checking the structure
 describe("yup schema validations", () => {
-  const yupSchema = buildYupFormForJsonSchema(simpleConditionalSchema, jsonSchemaToFormBlock(simpleConditionalSchema));
+  const yupSchema = buildYupFormForJsonSchema(
+    simpleConditionalSchema,
+    jsonSchemaToFormBlock(simpleConditionalSchema),
+    formatMessage
+  );
+
   it("enforces required props for selected condition", () => {
     expect(() => {
       yupSchema.validateSync({
@@ -184,7 +198,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).toThrow(FORM_PATTERN_ERROR);
+    }).toThrow(`${FORM_PATTERN_ERROR}: {"pattern":"\\\\w{5}"}`);
   });
 
   it("strips out properties belonging to other conditions", () => {
