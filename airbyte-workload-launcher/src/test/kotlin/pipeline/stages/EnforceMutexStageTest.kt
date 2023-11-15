@@ -27,7 +27,7 @@ class EnforceMutexStageTest {
     every { launcher.deleteMutexPods(any()) } returns false
 
     val stage = EnforceMutexStage(launcher, metricClient, labeler)
-    val io = LaunchStageIO(msg = LauncherInput("1", msgStr), replInput)
+    val io = LaunchStageIO(msg = LauncherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"), replInput)
 
     val result = stage.applyStage(io)
 

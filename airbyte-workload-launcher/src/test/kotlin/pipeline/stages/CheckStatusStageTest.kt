@@ -36,7 +36,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify { statusUpdater.updateStatusToRunning(workloadId) }
@@ -57,7 +57,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
     verify(exactly = 0) { statusUpdater.updateStatusToRunning(workloadId) }
@@ -84,7 +84,7 @@ class CheckStatusStageTest {
 
     val checkStatusStage = CheckStatusStage(statusUpdater, kubernetesClient, metricPublisher)
 
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
 
     assertThrows<ClientErrorException> { checkStatusStage.applyStage(originalInput) }
   }

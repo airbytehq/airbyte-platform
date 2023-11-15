@@ -11,6 +11,8 @@ class LauncherMessageConsumer(private val launchPipeline: LaunchPipeline) : Mess
       LauncherInput(
         workloadId = input.workloadId,
         workloadInput = input.workloadInput,
+        labels = input.labels,
+        logPath = input.logPath,
       ),
     )
   }

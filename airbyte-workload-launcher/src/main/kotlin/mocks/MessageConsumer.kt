@@ -36,7 +36,7 @@ class MessageConsumer(private val deserializer: PayloadDeserializer) {
     val id = mockJobId.getAndIncrement().toString()
     val mocked = mockJobIdFor(input, id)
 
-    return LauncherInput("workload-$id", mocked)
+    return LauncherInput("workload-$id", mocked, mapOf(), "/")
   }
 
   private fun mockJobIdFor(

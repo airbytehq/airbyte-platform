@@ -28,9 +28,9 @@ class LogPathTest {
     val dataplaneId = "dataplane_id"
 
     val logFile: File = File.createTempFile("log-path-1", ".txt")
-    val launcherInputMessage: LauncherInput =
-      LauncherInput(workloadId, "workload-input", logFile.absolutePath)
-    val launchStageIO: LaunchStageIO = LaunchStageIO(launcherInputMessage)
+    val launcherInputMessage =
+      LauncherInput(workloadId, "workload-input", mapOf(), logFile.absolutePath)
+    val launchStageIO = LaunchStageIO(launcherInputMessage)
 
     val claim: ClaimStage = claimStage(launchStageIO)
     val check: CheckStatusStage = checkStatusStage(launchStageIO)
@@ -39,7 +39,7 @@ class LogPathTest {
     val launch: LaunchPodStage = launchPodStage(launchStageIO, false)
     val statusUpdater: StatusUpdater = mockk()
 
-    val launchPipeline: LaunchPipeline =
+    val launchPipeline =
       LaunchPipeline(dataplaneId, claim, check, build, mutex, launch, statusUpdater, metricPublisher)
     launchPipeline.accept(launcherInputMessage)
 
@@ -52,9 +52,9 @@ class LogPathTest {
     val dataplaneId = "dataplane_id"
 
     val logFile: File = File.createTempFile("log-path-1", ".txt")
-    val launcherInputMessage: LauncherInput =
-      LauncherInput(workloadId, "workload-input", logFile.absolutePath)
-    val launchStageIO: LaunchStageIO = LaunchStageIO(launcherInputMessage)
+    val launcherInputMessage =
+      LauncherInput(workloadId, "workload-input", mapOf(), logFile.absolutePath)
+    val launchStageIO = LaunchStageIO(launcherInputMessage)
 
     val claim: ClaimStage = claimStage(launchStageIO)
     val check: CheckStatusStage = checkStatusStage(launchStageIO)
@@ -161,16 +161,16 @@ class LogPathTest {
     }
     val completeFileContent = fileContent.toString()
 
-    assert(completeFileContent.isNotBlank())
-    assert(completeFileContent.contains("CLAIM for workload 1"))
-    assert(completeFileContent.contains("CHECK_STATUS for workload 1"))
-    assert(completeFileContent.contains("BUILD for workload 1"))
-    assert(completeFileContent.contains("LAUNCH for workload 1"))
+    assert(completeFileContent.isNotBlank()) { "File content was blank" }
+    assert(completeFileContent.contains("CLAIM for workload 1")) { "CLAIM line missing" }
+    assert(completeFileContent.contains("CHECK_STATUS for workload 1")) { "CHECK_STATUS line missing" }
+    assert(completeFileContent.contains("BUILD for workload 1")) { "BUILD line missing" }
+    assert(completeFileContent.contains("LAUNCH for workload 1")) { "LAUNCH line missing" }
     if (assertException) {
-      assert(completeFileContent.contains("Failure for workload 1"))
-      assert(completeFileContent.contains("Completed without launching workload."))
+      assert(completeFileContent.contains("Failure for workload 1")) { "FAILURE line missing" }
+      assert(completeFileContent.contains("Completed without launching workload.")) { "TERMINAL line missing" }
     } else {
-      assert(completeFileContent.contains("Success: "))
+      assert(completeFileContent.contains("Success: ")) { "SUCCESS line missing" }
     }
   }
 }

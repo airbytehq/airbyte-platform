@@ -79,7 +79,12 @@ open class WorkloadApi(
       workloadCreateRequest.workloadInput,
       workloadCreateRequest.logPath,
     )
-    workloadService.create(workloadId = workloadCreateRequest.workloadId, workloadInput = workloadCreateRequest.workloadInput)
+    workloadService.create(
+      workloadId = workloadCreateRequest.workloadId,
+      workloadInput = workloadCreateRequest.workloadInput,
+      workloadCreateRequest.labels.associate { it.key to it.value },
+      workloadCreateRequest.logPath,
+    )
   }
 
   @PUT

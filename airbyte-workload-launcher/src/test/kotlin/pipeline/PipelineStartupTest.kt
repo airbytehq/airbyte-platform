@@ -23,7 +23,9 @@ class PipelineStartupTest {
   fun `should process claimed workloads`() {
     val workloadId = "1"
     val dataplaneId = "US"
-    val launcherInput = LauncherInput(workloadId, "workload-input", "log-path.txt")
+    val payload = "payload"
+    val logPath = "/log/path"
+    val launcherInput = LauncherInput(workloadId, payload, mapOf(), logPath)
 
     val workloadApiClient: WorkloadApi = mockk()
     val workerFactory: WorkerFactory = mockk()
@@ -40,7 +42,7 @@ class PipelineStartupTest {
       )
 
     val workload =
-      Workload(workloadId, "payload", "/", dataplaneId, WorkloadStatus.cLAIMED)
+      Workload(workloadId, listOf(), payload, logPath, dataplaneId, WorkloadStatus.cLAIMED)
 
     val workloadListResponse = WorkloadListResponse(listOf(workload))
 
@@ -61,10 +63,9 @@ class PipelineStartupTest {
         ),
       )
 
-    startupApplicationEventListener.rehydrateAndProcessClaimed()
+    startupApplicationEventListener.retrieveAndProcessClaimed()
 
     verify { workloadApiClient.workloadList(workloadListRequest) }
-    verify { startupApplicationEventListener.convertToInputMessage(workload) }
     verify { launchPipeline.accept(launcherInput) }
   }
 }

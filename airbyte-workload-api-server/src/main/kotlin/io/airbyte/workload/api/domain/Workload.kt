@@ -9,7 +9,7 @@ data class Workload(
   var dataplaneId: String? = null,
   var status: WorkloadStatus? = null,
   var lastHeartbeatAt: OffsetDateTime? = null,
-  var labels: MutableList<WorkloadLabel>? = null,
+  var labels: MutableList<WorkloadLabel> = mutableListOf(),
   var inputPayload: String = "",
   var logPath: String = "",
 )

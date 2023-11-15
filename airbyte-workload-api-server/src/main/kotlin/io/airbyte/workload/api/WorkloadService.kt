@@ -28,12 +28,18 @@ open class WorkloadService(
   open fun create(
     workloadId: String,
     workloadInput: String,
+    labels: Map<String, String>,
+    logPath: String,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    messageProducer.publish("launcher-queue", LauncherInputMessage(workloadId, workloadInput))
+    messageProducer.publish(LAUNCHER_QUEUE_NAME, LauncherInputMessage(workloadId, workloadInput, labels, logPath))
     metricPublisher.count(
       WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
       MetricAttribute(WORKLOAD_ID_TAG, workloadId),
     )
+  }
+
+  companion object {
+    const val LAUNCHER_QUEUE_NAME = "launcher-queue"
   }
 }

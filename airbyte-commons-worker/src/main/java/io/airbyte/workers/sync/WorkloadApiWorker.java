@@ -67,13 +67,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
     // TODO worker may resume, check if job exists first
     // Create the workload
-    createWorkload(new WorkloadCreateRequest(workloadId,
-        serializedInput,
-        jobRoot.toString(),
+    createWorkload(new WorkloadCreateRequest(
+        workloadId,
         List.of(
             new WorkloadLabel("connectionId", replicationInput.getConnectionId().toString()),
             new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
-            new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString()))));
+            new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
+        serializedInput,
+        jobRoot.toString()));
 
     // Wait until workload reaches a terminal status
     int i = 0;

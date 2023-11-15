@@ -37,7 +37,7 @@ class ClaimStageTest {
     } returns ClaimResponse(true)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -64,7 +64,7 @@ class ClaimStageTest {
     } returns ClaimResponse(false)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -91,7 +91,7 @@ class ClaimStageTest {
     } throws ClientErrorException(400)
 
     val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
-    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}"))
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
 
     assertThrows<ClientErrorException> { claimStage.applyStage(originalInput) }
 

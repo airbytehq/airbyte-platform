@@ -38,7 +38,7 @@ class BuildInputStageTest {
         replicationInputHydrator,
         deserializer,
       )
-    val io = LaunchStageIO(msg = LauncherInput("1", msgStr))
+    val io = LaunchStageIO(msg = LauncherInput("1", msgStr, mapOf("label_key" to "label_value"), "/log/path"))
 
     val result = stage.applyStage(io)
 

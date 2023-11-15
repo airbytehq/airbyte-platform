@@ -48,6 +48,6 @@ class MeterFilterFactory(
 
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
-    const val REHYDRATION_OPERATION_NAME = "rehydration"
+    const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
   }
 }

@@ -76,7 +76,7 @@ class LaunchPipeline(
 
   private fun setLoggingScopeForWorkload(msg: LauncherInput): MdcScope {
     return MdcScope.Builder()
-      .setExtraMdcEntries(mapOf(LogClientSingleton.JOB_LOG_PATH_MDC_KEY to msg.jobLogPath))
+      .setExtraMdcEntries(mapOf(LogClientSingleton.JOB_LOG_PATH_MDC_KEY to msg.logPath))
       .build()
   }
 

@@ -204,6 +204,7 @@ components:
       required:
       - id
       - inputPayload
+      - labels
       - logPath
       type: object
       properties:
@@ -222,7 +223,6 @@ components:
           nullable: true
         labels:
           type: array
-          nullable: true
           items:
             $ref: '#/components/schemas/WorkloadLabel'
         inputPayload:
@@ -254,6 +254,7 @@ components:
           type: string
     WorkloadCreateRequest:
       required:
+      - labels
       - logPath
       - workloadId
       - workloadInput
@@ -263,7 +264,6 @@ components:
           type: string
         labels:
           type: array
-          nullable: true
           items:
             $ref: '#/components/schemas/WorkloadLabel'
         workloadInput:
