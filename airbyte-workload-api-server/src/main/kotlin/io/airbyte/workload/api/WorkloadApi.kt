@@ -20,6 +20,8 @@ import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_I
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
+import io.micronaut.scheduling.TaskExecutors
+import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.swagger.v3.oas.annotations.Operation
@@ -38,6 +40,7 @@ import javax.ws.rs.Produces
 
 @Controller("/api/v1/workload")
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@ExecuteOn(TaskExecutors.IO)
 open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
   private val workloadService: WorkloadService,

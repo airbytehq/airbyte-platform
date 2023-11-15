@@ -2,9 +2,9 @@ micronaut:
   application:
     name: airbyte-workload-api-server
   executors:
-    health:
+    io:
       type: fixed
-      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10}
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
   metrics:
     enabled: true
     export:
