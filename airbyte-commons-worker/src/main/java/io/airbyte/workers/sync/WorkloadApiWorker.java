@@ -35,8 +35,8 @@ import org.slf4j.LoggerFactory;
  */
 public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
 
-  private final static Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
-  private final static Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.cANCELLED, WorkloadStatus.fAILURE, WorkloadStatus.sUCCESS);
+  private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
+  private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.cANCELLED, WorkloadStatus.fAILURE, WorkloadStatus.sUCCESS);
   private final DocumentStoreClient documentStoreClient;
   private final OrchestratorNameGenerator orchestratorNameGenerator;
   private final WorkloadApi workloadApi;
@@ -80,18 +80,20 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     int i = 0;
     while (true) {
       final Workload workload = getWorkload(workloadId);
-
+    
       if (workload.getStatus() != null) {
         if (TERMINAL_STATUSES.contains(workload.getStatus())) {
           break;
         }
-
-        if (i++ % 5 == 0) {
+    
+        if (i % 5 == 0) {
           log.info("Workload {} is {}", workloadId, workload.getStatus());
         }
+        i++;
       }
       sleep(Duration.ofMinutes(1).toMillis());
     }
+    
 
     return getReplicationOutput();
   }
