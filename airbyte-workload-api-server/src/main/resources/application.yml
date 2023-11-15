@@ -112,6 +112,7 @@ temporal:
 
 logger:
   levels:
+    # io.micronaut.data.query: TRACE
     #   Uncomment to help resolve issues with conditional beans
     # io.micronaut.context.condition: DEBUG
 #   Uncomment to help resolve issues with security beans
@@ -119,3 +120,6 @@ logger:
 #   Uncomment to help resolve issues with micronaut data
 #      com.zaxxer.hikari.HikariConfig: DEBUG
 #      com.zaxxer.hikari: TRACE
+
+jackson:
+  serialization-inclusion: always

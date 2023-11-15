@@ -1,4 +1,4 @@
-package io.airbyte.workers.config
+package io.airbyte.commons.auth
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value

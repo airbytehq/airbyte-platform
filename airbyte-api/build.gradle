@@ -256,6 +256,7 @@ def genWorkloadApiClient2 = tasks.register("genWorkloadApiClient2", GenerateTask
     generateApiDocumentation = false
 
     configOptions = [
+            enumPropertyNaming  : "UPPERCASE",
             generatePom         : "false",
             interfaceOnly       : "true"
     ]

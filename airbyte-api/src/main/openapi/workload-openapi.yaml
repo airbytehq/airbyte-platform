@@ -20,22 +20,10 @@ paths:
       responses:
         "204":
           description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "404":
           description: Workload with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "410":
           description: "Workload is in terminal state, it cannot be cancelled."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/claim:
     put:
       tags:
@@ -57,16 +45,8 @@ paths:
                 $ref: '#/components/schemas/ClaimResponse'
         "404":
           description: Workload with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "410":
           description: "Workload is in terminal state, it cannot be claimed."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/create:
     post:
       tags:
@@ -87,10 +67,6 @@ paths:
                 $ref: '#/components/schemas/WorkloadListResponse'
         "304":
           description: Workload with given workload id already exists.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -105,23 +81,11 @@ paths:
       responses:
         "204":
           description: Successfully heartbeated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "404":
           description: Workload with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "410":
           description: Workload should stop because it is no longer expected to be
             running.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/list:
     post:
       tags:
@@ -185,10 +149,6 @@ paths:
                 $ref: '#/components/schemas/Workload'
         "404":
           description: Workload with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
 components:
   schemas:
     ClaimResponse:
@@ -316,12 +276,12 @@ components:
     WorkloadStatus:
       type: string
       enum:
-      - PENDING
-      - CLAIMED
-      - RUNNING
-      - SUCCESS
-      - FAILURE
-      - CANCELLED
+      - pending
+      - claimed
+      - running
+      - success
+      - failure
+      - cancelled
     WorkloadStatusUpdateRequest:
       required:
       - status

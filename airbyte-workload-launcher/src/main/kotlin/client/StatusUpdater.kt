@@ -32,12 +32,12 @@ class StatusUpdater(
   }
 
   fun updateStatusToRunning(workloadId: String) {
-    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
+    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.RUNNING)
     workloadApiClient.workloadStatusUpdate(workloadStatusUpdateRequest)
   }
 
   fun updateStatusToFailed(workloadId: String) {
-    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.fAILURE)
+    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.FAILURE)
     workloadApiClient.workloadStatusUpdate(workloadStatusUpdateRequest)
   }
 }

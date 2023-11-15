@@ -120,18 +120,6 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test get workloads empty dataplane list`() {
-    val workloads = workloadHandler.getWorkloads(emptyList(), listOf(ApiWorkloadStatus.CLAIMED), null)
-    assertTrue(workloads.isEmpty())
-  }
-
-  @Test
-  fun `test get workloads empty status list`() {
-    val workloads = workloadHandler.getWorkloads(listOf("dataplane1"), emptyList(), null)
-    assertTrue(workloads.isEmpty())
-  }
-
-  @Test
   fun `test update workload`() {
     every { workloadRepository.update(eq(workloadId), any()) }.returns(Unit)
     workloadHandler.updateWorkload(workloadId, ApiWorkloadStatus.CLAIMED)

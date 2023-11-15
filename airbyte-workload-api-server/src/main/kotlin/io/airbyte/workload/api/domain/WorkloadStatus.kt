@@ -1,15 +1,26 @@
 package io.airbyte.workload.api.domain
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import java.util.Objects
 
 enum class WorkloadStatus(private val value: String) {
+  @JsonProperty("pending")
   PENDING("pending"),
+
+  @JsonProperty("claimed")
   CLAIMED("claimed"),
+
+  @JsonProperty("running")
   RUNNING("running"),
+
+  @JsonProperty("success")
   SUCCESS("success"),
+
+  @JsonProperty("failure")
   FAILURE("failure"),
+
+  @JsonProperty("cancelled")
   CANCELLED("cancelled"),
   ;
 
@@ -19,29 +30,11 @@ enum class WorkloadStatus(private val value: String) {
   }
 
   companion object {
-    /**
-     * Convert a String into String, as specified in the
-     * [See JAX RS 2.0 Specification, section 3.2, p. 12](https://download.oracle.com/otndocs/jcp/jaxrs-2_0-fr-eval-spec/index.html)
-     */
-    fun fromString(s: String): WorkloadStatus {
-      for (b in entries) {
-        // using Objects.toString() to be safe if value type non-object type
-        // because types like 'int' etc. will be auto-boxed
-        if (Objects.toString(b.value) == s) {
-          return b
-        }
-      }
-      throw IllegalArgumentException("Unexpected string value '$s'")
-    }
-
+    @JvmStatic
     @JsonCreator
     fun fromValue(value: String): WorkloadStatus {
-      for (b in entries) {
-        if (b.value == value) {
-          return b
-        }
-      }
-      throw IllegalArgumentException("Unexpected value '$value'")
+      val result = values().firstOrNull { it.value.equals(value, true) }
+      return result ?: throw IllegalArgumentException("Unexpected value '$value'")
     }
   }
 }

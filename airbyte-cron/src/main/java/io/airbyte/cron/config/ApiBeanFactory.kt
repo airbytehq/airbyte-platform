@@ -1,16 +1,12 @@
-/*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
- */
-
-package io.airbyte.workers.config
+package io.airbyte.cron.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.auth.AuthenticationInterceptor
+import io.airbyte.commons.temporal.config.WorkerMode
 import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
+import io.micronaut.context.env.Environment
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
@@ -20,10 +16,8 @@ import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.time.Duration
 
-private val logger = KotlinLogging.logger {}
-
 @Factory
-class WorkloadApiClientFactory {
+class ApiBeanFactory {
   @Singleton
   fun workloadApiClient(
     @Named("internalApiScheme") internalApiScheme: String,
@@ -52,12 +46,16 @@ class WorkloadApiClientFactory {
             ServerException::class.java,
           ),
         )
-        .onRetry { l -> logger.warn { "Retry attempt ${l.attemptCount} of $maxRetries. Last response: ${l.lastResult}" } }
-        .onRetriesExceeded { l -> logger.error(l.exception) { "Retry attempts exceeded." } }
         .withDelay(Duration.ofSeconds(retryDelaySeconds))
         .withMaxRetries(maxRetries)
         .build()
 
-    return WorkloadApiClient("$internalApiScheme://$workloadApiBasePath", retryPolicy, okHttpClient).workloadApi
+    return WorkloadApi("$internalApiScheme://$workloadApiBasePath", okHttpClient, retryPolicy)
+  }
+
+  @Singleton
+  @Named("internalApiScheme")
+  fun internalApiScheme(environment: Environment): String {
+    return if (environment.activeNames.contains(WorkerMode.CONTROL_PLANE)) "http" else "https"
   }
 }

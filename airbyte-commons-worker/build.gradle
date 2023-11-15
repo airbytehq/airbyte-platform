@@ -47,6 +47,7 @@ dependencies {
 
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-auth')
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')

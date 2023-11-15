@@ -102,6 +102,16 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
+          - name: WORKLOAD_API_BEARER_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.global.database.secretName | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+                key: {{ .Values.global.database.secretValue | default "WORKLOAD_API_BEARER_TOKEN" }}
+          - name: WORKLOAD_API_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: WORKLOAD_API_HOST
           - name: WORKSPACE_DOCKER_MOUNT
             valueFrom:
               configMapKeyRef:

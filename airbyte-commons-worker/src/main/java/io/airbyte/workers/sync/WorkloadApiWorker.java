@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOutput> {
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
-  private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.cANCELLED, WorkloadStatus.fAILURE, WorkloadStatus.sUCCESS);
+  private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final DocumentStoreClient documentStoreClient;
   private final OrchestratorNameGenerator orchestratorNameGenerator;
   private final WorkloadApi workloadApi;

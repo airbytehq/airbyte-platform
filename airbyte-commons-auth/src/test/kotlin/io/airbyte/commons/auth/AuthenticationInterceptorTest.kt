@@ -1,12 +1,7 @@
-/*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
- */
+package io.airbyte.commons.auth
 
-package io.airbyte.workload.launcher.client
-
-import io.airbyte.workers.config.AuthenticationInterceptor
-import io.airbyte.workers.config.AuthenticationInterceptor.Companion.BEARER_TOKEN_PREFIX
-import io.airbyte.workers.config.AuthenticationInterceptor.Companion.USER_AGENT_VALUE
+import io.airbyte.commons.auth.AuthenticationInterceptor.Companion.BEARER_TOKEN_PREFIX
+import io.airbyte.commons.auth.AuthenticationInterceptor.Companion.USER_AGENT_VALUE
 import io.micronaut.http.HttpHeaders
 import io.mockk.every
 import io.mockk.mockk

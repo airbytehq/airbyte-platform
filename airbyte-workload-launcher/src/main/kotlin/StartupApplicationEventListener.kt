@@ -57,7 +57,7 @@ class StartupApplicationEventListener(
     val workloadListRequest =
       WorkloadListRequest(
         listOf(dataplaneId),
-        listOf(WorkloadStatus.cLAIMED),
+        listOf(WorkloadStatus.CLAIMED),
       )
 
     val workloadList: WorkloadListResponse =

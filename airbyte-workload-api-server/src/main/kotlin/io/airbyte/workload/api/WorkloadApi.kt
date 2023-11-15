@@ -61,7 +61,6 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "304",
         description = "Workload with given workload id already exists.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -100,17 +99,14 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "204",
         description = "Success",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is in terminal state, it cannot be cancelled.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -140,12 +136,10 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload is in terminal state, it cannot be claimed.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -178,7 +172,6 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -200,19 +193,14 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "204",
         description = "Successfully heartbeated",
-        content = [
-          Content(schema = Schema(implementation = Void::class)),
-        ],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "410",
         description = "Workload should stop because it is no longer expected to be running.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
@@ -244,7 +232,6 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(DATA_PLANE_ID_TAG to workloadListRequest.dataplane) as Map<String, Any>?)
     return WorkloadListResponse(
       workloadHandler.getWorkloads(
         workloadListRequest.dataplane,

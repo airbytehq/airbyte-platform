@@ -2,6 +2,7 @@ package io.airbyte.workload.repository
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.WorkloadStatus
 import io.airbyte.workload.repository.domain.Workload
+import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.Join
 import io.micronaut.data.annotation.Query
@@ -22,14 +23,14 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     """
       SELECT * FROM workload
       WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
-      AND ((:statuses) IS NULL OR status =  ANY(CAST(ARRAY[:statuses] AS workload_status[])))
+      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
       AND (CAST(:updatedBefore AS timestamptz) IS NULL OR updated_at < CAST(:updatedBefore AS timestamptz))
       
       """,
   )
   fun search(
-    dataplaneIds: List<String>?,
-    statuses: List<WorkloadStatus>?,
+    @Expandable dataplaneIds: List<String>?,
+    @Expandable statuses: List<WorkloadStatus>?,
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
 

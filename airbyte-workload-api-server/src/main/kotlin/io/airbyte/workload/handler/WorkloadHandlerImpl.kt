@@ -34,10 +34,6 @@ class WorkloadHandlerImpl(
     workloadStatus: List<ApiWorkloadStatus>?,
     updatedBefore: OffsetDateTime?,
   ): List<Workload> {
-    if (dataplaneId?.isEmpty() == true || workloadStatus?.isEmpty() == true) {
-      return emptyList()
-    }
-
     val domainWorkloads =
       workloadRepository.search(
         dataplaneId,
