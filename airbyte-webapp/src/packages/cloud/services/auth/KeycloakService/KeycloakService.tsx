@@ -127,7 +127,7 @@ export const KeycloakService: React.FC<PropsWithChildren> = ({ children }) => {
           keycloakUser = await userManager.signinCallback();
           clearSsoSearchParams();
           // Otherwise, check if there is a session currently
-        } else if ((keycloakUser ??= await userManager.getUser())) {
+        } else if ((keycloakUser ??= await userManager.signinSilent())) {
           // Initialize the access token ref with a value
           keycloakAccessTokenRef.current = keycloakUser.access_token;
           const airbyteUser = await getAirbyteUser({
