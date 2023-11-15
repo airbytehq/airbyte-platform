@@ -35,6 +35,7 @@ airbyte:
   workload-launcher:
     queue: ${WORKLOAD_LAUNCHER_QUEUE_NAME:launcher-queue}
     workload-start-timeout: PT10M
+    parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:

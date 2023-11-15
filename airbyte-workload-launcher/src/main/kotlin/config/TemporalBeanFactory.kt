@@ -12,6 +12,7 @@ import io.micronaut.context.annotation.Property
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
 import io.temporal.worker.WorkerFactory
+import io.temporal.worker.WorkerOptions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -41,9 +42,10 @@ class TemporalBeanFactory {
     temporalProxyHelper: TemporalProxyHelper,
     @Property(name = "airbyte.workload-launcher.queue") starterQueue: String,
     @Named("starterActivities") workloadStarterActivities: QueueActivity<LauncherInputMessage>,
+    @Property(name = "airbyte.workload-launcher.parallelism") paralellism: Int,
   ): WorkerFactory {
     val workerFactory = WorkerFactory.newInstance(workflowClient)
-    val worker = workerFactory.newWorker(starterQueue)
+    val worker = workerFactory.newWorker(starterQueue, WorkerOptions.newBuilder().setMaxConcurrentActivityExecutionSize(paralellism).build())
     worker.registerActivitiesImplementations(workloadStarterActivities)
     worker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(LauncherWorkflowImpl::class.java))
     return workerFactory
