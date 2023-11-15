@@ -33,15 +33,16 @@ class KubePodClient(
   fun launchReplication(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ) {
-    val passThroughLabels = labeler.getSharedLabels(input, workloadId)
+    val sharedLabels = labeler.getSharedLabels(input, workloadId, passThroughLabels)
 
     val inputWithLabels =
       input
-        .setSourceLabels(passThroughLabels)
-        .setDestinationLabels(passThroughLabels)
+        .setSourceLabels(sharedLabels)
+        .setDestinationLabels(sharedLabels)
 
-    val kubeInput = mapper.toKubeInput(inputWithLabels, workloadId)
+    val kubeInput = mapper.toKubeInput(inputWithLabels, workloadId, passThroughLabels)
 
     val pod: Pod
     try {

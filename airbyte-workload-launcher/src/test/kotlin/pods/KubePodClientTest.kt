@@ -9,6 +9,7 @@ import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.CONNECTOR_STARTUP_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.ORCHESTRATOR_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.kubeInput
+import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.passThroughLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.sharedLabels
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workloadId
 import io.fabric8.kubernetes.api.model.Pod
@@ -54,9 +55,9 @@ class KubePodClientTest {
         .withSourceLauncherConfig(IntegrationLauncherConfig())
         .withDestinationLauncherConfig(IntegrationLauncherConfig())
 
-    every { labeler.getSharedLabels(any(), any()) } returns mapOf()
+    every { labeler.getSharedLabels(any(), any(), any()) } returns mapOf()
 
-    every { mapper.toKubeInput(input, workloadId) } returns kubeInput
+    every { mapper.toKubeInput(input, workloadId, passThroughLabels) } returns kubeInput
 
     every { launcher.create(any(), any(), any(), any()) } returns pod
     every { launcher.waitForPodInit(any(), any()) } returns Unit
@@ -66,7 +67,7 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication starts an orchestrator and waits on all 3 pods`() {
-    client.launchReplication(input, workloadId)
+    client.launchReplication(input, workloadId, passThroughLabels)
 
     verify {
       launcher.create(
@@ -88,14 +89,14 @@ class KubePodClientTest {
 
   @Test
   fun `launchReplication sets pass-through labels for propagation to source and destination`() {
-    every { labeler.getSharedLabels(any(), any()) } returns sharedLabels
-    every { mapper.toKubeInput(input, workloadId) } returns kubeInput
+    every { labeler.getSharedLabels(any(), any(), any()) } returns sharedLabels
+    every { mapper.toKubeInput(input, workloadId, passThroughLabels) } returns kubeInput
 
-    client.launchReplication(input, workloadId)
+    client.launchReplication(input, workloadId, passThroughLabels)
 
     val inputWithLabels = input.setDestinationLabels(sharedLabels).setSourceLabels(sharedLabels)
 
-    verify { mapper.toKubeInput(inputWithLabels, workloadId) }
+    verify { mapper.toKubeInput(inputWithLabels, workloadId, passThroughLabels) }
   }
 
   @Test
@@ -103,7 +104,7 @@ class KubePodClientTest {
     every { launcher.create(any(), any(), any(), any()) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, workloadId)
+      client.launchReplication(input, workloadId, passThroughLabels)
     }
   }
 
@@ -112,7 +113,7 @@ class KubePodClientTest {
     every { launcher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, workloadId)
+      client.launchReplication(input, workloadId, passThroughLabels)
     }
   }
 
@@ -121,7 +122,7 @@ class KubePodClientTest {
     every { launcher.copyFilesToKubeConfigVolumeMain(any(), kubeInput.fileMap) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, workloadId)
+      client.launchReplication(input, workloadId, passThroughLabels)
     }
   }
 
@@ -130,7 +131,7 @@ class KubePodClientTest {
     every { launcher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, workloadId)
+      client.launchReplication(input, workloadId, passThroughLabels)
     }
   }
 
@@ -139,7 +140,7 @@ class KubePodClientTest {
     every { launcher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws RuntimeException("bang")
 
     assertThrows<KubePodInitException> {
-      client.launchReplication(input, workloadId)
+      client.launchReplication(input, workloadId, passThroughLabels)
     }
   }
 
@@ -155,6 +156,7 @@ class KubePodClientTest {
         ResourceRequirements().withCpuRequest("test-cpu").withMemoryRequest("test-mem"),
       )
     val workloadId = "workload-id"
+    val passThroughLabels = mapOf("labels" to "we get", "from" to "the activity")
     val sharedLabels = mapOf("arbitrary" to "label", "literally" to "anything")
   }
 }

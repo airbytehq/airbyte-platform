@@ -69,11 +69,12 @@ class PayloadKubeInputMapperTest {
     val orchestratorLabels = mapOf("orchestrator" to "labels")
     val sourceLabels = mapOf("source" to "labels")
     val destinationLabels = mapOf("dest" to "labels")
-    every { labeler.getOrchestratorLabels(input, workloadId) } returns orchestratorLabels
-    every { labeler.getSourceLabels(input, workloadId) } returns sourceLabels
-    every { labeler.getDestinationLabels(input, workloadId) } returns destinationLabels
+    val passThroughLabels = mapOf("pass through" to "labels")
+    every { labeler.getOrchestratorLabels(input, workloadId, passThroughLabels) } returns orchestratorLabels
+    every { labeler.getSourceLabels(input, workloadId, passThroughLabels) } returns sourceLabels
+    every { labeler.getDestinationLabels(input, workloadId, passThroughLabels) } returns destinationLabels
 
-    val result = mapper.toKubeInput(input, workloadId)
+    val result = mapper.toKubeInput(input, workloadId, passThroughLabels)
 
     assert(result.orchestratorLabels == orchestratorLabels)
     assert(result.sourceLabels == sourceLabels)

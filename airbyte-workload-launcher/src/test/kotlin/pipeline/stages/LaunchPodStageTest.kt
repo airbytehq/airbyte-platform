@@ -21,16 +21,17 @@ class LaunchPodStageTest {
     val replInput = ReplicationInput()
 
     val launcher: KubePodClient = mockk()
-    every { launcher.launchReplication(any(), any()) } returns Unit
+    every { launcher.launchReplication(any(), any(), any()) } returns Unit
 
     val stage = LaunchPodStage(launcher)
     val workloadId = UUID.randomUUID().toString()
-    val io = LaunchStageIO(msg = LauncherInput(workloadId, msgStr, mapOf("label_key" to "label_value"), "/log/path"), replInput)
+    val labels = mapOf("label_key" to "label_value")
+    val io = LaunchStageIO(msg = LauncherInput(workloadId, msgStr, labels, "/log/path"), replInput)
 
     val result = stage.applyStage(io)
 
     verify {
-      launcher.launchReplication(replInput, workloadId)
+      launcher.launchReplication(replInput, workloadId, labels)
     }
 
     assert(result.replicationInput == replInput)

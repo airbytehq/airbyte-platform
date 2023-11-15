@@ -17,7 +17,7 @@ class LaunchPodStage(private val launcher: KubePodClient) : LaunchStage {
     logger.info { "Stage: ${javaClass.simpleName}" }
     val replInput = input.replicationInput!!
 
-    launcher.launchReplication(replInput, input.msg.workloadId)
+    launcher.launchReplication(replInput, input.msg.workloadId, input.msg.labels)
 
     return input
   }

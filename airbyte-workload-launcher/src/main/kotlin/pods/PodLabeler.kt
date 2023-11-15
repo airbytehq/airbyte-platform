@@ -14,8 +14,9 @@ class PodLabeler {
   fun getSourceLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ): Map<String, String> {
-    return getSharedLabels(input, workloadId) +
+    return getSharedLabels(input, workloadId, passThroughLabels) +
       mapOf(
         SYNC_STEP_KEY to READ_STEP,
       )
@@ -24,8 +25,9 @@ class PodLabeler {
   fun getDestinationLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ): Map<String, String> {
-    return getSharedLabels(input, workloadId) +
+    return getSharedLabels(input, workloadId, passThroughLabels) +
       mapOf(
         SYNC_STEP_KEY to WRITE_STEP,
       )
@@ -34,8 +36,9 @@ class PodLabeler {
   fun getOrchestratorLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ): Map<String, String> {
-    return getSharedLabels(input, workloadId) +
+    return getSharedLabels(input, workloadId, passThroughLabels) +
       mapOf(
         SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
       )
@@ -56,8 +59,9 @@ class PodLabeler {
   fun getSharedLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ): Map<String, String> {
-    return getMutexLabels(input) + getWorkloadLabels(workloadId)
+    return passThroughLabels + getMutexLabels(input) + getWorkloadLabels(workloadId)
   }
 
   // TODO: this should be passed from workload API

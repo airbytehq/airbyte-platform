@@ -37,6 +37,7 @@ class PayloadKubeInputMapper(
   fun toKubeInput(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ): OrchestratorKubeInput {
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
@@ -56,9 +57,9 @@ class PayloadKubeInputMapper(
     val fileMap = buildFileMap(input, input.jobRunConfig, orchestratorPodInfo)
 
     return OrchestratorKubeInput(
-      labeler.getOrchestratorLabels(input, workloadId),
-      labeler.getSourceLabels(input, workloadId),
-      labeler.getDestinationLabels(input, workloadId),
+      labeler.getOrchestratorLabels(input, workloadId, passThroughLabels),
+      labeler.getSourceLabels(input, workloadId, passThroughLabels),
+      labeler.getDestinationLabels(input, workloadId, passThroughLabels),
       nodeSelectors,
       orchestratorPodInfo,
       fileMap,

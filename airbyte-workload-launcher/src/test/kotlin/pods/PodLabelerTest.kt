@@ -19,12 +19,14 @@ class PodLabelerTest {
   fun getSourceLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ) {
     val labeler = PodLabeler()
-    val result = labeler.getSourceLabels(input, workloadId)
+    val result = labeler.getSourceLabels(input, workloadId, passThroughLabels)
 
     assert(
       result ==
+        passThroughLabels +
         mapOf(
           MUTEX_KEY to input.connectionId.toString(),
           WORKLOAD_ID to workloadId,
@@ -38,12 +40,14 @@ class PodLabelerTest {
   fun getDestinationLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ) {
     val labeler = PodLabeler()
-    val result = labeler.getDestinationLabels(input, workloadId)
+    val result = labeler.getDestinationLabels(input, workloadId, passThroughLabels)
 
     assert(
       result ==
+        passThroughLabels +
         mapOf(
           MUTEX_KEY to input.connectionId.toString(),
           WORKLOAD_ID to workloadId,
@@ -57,12 +61,14 @@ class PodLabelerTest {
   fun getOrchestratorLabels(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ) {
     val labeler = PodLabeler()
-    val result = labeler.getOrchestratorLabels(input, workloadId)
+    val result = labeler.getOrchestratorLabels(input, workloadId, passThroughLabels)
 
     assert(
       result ==
+        passThroughLabels +
         mapOf(
           MUTEX_KEY to input.connectionId.toString(),
           WORKLOAD_ID to workloadId,
@@ -75,8 +81,9 @@ class PodLabelerTest {
   @ParameterizedTest
   @MethodSource("replInputWorkloadIdMatrix")
   fun getWorkloadLabels(
-    unused: ReplicationInput,
+    unusedInput: ReplicationInput,
     workloadId: String,
+    unusedLabels: Map<String, String>,
   ) {
     val labeler = PodLabeler()
     val result = labeler.getWorkloadLabels(workloadId)
@@ -94,7 +101,8 @@ class PodLabelerTest {
   @MethodSource("replInputWorkloadIdMatrix")
   fun getMutexLabels(
     input: ReplicationInput,
-    unused: String,
+    unusedWorkloadId: String,
+    unusedLabels: Map<String, String>,
   ) {
     val labeler = PodLabeler()
     val result = labeler.getMutexLabels(input)
@@ -111,8 +119,16 @@ class PodLabelerTest {
     @JvmStatic
     private fun replInputWorkloadIdMatrix(): Stream<Arguments> {
       return Stream.of(
-        Arguments.of(ReplicationInput().withConnectionId(UUID.randomUUID()), UUID.randomUUID().toString()),
-        Arguments.of(ReplicationInput().withConnectionId(UUID.randomUUID()), UUID.randomUUID().toString()),
+        Arguments.of(
+          ReplicationInput().withConnectionId(UUID.randomUUID()),
+          UUID.randomUUID().toString(),
+          mapOf("random labels1" to "from input msg1"),
+        ),
+        Arguments.of(
+          ReplicationInput().withConnectionId(UUID.randomUUID()),
+          UUID.randomUUID().toString(),
+          mapOf("random labels2" to "from input msg2"),
+        ),
       )
     }
   }
