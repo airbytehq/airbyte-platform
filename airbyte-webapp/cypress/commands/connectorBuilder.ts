@@ -2,12 +2,12 @@ import {
   addStream,
   assertHasNumberOfPages,
   configureLimitOffsetPagination,
-  configureListStreamSlicer,
+  configureParameters,
   disableAutoImportSchema,
   disablePagination,
   disableStreamSlicer,
   enablePagination,
-  enableStreamSlicer,
+  enableParameterizedRequests,
   enterName,
   enterRecordSelector,
   enterStreamName,
@@ -64,10 +64,10 @@ export const configurePagination = () => {
   configureLimitOffsetPagination("2", "Header", "limit", "Header", "offset");
 };
 
-export const configureStreamSlicer = (numberOfSlices: number) => {
+export const configureParameterizedRequests = (numberOfParameters: number) => {
   goToView("0");
-  enableStreamSlicer();
-  configureListStreamSlicer(Array.from(Array(numberOfSlices).keys()).join(","), "item_id");
+  enableParameterizedRequests();
+  configureParameters(Array.from(Array(numberOfParameters).keys()).join(","), "item_id");
   enterUrlPath("items/{{}{{} stream_slice.item_id }}");
 };
 

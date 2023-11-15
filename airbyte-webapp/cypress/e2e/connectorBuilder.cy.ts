@@ -17,8 +17,8 @@ import {
   configureAuth,
   configureGlobals,
   configurePagination,
+  configureParameterizedRequests,
   configureStream,
-  configureStreamSlicer,
   publishProject,
 } from "commands/connectorBuilder";
 
@@ -54,7 +54,7 @@ describe("Connector builder", { testIsolation: false }, () => {
   });
 
   /*
-  This test assumes it runs before "Read - Without pagination or partition router" since auth will be configured at that
+  This test assumes it runs before "Read - Without pagination or parameterized requests" since auth will be configured at that
   point
   */
   it("Fail on invalid auth", () => {
@@ -63,14 +63,14 @@ describe("Connector builder", { testIsolation: false }, () => {
     assertTestReadAuthFailure();
   });
 
-  it("Read - Without pagination or partition router", () => {
+  it("Read - Without pagination or parameterized requests", () => {
     configureAuth();
     testStream();
     assertTestReadItems();
   });
 
   /*
-  All the tests below assume they run after "Read - Without pagination or partition router" in order to have auth
+  All the tests below assume they run after "Read - Without pagination or parameterized requests" in order to have auth
   configured
   */
   it("Read - Infer schema", () => {
@@ -108,21 +108,21 @@ describe("Connector builder", { testIsolation: false }, () => {
     assertMaxNumberOfPages();
   });
 
-  it("Read - With partition router", () => {
-    configureStreamSlicer(3);
+  it("Read - With parameterized requests", () => {
+    configureParameterizedRequests(3);
     testStream();
     assertHasNumberOfSlices(3);
   });
 
-  it("Read - With partition router exceeding number of partitions", () => {
-    configureStreamSlicer(10);
+  it("Read - With parameterized requests exceeding number of slices", () => {
+    configureParameterizedRequests(10);
     testStream();
     assertMaxNumberOfSlices();
   });
 
-  it("Read - Pagination & partition router exceeding limits", () => {
+  it("Read - Pagination & parameterized requests exceeding limits", () => {
     configurePagination();
-    configureStreamSlicer(10);
+    configureParameterizedRequests(10);
 
     testStream();
 

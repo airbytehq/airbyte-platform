@@ -3,7 +3,8 @@ const nameInput = "input[name='name']";
 const urlBaseInput = "input[name='formValues.global.urlBase']";
 const addStreamButton = "button[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
-const toggleInput = "input[data-testid='toggle']";
+const togglePaginationInput = "input[data-testid='toggle-formValues.streams.0.paginator']";
+const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.streams.0.parameterizedRequests']";
 const streamNameInput = "input[name='streamName']";
 const streamUrlPathFromModal = "input[name='urlPath']";
 const streamUrlPathFromForm = "input[name='formValues.streams.0.urlPath']";
@@ -81,16 +82,12 @@ export const goToTestPage = (page: number) => {
   cy.get(testPageItem).contains(page).click();
 };
 
-const getFirstCheckbox = () => {
-  return cy.get(toggleInput).first();
-};
-
 export const enablePagination = () => {
-  getFirstCheckbox().check({ force: true });
+  cy.get(togglePaginationInput).check({ force: true });
 };
 
 export const disablePagination = () => {
-  getFirstCheckbox().uncheck({ force: true });
+  cy.get(togglePaginationInput).uncheck({ force: true });
 };
 
 export const configureLimitOffsetPagination = (
@@ -107,26 +104,22 @@ export const configureLimitOffsetPagination = (
   cy.get(injectOffsetFieldName).type(offsetFieldName, { force: true });
 };
 
-const getStreamSlicerCheckbox = () => {
-  return cy.get(toggleInput).eq(2);
-};
-
-export const enableStreamSlicer = () => {
-  getStreamSlicerCheckbox().check({ force: true });
+export const enableParameterizedRequests = () => {
+  cy.get(toggleParameterizedRequestsInput).check({ force: true });
 };
 
 export const disableStreamSlicer = () => {
-  getStreamSlicerCheckbox().uncheck({ force: true });
+  cy.get(toggleParameterizedRequestsInput).uncheck({ force: true });
 };
 
-export const configureListStreamSlicer = (values: string, cursor_field: string) => {
-  cy.get('[data-testid="tag-input-formValues.streams.0.partitionRouter.0.values.value"] input[type="text"]').type(
+export const configureParameters = (values: string, cursor_field: string) => {
+  cy.get('[data-testid="tag-input-formValues.streams.0.parameterizedRequests.0.values.value"] input[type="text"]').type(
     values,
     {
       force: true,
     }
   );
-  cy.get("[name='formValues.streams.0.partitionRouter.0.cursor_field']").type(cursor_field, { force: true });
+  cy.get("[name='formValues.streams.0.parameterizedRequests.0.cursor_field']").type(cursor_field, { force: true });
 };
 
 export const getSlicesFromDropdown = () => {

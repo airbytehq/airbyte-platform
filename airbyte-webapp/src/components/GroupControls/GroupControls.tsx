@@ -7,7 +7,7 @@ import { PropertyError } from "views/Connector/ConnectorForm/components/Property
 import styles from "./GroupControls.module.scss";
 
 interface GroupControlsProps {
-  label: React.ReactNode;
+  label?: React.ReactNode;
   control?: React.ReactNode;
   controlClassName?: string;
   name?: string;
@@ -22,15 +22,26 @@ const GroupControls: React.FC<React.PropsWithChildren<GroupControlsProps>> = ({
   controlClassName,
   error,
 }) => {
+  const hasTitle = Boolean(label || control);
+
   return (
     // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
     <div>
-      <div className={styles.container} data-testid={name}>
-        <div className={styles.title}>
-          <div className={styles.label}>{label}</div>
-          <div className={classNames(styles.control, controlClassName)}>{control}</div>
+      <div className={classNames(styles.container, { [styles["container--title"]]: hasTitle })} data-testid={name}>
+        {hasTitle && (
+          <div className={styles.title}>
+            <div className={styles.label}>{label}</div>
+            <div className={classNames(styles.control, controlClassName)}>{control}</div>
+          </div>
+        )}
+        <div
+          className={classNames(styles.content, {
+            [styles["content--error"]]: error,
+            [styles["content--title"]]: hasTitle,
+          })}
+        >
+          {children}
         </div>
-        <div className={classNames(styles.content, { [styles["content--error"]]: error })}>{children}</div>
       </div>
       {error && (
         <PropertyError>
