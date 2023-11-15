@@ -14,10 +14,10 @@ import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
+import java.io.File
 import org.junit.jupiter.api.Test
 import pipeline.SharedMocks.Companion.metricPublisher
 import reactor.kotlin.core.publisher.toMono
-import java.io.File
 
 private val LOGGER = KotlinLogging.logger {}
 
@@ -168,7 +168,7 @@ class LogPathTest {
     assert(completeFileContent.contains("LAUNCH for workload 1")) { "LAUNCH line missing" }
     if (assertException) {
       assert(completeFileContent.contains("Failure for workload 1")) { "FAILURE line missing" }
-      assert(completeFileContent.contains("Completed without launching workload.")) { "TERMINAL line missing" }
+      assert(completeFileContent.contains("Completed without launching workload")) { "TERMINAL line missing" }
     } else {
       assert(completeFileContent.contains("Success: ")) { "SUCCESS line missing" }
     }
