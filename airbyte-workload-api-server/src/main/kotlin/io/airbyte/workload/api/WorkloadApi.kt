@@ -73,6 +73,8 @@ open class WorkloadApi(
     workloadHandler.createWorkload(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
+      workloadCreateRequest.workloadInput,
+      workloadCreateRequest.logPath,
     )
     workloadService.create(workloadId = workloadCreateRequest.workloadId, workloadInput = workloadCreateRequest.workloadInput)
   }

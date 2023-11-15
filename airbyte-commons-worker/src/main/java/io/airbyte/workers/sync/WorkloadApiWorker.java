@@ -56,7 +56,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   @Override
-  public ReplicationOutput run(final ReplicationInput replicationInput, Path jobRoot) throws WorkerException {
+  public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
     final String workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
@@ -69,6 +69,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     // Create the workload
     createWorkload(new WorkloadCreateRequest(workloadId,
         serializedInput,
+        jobRoot.toString(),
         List.of(
             new WorkloadLabel("connectionId", replicationInput.getConnectionId().toString()),
             new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),

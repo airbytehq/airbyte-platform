@@ -39,8 +39,8 @@ class PipelineStartupTest {
         listOf(WorkloadStatus.cLAIMED),
       )
 
-    val workload: Workload =
-      Workload(workloadId, dataplaneId, WorkloadStatus.cLAIMED)
+    val workload =
+      Workload(workloadId, "payload", "/", dataplaneId, WorkloadStatus.cLAIMED)
 
     val workloadListResponse = WorkloadListResponse(listOf(workload))
 

@@ -39,6 +39,8 @@ class WorkloadHandlerImplTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "/",
       )
 
     every { workloadRepository.findById(workloadId) }.returns(Optional.of(domainWorkload))
@@ -66,9 +68,11 @@ class WorkloadHandlerImplTest {
         status = WorkloadStatus.pending,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "/",
       ),
     )
-    workloadHandler.createWorkload(workloadId, workloadLabels)
+    workloadHandler.createWorkload(workloadId, workloadLabels, "input payload", "/log/path")
     verify {
       workloadRepository.save(
         match {
@@ -79,7 +83,9 @@ class WorkloadHandlerImplTest {
             it.workloadLabels!!.get(0).key == workloadLabel1.key &&
             it.workloadLabels!!.get(0).value == workloadLabel1.value &&
             it.workloadLabels!!.get(1).key == workloadLabel2.key &&
-            it.workloadLabels!!.get(1).value == workloadLabel2.value
+            it.workloadLabels!!.get(1).value == workloadLabel2.value &&
+            it.inputPayload == "input payload" &&
+            it.logPath == "/log/path"
         },
       )
     }
@@ -88,7 +94,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(workloadId) }.returns(true)
-    assertThrows<NotModifiedException> { workloadHandler.createWorkload(workloadId, null) }
+    assertThrows<NotModifiedException> { workloadHandler.createWorkload(workloadId, null, "", "") }
   }
 
   @Test
@@ -102,11 +108,15 @@ class WorkloadHandlerImplTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "a payload",
+        logPath = "/log/path",
       )
     every { workloadRepository.search(any(), any(), any()) }.returns(listOf(domainWorkload))
     val workloads = workloadHandler.getWorkloads(listOf("dataplane1"), listOf(ApiWorkloadStatus.CLAIMED, ApiWorkloadStatus.FAILURE), null)
     assertEquals(1, workloads.size)
-    assertEquals(workloadId, workloads.get(0).id)
+    assertEquals(workloadId, workloads[0].id)
+    assertEquals("a payload", workloads[0].inputPayload)
+    assertEquals("/log/path", workloads[0].logPath)
   }
 
   @Test
@@ -139,6 +149,8 @@ class WorkloadHandlerImplTest {
           status = workloadStatus,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -158,6 +170,8 @@ class WorkloadHandlerImplTest {
           status = workloadStatus,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -180,6 +194,8 @@ class WorkloadHandlerImplTest {
           status = WorkloadStatus.running,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -197,6 +213,8 @@ class WorkloadHandlerImplTest {
           status = workloadStatus,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -213,6 +231,8 @@ class WorkloadHandlerImplTest {
           status = WorkloadStatus.pending,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -241,6 +261,8 @@ class WorkloadHandlerImplTest {
           status = workloadStatus,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -259,6 +281,8 @@ class WorkloadHandlerImplTest {
           status = workloadStatus,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )
@@ -279,6 +303,8 @@ class WorkloadHandlerImplTest {
           status = WorkloadStatus.cancelled,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
         ),
       ),
     )

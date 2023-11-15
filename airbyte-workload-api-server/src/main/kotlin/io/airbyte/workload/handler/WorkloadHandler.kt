@@ -7,7 +7,7 @@ import java.time.OffsetDateTime
 
 /**
  * In order to mock a class it needs to be open. We have added this interface to avoid making [WorkloadHandler] an open class.
- * There is a chance that once we move to micronaut 4 this issue will be resolved and we can remove this interface.
+ * There is a chance that once we move to micronaut 4 this issue will be resolved, and we can remove this interface.
  */
 interface WorkloadHandler {
   fun getWorkload(workloadId: String): ApiWorkload
@@ -22,6 +22,8 @@ interface WorkloadHandler {
   fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
+    input: String,
+    logPath: String,
   )
 
   @Transactional

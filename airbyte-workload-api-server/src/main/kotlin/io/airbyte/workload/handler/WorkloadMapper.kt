@@ -40,6 +40,8 @@ fun DomainWorkload.toApi(): ApiWorkload {
     status = this.status.toApi(),
     lastHeartbeatAt = this.lastHeartbeatAt,
     labels = this.workloadLabels?.map { it.toApi() }?.toMutableList() ?: mutableListOf(),
+    inputPayload = this.inputPayload,
+    logPath = this.logPath,
   )
 }
 
@@ -50,6 +52,8 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     status = this.status?.toDomain() ?: WorkloadStatus.pending,
     lastHeartbeatAt = this.lastHeartbeatAt,
     workloadLabels = this.labels?.map { it.toDomain() },
+    inputPayload = this.inputPayload,
+    logPath = this.logPath,
   )
 }
 

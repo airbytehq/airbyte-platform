@@ -10,4 +10,6 @@ data class Workload(
   var status: WorkloadStatus? = null,
   var lastHeartbeatAt: OffsetDateTime? = null,
   var labels: MutableList<WorkloadLabel>? = null,
+  var inputPayload: String = "",
+  var logPath: String = "",
 )

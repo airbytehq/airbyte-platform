@@ -203,6 +203,8 @@ components:
     Workload:
       required:
       - id
+      - inputPayload
+      - logPath
       type: object
       properties:
         id:
@@ -223,6 +225,10 @@ components:
           nullable: true
           items:
             $ref: '#/components/schemas/WorkloadLabel'
+        inputPayload:
+          type: string
+        logPath:
+          type: string
     WorkloadCancelRequest:
       required:
       - reason
@@ -248,6 +254,7 @@ components:
           type: string
     WorkloadCreateRequest:
       required:
+      - logPath
       - workloadId
       - workloadInput
       type: object
@@ -260,6 +267,8 @@ components:
           items:
             $ref: '#/components/schemas/WorkloadLabel'
         workloadInput:
+          type: string
+        logPath:
           type: string
     WorkloadHeartbeatRequest:
       required:

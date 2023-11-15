@@ -51,6 +51,8 @@ class WorkloadHandlerImpl(
   override fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
+    input: String,
+    logPath: String,
   ) {
     val workloadAlreadyExists = workloadRepository.existsById(workloadId)
     if (workloadAlreadyExists) {
@@ -63,6 +65,8 @@ class WorkloadHandlerImpl(
         status = WorkloadStatus.pending,
         lastHeartbeatAt = null,
         workloadLabels = labels?.map { it.toDomain() },
+        inputPayload = input,
+        logPath = logPath,
       )
 
     workloadRepository.save(domainWorkload).toApi()

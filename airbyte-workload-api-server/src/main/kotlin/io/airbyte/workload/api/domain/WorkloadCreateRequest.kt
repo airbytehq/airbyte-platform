@@ -8,4 +8,5 @@ data class WorkloadCreateRequest(
   var labels: List<WorkloadLabel>? = null,
   @Schema(required = true)
   var workloadInput: String = "",
+  var logPath: String = "",
 )

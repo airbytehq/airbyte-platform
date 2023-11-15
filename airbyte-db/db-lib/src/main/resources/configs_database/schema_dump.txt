@@ -357,6 +357,8 @@ create table "public"."workload" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "last_heartbeat_at" timestamp(6) with time zone,
+  "input_payload" text not null,
+  "log_path" text not null,
   constraint "workload_pkey"
     primary key ("id")
 );

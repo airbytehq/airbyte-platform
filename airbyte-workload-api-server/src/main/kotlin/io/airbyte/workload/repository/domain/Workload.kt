@@ -32,6 +32,8 @@ data class Workload(
   )
   @Nullable
   var workloadLabels: List<WorkloadLabel>?,
+  var inputPayload: String,
+  var logPath: String,
 ) {
   @JvmOverloads
   constructor(
@@ -40,12 +42,16 @@ data class Workload(
     status: WorkloadStatus,
     lastHeartbeatAt: OffsetDateTime?,
     workloadLabels: List<WorkloadLabel>?,
+    inputPayload: String,
+    logPath: String,
   ) : this(
     id = id,
     dataplaneId = dataplaneId,
     status = status,
     lastHeartbeatAt = lastHeartbeatAt,
     workloadLabels = workloadLabels,
+    inputPayload = inputPayload,
+    logPath = logPath,
     createdAt = null,
     updatedAt = null,
   )

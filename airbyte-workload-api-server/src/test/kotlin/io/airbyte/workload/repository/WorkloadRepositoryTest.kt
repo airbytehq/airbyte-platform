@@ -111,9 +111,9 @@ internal class WorkloadRepositoryTest {
         value = "value2",
         workload = null,
       )
-    val objects = ArrayList<WorkloadLabel>()
-    objects.add(label1)
-    objects.add(label2)
+    val labels = ArrayList<WorkloadLabel>()
+    labels.add(label1)
+    labels.add(label2)
     val workload =
       Workload(
         id = workloadId,
@@ -122,7 +122,9 @@ internal class WorkloadRepositoryTest {
         createdAt = null,
         updatedAt = null,
         lastHeartbeatAt = null,
-        objects,
+        workloadLabels = labels,
+        inputPayload = "",
+        logPath = "",
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(workloadId)
@@ -155,6 +157,8 @@ internal class WorkloadRepositoryTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "",
       )
     workloadRepo.save(workload)
     workloadRepo.update(workloadId, WorkloadStatus.running)
@@ -179,6 +183,8 @@ internal class WorkloadRepositoryTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "",
       )
     workloadRepo.save(workload)
     val now = OffsetDateTime.now()
@@ -207,6 +213,8 @@ internal class WorkloadRepositoryTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "",
       )
     workloadRepo.save(workload)
     workloadRepo.update(workloadId, "dataplaneId1", WorkloadStatus.running)
@@ -231,6 +239,8 @@ internal class WorkloadRepositoryTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "",
       )
     val workload2 =
       Workload(
@@ -241,6 +251,8 @@ internal class WorkloadRepositoryTest {
         updatedAt = null,
         lastHeartbeatAt = null,
         workloadLabels = null,
+        inputPayload = "",
+        logPath = "",
       )
     workloadRepo.save(workload1)
     workloadRepo.save(workload2)
