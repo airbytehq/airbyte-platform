@@ -71,6 +71,7 @@ class PodLabelerTest {
     )
   }
 
+  @SuppressWarnings("PMD.UnusedFormalParameter")
   @ParameterizedTest
   @MethodSource("replInputWorkloadIdMatrix")
   fun getWorkloadLabels(
@@ -88,6 +89,7 @@ class PodLabelerTest {
     )
   }
 
+  @SuppressWarnings("PMD.UnusedFormalParameter")
   @ParameterizedTest
   @MethodSource("replInputWorkloadIdMatrix")
   fun getMutexLabels(

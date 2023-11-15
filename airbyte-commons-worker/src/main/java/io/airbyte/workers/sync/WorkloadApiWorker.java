@@ -80,12 +80,12 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     int i = 0;
     while (true) {
       final Workload workload = getWorkload(workloadId);
-    
+
       if (workload.getStatus() != null) {
         if (TERMINAL_STATUSES.contains(workload.getStatus())) {
           break;
         }
-    
+
         if (i % 5 == 0) {
           log.info("Workload {} is {}", workloadId, workload.getStatus());
         }
@@ -93,7 +93,6 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       }
       sleep(Duration.ofMinutes(1).toMillis());
     }
-    
 
     return getReplicationOutput();
   }

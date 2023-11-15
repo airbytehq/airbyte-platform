@@ -24,7 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test extends AbstractConfigsDatabaseTest {
+class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test extends AbstractConfigsDatabaseTest {
 
   private static final UUID DEFAULT_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
   // The user table is quoted to avoid conflict with the reserved user keyword in Postgres.
