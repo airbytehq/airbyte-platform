@@ -168,7 +168,9 @@ class LogPathTest {
     assert(completeFileContent.contains("LAUNCH for workload 1"))
     if (assertException) {
       assert(completeFileContent.contains("Failure for workload 1"))
+      assert(completeFileContent.contains("Completed without launching workload."))
+    } else {
+      assert(completeFileContent.contains("Success: "))
     }
-    assert(completeFileContent.contains("Success: "))
   }
 }

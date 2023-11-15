@@ -5,7 +5,7 @@ micronaut:
     port: 8016
     netty:
       access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
   metrics:
     enabled: true
