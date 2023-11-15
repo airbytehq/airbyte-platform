@@ -6,6 +6,7 @@ package io.airbyte.workers.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -16,6 +17,8 @@ import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.time.Duration
+
+private val logger = KotlinLogging.logger {}
 
 @Factory
 class WorkloadApiClientFactory {
@@ -47,6 +50,8 @@ class WorkloadApiClientFactory {
             ServerException::class.java,
           ),
         )
+        .onRetry { l -> logger.warn { "Retry attempt ${l.attemptCount} of $maxRetries. Last response: ${l.lastResult}" } }
+        .onRetriesExceeded { l -> logger.error(l.exception) { "Retry attempts exceeded." } }
         .withDelay(Duration.ofSeconds(retryDelaySeconds))
         .withMaxRetries(maxRetries)
         .build()
