@@ -73,7 +73,7 @@ env.load(rootProject.file(".env.dev").inputStream())
 airbyte {
     application {
         mainClass.set("io.airbyte.workload.launcher.ApplicationKt")
-        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0", "-Dmicronaut.environments=test"))
+        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0", "-Dmicronaut.environments=local-test"))
         localEnvVars.putAll((env.toMutableMap() +
                 mutableMapOf("AIRBYTE_VERSION" to env["VERSION"],
                              "DATA_PLANE_ID" to "local")) as Map<String,String>)
