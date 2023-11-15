@@ -155,6 +155,8 @@
     "@storybook/react": "^7.5.2",
     "@storybook/react-vite": "^7.5.2",
     "@storybook/theming": "^7.5.2",
+    "@svgr/plugin-jsx": "^8.1.0",
+    "@svgr/plugin-svgo": "^8.1.0",
     "@testing-library/jest-dom": "^6.1.4",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.5.1",

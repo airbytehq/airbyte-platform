@@ -29,6 +29,7 @@ export default defineConfig(() => {
       viteYaml(),
       svgrPlugin({
         svgrOptions: {
+          plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
           titleProp: true,
         },
       }),
