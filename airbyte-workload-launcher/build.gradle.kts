@@ -73,10 +73,11 @@ env.load(rootProject.file(".env.dev").inputStream())
 airbyte {
     application {
         mainClass.set("io.airbyte.workload.launcher.ApplicationKt")
-        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0", "-Dmicronaut.environments=local-test"))
+        defaultJvmArgs.set(listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0"))
         localEnvVars.putAll((env.toMutableMap() +
                 mutableMapOf("AIRBYTE_VERSION" to env["VERSION"],
-                             "DATA_PLANE_ID" to "local")) as Map<String,String>)
+                             "DATA_PLANE_ID" to "local",
+                             "MICRONAUT_ENVIRONMENTS" to "test")) as Map<String,String>)
     }
     docker {
         imageName.set("workload-launcher")
