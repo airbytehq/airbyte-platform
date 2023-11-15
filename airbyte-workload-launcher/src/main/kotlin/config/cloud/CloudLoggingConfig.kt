@@ -15,17 +15,21 @@ class CloudLoggingConfig() {
   val gcsCloudConfig = GcsCloudConfig.builder()
 
   @ConfigurationBuilder(prefixes = ["with"], configurationPrefix = "minio")
-  val minioCloudLoggingConfig = MinioCloudConfig.builder()
+  val minioCloudConfig = MinioCloudConfig.builder()
 
   @ConfigurationBuilder(prefixes = ["with"], configurationPrefix = "s3")
-  val s3CloudLoggingConfig = S3CloudConfig.builder()
+  val s3CloudConfig = S3CloudConfig.builder()
 
   fun toEnvVarMap(): Map<String, String> {
     return if (type.isNotBlank()) {
-      when (LoggingType.valueOf(type)) {
-        LoggingType.GCS -> buildGcsConfig()
-        LoggingType.MINIO -> buildMinoConfig()
-        LoggingType.S3 -> buildS3Config()
+      try {
+        when (LoggingType.valueOf(type)) {
+          LoggingType.GCS -> buildGcsConfig()
+          LoggingType.MINIO -> buildMinoConfig()
+          LoggingType.S3 -> buildS3Config()
+        }
+      } catch (e: IllegalArgumentException) {
+        mapOf()
       }
     } else {
       mapOf()
@@ -37,12 +41,12 @@ class CloudLoggingConfig() {
     return mapOf(
       WORKER_LOGS_STORAGE_TYPE_ENV_VAR to LoggingType.GCS.name,
       GCS_LOG_BUCKET_ENV_VAR to gcsConfig.bucket,
-      GOOGLE_APPLICATION_CREDENTIALS to gcsConfig.applicationCredentials,
+      GOOGLE_APPLICATION_CREDENTIALS_ENV_VAR to gcsConfig.applicationCredentials,
     )
   }
 
   private fun buildMinoConfig(): Map<String, String> {
-    val minioConfig = minioCloudLoggingConfig.build()
+    val minioConfig = minioCloudConfig.build()
     return mapOf(
       WORKER_LOGS_STORAGE_TYPE_ENV_VAR to LoggingType.MINIO.name,
       AWS_ACCESS_KEY_ID_ENV_VAR to minioConfig.accessKey,
@@ -53,7 +57,7 @@ class CloudLoggingConfig() {
   }
 
   private fun buildS3Config(): Map<String, String> {
-    val s3Config = s3CloudLoggingConfig.build()
+    val s3Config = s3CloudConfig.build()
     return mapOf(
       WORKER_LOGS_STORAGE_TYPE_ENV_VAR to LoggingType.S3.name,
       AWS_ACCESS_KEY_ID_ENV_VAR to s3Config.accessKey,
@@ -65,13 +69,13 @@ class CloudLoggingConfig() {
 
   companion object {
     const val AWS_ACCESS_KEY_ID_ENV_VAR = "AWS_ACCESS_KEY_ID"
-    const val S3_LOG_BUCKET_ENV_VAR = "S3_LOG_BUCKET"
-    const val S3_MINIO_ENDPOINT_ENV_VAR = "S3_MINIO_ENDPOINT"
     const val AWS_SECRET_ACCESS_KEY_ENV_VAR = "AWS_SECRET_ACCESS_KEY"
-    const val S3_LOG_BUCKET_REGION_ENV_VAR = "S3_LOG_BUCKET_REGION"
-    const val WORKER_LOGS_STORAGE_TYPE_ENV_VAR = "WORKER_LOGS_STORAGE_TYPE"
     const val GCS_LOG_BUCKET_ENV_VAR = "GCS_LOG_BUCKET"
-    const val GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
+    const val GOOGLE_APPLICATION_CREDENTIALS_ENV_VAR = "GOOGLE_APPLICATION_CREDENTIALS"
+    const val S3_LOG_BUCKET_ENV_VAR = "S3_LOG_BUCKET"
+    const val S3_LOG_BUCKET_REGION_ENV_VAR = "S3_LOG_BUCKET_REGION"
+    const val S3_MINIO_ENDPOINT_ENV_VAR = "S3_MINIO_ENDPOINT"
+    const val WORKER_LOGS_STORAGE_TYPE_ENV_VAR = "WORKER_LOGS_STORAGE_TYPE"
   }
 }
 
