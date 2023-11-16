@@ -19,7 +19,6 @@ import io.airbyte.workload.api.client2.model.generated.Workload;
 import io.airbyte.workload.api.client2.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client2.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client2.model.generated.WorkloadLabel;
-import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse;
 import io.airbyte.workload.api.client2.model.generated.WorkloadStatus;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -114,9 +113,9 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     return output.map(s -> Jsons.deserialize(s, ReplicationOutput.class)).orElse(null);
   }
 
-  private WorkloadListResponse createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
+  private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
-      return workloadApi.workloadCreate(workloadCreateRequest);
+      workloadApi.workloadCreate(workloadCreateRequest);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

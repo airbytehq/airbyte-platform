@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_I
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
@@ -19,15 +20,23 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
+import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.AsyncKubePodStatus;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workers.workload.WorkloadType;
+import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client2.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,15 +51,24 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   private final ReplicationWorkerFactory replicationWorkerFactory;
   // Used by the orchestrator to mark the job RUNNING once the relevant pods are spun up.
   private final AsyncStateManager asyncStateManager;
+  private final WorkloadApi workloadApi;
+  private final WorkloadIdGenerator workloadIdGenerator;
+  private final boolean workloadEnabled;
 
   public ReplicationJobOrchestrator(final Configs configs,
                                     final JobRunConfig jobRunConfig,
                                     final ReplicationWorkerFactory replicationWorkerFactory,
-                                    final AsyncStateManager asyncStateManager) {
+                                    final AsyncStateManager asyncStateManager,
+                                    final WorkloadApi workloadApi,
+                                    final WorkloadIdGenerator workloadIdGenerator,
+                                    final boolean workloadEnabled) {
     this.configs = configs;
     this.jobRunConfig = jobRunConfig;
     this.replicationWorkerFactory = replicationWorkerFactory;
     this.asyncStateManager = asyncStateManager;
+    this.workloadApi = workloadApi;
+    this.workloadIdGenerator = workloadIdGenerator;
+    this.workloadEnabled = workloadEnabled;
   }
 
   @Override
@@ -88,10 +106,49 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     log.info("Running replication worker...");
     final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
-    final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
+
+    ReplicationOutput replicationOutput;
+    if (workloadEnabled) {
+      replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot);
+    } else {
+      replicationOutput = replicationWorker.run(replicationInput, jobRoot);
+    }
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));
+  }
+
+  @VisibleForTesting
+  ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
+      throws WorkerException {
+    try {
+      ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
+      switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
+        case FAILED -> updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
+        case CANCELLED -> updateWorkloadStatus(WorkloadStatus.CANCELLED, replicationInput.getConnectionId());
+        case COMPLETED -> updateWorkloadStatus(WorkloadStatus.SUCCESS, replicationInput.getConnectionId());
+        default -> throw new RuntimeException(String.format("Unknown status %s.", replicationOutput.getReplicationAttemptSummary().getStatus()));
+      }
+
+      return replicationOutput;
+    } catch (WorkerException e) {
+      updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
+      throw e;
+    }
+  }
+
+  private void updateWorkloadStatus(final WorkloadStatus status, final UUID connectionId) {
+    try {
+      workloadApi.workloadStatusUpdate(new WorkloadStatusUpdateRequest(
+          workloadIdGenerator.generate(
+              connectionId,
+              Long.parseLong(jobRunConfig.getJobId()),
+              Math.toIntExact(jobRunConfig.getAttemptId()),
+              WorkloadType.SYNC),
+          status));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void markJobRunning() {

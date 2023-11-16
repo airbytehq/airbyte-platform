@@ -61,10 +61,6 @@ paths:
       responses:
         "204":
           description: Successfully created workload
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkloadListResponse'
         "304":
           description: Workload with given workload id already exists.
   /api/v1/workload/heartbeat:
@@ -118,16 +114,8 @@ paths:
       responses:
         "204":
           description: Successfully updated the workload.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
         "404":
           description: Workload with given id was not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Void'
   /api/v1/workload/{workloadId}:
     get:
       tags:
@@ -158,8 +146,6 @@ components:
       properties:
         claimed:
           type: boolean
-    Void:
-      type: object
     Workload:
       required:
       - id

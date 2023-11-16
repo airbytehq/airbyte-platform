@@ -56,7 +56,6 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "204",
         description = "Successfully created workload",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
       ),
       ApiResponse(
         responseCode = "304",
@@ -252,12 +251,10 @@ open class WorkloadApi(
       ApiResponse(
         responseCode = "204",
         description = "Successfully updated the workload.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
       ApiResponse(
         responseCode = "404",
         description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = Void::class))],
       ),
     ],
   )
