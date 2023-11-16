@@ -20,12 +20,14 @@ import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest;
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel;
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.openapitools.client.infrastructure.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,6 +119,18 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
       workloadApi.workloadCreate(workloadCreateRequest);
+    } catch (final ClientException e) {
+      /*
+       * The Workload API returns a 304 response when the request to execute the workload has already been
+       * created. That response is handled in the form of a ClientException by the generated OpenAPI
+       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
+       * information so that the workflow will continue.
+       */
+      if (e.getStatusCode() == HttpStatus.NOT_MODIFIED.getCode()) {
+        log.warn("Workload {} already created and in progress.  Continuing...", workloadCreateRequest.getWorkloadId());
+      } else {
+        throw new RuntimeException(e);
+      }
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }

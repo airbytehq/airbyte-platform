@@ -19,7 +19,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
-
+    implementation libs.micronaut.http
     implementation libs.kotlin.logging
     implementation libs.micronaut.kotlin.extensions
 
