@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -92,6 +93,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.workload.api.client2.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -172,6 +174,9 @@ abstract class ReplicationWorkerTest {
 
   protected VoidCallable onReplicationRunning;
 
+  protected ReplicationWorkerHelper replicationWorkerHelper;
+  protected WorkloadApi workloadApi;
+
   ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
   }
@@ -214,6 +219,7 @@ abstract class ReplicationWorkerTest {
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     featureFlagClient = mock(TestClient.class);
+    workloadApi = mock(WorkloadApi.class);
 
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
 
@@ -224,7 +230,7 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false));
+    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 60));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
   }
 
@@ -974,7 +980,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationAcceptTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true));
+        .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         featureFlagClient,
@@ -1024,7 +1030,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true));
+        .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         featureFlagClient,
@@ -1072,7 +1078,7 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
     when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true));
+        .thenReturn(new ReplicationFeatureFlags(true, 0));
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         featureFlagClient,
@@ -1137,6 +1143,30 @@ abstract class ReplicationWorkerTest {
     failureReason = ReplicationWorkerHelper.getFailureReason(new TimeoutException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
     assertEquals(failureReason.getFailureType(), FailureType.DESTINATION_TIMEOUT);
+  }
+
+  @Test
+  void testDontCallHeartbeat() throws WorkerException {
+    sourceStub.setMessages(RECORD_MESSAGE1);
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    doReturn(Boolean.FALSE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
+
+    worker.run(replicationInput, jobRoot);
+
+    verify(replicationWorkerHelper, times(0)).getWorkloadStatusHeartbeat();
+  }
+
+  @Test
+  void testCallHeartbeat() throws WorkerException {
+    sourceStub.setMessages(RECORD_MESSAGE1);
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    doReturn(Boolean.TRUE).when(replicationWorkerHelper).isWorkerV2TestEnabled();
+
+    worker.run(replicationInput, jobRoot);
+
+    verify(replicationWorkerHelper).getWorkloadStatusHeartbeat();
   }
 
   private ReplicationContext simpleContext(final boolean isReset) {

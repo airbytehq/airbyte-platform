@@ -44,9 +44,14 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
+import io.airbyte.workers.workload.WorkloadIdGenerator
+import io.airbyte.workers.workload.WorkloadType
+import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.api.client2.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.io.FileUtils
 import java.nio.file.Path
+import java.time.Duration
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
@@ -62,6 +67,9 @@ class ReplicationWorkerHelper(
   private val replicationAirbyteMessageEventPublishingHelper: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
+  private val workloadApi: WorkloadApi,
+  private val workloadIdGenerator: WorkloadIdGenerator,
+  private val workloadEnabled: Boolean,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
@@ -73,7 +81,7 @@ class ReplicationWorkerHelper(
   private var destinationConfig: WorkerDestinationConfig? = null
   private var currentDestinationStream: StreamDescriptor? = null
   private var ctx: ReplicationContext? = null
-  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
+  private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
 
   fun markCancelled(): Unit = cancelled.set(true)
 
@@ -81,6 +89,36 @@ class ReplicationWorkerHelper(
 
   fun markReplicationRunning() {
     onReplicationRunning.call()
+  }
+
+  fun getWorkloadStatusHeartbeat(): Runnable {
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()))
+  }
+
+  fun getWorkloadStatusHeartbeat(heartbeatInterval: Duration): Runnable {
+    return Runnable {
+      logger.info { "Starting workload heartbeat" }
+      do {
+        Thread.sleep(heartbeatInterval.toMillis())
+        ctx?.let {
+          try {
+            workloadApi.workloadHeartbeat(
+              WorkloadHeartbeatRequest(
+                workloadIdGenerator.generate(
+                  it.connectionId,
+                  it.jobId,
+                  it.attempt,
+                  WorkloadType.SYNC,
+                ),
+              ),
+            )
+          } catch (e: Exception) {
+            logger.error(e) { "Heartbeat failed" }
+            return@Runnable
+          }
+        }
+      } while (true)
+    }
   }
 
   fun initialize(
@@ -324,6 +362,10 @@ class ReplicationWorkerHelper(
     return internalProcessMessageFromSource(sourceRawMessage)
       .let { mapper.mapMessage(it) }
       .let { Optional.of(it) }
+  }
+
+  fun isWorkerV2TestEnabled(): Boolean {
+    return workloadEnabled
   }
 
   private fun getTotalStats(

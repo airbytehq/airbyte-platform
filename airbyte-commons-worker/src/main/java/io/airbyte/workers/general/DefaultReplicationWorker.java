@@ -7,8 +7,6 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -24,15 +22,10 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
-import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
-import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
@@ -92,29 +85,23 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
                                   final AirbyteSource source,
-                                  final AirbyteMapper mapper,
                                   final AirbyteDestination destination,
-                                  final AirbyteMessageTracker messageTracker,
                                   final SyncPersistence syncPersistence,
                                   final RecordSchemaValidator recordSchemaValidator,
-                                  final FieldSelector fieldSelector,
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final VoidCallable onReplicationRunning,
+                                  final ReplicationWorkerHelper replicationWorkerHelper,
                                   final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
-    this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
+    this.replicationWorkerHelper = replicationWorkerHelper;
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
     // readFromSrcAndWriteToDstRunnable + readFromDstThread
-    // + source heartbeat + dest timeout monitor = 4
-    this.executors = Executors.newFixedThreadPool(4);
+    // + source heartbeat + dest timeout monitor + workload timeout = 5
+    this.executors = Executors.newFixedThreadPool(5);
     this.recordSchemaValidator = recordSchemaValidator;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
@@ -169,8 +156,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   private void replicate(final Path jobRoot,
                          final ReplicationInput replicationInput,
-                         final ReplicationFeatureFlags flags)
-      throws Exception {
+                         final ReplicationFeatureFlags flags) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
     final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
@@ -181,6 +167,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       replicationWorkerHelper.startSource(source, replicationInput, jobRoot);
 
       replicationWorkerHelper.markReplicationRunning();
+
+      if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
+        CompletableFuture.runAsync(
+            replicationWorkerHelper.getWorkloadStatusHeartbeat(),
+            executors);
+      }
 
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
@@ -464,7 +456,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     private final Map<String, String> mdc;
     private final ReplicationFeatureFlags flags;
 
-    public CloseableWithTimeout(AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+    public CloseableWithTimeout(final AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
       this.autoCloseable = autoCloseable;
       this.mdc = mdc;
       this.flags = flags;

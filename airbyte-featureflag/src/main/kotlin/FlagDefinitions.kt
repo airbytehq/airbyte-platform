@@ -158,6 +158,8 @@ object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-bi
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
+object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 60)
+
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
 
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)

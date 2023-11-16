@@ -126,6 +126,12 @@ class ContainerOrchestratorConfigBeanFactory {
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
     @Value("\${google.application.credentials}") googleApplicationCredentials: String,
+    @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
+    @Value("\${airbyte.workload-api.bearer-token}") workloadApiBearerToken: String,
+    @Value("\${airbyte.workload-api.connect-timeout-seconds}") workloadApiConnectTimeoutSeconds: String,
+    @Value("\${airbyte.workload-api.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
+    @Value("\${airbyte.workload-api.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
+    @Value("\${airbyte.workload-api.retries.max}") workloadApiRetriesMax: String,
     cloudLoggingConfig: CloudLoggingConfig,
     cloudStateConfig: CloudStateConfig,
   ): Map<String, String> {
@@ -165,6 +171,14 @@ class ContainerOrchestratorConfigBeanFactory {
     if (System.getenv(DD_VERSION_ENV_VAR) != null) {
       envMap[DD_VERSION_ENV_VAR] = System.getenv(DD_VERSION_ENV_VAR)
     }
+
+    // Environment variables for Workload API
+    envMap[WORKLOAD_API_HOST_ENV_VAR] = workloadApiBasePath
+    envMap[WORKLOAD_API_BEARER_TOKEN_ENV_VAR] = workloadApiBearerToken
+    envMap[WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR] = workloadApiConnectTimeoutSeconds
+    envMap[WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR] = workloadApiReadTimeoutSeconds
+    envMap[WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR] = workloadApiRetriesDelaySeconds
+    envMap[WORKLOAD_API_MAX_RETRIES_ENV_VAR] = workloadApiRetriesMax
 
     // Environment variables for ApiClientBeanFactory
     envMap[CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint
@@ -229,5 +243,11 @@ class ContainerOrchestratorConfigBeanFactory {
     private const val ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED"
     private const val DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED"
     private const val WORKER_V2_MICRONAUT_ENV = "worker-v2"
+    private const val WORKLOAD_API_HOST_ENV_VAR = "WORKLOAD_API_HOST"
+    private const val WORKLOAD_API_BEARER_TOKEN_ENV_VAR = "WORKLOAD_API_BEARER_TOKEN"
+    private const val WORKLOAD_API_CONNECT_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_CONNECT_TIMEOUT_SECONDS"
+    private const val WORKLOAD_API_READ_TIMEOUT_SECONDS_ENV_VAR = "WORKLOAD_API_READ_TIMEOUT_SECONDS"
+    private const val WORKLOAD_API_RETRY_DELAY_SECONDS_ENV_VAR = "WORKLOAD_API_RETRY_DELAY_SECONDS"
+    private const val WORKLOAD_API_MAX_RETRIES_ENV_VAR = "WORKLOAD_API_MAX_RETRIES"
   }
 }
