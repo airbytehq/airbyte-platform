@@ -10,10 +10,12 @@ import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
-import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
+import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_REASON_TAG
@@ -87,6 +89,99 @@ open class WorkloadApi(
       workloadCreateRequest.labels.associate { it.key to it.value },
       workloadCreateRequest.logPath,
     )
+  }
+
+  @PUT
+  @Path("/failure")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Set workload status to 'failure'", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Success",
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Workload with given id was not found.",
+      ),
+      ApiResponse(
+        responseCode = "410",
+        description = "Workload is not in an active state, it cannot be failed.",
+      ),
+    ],
+  )
+  open fun workloadFailure(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
+    ) workloadFailureRequest: WorkloadFailureRequest,
+  ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.failWorkload(workloadFailureRequest.workloadId)
+  }
+
+  @PUT
+  @Path("/success")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Set workload status to 'success'", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Success",
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Workload with given id was not found.",
+      ),
+      ApiResponse(
+        responseCode = "410",
+        description = "Workload is not in an active state, it cannot be succeeded.",
+      ),
+    ],
+  )
+  open fun workloadSuccess(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
+    ) workloadSuccessRequest: WorkloadSuccessRequest,
+  ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
+  }
+
+  @PUT
+  @Path("/running")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Set workload status to 'running'", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Success",
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Workload with given id was not found.",
+      ),
+      ApiResponse(
+        responseCode = "410",
+        description = "Workload is not in pending status, it can't be set to running.",
+      ),
+    ],
+  )
+  open fun workloadRunning(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
+    ) workloadRunningRequest: WorkloadRunningRequest,
+  ) {
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
+    workloadHandler.setWorkloadStatusToRunning(workloadRunningRequest.workloadId)
   }
 
   @PUT
@@ -246,32 +341,5 @@ open class WorkloadApi(
         workloadListRequest.updatedBefore,
       ),
     )
-  }
-
-  @PUT
-  @Path("/status")
-  @Status(HttpStatus.NO_CONTENT)
-  @Consumes("application/json")
-  @Produces("application/json")
-  @Operation(summary = "Update the status of a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Successfully updated the workload.",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-      ),
-    ],
-  )
-  open fun workloadStatusUpdate(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadStatusUpdateRequest::class))],
-    ) workloadStatusUpdateRequest: WorkloadStatusUpdateRequest,
-  ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadStatusUpdateRequest.workloadId) as Map<String, Any>?)
-    workloadHandler.updateWorkload(workloadStatusUpdateRequest.workloadId, workloadStatusUpdateRequest.status)
   }
 }

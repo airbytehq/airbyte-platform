@@ -68,13 +68,6 @@ class WorkloadHandlerImpl(
     workloadRepository.save(domainWorkload).toApi()
   }
 
-  override fun updateWorkload(
-    workloadId: String,
-    workloadStatus: ApiWorkloadStatus,
-  ) {
-    workloadRepository.update(workloadId, workloadStatus.toDomain())
-  }
-
   override fun claimWorkload(
     workloadId: String,
     dataplaneId: String,
@@ -105,9 +98,61 @@ class WorkloadHandlerImpl(
           workloadId,
           WorkloadStatus.cancelled,
         )
-      WorkloadStatus.cancelled -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workflow is a noop" }
+      WorkloadStatus.cancelled -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
         "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${workload.status}",
+      )
+    }
+  }
+
+  override fun failWorkload(workloadId: String) {
+    val workload = getDomainWorkload(workloadId)
+
+    when (workload.status) {
+      WorkloadStatus.claimed, WorkloadStatus.running ->
+        workloadRepository.update(
+          workloadId,
+          WorkloadStatus.failure,
+        )
+      WorkloadStatus.failure -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
+      else -> throw InvalidStatusTransitionException(
+        "Tried to fail a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
+      )
+    }
+  }
+
+  override fun succeedWorkload(workloadId: String) {
+    val workload = getDomainWorkload(workloadId)
+
+    when (workload.status) {
+      WorkloadStatus.claimed, WorkloadStatus.running ->
+        workloadRepository.update(
+          workloadId,
+          WorkloadStatus.success,
+        )
+      WorkloadStatus.success ->
+        logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
+      else -> throw InvalidStatusTransitionException(
+        "Tried to succeed a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
+      )
+    }
+  }
+
+  override fun setWorkloadStatusToRunning(workloadId: String) {
+    val workload = getDomainWorkload(workloadId)
+
+    when (workload.status) {
+      WorkloadStatus.claimed ->
+        workloadRepository.update(
+          workloadId,
+          WorkloadStatus.success,
+        )
+      WorkloadStatus.running -> logger.info { "Workload $workloadId is already marked as running. Trying to update its status to running is a noop" }
+      WorkloadStatus.cancelled, WorkloadStatus.failure, WorkloadStatus.success -> throw InvalidStatusTransitionException(
+        "Heartbeat a workload in a terminal state",
+      )
+      WorkloadStatus.pending -> throw InvalidStatusTransitionException(
+        "Can't set a workload status to running on a workload that hasn't been claimed",
       )
     }
   }

@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.client
 
 import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus
-import io.airbyte.workload.api.client.model.generated.WorkloadStatusUpdateRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadRunningRequest
 import io.airbyte.workload.launcher.pipeline.StageError
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -32,12 +32,12 @@ class StatusUpdater(
   }
 
   fun updateStatusToRunning(workloadId: String) {
-    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.RUNNING)
-    workloadApiClient.workloadStatusUpdate(workloadStatusUpdateRequest)
+    val workloadRunningRequest = WorkloadRunningRequest(workloadId)
+    workloadApiClient.workloadRunning(workloadRunningRequest)
   }
 
   fun updateStatusToFailed(workloadId: String) {
-    val workloadStatusUpdateRequest = WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.FAILURE)
-    workloadApiClient.workloadStatusUpdate(workloadStatusUpdateRequest)
+    val workloadFailureRequest = WorkloadFailureRequest(workloadId)
+    workloadApiClient.workloadFailure(workloadFailureRequest)
   }
 }

@@ -29,14 +29,14 @@ import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.WorkloadType;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
-import io.airbyte.workload.api.client.model.generated.WorkloadStatusUpdateRequest;
+import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest;
+import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest;
+import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,35 +120,40 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
 
   @VisibleForTesting
   ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
-      throws WorkerException {
+      throws WorkerException, IOException {
+
+    String workloadId = workloadIdGenerator.generate(
+        replicationInput.getConnectionId(),
+        Long.parseLong(jobRunConfig.getJobId()),
+        Math.toIntExact(jobRunConfig.getAttemptId()),
+        WorkloadType.SYNC);
+
     try {
       final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
       switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
-        case FAILED -> updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
-        case CANCELLED -> updateWorkloadStatus(WorkloadStatus.CANCELLED, replicationInput.getConnectionId());
-        case COMPLETED -> updateWorkloadStatus(WorkloadStatus.SUCCESS, replicationInput.getConnectionId());
+        case FAILED -> failWorkload(workloadId);
+        case CANCELLED -> cancelWorkload(workloadId);
+        case COMPLETED -> succeedWorkload(workloadId);
         default -> throw new RuntimeException(String.format("Unknown status %s.", replicationOutput.getReplicationAttemptSummary().getStatus()));
       }
 
       return replicationOutput;
     } catch (final WorkerException e) {
-      updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
+      failWorkload(workloadId);
       throw e;
     }
   }
 
-  private void updateWorkloadStatus(final WorkloadStatus status, final UUID connectionId) {
-    try {
-      workloadApi.workloadStatusUpdate(new WorkloadStatusUpdateRequest(
-          workloadIdGenerator.generate(
-              connectionId,
-              Long.parseLong(jobRunConfig.getJobId()),
-              Math.toIntExact(jobRunConfig.getAttemptId()),
-              WorkloadType.SYNC),
-          status));
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
+  private void cancelWorkload(String workloadId) throws IOException {
+    workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"));
+  }
+
+  private void failWorkload(String workloadId) throws IOException {
+    workloadApi.workloadFailure(new WorkloadFailureRequest(workloadId));
+  }
+
+  private void succeedWorkload(String workloadId) throws IOException {
+    workloadApi.workloadSuccess(new WorkloadSuccessRequest(workloadId));
   }
 
   private void markJobRunning() {

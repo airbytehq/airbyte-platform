@@ -5,9 +5,11 @@ import io.airbyte.commons.temporal.WorkflowClientWrapped
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadListRequest
-import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
+import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.errors.NotModifiedException
@@ -137,18 +139,6 @@ class WorkloadApiTest(
   }
 
   @Test
-  fun `test status update success`() {
-    every { workloadHandler.updateWorkload(any(), any()) }.returns(mockk())
-    testEndpointStatus(HttpRequest.PUT("/api/v1/workload/status", Jsons.serialize(WorkloadStatusUpdateRequest())), HttpStatus.NO_CONTENT)
-  }
-
-  @Test
-  fun `test status update workload id not found`() {
-    every { workloadHandler.updateWorkload(any(), any()) } throws NotFoundException("test")
-    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/status", Jsons.serialize(WorkloadStatusUpdateRequest())), HttpStatus.NOT_FOUND)
-  }
-
-  @Test
   fun `test cancel success`() {
     every { workloadHandler.cancelWorkload(any()) } just Runs
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", Jsons.serialize(WorkloadCancelRequest())), HttpStatus.NO_CONTENT)
@@ -164,6 +154,60 @@ class WorkloadApiTest(
   fun `test cancel workload in invalid status`() {
     every { workloadHandler.cancelWorkload(any()) } throws InvalidStatusTransitionException("test")
     testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", Jsons.serialize(WorkloadCancelRequest())), HttpStatus.GONE)
+  }
+
+  @Test
+  fun `test failure success`() {
+    every { workloadHandler.failWorkload(any()) } just Runs
+    testEndpointStatus(HttpRequest.PUT("/api/v1/workload/failure", Jsons.serialize(WorkloadFailureRequest())), HttpStatus.NO_CONTENT)
+  }
+
+  @Test
+  fun `test failure workload id not found`() {
+    every { workloadHandler.failWorkload(any()) } throws NotFoundException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/failure", Jsons.serialize(WorkloadFailureRequest())), HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `test failure workload in invalid status`() {
+    every { workloadHandler.failWorkload(any()) } throws InvalidStatusTransitionException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/failure", Jsons.serialize(WorkloadFailureRequest())), HttpStatus.GONE)
+  }
+
+  @Test
+  fun `test success succeeded`() {
+    every { workloadHandler.succeedWorkload(any()) } just Runs
+    testEndpointStatus(HttpRequest.PUT("/api/v1/workload/success", Jsons.serialize(WorkloadSuccessRequest())), HttpStatus.NO_CONTENT)
+  }
+
+  @Test
+  fun `test success workload id not found`() {
+    every { workloadHandler.succeedWorkload(any()) } throws NotFoundException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/success", Jsons.serialize(WorkloadSuccessRequest())), HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `test success workload in invalid status`() {
+    every { workloadHandler.succeedWorkload(any()) } throws InvalidStatusTransitionException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/success", Jsons.serialize(WorkloadSuccessRequest())), HttpStatus.GONE)
+  }
+
+  @Test
+  fun `test running succeeded`() {
+    every { workloadHandler.setWorkloadStatusToRunning(any()) } just Runs
+    testEndpointStatus(HttpRequest.PUT("/api/v1/workload/running", Jsons.serialize(WorkloadRunningRequest())), HttpStatus.NO_CONTENT)
+  }
+
+  @Test
+  fun `test running workload id not found`() {
+    every { workloadHandler.setWorkloadStatusToRunning(any()) } throws NotFoundException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/running", Jsons.serialize(WorkloadRunningRequest())), HttpStatus.NOT_FOUND)
+  }
+
+  @Test
+  fun `test running workload in invalid status`() {
+    every { workloadHandler.setWorkloadStatusToRunning(any()) } throws InvalidStatusTransitionException("test")
+    testErrorEndpointStatus(HttpRequest.PUT("/api/v1/workload/running", Jsons.serialize(WorkloadRunningRequest())), HttpStatus.GONE)
   }
 
   private fun testEndpointStatus(

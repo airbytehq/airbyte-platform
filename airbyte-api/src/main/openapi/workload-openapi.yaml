@@ -63,6 +63,24 @@ paths:
           description: Successfully created workload
         "304":
           description: Workload with given workload id already exists.
+  /api/v1/workload/failure:
+    put:
+      tags:
+      - workload
+      summary: Set workload status to 'failure'
+      operationId: workloadFailure
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadFailureRequest'
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Workload with given id was not found.
+        "410":
+          description: "Workload is not in an active state, it cannot be failed."
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -100,22 +118,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkloadListResponse'
-  /api/v1/workload/status:
+  /api/v1/workload/running:
     put:
       tags:
       - workload
-      summary: Update the status of a workload
-      operationId: workloadStatusUpdate
+      summary: Set workload status to 'running'
+      operationId: workloadRunning
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkloadStatusUpdateRequest'
+              $ref: '#/components/schemas/WorkloadRunningRequest'
       responses:
         "204":
-          description: Successfully updated the workload.
+          description: Success
         "404":
           description: Workload with given id was not found.
+        "410":
+          description: "Workload is not in pending status, it can't be set to running."
+  /api/v1/workload/success:
+    put:
+      tags:
+      - workload
+      summary: Set workload status to 'success'
+      operationId: workloadSuccess
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkloadSuccessRequest'
+      responses:
+        "204":
+          description: Success
+        "404":
+          description: Workload with given id was not found.
+        "410":
+          description: "Workload is not in an active state, it cannot be succeeded."
   /api/v1/workload/{workloadId}:
     get:
       tags:
@@ -212,6 +250,13 @@ components:
           type: string
         logPath:
           type: string
+    WorkloadFailureRequest:
+      required:
+      - workloadId
+      type: object
+      properties:
+        workloadId:
+          type: string
     WorkloadHeartbeatRequest:
       required:
       - workloadId
@@ -255,6 +300,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workload'
+    WorkloadRunningRequest:
+      required:
+      - workloadId
+      type: object
+      properties:
+        workloadId:
+          type: string
     WorkloadStatus:
       type: string
       enum:
@@ -264,13 +316,10 @@ components:
       - success
       - failure
       - cancelled
-    WorkloadStatusUpdateRequest:
+    WorkloadSuccessRequest:
       required:
-      - status
       - workloadId
       type: object
       properties:
         workloadId:
           type: string
-        status:
-          $ref: '#/components/schemas/WorkloadStatus'

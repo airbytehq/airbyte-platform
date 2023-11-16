@@ -119,13 +119,6 @@ class WorkloadHandlerImplTest {
     assertEquals("/log/path", workloads[0].logPath)
   }
 
-  @Test
-  fun `test update workload`() {
-    every { workloadRepository.update(eq(workloadId), any()) }.returns(Unit)
-    workloadHandler.updateWorkload(workloadId, ApiWorkloadStatus.CLAIMED)
-    verify { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.claimed)) }
-  }
-
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["claimed", "running"])
   fun `test successfulHeartbeat`(workloadStatus: WorkloadStatus) {
@@ -354,5 +347,230 @@ class WorkloadHandlerImplTest {
 
     workloadHandler.cancelWorkload(workloadId)
     verify(exactly = 0) { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.cancelled)) }
+  }
+
+  @Test
+  fun `test workload not found when failing workload`() {
+    every { workloadRepository.findById(workloadId) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.failWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["success", "pending", "cancelled"])
+  fun `test fail workload in inactive status`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["claimed", "running"])
+  fun `test failing workload succeeded`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+
+    workloadHandler.failWorkload(workloadId)
+    verify { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.failure)) }
+  }
+
+  @Test
+  fun `test noop failure`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.failure,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    workloadHandler.failWorkload(workloadId)
+    verify(exactly = 0) { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.failure)) }
+  }
+
+  @Test
+  fun `test workload not found when succeeding workload`() {
+    every { workloadRepository.findById(workloadId) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.succeedWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["pending", "cancelled", "failure"])
+  fun `test succeed workload in inactive status`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.succeedWorkload(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["claimed", "running"])
+  fun `test succeeding workload succeeded`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+
+    workloadHandler.succeedWorkload(workloadId)
+    verify { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.success)) }
+  }
+
+  @Test
+  fun `test noop success`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.success,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    workloadHandler.succeedWorkload(workloadId)
+    verify(exactly = 0) { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.success)) }
+  }
+
+  @Test
+  fun `test workload not found when setting status to running`() {
+    every { workloadRepository.findById(workloadId) }.returns(Optional.empty())
+    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(workloadId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadStatus::class, names = ["success", "cancelled", "failure"])
+  fun `test set workload status to running when workload is in terminal state`(workloadStatus: WorkloadStatus) {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = workloadStatus,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(workloadId) }
+  }
+
+  @Test
+  fun `test set workload status to running on unclaimed workload`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.pending,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(workloadId) }
+  }
+
+  @Test
+  fun `test set workload status to running succeeded`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.claimed,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    every { workloadRepository.update(any(), ofType(WorkloadStatus::class)) } just Runs
+
+    workloadHandler.succeedWorkload(workloadId)
+    verify { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.success)) }
+  }
+
+  @Test
+  fun `test noop when setting workload status to running`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = null,
+          status = WorkloadStatus.success,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+
+    workloadHandler.succeedWorkload(workloadId)
+    verify(exactly = 0) { workloadRepository.update(eq(workloadId), eq(WorkloadStatus.success)) }
   }
 }
