@@ -6,6 +6,14 @@ package io.airbyte.workers.sync;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Destination;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Source;
+import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.exception.WorkerException;
@@ -24,6 +32,8 @@ import io.micronaut.http.HttpStatus;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -43,18 +53,21 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
+  private final FeatureFlagClient featureFlagClient;
   private String workloadId = null;
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
                            final OrchestratorNameGenerator orchestratorNameGenerator,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
-                           final ReplicationActivityInput input) {
+                           final ReplicationActivityInput input,
+                           final FeatureFlagClient featureFlagClient) {
     this.documentStoreClient = documentStoreClient;
     this.orchestratorNameGenerator = orchestratorNameGenerator;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Override
@@ -115,9 +128,29 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private ReplicationOutput getReplicationOutput(final String workloadId) {
     final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
         input.getJobRunConfig().getAttemptId());
-    final Optional<String> output = documentStoreClient.read(outputLocation);
+
+    final Optional<String> output = fetchReplicationOutput(outputLocation);
+
     log.info("Replication output for workload {} : {}", workloadId, output.orElse(""));
     return output.map(s -> Jsons.deserialize(s, ReplicationOutput.class)).orElse(null);
+  }
+
+  private Optional<String> fetchReplicationOutput(final String outputLocation) {
+    final Context context = new Multi(List.of(
+        new Workspace(input.getWorkspaceId()),
+        new Connection(input.getConnectionId()),
+        new Source(input.getSourceId()),
+        new Destination(input.getDestinationId())
+    ));
+    final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
+    final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
+    do {
+      final Optional<String> output = documentStoreClient.read(outputLocation);
+      if (output.isPresent()) {
+        return output;
+      }
+    } while (Instant.now().isBefore(cutoffTime));
+    return Optional.empty();
   }
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {

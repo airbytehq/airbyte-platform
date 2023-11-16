@@ -189,7 +189,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               new Multi(
                   List.of(new Workspace(replicationActivityInput.getWorkspaceId()), new Connection(replicationActivityInput.getConnectionId()))))) {
             worker = new WorkloadApiWorker(documentStoreClient, orchestratorNameGenerator, workloadApi, workloadIdGenerator,
-                replicationActivityInput);
+                replicationActivityInput, featureFlagClient);
           } else {
             final CheckedSupplier<Worker<ReplicationInput, ReplicationOutput>, Exception> workerFactory =
                 orchestratorHandleFactory.create(hydratedReplicationInput.getSourceLauncherConfig(),
