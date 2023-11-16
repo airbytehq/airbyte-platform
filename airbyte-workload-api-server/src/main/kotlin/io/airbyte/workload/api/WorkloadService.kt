@@ -32,7 +32,7 @@ open class WorkloadService(
     logPath: String,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
-    messageProducer.publish(LAUNCHER_QUEUE_NAME, LauncherInputMessage(workloadId, workloadInput, labels, logPath))
+    messageProducer.publish(LAUNCHER_QUEUE_NAME, LauncherInputMessage(workloadId, workloadInput, labels, logPath), "wl-create_$workloadId")
     metricPublisher.count(
       WorkloadApiMetricMetadata.WORKLOAD_MESSAGE_PUBLISHED.metricName,
       MetricAttribute(WORKLOAD_ID_TAG, workloadId),

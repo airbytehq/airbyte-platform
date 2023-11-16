@@ -13,8 +13,9 @@ class TemporalMessageProducer<T : Any>(private val workflowClientWrapped: Workfl
   fun publish(
     subject: String,
     message: T,
+    messageId: String,
   ) {
-    doPublish<QueueWorkflow<T>>(subject, message)
+    doPublish<QueueWorkflow<T>>(subject, message, messageId)
   }
 
   // This is a workaround to get a class with a generic.
@@ -23,8 +24,12 @@ class TemporalMessageProducer<T : Any>(private val workflowClientWrapped: Workfl
   private inline fun <reified W : QueueWorkflow<T>> doPublish(
     subject: String,
     message: T,
+    messageId: String,
   ) {
-    val workflowOptions = WorkflowOptions.newBuilder().setTaskQueue(subject).build()
+    val workflowOptions = WorkflowOptions.newBuilder()
+      .setTaskQueue(subject)
+      .setWorkflowId(messageId)
+      .build()
     val workflow = workflowClientWrapped.newWorkflowStub(W::class.java, workflowOptions)
     workflow.publish(Message(message))
   }
