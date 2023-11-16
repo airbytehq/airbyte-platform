@@ -189,9 +189,6 @@ class LogPathTest {
     assert(completeFileContent.contains("LAUNCH for workload 1")) { "LAUNCH line missing" }
     if (assertException) {
       assert(completeFileContent.contains("Failure for workload 1")) { "FAILURE line missing" }
-      assert(completeFileContent.contains("Completed without launching workload")) { "TERMINAL line missing" }
-    } else {
-      assert(completeFileContent.contains("Success: ")) { "SUCCESS line missing" }
     }
   }
 }

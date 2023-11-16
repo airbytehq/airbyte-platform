@@ -26,10 +26,11 @@ class TemporalMessageProducer<T : Any>(private val workflowClientWrapped: Workfl
     message: T,
     messageId: String,
   ) {
-    val workflowOptions = WorkflowOptions.newBuilder()
-      .setTaskQueue(subject)
-      .setWorkflowId(messageId)
-      .build()
+    val workflowOptions =
+      WorkflowOptions.newBuilder()
+        .setTaskQueue(subject)
+        .setWorkflowId(messageId)
+        .build()
     val workflow = workflowClientWrapped.newWorkflowStub(W::class.java, workflowOptions)
     workflow.publish(Message(message))
   }

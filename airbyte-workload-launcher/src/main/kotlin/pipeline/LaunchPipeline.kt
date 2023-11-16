@@ -77,7 +77,7 @@ class LaunchPipeline(
               WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY,
               MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
             )
-            logger.info { "Pipeline completed for workload: ${r.msg.workloadId}" }
+            logger.info { "Pipeline completed for workload: ${r.msg.workloadId}." }
           }
         }
         .subscribeOn(scheduler)
