@@ -71,13 +71,13 @@ class LaunchPipeline(
               WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_UNSUCCESSFULLY,
               MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
             )
-            logger.info { "Completed without launching workload ${msg.workloadId}." }
+            logger.info { "Pipeline completed after error for workload: ${msg.workloadId}." }
           } else {
             metricPublisher.count(
               WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_SUCCESSFULLY,
               MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId),
             )
-            logger.info { "Success: $r" }
+            logger.info { "Pipeline completed for workload: ${r.msg.workloadId}" }
           }
         }
         .subscribeOn(scheduler)
