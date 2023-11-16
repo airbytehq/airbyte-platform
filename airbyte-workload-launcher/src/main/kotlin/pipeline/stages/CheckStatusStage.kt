@@ -23,7 +23,7 @@ class CheckStatusStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    LOGGER.info { "Stage: ${javaClass.simpleName}" }
+    LOGGER.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
     return if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
       LOGGER.info {
         "Found pods running for workload ${input.msg.workloadId}, setting status as running and skip flag as true"

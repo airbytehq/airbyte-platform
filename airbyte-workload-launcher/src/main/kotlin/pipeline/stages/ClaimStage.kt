@@ -29,7 +29,7 @@ class ClaimStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    logger.info { "Stage: ${javaClass.simpleName}" }
+    logger.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
     val resp: ClaimResponse =
       workloadApiClient.workloadClaim(
         WorkloadClaimRequest(
