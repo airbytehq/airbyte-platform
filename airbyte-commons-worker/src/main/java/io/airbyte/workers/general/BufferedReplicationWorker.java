@@ -348,7 +348,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         final Optional<AirbyteMessage> messageOptional = source.attemptRead();
         if (messageOptional.isPresent()) {
           sourceMessagesRead.incrementAndGet();
-          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(messageOptional.get()) && !messagesFromSourceQueue.isClosed()) {
+          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(messageOptional.get())
+              && !messagesFromSourceQueue.isClosed()) {
             Thread.sleep(100);
           }
         }

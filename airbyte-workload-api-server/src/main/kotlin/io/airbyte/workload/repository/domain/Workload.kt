@@ -24,7 +24,7 @@ data class Workload(
   @DateUpdated
   var updatedAt: OffsetDateTime? = null,
   @Nullable
-  var lastHeartbeatAt: OffsetDateTime?,
+  var lastHeartbeatAt: OffsetDateTime? = null,
   @Relation(
     value = Relation.Kind.ONE_TO_MANY,
     mappedBy = "workload",
@@ -40,7 +40,6 @@ data class Workload(
     id: String,
     dataplaneId: String?,
     status: WorkloadStatus,
-    lastHeartbeatAt: OffsetDateTime?,
     workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
     logPath: String,
@@ -48,7 +47,6 @@ data class Workload(
     id = id,
     dataplaneId = dataplaneId,
     status = status,
-    lastHeartbeatAt = lastHeartbeatAt,
     workloadLabels = workloadLabels,
     inputPayload = inputPayload,
     logPath = logPath,

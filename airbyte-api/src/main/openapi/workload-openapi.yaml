@@ -163,10 +163,6 @@ components:
           nullable: true
           allOf:
           - $ref: '#/components/schemas/WorkloadStatus'
-        lastHeartbeatAt:
-          type: string
-          format: date-time
-          nullable: true
         labels:
           type: array
           items:
