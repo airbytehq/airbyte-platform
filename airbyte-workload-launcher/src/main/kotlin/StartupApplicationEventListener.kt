@@ -63,6 +63,8 @@ class StartupApplicationEventListener(
     val workloadList: WorkloadListResponse =
       apiClient.workloadList(workloadListRequest)
 
+    logger.info { "Re-hydrating ${workloadList.workloads.size} workload claim(s)..." }
+
     workloadList.workloads.forEach {
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_ON_RESTART,

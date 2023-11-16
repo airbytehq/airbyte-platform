@@ -33,7 +33,7 @@ enum class WorkloadLauncherMetricMetadata(
     "increments when the launcher claims a workload and finds the that there is a job already running for that workload",
   ),
   WORKLOAD_PROCESSED_ON_RESTART(
-    "workload_already_running",
+    "workload_claims_rehydrated",
     "increments when the launcher restarts and finds out a workload that was claimed before restart and needs to be processed",
   ),
   WORKLOAD_PROCESSED_SUCCESSFULLY(
