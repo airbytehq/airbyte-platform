@@ -4,6 +4,10 @@
 
 package io.airbyte.workers.process;
 
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.INIT_CONTAINER_STARTUP_TIMEOUT;
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.INIT_CONTAINER_TERMINATION_TIMEOUT;
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.POD_READY_TIMEOUT;
+
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.list.Lists;
@@ -143,14 +147,6 @@ public class KubePodProcess implements KubePod {
   private static final Duration INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(configs.getJobInitRetryTimeoutMinutes());
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
-
-  private static final Duration INIT_CONTAINER_STARTUP_TIMEOUT = Duration.ofMinutes(5);
-
-  private static final Duration INIT_CONTAINER_TERMINATION_TIMEOUT = Duration.ofMinutes(2);
-
-  private static final Duration POD_READY_TIMEOUT = Duration.ofMinutes(2);
-
-  public static final Duration FULL_POD_TIMEOUT = INIT_CONTAINER_STARTUP_TIMEOUT.plus(INIT_CONTAINER_TERMINATION_TIMEOUT).plus(POD_READY_TIMEOUT);
 
   private static final ConnectorApmSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorApmSupportHelper();
   private final KubernetesClient fabricClient;

@@ -1,8 +1,8 @@
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.process.KubePodProcess.FULL_POD_TIMEOUT
 import io.airbyte.workload.launcher.model.setDestinationLabels
 import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID

@@ -9,6 +9,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -25,7 +26,7 @@ class WorkloadMonitor(
   private val workloadApi: WorkloadApi,
   @Property(name = "airbyte.workload.monitor.claim-timeout") private val claimTimeout: Duration,
   @Property(name = "airbyte.workload.monitor.heartbeat-timeout") private val heartbeatTimeout: Duration,
-  @Property(name = "airbyte.workload.monitor.not-started-timeout") private val nonStartedTimeout: Duration,
+  @Named("replicationNotStartedTimeout") private val nonStartedTimeout: Duration,
 ) {
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.not-started-check-rate}")
   fun cancelNotStartedWorkloads() {
