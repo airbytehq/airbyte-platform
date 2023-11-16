@@ -82,6 +82,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
       if (workload.getStatus() != null) {
         if (TERMINAL_STATUSES.contains(workload.getStatus())) {
+          log.info("Workload {} has returned a terminal status of {}.  Fetching output...", workloadId, workload.getStatus());
           break;
         }
 
@@ -93,30 +94,30 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       sleep(Duration.ofMinutes(1).toMillis());
     }
 
-    return getReplicationOutput();
+    return getReplicationOutput(workloadId);
   }
 
   @Override
   public void cancel() {
     try {
-      // TODO retry with jitter
       workloadApi.workloadCancel(new WorkloadCancelRequest("", "o//", "wl-api-worker"));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private ReplicationOutput getReplicationOutput() {
+  private ReplicationOutput getReplicationOutput(final String workloadId) {
     final String outputLocation = orchestratorNameGenerator.getOrchestratorOutputLocation(input.getJobRunConfig().getJobId(),
         input.getJobRunConfig().getAttemptId());
     final Optional<String> output = documentStoreClient.read(outputLocation);
+    log.info("Replication output for workload {} : {}", workloadId, output.orElse(""));
     return output.map(s -> Jsons.deserialize(s, ReplicationOutput.class)).orElse(null);
   }
 
   private void createWorkload(final WorkloadCreateRequest workloadCreateRequest) {
     try {
       workloadApi.workloadCreate(workloadCreateRequest);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -124,15 +125,15 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private Workload getWorkload(final String workloadId) {
     try {
       return workloadApi.workloadGet(workloadId);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private void sleep(long millis) {
+  private void sleep(final long millis) {
     try {
       Thread.sleep(millis);
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
