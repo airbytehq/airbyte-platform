@@ -355,6 +355,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
 
+      if (replicationWorkerHelper.isWorkerV2TestEnabled() && replicationWorkerHelper.getShouldAbort()) {
+        source.cancel();
+      }
+
       if (source.getExitValue() == 0) {
         replicationWorkerHelper.endOfSource();
       } else {

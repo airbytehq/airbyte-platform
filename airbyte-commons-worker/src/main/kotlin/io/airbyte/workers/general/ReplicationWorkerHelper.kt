@@ -124,6 +124,7 @@ class ReplicationWorkerHelper(
             )
           } catch (e: Exception) {
             logger.error(e) { "Heartbeat failed" }
+            markCancelled()
             return@Runnable
           }
         }

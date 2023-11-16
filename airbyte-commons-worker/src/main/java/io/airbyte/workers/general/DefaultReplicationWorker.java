@@ -368,6 +368,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           }
         }
+        if (replicationWorkerHelper.isWorkerV2TestEnabled() && replicationWorkerHelper.getShouldAbort()) {
+          source.cancel();
+        }
         replicationWorkerHelper.endOfSource();
 
         try {
@@ -388,10 +391,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           // This read will fail and throw an exception. Because of this, throw exceptions only if the worker
           // was not cancelled.
 
-          if (e instanceof SourceException || e instanceof DestinationException) {
+          if (e instanceof SourceException) {
             // Surface Source and Destination exceptions directly so that they can be classified properly by the
             // worker
-            throw e;
+            throw (SourceException) e;
+          } else if (e instanceof DestinationException) {
+            // Surface Source and Destination exceptions directly so that they can be classified properly by the
+            // worker
+            throw (DestinationException) e;
           } else {
             throw new RuntimeException(e);
           }

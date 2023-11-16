@@ -43,6 +43,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
+  private String workloadId = null;
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
                            final OrchestratorNameGenerator orchestratorNameGenerator,
@@ -59,7 +60,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   @Override
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
-    final String workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
+    workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
         replicationInput.getJobRunConfig().getAttemptId().intValue(),
         WorkloadType.SYNC);
@@ -102,8 +103,10 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   @Override
   public void cancel() {
     try {
-      workloadApi.workloadCancel(new WorkloadCancelRequest("", "o//", "wl-api-worker"));
-    } catch (final IOException e) {
+      if (workloadId != null) {
+        workloadApi.workloadCancel(new WorkloadCancelRequest(workloadId, "user requested", "WorkloadApiWorker"));
+      }
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
