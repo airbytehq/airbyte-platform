@@ -100,7 +100,6 @@ export const UsagePerConnectionTable: React.FC = () => {
         ),
         enableSorting: false,
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"]),
           responsive: true,
         },
       }),
@@ -140,7 +139,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         id: "schedule",
         header: () => <FormattedMessage id="credits.schedule" />,
         cell: (props) => (
-          <FlexContainer className={styles.cell} alignItems="center">
+          <FlexContainer alignItems="center">
             <TextWithOverflowTooltip size="sm" className={styles.cellText}>
               {props.row.original.connection.connectionScheduleType ===
               (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
