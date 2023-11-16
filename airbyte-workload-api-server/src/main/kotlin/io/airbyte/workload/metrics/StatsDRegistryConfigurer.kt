@@ -74,7 +74,8 @@ class StatsDRegistryConfigurer : MeterRegistryConfigurer<StatsdMeterRegistry>, O
     const val DATA_DOG_VERSION_TAG = "DD_VERSION"
     const val DATA_PLANE_ID_TAG = "data_plane_id"
     const val WORKLOAD_ID_TAG = "workload_id"
-
+    const val WORKLOAD_CANCEL_REASON_TAG = "cancel_reason"
+    const val WORKLOAD_CANCEL_SOURCE_TAG = "cancel_source"
     const val WORKLOAD_PUBLISHER_OPERATION_NAME = "workload_publisher"
   }
 }

@@ -16,6 +16,8 @@ import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadStatusUpdateRequest
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.DATA_PLANE_ID_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_REASON_TAG
+import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_CANCEL_SOURCE_TAG
 import io.airbyte.workload.metrics.StatsDRegistryConfigurer.Companion.WORKLOAD_ID_TAG
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -114,7 +116,13 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
     ) workloadCancelRequest: WorkloadCancelRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(WORKLOAD_ID_TAG to workloadCancelRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(
+      mutableMapOf(
+        WORKLOAD_ID_TAG to workloadCancelRequest.workloadId,
+        WORKLOAD_CANCEL_REASON_TAG to workloadCancelRequest.reason,
+        WORKLOAD_CANCEL_SOURCE_TAG to workloadCancelRequest.source,
+      ) as Map<String, Any>?,
+    )
     workloadHandler.cancelWorkload(workloadCancelRequest.workloadId)
   }
 
