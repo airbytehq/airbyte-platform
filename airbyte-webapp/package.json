@@ -210,6 +210,7 @@
     "license-checker": "^25.0.1",
     "lint-staged": "^12.3.7",
     "meow": "^9.0.0",
+    "mime-types": "^2.1.35",
     "node-fetch": "^2.6.9",
     "optionator": "^0.9.3",
     "orval": "^6.19.1",

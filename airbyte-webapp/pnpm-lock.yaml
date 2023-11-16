@@ -476,6 +476,9 @@ devDependencies:
   meow:
     specifier: ^9.0.0
     version: 9.0.0
+  mime-types:
+    specifier: ^2.1.35
+    version: 2.1.35
   node-fetch:
     specifier: ^2.6.9
     version: 2.6.9

@@ -15,6 +15,7 @@ import {
   docMiddleware,
   environmentVariables,
   experimentOverwrites,
+  preloadTags,
 } from "./packages/vite-plugins";
 
 export default defineConfig(() => {
@@ -65,6 +66,7 @@ export default defineConfig(() => {
       }),
       docMiddleware(),
       experimentOverwrites(),
+      preloadTags(),
     ],
     // Use `REACT_APP_` as a prefix for environment variables that should be accessible from within FE code.
     envPrefix: ["REACT_APP_"],
