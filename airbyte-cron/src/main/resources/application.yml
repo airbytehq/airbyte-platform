@@ -44,7 +44,7 @@ airbyte:
     monitor:
       enabled: ${WORKLOAD_MONITOR_ENABLED:false}
       claim-check-rate: PT1M
-      claim-timeout: PT5M
+      claim-timeout: ${WORKLOAD_CLAIM_TIMEOUT:PT1H}
       heartbeat-check-rate: PT1M
       heartbeat-timeout: PT5M
       not-started-check-rate: PT1M
