@@ -99,55 +99,62 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
 
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
-  return isLoading ? (
-    <Box p="lg">
-      <LoadingSpinner />
-    </Box>
-  ) : (
-    <div>
+  return (
+    <>
       <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} inline />
-      {!workspaces || !workspaces.length ? (
-        <Box p="md">
-          <FormattedMessage id="workspaces.noWorkspaces" />
-        </Box>
-      ) : (
-        <Virtuoso
-          ref={virtuosoRef}
-          style={{
-            height: Math.min(
-              400 /* max height */,
-              window.innerHeight - 225 /* otherwise take up full height, minus gap above the popover */
-            ),
-            width: "100%",
-          }}
-          data={workspaces}
-          endReached={handleEndReached}
-          increaseViewportBy={5}
-          defaultItemHeight={37 /* single-line workspaces are 36.59 pixels in Chrome */}
-          computeItemKey={computeItemKey}
-          components={{
-            List: UlList,
 
-            // components are overly constrained to be a function/class component
-            // but the string representation is fine; react-virtuoso defaults Item to `"div"`
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Item: "li" as any,
-          }}
-          itemContent={ListRow}
-        />
-      )}
-      {isFetchingNextPage && (
-        <Box pt="sm">
+      {isLoading ? (
+        <Box p="lg">
           <LoadingSpinner />
         </Box>
+      ) : (
+        <div>
+          {!workspaces || !workspaces.length ? (
+            <Box p="md">
+              <Text align="center">
+                <FormattedMessage id="workspaces.noWorkspaces" />
+              </Text>
+            </Box>
+          ) : (
+            <Virtuoso
+              ref={virtuosoRef}
+              style={{
+                height: Math.min(
+                  400 /* max height */,
+                  window.innerHeight - 225 /* otherwise take up full height, minus gap above the popover */
+                ),
+                width: "100%",
+              }}
+              data={workspaces}
+              endReached={handleEndReached}
+              increaseViewportBy={5}
+              defaultItemHeight={37 /* single-line workspaces are 36.59 pixels in Chrome */}
+              computeItemKey={computeItemKey}
+              components={{
+                List: UlList,
+
+                // components are overly constrained to be a function/class component
+                // but the string representation is fine; react-virtuoso defaults Item to `"div"`
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                Item: "li" as any,
+              }}
+              itemContent={ListRow}
+            />
+          )}
+          {isFetchingNextPage && (
+            <Box pt="sm">
+              <LoadingSpinner />
+            </Box>
+          )}
+          <Box py="lg">
+            <Link variant="primary" to={`/${RoutePaths.Workspaces}`}>
+              <Text color="blue" size="md" bold align="center">
+                <FormattedMessage id="workspaces.seeAll" />
+              </Text>
+            </Link>
+          </Box>
+        </div>
       )}
-      <Box py="lg">
-        <Link variant="primary" to={`/${RoutePaths.Workspaces}`}>
-          <Text color="blue" size="md" bold align="center">
-            <FormattedMessage id="workspaces.seeAll" />
-          </Text>
-        </Link>
-      </Box>
-    </div>
+    </>
   );
 };

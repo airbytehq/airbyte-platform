@@ -163,7 +163,7 @@ export const useListWorkspacesInfinite = (pageSize: number, nameContains: string
       };
     },
     {
-      suspense: true,
+      suspense: false,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
       cacheTime: 10000,
