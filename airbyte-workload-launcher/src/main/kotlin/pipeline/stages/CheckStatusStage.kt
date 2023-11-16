@@ -13,7 +13,7 @@ import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 
-private val LOGGER = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class CheckStatusStage(
@@ -23,10 +23,9 @@ class CheckStatusStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    LOGGER.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
     return if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
-      LOGGER.info {
-        "Found pods running for workload ${input.msg.workloadId}, setting status as running and skip flag as true"
+      logger.info {
+        "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true"
       }
       customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
       statusClient.updateStatusToRunning(input.msg.workloadId)
@@ -34,7 +33,7 @@ class CheckStatusStage(
         skip = true
       }
     } else {
-      LOGGER.info { "No pod found running for workload ${input.msg.workloadId}" }
+      logger.info { "No pod found running for workload ${input.msg.workloadId}" }
       input
     }
   }

@@ -20,8 +20,6 @@ class BuildInputStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    logger.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
-
     val parsed: ReplicationActivityInput = deserializer.toReplicationActivityInput(input.msg.workloadInput)
     val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
 

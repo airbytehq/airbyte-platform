@@ -29,7 +29,6 @@ class ClaimStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    logger.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
     val resp: ClaimResponse =
       workloadApiClient.workloadClaim(
         WorkloadClaimRequest(
@@ -38,15 +37,16 @@ class ClaimStage(
         ),
       )
 
-    if (resp.claimed) {
-      metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIMED, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
-    } else {
+    if (!resp.claimed) {
       metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_NOT_CLAIMED, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+      logger.info { "Workload not claimed. Setting SKIP flag to true." }
+      return input.apply {
+        skip = true
+      }
     }
 
-    return input.apply {
-      skip = !resp.claimed
-    }
+    metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_CLAIMED, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+    return input
   }
 
   override fun getStageName(): StageName {

@@ -24,7 +24,6 @@ class EnforceMutexStage(
 ) : LaunchStage {
   @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    logger.info { "Stage: ${javaClass.simpleName} (workloadId = ${input.msg.workloadId})" }
     val replInput = input.replicationInput!!
 
     val deleted = launcher.deleteMutexPods(replInput)
