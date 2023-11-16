@@ -105,6 +105,8 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobCreator;
@@ -255,6 +257,8 @@ class SchedulerHandlerTest {
   private JobNotifier jobNotifier;
   private JobTracker jobTracker;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
+  private WorkspaceService workspaceService;
+  private SecretPersistenceConfigService secretPersistenceConfigService;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -296,6 +300,8 @@ class SchedulerHandlerTest {
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
     featureFlagClient = mock(TestClient.class);
+    workspaceService = mock(WorkspaceService.class);
+    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     when(connectorDefinitionSpecificationHandler.getDestinationSpecification(any())).thenReturn(new DestinationDefinitionSpecificationRead()
         .supportedDestinationSyncModes(
@@ -315,7 +321,15 @@ class SchedulerHandlerTest {
         webUrlHelper,
         actorDefinitionVersionHelper,
         featureFlagClient,
-        streamResetPersistence, oAuthConfigSupplier, jobCreator, jobFactory, jobNotifier, jobTracker, connectorDefinitionSpecificationHandler);
+        streamResetPersistence,
+        oAuthConfigSupplier,
+        jobCreator,
+        jobFactory,
+        jobNotifier,
+        jobTracker,
+        connectorDefinitionSpecificationHandler,
+        workspaceService,
+        secretPersistenceConfigService);
   }
 
   @Test
@@ -429,7 +443,7 @@ class SchedulerHandlerTest {
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), null)).thenReturn(sourceVersion);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
     when(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, RESOURCE_REQUIREMENT))
@@ -468,7 +482,7 @@ class SchedulerHandlerTest {
         .withWorkspaceId(source.getWorkspaceId());
     when(synchronousSchedulerClient.createSourceCheckConnectionJob(submittedSource, sourceVersion, false, null))
         .thenReturn((SynchronousResponse<StandardCheckConnectionOutput>) jobResponse);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
     schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate);
@@ -529,7 +543,7 @@ class SchedulerHandlerTest {
 
     when(synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null))
         .thenReturn((SynchronousResponse<StandardCheckConnectionOutput>) jobResponse);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(destination.getConfiguration()),
         any())).thenReturn(destination.getConfiguration());
     schedulerHandler.checkDestinationConnectionFromDestinationCreate(destinationCoreConfig);
@@ -571,7 +585,7 @@ class SchedulerHandlerTest {
         .withWorkspaceId(destination.getWorkspaceId());
     when(synchronousSchedulerClient.createDestinationCheckConnectionJob(submittedDestination, destinationVersion, false, RESOURCE_REQUIREMENT))
         .thenReturn((SynchronousResponse<StandardCheckConnectionOutput>) jobResponse);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(destination.getConfiguration()),
         any())).thenReturn(destination.getConfiguration());
     schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(destinationUpdate);
@@ -700,7 +714,7 @@ class SchedulerHandlerTest {
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
         .thenReturn(sourceVersion);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
     when(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null))
@@ -1414,7 +1428,7 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
         .thenReturn(discoverResponse);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
 
@@ -1451,7 +1465,7 @@ class SchedulerHandlerTest {
         .thenReturn(sourceVersion);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null))
         .thenReturn((SynchronousResponse<UUID>) jobResponse);
-    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    when(secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
         eq(source.getConfiguration()),
         any())).thenReturn(source.getConfiguration());
     when(job.getSuccessOutput()).thenReturn(Optional.empty());
@@ -1628,8 +1642,8 @@ class SchedulerHandlerTest {
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM))
         .config(new AirbyteStreamConfiguration().selected(true)));
 
-    UUID workspaceId = source.getWorkspaceId();
-    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
@@ -1666,8 +1680,8 @@ class SchedulerHandlerTest {
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
         Field.of(SKU, JsonSchemaType.STRING), Field.of("aDifferentField", JsonSchemaType.STRING)), sourceVersion);
 
-    UUID workspaceId = source.getWorkspaceId();
-    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
@@ -1704,8 +1718,8 @@ class SchedulerHandlerTest {
     final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion)
         .streams(List.of());
 
-    UUID workspaceId = source.getWorkspaceId();
-    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
@@ -1744,8 +1758,8 @@ class SchedulerHandlerTest {
     final var catalogWithNewColumnAndStream = Jsons.clone(catalogWithNewColumn)
         .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
 
-    UUID workspaceId = source.getWorkspaceId();
-    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
@@ -1782,8 +1796,8 @@ class SchedulerHandlerTest {
         CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceVersion);
     catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
 
-    UUID workspaceId = source.getWorkspaceId();
-    StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
+    final UUID workspaceId = source.getWorkspaceId();
+    final StandardWorkspace workspace = new StandardWorkspace().withWorkspaceId(workspaceId);
     when(configRepository.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
     final SourceAutoPropagateChange request = new SourceAutoPropagateChange()

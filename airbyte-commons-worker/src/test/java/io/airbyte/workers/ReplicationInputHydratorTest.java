@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
@@ -38,7 +39,7 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.secrets.hydration.SecretsHydrator;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;
@@ -110,24 +111,27 @@ class ReplicationInputHydratorTest {
           .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
           .addUpdateStreamItem(new FieldTransform()
               .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)));
-  private static SecretsHydrator secretsHydrator;
+  private static SecretsRepositoryReader secretsRepositoryReader;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
   private static JobsApi jobsApi;
   private static FeatureFlagClient featureFlagClient;
+  private SecretsPersistenceConfigApi secretsPersistenceConfigApi;
 
   @BeforeEach
   void setup() throws ApiException {
-    secretsHydrator = mock(SecretsHydrator.class);
+    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     connectionApi = mock(ConnectionApi.class);
     stateApi = mock(StateApi.class);
     jobsApi = mock(JobsApi.class);
     featureFlagClient = mock(TestClient.class);
+    secretsPersistenceConfigApi = mock(SecretsPersistenceConfigApi.class);
     when(airbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
+    when(airbyteApiClient.getSecretPersistenceConfigApi()).thenReturn(secretsPersistenceConfigApi);
     when(featureFlagClient.boolVariation(eq(RemoveLargeSyncInputs.INSTANCE), any())).thenReturn(true);
     when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
         .connectionId(CONNECTION_ID)
@@ -140,7 +144,7 @@ class ReplicationInputHydratorTest {
         airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
-        secretsHydrator,
+        secretsPersistenceConfigApi, secretsRepositoryReader,
         featureFlagClient);
   }
 
@@ -164,7 +168,7 @@ class ReplicationInputHydratorTest {
         "unused",
         "unused",
         null, // unused
-        new ConnectionContext());
+        new ConnectionContext().withOrganizationId(UUID.randomUUID()));
   }
 
   @Test

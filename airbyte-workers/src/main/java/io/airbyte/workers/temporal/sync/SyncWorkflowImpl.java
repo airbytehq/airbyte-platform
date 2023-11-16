@@ -196,7 +196,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
         syncOutput.getOutputCatalog(),
         syncInput.getWorkspaceId(),
-        syncInput.getConnectionId());
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId());
   }
 
   private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,

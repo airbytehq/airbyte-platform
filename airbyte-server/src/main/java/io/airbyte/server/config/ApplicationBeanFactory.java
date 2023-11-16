@@ -147,6 +147,12 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
+  @Named("jsonSecretsProcessorWithCopy")
+  public JsonSecretsProcessor jsonSecretsProcessorWithCopy() {
+    return new JsonSecretsProcessor(true);
+  }
+
+  @Singleton
   public JsonSchemaValidator jsonSchemaValidator() {
     return new JsonSchemaValidator();
   }

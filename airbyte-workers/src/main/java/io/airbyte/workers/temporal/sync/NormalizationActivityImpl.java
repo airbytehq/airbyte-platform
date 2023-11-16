@@ -13,8 +13,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
+import io.airbyte.api.client.model.generated.ScopeType;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
+import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.functional.CheckedSupplier;
@@ -28,6 +32,7 @@ import io.airbyte.commons.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -35,9 +40,12 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.hydration.SecretsHydrator;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
@@ -49,6 +57,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultNormalizationWorker;
+import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
@@ -77,7 +86,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig;
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
-  private final SecretsHydrator secretsHydrator;
+  private final SecretsRepositoryReader secretsRepositoryReader;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -93,7 +102,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   public NormalizationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                    final WorkerConfigsProvider workerConfigsProvider,
                                    final ProcessFactory processFactory,
-                                   final SecretsHydrator secretsHydrator,
+                                   final SecretsRepositoryReader secretsRepositoryReader,
                                    @Named("workspaceRoot") final Path workspaceRoot,
                                    final WorkerEnvironment workerEnvironment,
                                    final LogConfigs logConfigs,
@@ -106,7 +115,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
-    this.secretsHydrator = secretsHydrator;
+    this.secretsRepositoryReader = secretsRepositoryReader;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
@@ -187,7 +196,22 @@ public class NormalizationActivityImpl implements NormalizationActivity {
 
   private NormalizationInput hydrateNormalizationInput(final NormalizationInput input) throws Exception {
     // Hydrate the destination config.
-    final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
+    final JsonNode fullDestinationConfig;
+    final UUID organizationId = input.getConnectionContext().getOrganizationId();
+    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      try {
+        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
+            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
+        final RuntimeSecretPersistence runtimeSecretPersistence =
+            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
+        fullDestinationConfig =
+            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
+      } catch (final ApiException e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      fullDestinationConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(input.getDestinationConfiguration());
+    }
     // Retrieve the catalog.
     final ConfiguredAirbyteCatalog catalog = featureFlagClient.boolVariation(RemoveLargeSyncInputs.INSTANCE, new Workspace(input.getWorkspaceId()))
         ? retrieveCatalog(input.getConnectionId())
@@ -234,13 +258,20 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   public NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
                                                                                          final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                                          final UUID workspaceId,
-                                                                                         final UUID connectionId) {
+                                                                                         final UUID connectionId,
+                                                                                         final UUID organizationId) {
     return new NormalizationInput()
         .withConnectionId(connectionId)
         .withDestinationConfiguration(destinationConfiguration)
         .withCatalog(airbyteCatalog)
         .withResourceRequirements(getNormalizationResourceRequirements())
-        .withWorkspaceId(workspaceId);
+        .withWorkspaceId(workspaceId)
+        // As much info as we can give.
+        .withConnectionContext(
+            new ConnectionContext()
+                .withOrganizationId(organizationId)
+                .withConnectionId(connectionId)
+                .withWorkspaceId(workspaceId));
   }
 
   private ResourceRequirements getNormalizationResourceRequirements() {

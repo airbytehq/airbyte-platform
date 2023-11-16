@@ -58,6 +58,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   }
 
   @Override
+  @SuppressWarnings("PMD.AssignmentInOperand")
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String serializedInput = Jsons.serialize(input);
     workloadId = workloadIdGenerator.generate(replicationInput.getConnectionId(),

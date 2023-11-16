@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
@@ -34,6 +35,9 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -49,6 +53,8 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -88,18 +94,38 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence = new StandardSyncPersistence(database);
 
     // only used for creating records that sync depends on.
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
         new ConnectionServiceJooqImpl(database),
         new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
         new HealthCheckServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database),
-        new WorkspaceServiceJooqImpl(database));
+        new SourceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
+        new WorkspaceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService));
   }
 
   @Test

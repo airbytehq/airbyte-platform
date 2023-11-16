@@ -31,7 +31,6 @@ dependencies {
      * that do need these dependencies will already have them declared, as they will
      * need to define singletons from these modules in order for everything work.
      */
-    implementation(project(":airbyte-config:config-persistence"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-json-validation"))
 

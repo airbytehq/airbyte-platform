@@ -4,12 +4,17 @@
 
 package io.airbyte.config.persistence;
 
+import static org.mockito.Mockito.mock;
+
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.UserPermission;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -21,6 +26,8 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -47,18 +54,39 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   private void setupTestData() throws IOException, JsonValidationException {
     final UserPersistence userPersistence = new UserPersistence(database);
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
     final ConfigRepository configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
         new ConnectionServiceJooqImpl(database),
         new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
         new HealthCheckServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretPersistenceConfigService),
         new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database),
-        new WorkspaceServiceJooqImpl(database));
+        new SourceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService),
+        new WorkspaceServiceJooqImpl(database,
+            featureFlagClient,
+            secretsRepositoryReader,
+            secretsRepositoryWriter,
+            secretPersistenceConfigService));
+
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
@@ -139,7 +167,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   void listInstanceUsersTest() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
     Assertions.assertEquals(1, userPermissions.size());
-    UserPermission userPermission = userPermissions.get(0);
+    final UserPermission userPermission = userPermissions.get(0);
     Assertions.assertEquals(MockData.CREATOR_USER_ID_1, userPermission.getUser().getUserId());
   }
 

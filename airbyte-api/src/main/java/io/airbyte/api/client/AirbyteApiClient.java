@@ -17,6 +17,7 @@ import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.OperationApi;
 import io.airbyte.api.client.generated.OrganizationApi;
 import io.airbyte.api.client.generated.PermissionApi;
+import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
@@ -76,6 +77,7 @@ public class AirbyteApiClient {
   private final UserApi userApi;
   private final PermissionApi permissionApi;
   private final OrganizationApi organizationApi;
+  private final SecretsPersistenceConfigApi secretPersistenceConfigApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
@@ -98,6 +100,7 @@ public class AirbyteApiClient {
     userApi = new UserApi(apiClient);
     permissionApi = new PermissionApi();
     organizationApi = new OrganizationApi(apiClient);
+    secretPersistenceConfigApi = new SecretsPersistenceConfigApi(apiClient);
   }
 
   public ConnectionApi getConnectionApi() {
@@ -178,6 +181,10 @@ public class AirbyteApiClient {
 
   public OrganizationApi getOrganizationApi() {
     return organizationApi;
+  }
+
+  public SecretsPersistenceConfigApi getSecretPersistenceConfigApi() {
+    return secretPersistenceConfigApi;
   }
 
   /**

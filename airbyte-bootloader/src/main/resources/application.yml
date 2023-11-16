@@ -32,7 +32,7 @@ airbyte:
         min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
         max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   secret:
-    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
+    persistence: ${SECRET_PERSISTENCE:NO_OP}
     store:
       aws:
         access-key: ${AWS_ACCESS_KEY:}

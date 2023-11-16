@@ -88,6 +88,7 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
 class AwsClient(
   @Value("\${airbyte.secret.store.aws.access-key}") private val awsAccessKey: String,
   @Value("\${airbyte.secret.store.aws.secret-key}") private val awsSecretKey: String,
+  @Value("\${airbyte.secret.store.aws.region}") private val awsRegion: String,
 ) {
   val client: AWSSecretsManager by lazy {
     val builder = AWSSecretsManagerClientBuilder.standard()
@@ -98,6 +99,7 @@ class AwsClient(
       val credentials = BasicAWSCredentials(awsAccessKey, awsSecretKey)
       builder.withCredentials(AWSStaticCredentialsProvider(credentials))
     }
+    builder.withRegion(awsRegion)
     builder.build()
   }
 }

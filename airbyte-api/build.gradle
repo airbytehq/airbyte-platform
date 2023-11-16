@@ -37,6 +37,7 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
             'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -82,6 +83,7 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     library = "native"
@@ -118,6 +120,7 @@ def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false

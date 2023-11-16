@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,6 +29,9 @@ import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
@@ -40,6 +44,8 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.HashSet;
@@ -68,22 +74,48 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   private PermissionPersistence permissionPersistence;
   private UserPersistence userPersistence;
   private WorkspaceService workspaceService;
+  private FeatureFlagClient featureFlagClient;
+  private SecretsRepositoryReader secretsRepositoryReader;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretPersistenceConfigService secretPersistenceConfigService;
 
   @BeforeEach
   void setup() throws Exception {
-    workspaceService = spy(new WorkspaceServiceJooqImpl(database));
-    configRepository = spy(new ConfigRepository(
-        new ActorDefinitionServiceJooqImpl(database),
-        new CatalogServiceJooqImpl(database),
-        new ConnectionServiceJooqImpl(database),
-        new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database),
-        new HealthCheckServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database),
-        new OperationServiceJooqImpl(database),
-        new OrganizationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database),
-        new WorkspaceServiceJooqImpl(database)));
+    featureFlagClient = mock(TestClient.class);
+    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    workspaceService = spy(new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+        secretPersistenceConfigService));
+
+    configRepository = spy(
+        new ConfigRepository(
+            new ActorDefinitionServiceJooqImpl(database),
+            new CatalogServiceJooqImpl(database),
+            new ConnectionServiceJooqImpl(database),
+            new ConnectorBuilderServiceJooqImpl(database),
+            new DestinationServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
+            new HealthCheckServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretPersistenceConfigService),
+            new OperationServiceJooqImpl(database),
+            new OrganizationServiceJooqImpl(database),
+            new SourceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
+            new WorkspaceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService)));
     workspacePersistence = new WorkspacePersistence(database);
     permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);

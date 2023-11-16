@@ -23,6 +23,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
@@ -354,15 +355,23 @@ class JobInputHandlerTest {
         .withDockerImage(jobSyncConfig.getDestinationDockerImage())
         .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
+    ActorContext sourceContext = new ActorContext().withActorId(SOURCE_ID);
+    when(contextBuilder.fromSource(any())).thenReturn(sourceContext);
+
+    ActorContext destinationContext = new ActorContext().withActorId(DESTINATION_ID);
+    when(contextBuilder.fromDestination(any())).thenReturn(destinationContext);
+
     final StandardCheckConnectionInput expectedDestinationCheckInput = new StandardCheckConnectionInput()
         .withActorId(DESTINATION_ID)
         .withActorType(ActorType.DESTINATION)
-        .withConnectionConfiguration(DESTINATION_CONFIG_WITH_OAUTH);
+        .withConnectionConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
+        .withActorContext(destinationContext);
 
     final StandardCheckConnectionInput expectedSourceCheckInput = new StandardCheckConnectionInput()
         .withActorId(SOURCE_ID)
         .withActorType(ActorType.SOURCE)
-        .withConnectionConfiguration(SOURCE_CONFIG_WITH_OAUTH);
+        .withConnectionConfiguration(SOURCE_CONFIG_WITH_OAUTH)
+        .withActorContext(sourceContext);
 
     final SyncJobCheckConnectionInputs expectedCheckInputs = new SyncJobCheckConnectionInputs(
         expectedSourceLauncherConfig,

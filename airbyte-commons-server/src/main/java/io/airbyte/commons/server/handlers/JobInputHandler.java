@@ -25,6 +25,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
@@ -292,20 +293,26 @@ public class JobInputHandler {
       final ResourceRequirements sourceCheckResourceRequirements =
           getResourceRequirementsForJobType(sourceDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
 
+      ActorContext sourceContext = contextBuilder.fromSource(source);
+
       final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.SOURCE)
           .withActorId(source.getSourceId())
           .withConnectionConfiguration(sourceConfiguration)
-          .withResourceRequirements(sourceCheckResourceRequirements);
+          .withResourceRequirements(sourceCheckResourceRequirements)
+          .withActorContext(sourceContext);
 
       final ResourceRequirements destinationCheckResourceRequirements =
           getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.CHECK_CONNECTION).orElse(null);
+
+      ActorContext destinationContext = contextBuilder.fromDestination(destination);
 
       final StandardCheckConnectionInput destinationCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.DESTINATION)
           .withActorId(destination.getDestinationId())
           .withConnectionConfiguration(destinationConfiguration)
-          .withResourceRequirements(destinationCheckResourceRequirements);
+          .withResourceRequirements(destinationCheckResourceRequirements)
+          .withActorContext(destinationContext);
       return new SyncJobCheckConnectionInputs(
           sourceLauncherConfig,
           destinationLauncherConfig,

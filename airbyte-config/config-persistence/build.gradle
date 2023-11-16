@@ -50,6 +50,7 @@ dependencies {
     testFixturesApi project(':airbyte-json-validation')
     testFixturesApi project(':airbyte-commons')
     testFixturesApi project(':airbyte-config:config-models')
+    testFixturesApi project(':airbyte-config:config-secrets')
     testFixturesApi libs.airbyte.protocol
     testFixturesApi libs.lombok
     testFixturesAnnotationProcessor libs.lombok

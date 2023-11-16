@@ -9,17 +9,13 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import io.airbyte.api.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.model.generated.CreateOrUpdateSecretsPersistenceConfigRequestBody;
 import io.airbyte.api.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.auth.SecuredWorkspace;
+import io.airbyte.api.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.handlers.SecretPersistenceConfigHandler;
-import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.SecretPersistenceCoordinate;
-import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.secrets.SecretCoordinate;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -31,8 +27,7 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("PMD.PreserveStackTrace")
@@ -76,6 +71,7 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
                 String.format("Runtime secret persistence is not supported for organization %s", requestBody.getScopeId()));
           }
         }
+        default -> throw new IllegalStateException("Unexpected value: " + requestBody.getScope());
       }
       return null;
     });
@@ -101,27 +97,18 @@ public class SecretsPersistenceConfigApiController implements SecretsPersistence
   @Post("/get")
   @Secured({ADMIN})
   @Override
-  @SecuredWorkspace
-  public SecretPersistenceConfig getSecretsPersistenceConfig(final WorkspaceIdRequestBody workspaceIdRequestBody) {
-    final StandardWorkspace workspace = ApiHelper.execute(() -> {
-      try {
-        return this.workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), false);
-      } catch (final ConfigNotFoundException e) {
-        throw new io.airbyte.config.persistence.ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceIdRequestBody.getWorkspaceId());
-      }
-    });
-
+  public SecretPersistenceConfig getSecretsPersistenceConfig(final SecretPersistenceConfigGetRequestBody requestBody) {
+    if (Objects.requireNonNull(requestBody.getScopeType()) == io.airbyte.api.model.generated.ScopeType.WORKSPACE) {
+      ApiHelper.execute(() -> {
+        throw new BadObjectSchemaKnownException(
+            String.format("Runtime secret persistence is not supported for workspace %s", requestBody.getScopeId()));
+      });
+    }
     return ApiHelper.execute(
         () -> {
-          final Optional<SecretPersistenceCoordinate> secretPersistenceCoordinate;
-          secretPersistenceCoordinate =
-              secretPersistenceConfigService.getSecretPersistenceConfig(workspace.getWorkspaceId(), workspace.getOrganizationId());
-
-          if (secretPersistenceCoordinate.isEmpty()) {
-            throw new io.airbyte.config.persistence.ConfigNotFoundException(
-                ConfigSchema.SECRET_PERSISTENCE_CONFIG, List.of(workspace.getWorkspaceId(), workspace.getOrganizationId()).toString());
-          }
-          return secretPersistenceConfigHandler.buildSecretPersistenceConfigResponse(secretPersistenceCoordinate.get());
+          final io.airbyte.config.SecretPersistenceConfig secretPersistenceConfig =
+              secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, requestBody.getScopeId());
+          return secretPersistenceConfigHandler.buildSecretPersistenceConfigResponse(secretPersistenceConfig);
         });
   }
 
