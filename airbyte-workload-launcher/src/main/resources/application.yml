@@ -34,7 +34,7 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-launcher:
     queue: ${WORKLOAD_LAUNCHER_QUEUE_NAME:launcher-queue}
-    workload-start-timeout: PT10M
+    workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
     parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
   secret:
     persistence: ${SECRET_PERSISTENCE}
