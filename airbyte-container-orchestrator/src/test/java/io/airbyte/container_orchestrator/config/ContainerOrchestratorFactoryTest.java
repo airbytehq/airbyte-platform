@@ -27,7 +27,7 @@ import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.env.Environment;

@@ -5,7 +5,7 @@
 package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.WorkloadApi
 import okhttp3.OkHttpClient
 import okhttp3.Response
 

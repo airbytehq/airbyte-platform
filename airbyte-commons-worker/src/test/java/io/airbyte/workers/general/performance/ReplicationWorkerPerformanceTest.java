@@ -57,7 +57,7 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;
 import java.nio.file.Path;
 import java.time.Duration;

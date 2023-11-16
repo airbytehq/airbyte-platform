@@ -55,7 +55,7 @@ import io.airbyte.workers.storage.DocumentStoreClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;

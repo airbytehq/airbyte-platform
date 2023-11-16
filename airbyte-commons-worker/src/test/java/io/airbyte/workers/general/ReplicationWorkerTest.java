@@ -93,7 +93,7 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

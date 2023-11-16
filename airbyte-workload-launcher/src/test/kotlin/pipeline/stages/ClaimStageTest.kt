@@ -4,9 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.ClaimResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadClaimRequest
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.ClaimResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.mockk.every

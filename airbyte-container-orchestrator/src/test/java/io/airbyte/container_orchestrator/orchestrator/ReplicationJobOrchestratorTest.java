@@ -24,9 +24,9 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus;
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client.model.generated.WorkloadStatusUpdateRequest;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -57,15 +57,15 @@ class ReplicationJobOrchestratorTest {
 
   @ParameterizedTest
   @MethodSource("provideErrorResponseAndExpectedOutcome")
-  void testRunWithWorkloadEnabledRunCompleted(ReplicationStatus replicationStatus, WorkloadStatus workloadStatus) throws Exception {
-    ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(replicationStatus);
-    ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
+  void testRunWithWorkloadEnabledRunCompleted(final ReplicationStatus replicationStatus, final WorkloadStatus workloadStatus) throws Exception {
+    final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(replicationStatus);
+    final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
     when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
 
-    JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
+    final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
-    ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+    final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,
@@ -74,7 +74,7 @@ class ReplicationJobOrchestratorTest {
         workloadIdGenerator,
         true);
 
-    ReplicationOutput actualReplicationOutput =
+    final ReplicationOutput actualReplicationOutput =
         replicationJobOrchestrator.runWithWorkloadEnabled(replicationWorker, new ReplicationInput().withConnectionId(UUID.randomUUID()),
             mock(Path.class));
 
@@ -90,14 +90,14 @@ class ReplicationJobOrchestratorTest {
 
   @Test
   void testRunWithWorkloadEnabledRunThrowsException() throws Exception {
-    ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
-    ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
+    final ReplicationAttemptSummary replicationAttemptSummary = new ReplicationAttemptSummary().withStatus(ReplicationStatus.FAILED);
+    final ReplicationOutput replicationOutput = new ReplicationOutput().withReplicationAttemptSummary(replicationAttemptSummary);
     when(replicationWorker.run(any(), any())).thenReturn(replicationOutput);
     when(workloadIdGenerator.generate(any(), anyLong(), anyInt(), any())).thenReturn(WORKLOAD_ID);
 
-    JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
+    final JobRunConfig jobRunConfig = new JobRunConfig().withJobId(JOB_ID).withAttemptId(ATTEMPT_ID);
 
-    ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
+    final ReplicationJobOrchestrator replicationJobOrchestrator = new ReplicationJobOrchestrator(
         mock(Configs.class),
         jobRunConfig,
         replicationWorkerFactory,

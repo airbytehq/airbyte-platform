@@ -53,7 +53,7 @@ import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;

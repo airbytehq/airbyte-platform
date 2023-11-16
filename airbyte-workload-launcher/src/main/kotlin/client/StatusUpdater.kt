@@ -4,9 +4,9 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client.model.generated.WorkloadStatusUpdateRequest
 import io.airbyte.workload.launcher.pipeline.StageError
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging

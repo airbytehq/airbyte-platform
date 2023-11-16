@@ -33,7 +33,7 @@ import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.OrchestratorConstants;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;

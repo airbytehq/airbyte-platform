@@ -8,10 +8,10 @@ import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.WorkloadListRequest
-import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.RESUME_CLAIMED_OPERATION_NAME

@@ -6,9 +6,9 @@ package io.airbyte.workload.launcher.pipeline.stages
 
 import datadog.trace.api.Trace
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.ClaimResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadClaimRequest
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.ClaimResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_STAGE_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG

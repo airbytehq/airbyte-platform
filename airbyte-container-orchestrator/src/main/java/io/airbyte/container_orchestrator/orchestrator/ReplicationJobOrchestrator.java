@@ -28,9 +28,9 @@ import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
 import io.airbyte.workers.workload.WorkloadType;
-import io.airbyte.workload.api.client2.generated.WorkloadApi;
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus;
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus;
+import io.airbyte.workload.api.client.model.generated.WorkloadStatusUpdateRequest;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -107,7 +107,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
     final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
 
-    ReplicationOutput replicationOutput;
+    final ReplicationOutput replicationOutput;
     if (workloadEnabled) {
       replicationOutput = runWithWorkloadEnabled(replicationWorker, replicationInput, jobRoot);
     } else {
@@ -122,7 +122,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
   ReplicationOutput runWithWorkloadEnabled(final ReplicationWorker replicationWorker, final ReplicationInput replicationInput, final Path jobRoot)
       throws WorkerException {
     try {
-      ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
+      final ReplicationOutput replicationOutput = replicationWorker.run(replicationInput, jobRoot);
       switch (replicationOutput.getReplicationAttemptSummary().getStatus()) {
         case FAILED -> updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
         case CANCELLED -> updateWorkloadStatus(WorkloadStatus.CANCELLED, replicationInput.getConnectionId());
@@ -131,7 +131,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
       }
 
       return replicationOutput;
-    } catch (WorkerException e) {
+    } catch (final WorkerException e) {
       updateWorkloadStatus(WorkloadStatus.FAILURE, replicationInput.getConnectionId());
       throw e;
     }
@@ -146,7 +146,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<ReplicationIn
               Math.toIntExact(jobRunConfig.getAttemptId()),
               WorkloadType.SYNC),
           status));
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }

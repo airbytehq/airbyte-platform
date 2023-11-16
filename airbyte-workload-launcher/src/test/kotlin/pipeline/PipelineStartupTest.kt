@@ -4,11 +4,11 @@
 
 package io.airbyte.workload.launcher.pipeline
 
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.Workload
-import io.airbyte.workload.api.client2.model.generated.WorkloadListRequest
-import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.StartupApplicationEventListener
 import io.mockk.every
 import io.mockk.mockk

@@ -3,7 +3,7 @@ package io.airbyte.cron.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.commons.auth.AuthenticationInterceptor
 import io.airbyte.commons.temporal.config.WorkerMode
-import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment

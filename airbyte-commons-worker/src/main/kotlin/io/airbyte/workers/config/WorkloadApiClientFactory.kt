@@ -7,7 +7,7 @@ package io.airbyte.workers.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.WorkloadApiClient
 import io.airbyte.commons.auth.AuthenticationInterceptor
-import io.airbyte.workload.api.client2.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
