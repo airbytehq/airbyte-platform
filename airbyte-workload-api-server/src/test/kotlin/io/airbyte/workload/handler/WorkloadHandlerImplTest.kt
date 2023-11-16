@@ -173,13 +173,13 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload has already been claimed`() {
+  fun `test claiming workload has already been claimed by another plane`() {
     every { workloadRepository.findById(workloadId) }.returns(
       Optional.of(
         Workload(
           id = workloadId,
           dataplaneId = "otherDataplaneId",
-          status = WorkloadStatus.running,
+          status = WorkloadStatus.claimed,
           lastHeartbeatAt = null,
           workloadLabels = listOf(),
           inputPayload = "",
@@ -190,9 +190,64 @@ class WorkloadHandlerImplTest {
     assertFalse(workloadHandler.claimWorkload(workloadId, dataplaneId))
   }
 
+  @Test
+  fun `test claiming pending workload has already been claimed by the same plane`() {
+    every { workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.claimed) }.returns(Unit)
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = dataplaneId,
+          status = WorkloadStatus.pending,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+    assertTrue(workloadHandler.claimWorkload(workloadId, dataplaneId))
+  }
+
+  @Test
+  fun `test claiming claimed workload has already been claimed by the same plane`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = dataplaneId,
+          status = WorkloadStatus.claimed,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+    assertTrue(workloadHandler.claimWorkload(workloadId, dataplaneId))
+  }
+
+  @Test
+  fun `test claiming running workload has already been claimed by the same plane`() {
+    every { workloadRepository.findById(workloadId) }.returns(
+      Optional.of(
+        Workload(
+          id = workloadId,
+          dataplaneId = dataplaneId,
+          status = WorkloadStatus.running,
+          lastHeartbeatAt = null,
+          workloadLabels = listOf(),
+          inputPayload = "",
+          logPath = "/",
+        ),
+      ),
+    )
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(workloadId, dataplaneId) }
+  }
+
   @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["claimed", "running", "success", "failure", "cancelled"])
-  fun `test claim workload that is not pending`(workloadStatus: WorkloadStatus) {
+  @EnumSource(value = WorkloadStatus::class, names = ["running", "success", "failure", "cancelled"])
+  fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
     every { workloadRepository.findById(workloadId) }.returns(
       Optional.of(
         Workload(

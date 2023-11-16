@@ -81,12 +81,13 @@ class WorkloadHandlerImpl(
   ): Boolean {
     val workload = getDomainWorkload(workloadId)
 
-    if (workload.dataplaneId != null) {
+    if (workload.dataplaneId != null && !workload.dataplaneId.equals(dataplaneId)) {
       return false
     }
 
     when (workload.status) {
       WorkloadStatus.pending -> workloadRepository.update(workloadId, dataplaneId, WorkloadStatus.claimed)
+      WorkloadStatus.claimed -> {}
       else -> throw InvalidStatusTransitionException(
         "Tried to claim a workload that is not pending. Workload id: $workloadId has status: ${workload.status}",
       )
