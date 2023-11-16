@@ -74,8 +74,16 @@ class ReplicationWorkerHelper(
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
   private val replicationFailures: MutableList<FailureReason> = Collections.synchronizedList(mutableListOf())
-  private val cancelled = AtomicBoolean()
+  private val _cancelled = AtomicBoolean()
   private val hasFailed = AtomicBoolean()
+  private val _shouldAbort = AtomicBoolean()
+
+  // The nuance between cancelled and abort is that cancelled is triggered by an external factor (typically user cancellation) while
+  // abort is the result of an internal detection that we should abort (typically heartbeat failure).
+  val cancelled: Boolean
+    get() = _cancelled.get()
+  val shouldAbort: Boolean
+    get() = _shouldAbort.get() || _cancelled.get()
 
   private var recordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
@@ -83,9 +91,11 @@ class ReplicationWorkerHelper(
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
 
-  fun markCancelled(): Unit = cancelled.set(true)
+  fun markCancelled(): Unit = _cancelled.set(true)
 
   fun markFailed(): Unit = hasFailed.set(true)
+
+  fun abort(): Unit = _shouldAbort.set(true)
 
   fun markReplicationRunning() {
     onReplicationRunning.call()
@@ -183,7 +193,7 @@ class ReplicationWorkerHelper(
     // If the sync has been cancelled, publish an incomplete event so that any streams in a non-terminal
     // status will be moved to incomplete/cancelled. Otherwise, publish a complete event to move those
     // streams to a complete status.
-    if (cancelled.get()) {
+    if (_cancelled.get()) {
       replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(
         stream = StreamDescriptor(),
         ctx = context,
@@ -246,7 +256,7 @@ class ReplicationWorkerHelper(
   fun getReplicationOutput(performanceMetrics: PerformanceMetrics? = null): ReplicationOutput {
     val outputStatus: ReplicationStatus =
       when {
-        cancelled.get() -> ReplicationStatus.CANCELLED
+        _cancelled.get() -> ReplicationStatus.CANCELLED
         hasFailed.get() -> ReplicationStatus.FAILED
         else -> ReplicationStatus.COMPLETED
       }

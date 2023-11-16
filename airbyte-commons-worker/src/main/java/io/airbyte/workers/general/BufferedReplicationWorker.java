@@ -78,7 +78,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   private volatile boolean isReadFromDestRunning;
   private volatile boolean writeToDestFailed;
-  private volatile boolean cancelled;
 
   private final Stopwatch readFromSourceStopwatch;
   private final Stopwatch processFromSourceStopwatch;
@@ -119,7 +118,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.scheduledExecutors = Executors.newSingleThreadScheduledExecutor();
     this.isReadFromDestRunning = true;
     this.writeToDestFailed = false;
-    this.cancelled = false;
 
     this.destMessagesRead = new AtomicLong();
     this.destMessagesSent = new AtomicLong();
@@ -196,7 +194,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
 
-      if (!cancelled) {
+      if (!replicationWorkerHelper.getCancelled()) {
+        // We don't call endOfReplication on cancelled because it should be called from the cancel method.
         replicationWorkerHelper.endOfReplication();
       }
 
@@ -289,7 +288,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   public void cancel() {
     boolean wasInterrupted = false;
 
-    cancelled = true;
     replicationWorkerHelper.markCancelled();
 
     LOGGER.info("Cancelling replication worker...");
@@ -346,11 +344,11 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("readFromSource: start");
 
-      while (!cancelled && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
+      while (!replicationWorkerHelper.getShouldAbort() && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
         final Optional<AirbyteMessage> messageOptional = source.attemptRead();
         if (messageOptional.isPresent()) {
           sourceMessagesRead.incrementAndGet();
-          while (!messagesFromSourceQueue.add(messageOptional.get()) && !messagesFromSourceQueue.isClosed()) {
+          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(messageOptional.get()) && !messagesFromSourceQueue.isClosed()) {
             Thread.sleep(100);
           }
         }
@@ -382,7 +380,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("processMessage: start");
 
-      while (!messagesFromSourceQueue.isDone() && !messagesForDestinationQueue.isClosed()) {
+      while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.isDone() && !messagesForDestinationQueue.isClosed()) {
         final AirbyteMessage message;
         message = messagesFromSourceQueue.poll();
         if (message == null) {
@@ -423,7 +421,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("writeToDestination: start");
       try {
-        while (!messagesForDestinationQueue.isDone() && isReadFromDestRunning) {
+        while (!replicationWorkerHelper.getShouldAbort() && !messagesForDestinationQueue.isDone() && isReadFromDestRunning) {
           final AirbyteMessage message;
           message = messagesForDestinationQueue.poll();
           if (message == null) {
@@ -456,7 +454,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
+      while (!replicationWorkerHelper.getShouldAbort() && !writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
         final Optional<AirbyteMessage> messageOptional;
         try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
