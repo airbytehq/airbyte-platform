@@ -31,6 +31,18 @@ export default defineConfig(() => {
         svgrOptions: {
           plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
           titleProp: true,
+          svgoConfig: {
+            plugins: [
+              {
+                name: "preset-default",
+                params: {
+                  overrides: {
+                    removeViewBox: false,
+                  },
+                },
+              },
+            ],
+          },
         },
       }),
       checker({
