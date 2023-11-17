@@ -12,10 +12,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
@@ -31,11 +27,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -43,7 +35,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultDiscoverCatalogWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
@@ -59,7 +50,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 
@@ -72,7 +62,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
-  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -82,11 +72,10 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
-  private final FeatureFlagClient featureFlagClient;
 
   public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
-                                     final SecretsRepositoryReader secretsRepositoryReader,
+                                     final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
                                      final LogConfigs logConfigs,
@@ -95,11 +84,10 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags,
-                                     final MetricClient metricClient,
-                                     final FeatureFlagClient featureFlagClient) {
+                                     final MetricClient metricClient) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
-    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
@@ -109,7 +97,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
     this.metricClient = metricClient;
-    this.featureFlagClient = featureFlagClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -121,21 +108,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DOCKER_IMAGE_KEY,
         launcherConfig.getDockerImage()));
-    final JsonNode fullConfig;
-    final UUID organizationId = config.getActorContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
-        fullConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(config.getConnectionConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      fullConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(config.getConnectionConfiguration());
-    }
+    final JsonNode fullConfig = secretsHydrator.hydrate(config.getConnectionConfiguration());
 
     final StandardDiscoverCatalogInput input = new StandardDiscoverCatalogInput()
         .withConnectionConfiguration(fullConfig)

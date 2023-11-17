@@ -27,11 +27,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.OAuthService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -60,11 +55,6 @@ class OAuthHandlerTest {
   private static final String CLIENT_SECRET_KEY = "client_secret";
   private static final String CLIENT_SECRET = "hunter2";
   private static TestClient featureFlagClient;
-  private SourceService sourceService;
-  private DestinationService destinationService;
-  private OAuthService oauthService;
-  private SecretPersistenceConfigService secretPersistenceConfigService;
-  private WorkspaceService workspaceService;
 
   @BeforeEach
   public void init() {
@@ -75,14 +65,8 @@ class OAuthHandlerTest {
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
-    sourceService = mock(SourceService.class);
-    destinationService = mock(DestinationService.class);
-    oauthService = mock(OAuthService.class);
-    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-    workspaceService = mock(WorkspaceService.class);
-    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryWriter,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, destinationService, oauthService, secretPersistenceConfigService,
-        workspaceService);
+    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryReader, secretsRepositoryWriter,
+        actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test
@@ -316,43 +300,41 @@ class OAuthHandlerTest {
   }
 
   @Test
-  void testGetSourceOAuthParamConfigNoFeatureFlag()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testGetSourceOAuthParamConfigNoFeatureFlag() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(sourceDefinitionId)
         .withConfiguration(Jsons.deserialize("""
                                              {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
                                              """));
-    when(oauthService.listSourceOAuthParamWithSecrets()).thenReturn(List.of(sourceOAuthParameter));
-    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(sourceOAuthParameter.getConfiguration());
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(secretsRepositoryReader.hydrateConfig(any())).thenReturn(sourceOAuthParameter.getConfiguration());
 
-    final JsonNode expected = Jsons.deserialize("""
-                                                {"client_id": "test", "client_secret": "shhhh"}
-                                                """);
+    JsonNode expected = Jsons.deserialize("""
+                                          {"client_id": "test", "client_secret": "shhhh"}
+                                          """);
     assertEquals(expected, handler.getSourceOAuthParamConfig(workspaceId, sourceDefinitionId));
   }
 
   @Test
-  void testGetSourceOAuthParamConfigFeatureFlagNoOverride()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testGetSourceOAuthParamConfigFeatureFlagNoOverride() throws JsonValidationException, ConfigNotFoundException, IOException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
-    final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(sourceDefinitionId)
         .withConfiguration(Jsons.deserialize("""
                                              {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
                                              """));
-    when(oauthService.listSourceOAuthParamWithSecrets()).thenReturn(List.of(sourceOAuthParameter));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
     when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
-    when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(any())).thenReturn(sourceOAuthParameter.getConfiguration());
+    when(secretsRepositoryReader.hydrateConfig(any())).thenReturn(sourceOAuthParameter.getConfiguration());
 
-    final JsonNode expected = Jsons.deserialize("""
-                                                {"client_id": "test", "client_secret": "shhhh"}
-                                                """);
+    JsonNode expected = Jsons.deserialize("""
+                                          {"client_id": "test", "client_secret": "shhhh"}
+                                          """);
     assertEquals(expected, handler.getSourceOAuthParamConfig(workspaceId, sourceDefinitionId));
   }
 

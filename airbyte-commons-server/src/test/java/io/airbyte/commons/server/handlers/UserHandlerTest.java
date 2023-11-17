@@ -165,7 +165,7 @@ class UserHandlerTest {
         .permissionId(PERMISSION1_ID)
         .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)));
 
-    final var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
+    var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
     assertEquals(expectedListResult, result);
   }
 
@@ -195,7 +195,7 @@ class UserHandlerTest {
         .permissionId(PERMISSION1_ID)
         .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
 
-    final var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+    var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
     assertEquals(expectedListResult, result);
   }
 
@@ -205,9 +205,9 @@ class UserHandlerTest {
         new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
-    final var result = userHandler.listInstanceAdminUsers();
+    var result = userHandler.listInstanceAdminUsers();
 
-    final var expectedResult = new UserWithPermissionInfoReadList().users(List.of(
+    var expectedResult = new UserWithPermissionInfoReadList().users(List.of(
         new io.airbyte.api.model.generated.UserWithPermissionInfoRead().name(USER_NAME).userId(USER_ID).email(USER_EMAIL)
             .permissionId(PERMISSION1_ID)));
     assertEquals(expectedResult, result);
@@ -373,7 +373,8 @@ class UserHandlerTest {
       }
 
       private void verifyDefaultWorkspaceCreation(final String ssoRealm, final Boolean isDefaultWorkspaceForOrgPresent, final InOrder inOrder)
-          throws IOException, JsonValidationException, ConfigNotFoundException {
+          throws IOException, JsonValidationException {
+
         boolean workspaceCreated = false;
 
         if (ssoRealm == null) {

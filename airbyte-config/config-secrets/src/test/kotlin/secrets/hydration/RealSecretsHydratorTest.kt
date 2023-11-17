@@ -20,7 +20,7 @@ class RealSecretsHydratorTest {
     every { secretPersistence.read(any()) } returns secretValue
     val hydrator = RealSecretsHydrator(secretPersistence)
     val partialConfig = Jsons.jsonNode(mapOf("_secret" to coordinate))
-    val hydratedConfig = hydrator.hydrateFromDefaultSecretPersistence(partialConfig)
+    val hydratedConfig = hydrator.hydrate(partialConfig)
     Assertions.assertEquals(secretValue, hydratedConfig.asText())
   }
 
@@ -33,7 +33,7 @@ class RealSecretsHydratorTest {
     every { secretPersistence.read(any()) } returns Jsons.serialize(secret)
     val hydrator = RealSecretsHydrator(secretPersistence)
     val secretCoordinate = Jsons.jsonNode(mapOf("_secret" to coordinate))
-    val hydratedCoordinate = hydrator.hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate)
+    val hydratedCoordinate = hydrator.hydrateSecretCoordinate(secretCoordinate)
     Assertions.assertEquals(secret["config"], hydratedCoordinate.get("config").asText())
   }
 }

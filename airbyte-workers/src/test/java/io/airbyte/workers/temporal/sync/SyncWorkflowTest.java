@@ -110,8 +110,6 @@ class SyncWorkflowTest {
 
   private static final String SYNC_QUEUE = "SYNC";
 
-  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
-
   private StandardSync sync;
   private StandardSyncInput syncInput;
   private NormalizationInput normalizationInput;
@@ -134,7 +132,7 @@ class SyncWorkflowTest {
     syncWorker = testEnv.newWorker(SYNC_QUEUE);
     client = testEnv.getWorkflowClient();
 
-    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig(ORGANIZATION_ID);
+    final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
     sync = syncPair.getKey();
     syncInput = syncPair.getValue();
 
@@ -152,14 +150,14 @@ class SyncWorkflowTest {
         .withResourceRequirements(new ResourceRequirements())
         .withConnectionId(syncInput.getConnectionId())
         .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
+        .withConnectionContext(new ConnectionContext());
 
     operatorDbtInput = new OperatorDbtInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withOperatorDbt(syncInput.getOperationSequence().get(1).getOperatorDbt())
         .withConnectionId(syncInput.getConnectionId())
         .withWorkspaceId(syncInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID));
+        .withConnectionContext(new ConnectionContext());
 
     replicationActivity = mock(ReplicationActivityImpl.class);
     normalizationActivity = mock(NormalizationActivityImpl.class);
@@ -169,7 +167,7 @@ class SyncWorkflowTest {
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
 
-    when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any(), any()))
+    when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any()))
         .thenReturn(normalizationInput);
     when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(true);
 
@@ -427,9 +425,7 @@ class SyncWorkflowTest {
     syncInput.withOperationSequence(List.of(webhookOperation)).withWebhookOperationConfigs(workspaceWebhookConfigs);
     when(webhookOperationActivity.invokeWebhook(
         new OperatorWebhookInput().withWebhookConfigId(WEBHOOK_CONFIG_ID).withExecutionUrl(WEBHOOK_URL).withExecutionBody(WEBHOOK_BODY)
-            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs)
-            .withConnectionContext(new ConnectionContext().withOrganizationId(ORGANIZATION_ID))))
-                .thenReturn(true);
+            .withWorkspaceWebhookConfigs(workspaceWebhookConfigs).withConnectionContext(new ConnectionContext()))).thenReturn(true);
     final StandardSyncOutput actualOutput = execute();
     assertEquals(actualOutput.getWebhookOperationSummary().getSuccesses().get(0), WEBHOOK_CONFIG_ID);
   }
@@ -494,7 +490,7 @@ class SyncWorkflowTest {
         syncInput.getNamespaceFormat(),
         syncInput.getPrefix(),
         null,
-        new ConnectionContext().withOrganizationId(ORGANIZATION_ID)));
+        new ConnectionContext()));
   }
 
   private void verifyNormalize(final NormalizationActivity normalizationActivity, final NormalizationInput normalizationInput) {

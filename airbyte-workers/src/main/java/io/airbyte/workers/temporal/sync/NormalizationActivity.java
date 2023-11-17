@@ -40,7 +40,6 @@ public interface NormalizationActivity {
   NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
                                                                                   final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                                   final UUID workspaceId,
-                                                                                  final UUID connectionId,
-                                                                                  final UUID organizationId);
+                                                                                  final UUID connectionId);
 
 }

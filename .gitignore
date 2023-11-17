@@ -6,7 +6,6 @@ build
 out
 .DS_Store
 data
-!oss/airbyte-data/src/main/java/io/airbyte/data/*
 .dockerversions
 .classpath
 .project

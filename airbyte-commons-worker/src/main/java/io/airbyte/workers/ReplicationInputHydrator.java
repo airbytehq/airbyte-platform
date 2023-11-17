@@ -4,38 +4,27 @@
 
 package io.airbyte.workers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.StateApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.converters.StateConverter;
-import io.airbyte.commons.enums.Enums;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogTransforms;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.ResetBackfillState;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -54,22 +43,19 @@ public class ReplicationInputHydrator {
   private final ConnectionApi connectionApi;
   private final JobsApi jobsApi;
   private final StateApi stateApi;
-  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsHydrator secretsHydrator;
   private final FeatureFlagClient featureFlagClient;
-  private final SecretsPersistenceConfigApi secretsPersistenceConfigApi;
 
   public ReplicationInputHydrator(final ConnectionApi connectionApi,
                                   final JobsApi jobsApi,
                                   final StateApi stateApi,
-                                  final SecretsPersistenceConfigApi secretsPersistenceConfigApi,
-                                  final SecretsRepositoryReader secretsRepositoryReader,
+                                  final SecretsHydrator secretsHydrator,
                                   final FeatureFlagClient featureFlagClient) {
     this.connectionApi = connectionApi;
     this.jobsApi = jobsApi;
     this.stateApi = stateApi;
-    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsHydrator = secretsHydrator;
     this.featureFlagClient = featureFlagClient;
-    this.secretsPersistenceConfigApi = secretsPersistenceConfigApi;
   }
 
   /**
@@ -94,30 +80,9 @@ public class ReplicationInputHydrator {
       state = getUpdatedStateForBackfill(state, replicationActivityInput.getSchemaRefreshOutput(),
           replicationActivityInput.getWorkspaceId(), replicationActivityInput.getConnectionId(), catalog);
     }
-
     // Hydrate the secrets.
-    final JsonNode fullDestinationConfig;
-    final JsonNode fullSourceConfig;
-    final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      try {
-        final SecretPersistenceConfig secretPersistenceConfig = secretsPersistenceConfigApi.getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence = new RuntimeSecretPersistence(
-            fromApiSecretPersistenceConfig(secretPersistenceConfig));
-        fullSourceConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getSourceConfiguration(),
-            runtimeSecretPersistence);
-        fullDestinationConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getDestinationConfiguration(),
-                runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
-      fullDestinationConfig =
-          secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
-    }
+    final var fullSourceConfig = secretsHydrator.hydrate(replicationActivityInput.getSourceConfiguration());
+    final var fullDestinationConfig = secretsHydrator.hydrate(replicationActivityInput.getDestinationConfiguration());
     return new ReplicationInput()
         .withNamespaceDefinition(replicationActivityInput.getNamespaceDefinition())
         .withNamespaceFormat(replicationActivityInput.getNamespaceFormat())
@@ -210,17 +175,6 @@ public class ReplicationInputHydrator {
           jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ProtocolConverters::clientStreamDescriptorToProtocol).toList();
       CatalogTransforms.updateCatalogForReset(streamsToReset, catalog);
     }
-  }
-
-  private io.airbyte.config.SecretPersistenceConfig fromApiSecretPersistenceConfig(final SecretPersistenceConfig apiSecretPersistenceConfig) {
-    return new io.airbyte.config.SecretPersistenceConfig()
-        .withScopeType(Enums.convertTo(apiSecretPersistenceConfig.getScopeType(), io.airbyte.config.ScopeType.class))
-        .withScopeId(apiSecretPersistenceConfig.getScopeId())
-        .withConfiguration(Jsons.deserializeToStringMap(apiSecretPersistenceConfig.getConfiguration()))
-        .withSecretPersistenceType(
-            Enums.convertTo(
-                apiSecretPersistenceConfig.getSecretPersistenceType(),
-                io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType.class));
   }
 
 }

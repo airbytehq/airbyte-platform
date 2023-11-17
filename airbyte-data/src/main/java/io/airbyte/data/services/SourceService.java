@@ -11,7 +11,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.SourceAndDefinition;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -67,11 +66,5 @@ public interface SourceService {
       throws IOException;
 
   List<SourceConnection> listSourcesWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
-
-  SourceConnection getSourceConnectionWithSecrets(UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
-  void writeSourceConnectionWithSecrets(final SourceConnection source,
-                                        final ConnectorSpecification connectorSpecification)
-      throws JsonValidationException, IOException, ConfigNotFoundException;
 
 }

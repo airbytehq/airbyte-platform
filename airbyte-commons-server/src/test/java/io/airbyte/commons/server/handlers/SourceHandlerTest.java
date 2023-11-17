@@ -51,9 +51,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.data.services.SecretPersistenceConfigService;
-import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -76,6 +74,7 @@ class SourceHandlerTest {
 
   private ConfigRepository configRepository;
   private SecretsRepositoryReader secretsRepositoryReader;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
   private StandardSourceDefinition standardSourceDefinition;
   private ActorDefinitionVersion sourceDefinitionVersion;
   private SourceDefinitionSpecificationRead sourceDefinitionSpecificationRead;
@@ -98,15 +97,13 @@ class SourceHandlerTest {
 
   // needs to match name of file in src/test/resources/icons
   private static final String ICON = "test-source.svg";
-  private SourceService sourceService;
-  private WorkspaceService workspaceService;
-  private SecretPersistenceConfigService secretPersistenceConfigService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
     configRepository = mock(ConfigRepository.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     validator = mock(JsonSchemaValidator.class);
     connectionsHandler = mock(ConnectionsHandler.class);
     configurationUpdate = mock(ConfigurationUpdate.class);
@@ -115,9 +112,6 @@ class SourceHandlerTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     featureFlagClient = mock(TestClient.class);
-    sourceService = mock(SourceService.class);
-    workspaceService = mock(WorkspaceService.class);
-    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -141,17 +135,18 @@ class SourceHandlerTest {
 
     sourceHandler = new SourceHandler(configRepository,
         secretsRepositoryReader,
+        secretsRepositoryWriter,
         validator,
         connectionsHandler,
         uuidGenerator,
         secretsProcessor,
         configurationUpdate,
         oAuthConfigSupplier,
-        actorDefinitionVersionHelper, featureFlagClient, sourceService, workspaceService, secretPersistenceConfigService);
+        actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test
-  void testCreateSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testCreateSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
         .workspaceId(sourceConnection.getWorkspaceId())
@@ -182,13 +177,13 @@ class SourceHandlerTest {
         sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(sourceConnection, connectorSpecification);
+    verify(secretsRepositoryWriter).writeSourceConnection(sourceConnection, connectorSpecification);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
   }
 
   @Test
-  void testUpdateSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testUpdateSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
@@ -232,7 +227,7 @@ class SourceHandlerTest {
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(), newConfiguration, sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(secretsRepositoryWriter).writeSourceConnection(expectedSourceConnection, connectorSpecification);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
@@ -285,8 +280,7 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testCloneSourceWithoutConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testCloneSourceWithoutConfigChange() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
     final SourceRead expectedClonedSourceRead = SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition);
     final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
@@ -294,7 +288,7 @@ class SourceHandlerTest {
     final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(configRepository.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
 
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
@@ -313,8 +307,7 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testCloneSourceWithConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testCloneSourceWithConfigChange() throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceConnection clonedConnection = SourceHelpers.generateSource(standardSourceDefinition.getSourceDefinitionId());
     final SourceRead expectedClonedSourceRead = SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition);
     final SourceRead sourceRead = SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition);
@@ -324,7 +317,7 @@ class SourceHandlerTest {
         new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId()).sourceConfiguration(sourceCloneConfiguration);
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(configRepository.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
 
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
@@ -418,7 +411,7 @@ class SourceHandlerTest {
   }
 
   @Test
-  void testDeleteSource() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testDeleteSource() throws JsonValidationException, ConfigNotFoundException, IOException {
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
 
@@ -433,7 +426,7 @@ class SourceHandlerTest {
     when(configRepository.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
     when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
@@ -451,7 +444,7 @@ class SourceHandlerTest {
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
-    verify(sourceService).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(secretsRepositoryWriter).writeSourceConnection(expectedSourceConnection, connectorSpecification);
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
   }
@@ -541,7 +534,7 @@ class SourceHandlerTest {
         .connectionConfiguration(sourceConnection.getConfiguration());
 
     doReturn(new SourceRead()).when(sourceHandlerSpy).createSource(any());
-    doReturn(Jsons.emptyObject()).when(sourceHandlerSpy).hydrateOAuthResponseSecret(any(), any());
+    doReturn(Jsons.emptyObject()).when(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
     when(configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceCreate.getWorkspaceId()))
@@ -551,14 +544,14 @@ class SourceHandlerTest {
     // secretId
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy).createSource(sourceCreate);
-    verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any(), any());
+    verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any());
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
     final SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
     sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);
-    verify(sourceHandlerSpy).hydrateOAuthResponseSecret(any(), any());
+    verify(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
   }
 
 }

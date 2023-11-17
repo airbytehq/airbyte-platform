@@ -9,24 +9,14 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KE
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.OperatorWebhookInput;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -34,7 +24,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,18 +38,12 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
 
   private final HttpClient httpClient;
 
-  private final SecretsRepositoryReader secretsRepositoryReader;
-  private final AirbyteApiClient airbyteApiClient;
-  private final FeatureFlagClient featureFlagClient;
+  private final SecretsHydrator secretsHydrator;
 
-  public WebhookOperationActivityImpl(final HttpClient httpClient,
-                                      final SecretsRepositoryReader secretsRepositoryReader,
-                                      final AirbyteApiClient airbyteApiClient,
-                                      final FeatureFlagClient featureFlagClient) {
+  public WebhookOperationActivityImpl(final HttpClient httpClient, final SecretsHydrator secretsHydrator) {
     this.httpClient = httpClient;
-    this.secretsRepositoryReader = secretsRepositoryReader;
-    this.airbyteApiClient = airbyteApiClient;
-    this.featureFlagClient = featureFlagClient;
+    this.secretsHydrator = secretsHydrator;
+
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -70,23 +53,7 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
 
     LOGGER.debug("Webhook operation input: {}", input);
     LOGGER.debug("Found webhook config: {}", input.getWorkspaceWebhookConfigs());
-
-    final JsonNode fullWebhookConfigJson;
-    final UUID organizationId = input.getConnectionContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
-        fullWebhookConfigJson =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      fullWebhookConfigJson = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(input.getWorkspaceWebhookConfigs());
-    }
+    final JsonNode fullWebhookConfigJson = secretsHydrator.hydrate(input.getWorkspaceWebhookConfigs());
     final WebhookOperationConfigs webhookConfigs = Jsons.object(fullWebhookConfigJson, WebhookOperationConfigs.class);
     final Optional<WebhookConfig> webhookConfig =
         webhookConfigs.getWebhookConfigs().stream().filter((config) -> config.getId().equals(input.getWebhookConfigId())).findFirst();

@@ -6,7 +6,6 @@ package io.airbyte.config.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import io.airbyte.commons.version.Version;
@@ -15,9 +14,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -29,8 +25,6 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -108,39 +102,19 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
   void setup() throws SQLException, JsonValidationException, IOException {
     truncateAllTables();
 
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
             new ConnectionServiceJooqImpl(database),
             new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService),
+            new DestinationServiceJooqImpl(database),
             new HealthCheckServiceJooqImpl(database),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
+            new OAuthServiceJooqImpl(database),
             new OperationServiceJooqImpl(database),
             new OrganizationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+            new SourceServiceJooqImpl(database),
+            new WorkspaceServiceJooqImpl(database)));
 
     configRepository.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

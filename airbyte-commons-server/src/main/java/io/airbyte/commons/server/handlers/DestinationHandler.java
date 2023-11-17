@@ -32,12 +32,13 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
-import io.airbyte.data.services.DestinationService;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
-import jakarta.inject.Named;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,32 +56,56 @@ public class DestinationHandler {
   private final ConnectionsHandler connectionsHandler;
   private final Supplier<UUID> uuidGenerator;
   private final ConfigRepository configRepository;
+  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final JsonSchemaValidator validator;
   private final ConfigurationUpdate configurationUpdate;
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
-  private final DestinationService destinationService;
 
   @VisibleForTesting
-  public DestinationHandler(final ConfigRepository configRepository,
-                            final JsonSchemaValidator integrationSchemaValidation,
-                            final ConnectionsHandler connectionsHandler,
-                            final Supplier<UUID> uuidGenerator,
-                            final @Named("jsonSecretsProcessorWithCopy") JsonSecretsProcessor secretsProcessor,
-                            final ConfigurationUpdate configurationUpdate,
-                            final OAuthConfigSupplier oAuthConfigSupplier,
-                            final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                            final DestinationService destinationService) {
+  DestinationHandler(final ConfigRepository configRepository,
+                     final SecretsRepositoryReader secretsRepositoryReader,
+                     final SecretsRepositoryWriter secretsRepositoryWriter,
+                     final JsonSchemaValidator integrationSchemaValidation,
+                     final ConnectionsHandler connectionsHandler,
+                     final Supplier<UUID> uuidGenerator,
+                     final JsonSecretsProcessor secretsProcessor,
+                     final ConfigurationUpdate configurationUpdate,
+                     final OAuthConfigSupplier oAuthConfigSupplier,
+                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
-    this.validator = integrationSchemaValidation;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
     this.configurationUpdate = configurationUpdate;
     this.secretsProcessor = secretsProcessor;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-    this.destinationService = destinationService;
+  }
+
+  @Inject
+  public DestinationHandler(final ConfigRepository configRepository,
+                            final SecretsRepositoryReader secretsRepositoryReader,
+                            final SecretsRepositoryWriter secretsRepositoryWriter,
+                            final JsonSchemaValidator integrationSchemaValidation,
+                            final ConnectionsHandler connectionsHandler,
+                            final OAuthConfigSupplier oAuthConfigSupplier,
+                            final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    this(
+        configRepository,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        integrationSchemaValidation,
+        connectionsHandler,
+        UUID::randomUUID,
+        new JsonSecretsProcessor(true),
+        new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper);
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -112,7 +137,6 @@ public class DestinationHandler {
     deleteDestination(destination);
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
   public void deleteDestination(final DestinationRead destination)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     // disable all connections associated with this destination
@@ -126,12 +150,7 @@ public class DestinationHandler {
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
 
-    final JsonNode fullConfig;
-    try {
-      fullConfig = destinationService.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    final var fullConfig = secretsRepositoryReader.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
     final ConnectorSpecification spec =
         getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
@@ -327,7 +346,6 @@ public class DestinationHandler {
     return destinationVersion.getSpec();
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
   private void persistDestinationConnection(final String name,
                                             final UUID destinationDefinitionId,
                                             final UUID workspaceId,
@@ -335,7 +353,7 @@ public class DestinationHandler {
                                             final JsonNode configurationJson,
                                             final boolean tombstone,
                                             final ConnectorSpecification spec)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException {
     final JsonNode oAuthMaskedConfigurationJson =
         oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
     final DestinationConnection destinationConnection = new DestinationConnection()
@@ -345,11 +363,7 @@ public class DestinationHandler {
         .withDestinationId(destinationId)
         .withConfiguration(oAuthMaskedConfigurationJson)
         .withTombstone(tombstone);
-    try {
-      destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    secretsRepositoryWriter.writeDestinationConnection(destinationConnection, spec);
   }
 
   private DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
@@ -376,17 +390,11 @@ public class DestinationHandler {
     return toDestinationRead(dci, standardDestinationDefinition);
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
   private DestinationRead buildDestinationReadWithSecrets(final UUID destinationId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     // remove secrets from config before returning the read
-    final DestinationConnection dci;
-    try {
-      dci = Jsons.clone(destinationService.getDestinationConnectionWithSecrets(destinationId));
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+    final DestinationConnection dci = Jsons.clone(secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationId));
     final StandardDestinationDefinition standardDestinationDefinition =
         configRepository.getStandardDestinationDefinition(dci.getDestinationDefinitionId());
     return toDestinationRead(dci, standardDestinationDefinition);

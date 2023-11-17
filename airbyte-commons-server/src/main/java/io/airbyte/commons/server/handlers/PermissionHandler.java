@@ -92,10 +92,10 @@ public class PermissionHandler {
         .withOrganizationId(permissionCreate.getOrganizationId());
 
     permissionPersistence.writePermission(permission);
-    final PermissionRead result;
+    PermissionRead result;
     try {
       result = buildPermissionRead(permissionId);
-    } catch (final ConfigNotFoundException ex) {
+    } catch (ConfigNotFoundException ex) {
       LOGGER.error("Config not found for permissionId: {} in CreatePermission.", permissionId);
       throw new IOException(ex);
     }
@@ -244,7 +244,7 @@ public class PermissionHandler {
    * to.
    */
   private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead userPermission)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
 
     if (mismatchedUserIds(userPermission, permissionCheckRequest)) {
       return false;
@@ -295,20 +295,15 @@ public class PermissionHandler {
 
   // check if this permission request is for a workspace that belongs to a different organization than
   // the user permission.
-  @SuppressWarnings("PMD.PreserveStackTrace")
   private boolean requestedWorkspaceNotInOrganization(final PermissionRead userPermission, final PermissionCheckRequest request)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
 
     // if the user permission is for an organization, and the request is for a workspace, return true if
     // the workspace
     // does not belong to the organization.
     if (userPermission.getOrganizationId() != null && request.getWorkspaceId() != null) {
-      final UUID requestedWorkspaceOrganizationId;
-      try {
-        requestedWorkspaceOrganizationId = workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
+      final UUID requestedWorkspaceOrganizationId =
+          workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
 
@@ -340,7 +335,7 @@ public class PermissionHandler {
         .map(permissionCheckRequest -> {
           try {
             return checkPermissions(permissionCheckRequest);
-          } catch (final IOException e) {
+          } catch (IOException e) {
             LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest);
             return new PermissionCheckRead().status(StatusEnum.FAILED);
           }

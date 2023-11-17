@@ -5,27 +5,16 @@
 package io.airbyte.data.services.impls.jooq;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
-import io.airbyte.config.ScopeType;
-import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.OAuthService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -46,18 +35,9 @@ import org.jooq.SelectJoinStep;
 public class OAuthServiceJooqImpl implements OAuthService {
 
   private final ExceptionWrappingDatabase database;
-  private final FeatureFlagClient featureFlagClient;
-  private final SecretsRepositoryReader secretsRepositoryReader;
-  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
-  public OAuthServiceJooqImpl(@Named("configDatabase") final Database database,
-                              final FeatureFlagClient featureFlagClient,
-                              final SecretsRepositoryReader secretsRepositoryReader,
-                              final SecretPersistenceConfigService secretPersistenceConfigService) {
+  public OAuthServiceJooqImpl(@Named("configDatabase") Database database) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.featureFlagClient = featureFlagClient;
-    this.secretsRepositoryReader = secretsRepositoryReader;
-    this.secretPersistenceConfigService = secretPersistenceConfigService;
   }
 
   /**
@@ -105,34 +85,6 @@ public class OAuthServiceJooqImpl implements OAuthService {
   @Override
   public List<SourceOAuthParameter> listSourceOAuthParam() throws JsonValidationException, IOException {
     return listSourceOauthParamQuery(Optional.empty()).toList();
-  }
-
-  private UUID getOrganizationIdFor(final UUID actorOAuthParameterId) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)
-        .from(ACTOR_OAUTH_PARAMETER)
-        .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
-        .where(ACTOR_OAUTH_PARAMETER.ID.eq(actorOAuthParameterId))
-        .fetchOne(WORKSPACE.ORGANIZATION_ID));
-  }
-
-  @Override
-  public List<SourceOAuthParameter> listSourceOAuthParamWithSecrets() throws JsonValidationException, IOException, ConfigNotFoundException {
-    final List<SourceOAuthParameter> sourceOAuthParameters = listSourceOAuthParam().stream().toList();
-    for (final SourceOAuthParameter sourceOAuthParameter : sourceOAuthParameters) {
-      final UUID organizationId = getOrganizationIdFor(sourceOAuthParameter.getOauthParameterId());
-      final JsonNode hydratedConfig;
-      if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-        final SecretPersistenceConfig secretPersistenceConfig =
-            secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
-        hydratedConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(sourceOAuthParameter.getConfiguration(),
-                new RuntimeSecretPersistence(secretPersistenceConfig));
-      } else {
-        hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(sourceOAuthParameter.getConfiguration());
-      }
-      sourceOAuthParameter.setConfiguration(hydratedConfig);
-    }
-    return sourceOAuthParameters;
   }
 
   /**

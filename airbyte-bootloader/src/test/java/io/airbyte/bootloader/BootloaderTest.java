@@ -25,11 +25,8 @@ import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.specs.DefinitionsProvider;
 import io.airbyte.config.specs.LocalDefinitionsProvider;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -140,38 +137,18 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
     val configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(configDatabase),
         new CatalogServiceJooqImpl(configDatabase),
         new ConnectionServiceJooqImpl(configDatabase),
         new ConnectorBuilderServiceJooqImpl(configDatabase),
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
+        new DestinationServiceJooqImpl(configDatabase),
         new HealthCheckServiceJooqImpl(configDatabase),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
+        new OAuthServiceJooqImpl(configDatabase),
         new OperationServiceJooqImpl(configDatabase),
         new OrganizationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+        new SourceServiceJooqImpl(configDatabase),
+        new WorkspaceServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -241,28 +218,13 @@ class BootloaderTest {
         new CatalogServiceJooqImpl(configDatabase),
         new ConnectionServiceJooqImpl(configDatabase),
         new ConnectorBuilderServiceJooqImpl(configDatabase),
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)),
+        new DestinationServiceJooqImpl(configDatabase),
         new HealthCheckServiceJooqImpl(configDatabase),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
+        new OAuthServiceJooqImpl(configDatabase),
         new OperationServiceJooqImpl(configDatabase),
         new OrganizationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)),
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)));
+        new SourceServiceJooqImpl(configDatabase),
+        new WorkspaceServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -361,28 +323,13 @@ class BootloaderTest {
         new CatalogServiceJooqImpl(configDatabase),
         new ConnectionServiceJooqImpl(configDatabase),
         new ConnectorBuilderServiceJooqImpl(configDatabase),
-        new DestinationServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)),
+        new DestinationServiceJooqImpl(configDatabase),
         new HealthCheckServiceJooqImpl(configDatabase),
-        new OAuthServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretPersistenceConfigService.class)),
+        new OAuthServiceJooqImpl(configDatabase),
         new OperationServiceJooqImpl(configDatabase),
         new OrganizationServiceJooqImpl(configDatabase),
-        new SourceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)),
-        new WorkspaceServiceJooqImpl(configDatabase,
-            featureFlagClient,
-            mock(SecretsRepositoryReader.class),
-            mock(SecretsRepositoryWriter.class),
-            mock(SecretPersistenceConfigService.class)));
+        new SourceServiceJooqImpl(configDatabase),
+        new WorkspaceServiceJooqImpl(configDatabase));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));

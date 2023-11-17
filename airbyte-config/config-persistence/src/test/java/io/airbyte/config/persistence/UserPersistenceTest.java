@@ -4,8 +4,6 @@
 
 package io.airbyte.config.persistence;
 
-import static org.mockito.Mockito.mock;
-
 import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -13,9 +11,6 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -27,8 +22,6 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -47,38 +40,18 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void setup() {
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
         new ConnectionServiceJooqImpl(database),
         new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
+        new DestinationServiceJooqImpl(database),
         new HealthCheckServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
+        new OAuthServiceJooqImpl(database),
         new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
     userPersistence = new UserPersistence(database);
   }
 
@@ -225,8 +198,8 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     void setup() throws IOException, JsonValidationException, SQLException {
       truncateAllTables();
 
-      final PermissionPersistence permissionPersistence = new PermissionPersistence(database);
-      final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
+      PermissionPersistence permissionPersistence = new PermissionPersistence(database);
+      OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);
 
       organizationPersistence.createOrganization(ORG);
 

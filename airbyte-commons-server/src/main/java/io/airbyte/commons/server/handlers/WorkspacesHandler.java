@@ -49,8 +49,8 @@ import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -80,10 +80,9 @@ public class WorkspacesHandler {
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
-  private final WorkspaceService workspaceService;
   private final Slugify slugify;
 
-  @VisibleForTesting
+  @Inject
   public WorkspacesHandler(final ConfigRepository configRepository,
                            final WorkspacePersistence workspacePersistence,
                            final OrganizationPersistence organizationPersistence,
@@ -91,9 +90,22 @@ public class WorkspacesHandler {
                            final PermissionPersistence permissionPersistence,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
-                           final SourceHandler sourceHandler,
-                           final Supplier<UUID> uuidSupplier,
-                           final WorkspaceService workspaceService) {
+                           final SourceHandler sourceHandler) {
+    this(configRepository, workspacePersistence, organizationPersistence, secretsRepositoryWriter, permissionPersistence,
+        connectionsHandler, destinationHandler,
+        sourceHandler, UUID::randomUUID);
+  }
+
+  @VisibleForTesting
+  WorkspacesHandler(final ConfigRepository configRepository,
+                    final WorkspacePersistence workspacePersistence,
+                    final OrganizationPersistence organizationPersistence,
+                    final SecretsRepositoryWriter secretsRepositoryWriter,
+                    final PermissionPersistence permissionPersistence,
+                    final ConnectionsHandler connectionsHandler,
+                    final DestinationHandler destinationHandler,
+                    final SourceHandler sourceHandler,
+                    final Supplier<UUID> uuidSupplier) {
     this.configRepository = configRepository;
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
@@ -103,7 +115,6 @@ public class WorkspacesHandler {
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
-    this.workspaceService = workspaceService;
     this.slugify = new Slugify();
   }
 
@@ -131,7 +142,7 @@ public class WorkspacesHandler {
   }
 
   public WorkspaceRead createWorkspace(final WorkspaceCreate workspaceCreate)
-      throws JsonValidationException, IOException, ValueConflictKnownException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, ValueConflictKnownException {
 
     final String email = workspaceCreate.getEmail();
     final Boolean anonymousDataCollection = workspaceCreate.getAnonymousDataCollection();
@@ -172,7 +183,7 @@ public class WorkspacesHandler {
   }
 
   public WorkspaceRead createDefaultWorkspaceForUser(final UserRead user, final Optional<Organization> organization)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException {
     // if user already had a default workspace, throw an exception
     if (user.getDefaultWorkspaceId() != null) {
       throw new IllegalArgumentException(
@@ -539,14 +550,8 @@ public class WorkspacesHandler {
     }
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
-  private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    try {
-      workspaceService.writeWorkspaceWithSecrets(workspace);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
+  private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace) throws JsonValidationException, IOException {
+    secretsRepositoryWriter.writeWorkspace(workspace);
     return buildWorkspaceRead(workspace);
   }
 

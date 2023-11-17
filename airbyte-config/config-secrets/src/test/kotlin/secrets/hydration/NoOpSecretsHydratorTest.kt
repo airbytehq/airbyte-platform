@@ -14,7 +14,7 @@ class NoOpSecretsHydratorTest {
     val coordinate = "secret_coordinate_v1"
     val hydrator = NoOpSecretsHydrator()
     val partialConfig = Jsons.jsonNode(mapOf("_secret" to coordinate))
-    val hydratedConfig = hydrator.hydrateFromDefaultSecretPersistence(partialConfig)
+    val hydratedConfig = hydrator.hydrate(partialConfig)
     Assertions.assertEquals(partialConfig, hydratedConfig)
   }
 
@@ -23,7 +23,7 @@ class NoOpSecretsHydratorTest {
     val coordinate = "secret_coordinate_v1"
     val hydrator = NoOpSecretsHydrator()
     val secretCoordinate = Jsons.jsonNode(mapOf("_secret" to coordinate))
-    val hydratedCoordinate = hydrator.hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate)
+    val hydratedCoordinate = hydrator.hydrateSecretCoordinate(secretCoordinate)
     Assertions.assertEquals(secretCoordinate, hydratedCoordinate)
   }
 }

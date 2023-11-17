@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -23,9 +21,6 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -37,8 +32,6 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -106,39 +99,18 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void beforeEach() throws Exception {
     truncateAllTables();
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
-    configRepository = spy(
-        new ConfigRepository(
-            new ActorDefinitionServiceJooqImpl(database),
-            new CatalogServiceJooqImpl(database),
-            new ConnectionServiceJooqImpl(database),
-            new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService),
-            new HealthCheckServiceJooqImpl(database),
-            new OAuthServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretPersistenceConfigService),
-            new OperationServiceJooqImpl(database),
-            new OrganizationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService),
-            new WorkspaceServiceJooqImpl(database,
-                featureFlagClient,
-                secretsRepositoryReader,
-                secretsRepositoryWriter,
-                secretPersistenceConfigService)));
+    configRepository = new ConfigRepository(
+        new ActorDefinitionServiceJooqImpl(database),
+        new CatalogServiceJooqImpl(database),
+        new ConnectionServiceJooqImpl(database),
+        new ConnectorBuilderServiceJooqImpl(database),
+        new DestinationServiceJooqImpl(database),
+        new HealthCheckServiceJooqImpl(database),
+        new OAuthServiceJooqImpl(database),
+        new OperationServiceJooqImpl(database),
+        new OrganizationServiceJooqImpl(database),
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
 
     final UUID defId = UUID.randomUUID();
     final ActorDefinitionVersion initialADV = initialActorDefinitionVersion(defId);

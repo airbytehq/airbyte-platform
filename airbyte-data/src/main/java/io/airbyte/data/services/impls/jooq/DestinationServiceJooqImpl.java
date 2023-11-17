@@ -17,7 +17,6 @@ import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -28,16 +27,11 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ScopeType;
-import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.db.Database;
@@ -48,10 +42,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -69,7 +59,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
@@ -84,27 +73,14 @@ import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.impl.DSL;
 
-@Slf4j
 @Singleton
 public class DestinationServiceJooqImpl implements DestinationService {
 
   private final ExceptionWrappingDatabase database;
-  private final FeatureFlagClient featureFlagClient;
-  private final SecretsRepositoryReader secretsRepositoryReader;
-  private final SecretsRepositoryWriter secretsRepositoryWriter;
-  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
   @VisibleForTesting
-  public DestinationServiceJooqImpl(@Named("configDatabase") final Database database,
-                                    final FeatureFlagClient featureFlagClient,
-                                    final SecretsRepositoryReader secretsRepositoryReader,
-                                    final SecretsRepositoryWriter secretsRepositoryWriter,
-                                    final SecretPersistenceConfigService secretPersistenceConfigService) {
+  public DestinationServiceJooqImpl(@Named("configDatabase") final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.featureFlagClient = featureFlagClient;
-    this.secretsRepositoryReader = secretsRepositoryReader;
-    this.secretsRepositoryWriter = secretsRepositoryWriter;
-    this.secretPersistenceConfigService = secretPersistenceConfigService;
   }
 
   /**
@@ -118,7 +94,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public StandardDestinationDefinition getStandardDestinationDefinition(
-                                                                        final UUID destinationDefinitionId)
+                                                                        UUID destinationDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return destDefQuery(Optional.of(destinationDefinitionId), true)
         .findFirst()
@@ -132,7 +108,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @return destination definition
    */
   @Override
-  public StandardDestinationDefinition getDestinationDefinitionFromDestination(final UUID destinationId) {
+  public StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId) {
     try {
       final DestinationConnection destination = getDestinationConnection(destinationId);
       return getStandardDestinationDefinition(destination.getDestinationDefinitionId());
@@ -148,7 +124,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @return destination definition
    */
   @Override
-  public StandardDestinationDefinition getDestinationDefinitionFromConnection(final UUID connectionId) {
+  public StandardDestinationDefinition getDestinationDefinitionFromConnection(UUID connectionId) {
     try {
       final StandardSync sync = getStandardSyncWithMetadata(connectionId).getConfig();
       return getDestinationDefinitionFromDestination(sync.getDestinationId());
@@ -166,7 +142,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<StandardDestinationDefinition> listStandardDestinationDefinitions(
-                                                                                final boolean includeTombstone)
+                                                                                boolean includeTombstone)
       throws IOException {
     return destDefQuery(Optional.empty(), includeTombstone).toList();
   }
@@ -180,7 +156,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<StandardDestinationDefinition> listPublicDestinationDefinitions(
-                                                                              final boolean includeTombstone)
+                                                                              boolean includeTombstone)
       throws IOException {
     return listStandardActorDefinitions(
         ActorType.destination,
@@ -198,8 +174,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public List<StandardDestinationDefinition> listGrantedDestinationDefinitions(final UUID workspaceId,
-                                                                               final boolean includeTombstones)
+  public List<StandardDestinationDefinition> listGrantedDestinationDefinitions(UUID workspaceId,
+                                                                               boolean includeTombstones)
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
@@ -220,8 +196,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<Entry<StandardDestinationDefinition, Boolean>> listGrantableDestinationDefinitions(
-                                                                                                 final UUID workspaceId,
-                                                                                                 final boolean includeTombstones)
+                                                                                                 UUID workspaceId,
+                                                                                                 boolean includeTombstones)
       throws IOException {
     return listActorDefinitionsJoinedWithGrants(
         workspaceId,
@@ -241,7 +217,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public void updateStandardDestinationDefinition(
-                                                  final StandardDestinationDefinition destinationDefinition)
+                                                  StandardDestinationDefinition destinationDefinition)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     // Check existence before updating
     // TODO: split out write and update methods so that we don't need explicit checking
@@ -254,7 +230,8 @@ public class DestinationServiceJooqImpl implements DestinationService {
   }
 
   /**
-   * Returns destination with a given id. Does not contain secrets.
+   * Returns destination with a given id. Does not contain secrets. To hydrate with secrets see
+   * { @link SecretsRepositoryReader#getDestinationConnectionWithSecrets(final UUID destinationId) }.
    *
    * @param destinationId - id of destination to fetch.
    * @return destinations
@@ -263,7 +240,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws ConfigNotFoundException - throws if no destination with that id can be found.
    */
   @Override
-  public DestinationConnection getDestinationConnection(final UUID destinationId)
+  public DestinationConnection getDestinationConnection(UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return listDestinationQuery(Optional.of(destinationId))
         .findFirst()
@@ -281,7 +258,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void writeDestinationConnectionNoSecrets(final DestinationConnection partialDestination)
+  public void writeDestinationConnectionNoSecrets(DestinationConnection partialDestination)
       throws IOException {
     database.transaction(ctx -> {
       writeDestinationConnection(Collections.singletonList(partialDestination), ctx);
@@ -309,7 +286,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public List<DestinationConnection> listWorkspaceDestinationConnection(final UUID workspaceId)
+  public List<DestinationConnection> listWorkspaceDestinationConnection(UUID workspaceId)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
@@ -328,7 +305,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<DestinationConnection> listWorkspacesDestinationConnections(
-                                                                          final ResourcesQueryPaginated resourcesQueryPaginated)
+                                                                          ResourcesQueryPaginated resourcesQueryPaginated)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
@@ -349,7 +326,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws IOException - exception while interacting with the db
    */
   @Override
-  public List<DestinationConnection> listDestinationsForDefinition(final UUID definitionId)
+  public List<DestinationConnection> listDestinationsForDefinition(UUID definitionId)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
@@ -368,7 +345,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<DestinationAndDefinition> getDestinationAndDefinitionsFromDestinationIds(
-                                                                                       final List<UUID> destinationIds)
+                                                                                       List<UUID> destinationIds)
       throws IOException {
     final Result<Record> records = database.query(ctx -> ctx
         .select(ACTOR.asterisk(), ACTOR_DEFINITION.asterisk())
@@ -401,10 +378,10 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public void writeCustomConnectorMetadata(
-                                           final StandardDestinationDefinition destinationDefinition,
-                                           final ActorDefinitionVersion defaultVersion,
-                                           final UUID scopeId,
-                                           final ScopeType scopeType)
+                                           StandardDestinationDefinition destinationDefinition,
+                                           ActorDefinitionVersion defaultVersion,
+                                           UUID scopeId,
+                                           ScopeType scopeType)
       throws IOException {
     database.transaction(ctx -> {
       writeConnectorMetadata(destinationDefinition, defaultVersion, List.of(), ctx);
@@ -426,9 +403,9 @@ public class DestinationServiceJooqImpl implements DestinationService {
    * @throws IOException - you never know when you IO
    */
   @Override
-  public void writeConnectorMetadata(final StandardDestinationDefinition destinationDefinition,
-                                     final ActorDefinitionVersion actorDefinitionVersion,
-                                     final List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
+  public void writeConnectorMetadata(StandardDestinationDefinition destinationDefinition,
+                                     ActorDefinitionVersion actorDefinitionVersion,
+                                     List<ActorDefinitionBreakingChange> breakingChangesForDefinition)
       throws IOException {
     database.transaction(ctx -> {
       writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition, ctx);
@@ -445,7 +422,7 @@ public class DestinationServiceJooqImpl implements DestinationService {
    */
   @Override
   public List<DestinationConnection> listDestinationsWithVersionIds(
-                                                                    final List<UUID> actorDefinitionVersionIds)
+                                                                    List<UUID> actorDefinitionVersionIds)
       throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
@@ -954,84 +931,6 @@ public class DestinationServiceJooqImpl implements DestinationService {
             .execute();
       }
     });
-  }
-
-  /**
-   * Get Destination with secrets.
-   *
-   * @param destinationId destination id
-   * @return destination with secrets
-   */
-  @Override
-  public DestinationConnection getDestinationConnectionWithSecrets(final UUID destinationId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final DestinationConnection destination = getDestinationConnection(destinationId);
-    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
-    final JsonNode hydratedConfig;
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      hydratedConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destination.getConfiguration(),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destination.getConfiguration());
-    }
-    return Jsons.clone(destination).withConfiguration(hydratedConfig);
-  }
-
-  /**
-   * Write a destination with its secrets to the appropriate persistence. Secrets go to secrets store
-   * and the rest of the object (with pointers to the secrets store) get saved in the db.
-   *
-   * @param destination to write
-   * @param connectorSpecification spec for the destination
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with the secrets store or db.
-   */
-  @Override
-  public void writeDestinationConnectionWithSecrets(
-                                                    final DestinationConnection destination,
-                                                    final ConnectorSpecification connectorSpecification)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    final Optional<JsonNode> previousDestinationConnection =
-        getDestinationIfExists(destination.getDestinationId()).map(DestinationConnection::getConfiguration);
-
-    // strip secrets
-    final Optional<UUID> organizationId = getOrganizationIdFromWorkspaceId(destination.getWorkspaceId());
-    final JsonNode partialConfig;
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig =
-          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToRuntimeSecretPersistence(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      partialConfig = secretsRepositoryWriter.statefulUpdateSecretsToDefaultSecretPersistence(
-          destination.getWorkspaceId(),
-          previousDestinationConnection,
-          destination.getConfiguration(),
-          connectorSpecification.getConnectionSpecification(),
-          validate(destination));
-    }
-    final DestinationConnection partialSource = Jsons.clone(destination).withConfiguration(partialConfig);
-    writeDestinationConnectionNoSecrets(partialSource);
-  }
-
-  private Optional<DestinationConnection> getDestinationIfExists(final UUID destinationId) {
-    try {
-      return Optional.of(getDestinationConnection(destinationId));
-    } catch (final ConfigNotFoundException | JsonValidationException | IOException e) {
-      log.warn("Unable to find destination with ID {}", destinationId);
-      return Optional.empty();
-    }
-  }
-
-  private boolean validate(final DestinationConnection destination) {
-    return destination.getTombstone() == null || !destination.getTombstone();
   }
 
 }

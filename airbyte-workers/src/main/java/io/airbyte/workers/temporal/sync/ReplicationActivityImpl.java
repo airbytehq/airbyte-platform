@@ -14,14 +14,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
@@ -36,14 +31,11 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.RemoveLargeSyncInputs;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.UseWorkloadApi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -56,7 +48,6 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.ReplicationInputHydrator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.helper.BackfillHelper;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.orchestrator.OrchestratorNameGenerator;
@@ -75,7 +66,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -90,8 +80,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
   private static final int MAX_TEMPORAL_MESSAGE_SIZE = 2 * 1024 * 1024;
 
-  private final SecretsRepositoryReader secretsRepositoryReader;
   private final ReplicationInputHydrator replicationInputHydrator;
+  private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -106,7 +96,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
 
-  public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
+  public ReplicationActivityImpl(final SecretsHydrator secretsHydrator,
                                  @Named("workspaceRoot") final Path workspaceRoot,
                                  final WorkerEnvironment workerEnvironment,
                                  final LogConfigs logConfigs,
@@ -120,12 +110,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final OrchestratorNameGenerator orchestratorNameGenerator,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
-    this.secretsRepositoryReader = secretsRepositoryReader;
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
-        airbyteApiClient.getSecretPersistenceConfigApi(), secretsRepositoryReader,
+        secretsHydrator,
         featureFlagClient);
+    this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
@@ -304,27 +294,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   private StandardSyncInput getHydratedSyncInput(final StandardSyncInput syncInput) {
-
-    final JsonNode fullDestinationConfig;
-    final JsonNode fullSourceConfig;
-    final UUID organizationId = syncInput.getConnectionContext().getOrganizationId();
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
-        fullDestinationConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(syncInput.getDestinationConfiguration(), runtimeSecretPersistence);
-        fullSourceConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(syncInput.getSourceConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      fullDestinationConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(syncInput.getDestinationConfiguration());
-      fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(syncInput.getSourceConfiguration());
-    }
+    final var fullSourceConfig = secretsHydrator.hydrate(syncInput.getSourceConfiguration());
+    final var fullDestinationConfig = secretsHydrator.hydrate(syncInput.getDestinationConfiguration());
 
     final var fullSyncInput = Jsons.clone(syncInput)
         .withSourceConfiguration(fullSourceConfig)

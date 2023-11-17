@@ -67,11 +67,4 @@ public interface WorkspaceService {
 
   List<StandardWorkspace> listStandardWorkspacesWithIds(final List<UUID> workspaceIds, final boolean includeTombstone) throws IOException;
 
-  Optional<UUID> getOrganizationIdFromWorkspaceId(UUID scopeId) throws IOException;
-
-  StandardWorkspace getWorkspaceWithSecrets(UUID workspaceId, boolean includeTombstone)
-      throws JsonValidationException, IOException, ConfigNotFoundException;
-
-  void writeWorkspaceWithSecrets(StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException;
-
 }

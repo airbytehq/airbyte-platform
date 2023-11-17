@@ -9,13 +9,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.HeartbeatUtils;
@@ -28,11 +23,8 @@ import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -43,7 +35,6 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.DbtLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -68,7 +59,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig;
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
-  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -82,7 +73,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
                                        final ProcessFactory processFactory,
-                                       final SecretsRepositoryReader secretsRepositoryReader,
+                                       final SecretsHydrator secretsHydrator,
                                        @Named("workspaceRoot") final Path workspaceRoot,
                                        final WorkerEnvironment workerEnvironment,
                                        final LogConfigs logConfigs,
@@ -95,7 +86,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
-    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
@@ -123,22 +114,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     return HeartbeatUtils.withBackgroundHeartbeat(
         cancellationCallback,
         () -> {
-          final JsonNode fullDestinationConfig;
-          final UUID organizationId = input.getConnectionContext().getOrganizationId();
-          if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-            try {
-              final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-                  new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-              final RuntimeSecretPersistence runtimeSecretPersistence =
-                  SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
-              fullDestinationConfig =
-                  secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getDestinationConfiguration(), runtimeSecretPersistence);
-            } catch (final ApiException e) {
-              throw new RuntimeException(e);
-            }
-          } else {
-            fullDestinationConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(input.getDestinationConfiguration());
-          }
+          final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
           final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
 
           final Supplier<OperatorDbtInput> inputSupplier = () -> {

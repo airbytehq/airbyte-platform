@@ -12,10 +12,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
@@ -34,18 +30,13 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
+import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
-import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
@@ -61,7 +52,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -72,7 +62,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
-  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -81,11 +71,10 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
-  private final FeatureFlagClient featureFlagClient;
 
   public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
-                                     final SecretsRepositoryReader secretsRepositoryReader,
+                                     final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
                                      final LogConfigs logConfigs,
@@ -93,20 +82,18 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      @Value("${airbyte.version}") final String airbyteVersion,
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                     final FeatureFlags featureFlags,
-                                     final FeatureFlagClient featureFlagClient) {
+                                     final FeatureFlags featureFlags) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
-    this.secretsRepositoryReader = secretsRepositoryReader;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.airbyteApiClient = airbyteApiClient;
+    this.secretsHydrator = secretsHydrator;
     this.airbyteVersion = airbyteVersion;
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
     this.featureFlags = featureFlags;
-    this.featureFlagClient = featureFlagClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -118,29 +105,12 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
         .addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, args.getJobRunConfig().getAttemptId(), JOB_ID_KEY, args.getJobRunConfig().getJobId(),
             DOCKER_IMAGE_KEY, args.getLauncherConfig().getDockerImage()));
     final StandardCheckConnectionInput rawInput = args.getConnectionConfiguration();
-    final JsonNode fullConfig;
-    final UUID organizationId = rawInput.getActorContext().getOrganizationId();
-
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      try {
-        final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-            new SecretPersistenceConfigGetRequestBody().scopeType(ScopeType.ORGANIZATION).scopeId(organizationId));
-        final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig);
-        fullConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(rawInput.getConnectionConfiguration(), runtimeSecretPersistence);
-      } catch (final ApiException e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      fullConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(rawInput.getConnectionConfiguration());
-    }
+    final JsonNode fullConfig = secretsHydrator.hydrate(rawInput.getConnectionConfiguration());
 
     final StandardCheckConnectionInput input = new StandardCheckConnectionInput()
         .withActorId(rawInput.getActorId())
         .withActorType(rawInput.getActorType())
-        .withConnectionConfiguration(fullConfig)
-        .withActorContext(rawInput.getActorContext());
+        .withConnectionConfiguration(fullConfig);
 
     final ActivityExecutionContext context = Activity.getExecutionContext();
     final AtomicReference<Runnable> cancellationCallback = new AtomicReference<>(null);

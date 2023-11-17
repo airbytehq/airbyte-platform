@@ -10,9 +10,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -25,8 +22,6 @@ import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.Database;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import java.sql.SQLException;
 import org.jooq.Result;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,38 +36,18 @@ class HealthCheckPersistenceTest {
   void beforeEach() throws Exception {
 
     database = mock(Database.class);
-    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
     configRepository = new ConfigRepository(
         new ActorDefinitionServiceJooqImpl(database),
         new CatalogServiceJooqImpl(database),
         new ConnectionServiceJooqImpl(database),
         new ConnectorBuilderServiceJooqImpl(database),
-        new DestinationServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
+        new DestinationServiceJooqImpl(database),
         new HealthCheckServiceJooqImpl(database),
-        new OAuthServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretPersistenceConfigService),
+        new OAuthServiceJooqImpl(database),
         new OperationServiceJooqImpl(database),
         new OrganizationServiceJooqImpl(database),
-        new SourceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService),
-        new WorkspaceServiceJooqImpl(database,
-            featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService));
+        new SourceServiceJooqImpl(database),
+        new WorkspaceServiceJooqImpl(database));
   }
 
   @Test

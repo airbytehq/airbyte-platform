@@ -6,11 +6,10 @@ package io.airbyte.workload.launcher.config
 
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.JobsApi
-import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
 import io.airbyte.api.client.generated.StateApi
 import io.airbyte.commons.features.EnvVariableFeatureFlags
 import io.airbyte.commons.features.FeatureFlags
-import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.hydration.SecretsHydrator
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricClientFactory
@@ -43,11 +42,10 @@ class ApplicationBeanFactory {
     connectionApi: ConnectionApi,
     jobsApi: JobsApi,
     stateApi: StateApi,
-    secretsPersistenceConfigApi: SecretsPersistenceConfigApi,
-    secretsRepositoryReader: SecretsRepositoryReader,
+    secretsHydrator: SecretsHydrator,
     featureFlagClient: FeatureFlagClient,
   ): ReplicationInputHydrator {
-    return ReplicationInputHydrator(connectionApi, jobsApi, stateApi, secretsPersistenceConfigApi, secretsRepositoryReader, featureFlagClient)
+    return ReplicationInputHydrator(connectionApi, jobsApi, stateApi, secretsHydrator, featureFlagClient)
   }
 
   @Singleton

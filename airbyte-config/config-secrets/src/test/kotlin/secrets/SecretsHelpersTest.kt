@@ -7,7 +7,6 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
-import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.config.secrets.test.cases.ArrayOneOfTestCase
 import io.airbyte.config.secrets.test.cases.ArrayTestCase
 import io.airbyte.config.secrets.test.cases.NestedObjectTestCase
@@ -35,8 +34,6 @@ import java.util.stream.Stream
 private const val PROVIDE_TEST_CASES = "provideTestCases"
 
 internal class SecretsHelpersTest {
-  private val secretPresistence: SecretPersistence = MemorySecretPersistence()
-
   @ParameterizedTest
   @MethodSource(PROVIDE_TEST_CASES)
   @Throws(
@@ -61,7 +58,6 @@ internal class SecretsHelpersTest {
         SecretsTestCase.WORKSPACE_ID,
         inputConfig,
         testCase.spec.connectionSpecification,
-        secretPresistence,
       )
     Assertions.assertEquals(testCase.partialConfig, splitConfig.partialConfig)
     Assertions.assertEquals(testCase.firstSecretMap, splitConfig.getCoordinateToPayload())
@@ -181,7 +177,6 @@ internal class SecretsHelpersTest {
         SecretsTestCase.WORKSPACE_ID,
         testCase.fullConfig,
         testCase.spec.connectionSpecification,
-        secretPersistence,
       )
     Assertions.assertEquals(testCase.partialConfig, splitConfig.partialConfig)
     Assertions.assertEquals(testCase.firstSecretMap, splitConfig.getCoordinateToPayload())
