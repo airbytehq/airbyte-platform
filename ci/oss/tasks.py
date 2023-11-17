@@ -159,7 +159,7 @@ async def test_oss_backend_task(client: Client, oss_build_result: Container, set
     # to spin up 3 separate containers on different ports, which adds a fair amount of boilerplate
     airbyte_proxy_service = ( # service binding for airbyte-proxy-test-container
         client.container()  
-        .from_("nginx:latest")
+        .from_("nginx:1.25.3")
         .with_directory("/", oss_build_result.directory("/airbyte/oss"), include="**/airbyte-proxy/**")
         .with_workdir("airbyte-proxy")
         .with_env_variable("BASIC_AUTH_PROXY_TIMEOUT", settings.basic_auth_proxy_timeout)

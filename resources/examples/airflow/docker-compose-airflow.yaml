@@ -76,7 +76,7 @@ services:
     restart: always
 
   redis:
-    image: redis:latest
+    image: redis:7.2.3
     ports:
       - 6379:6379
     healthcheck:

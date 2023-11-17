@@ -435,7 +435,7 @@ class KubePodProcessIntegrationTest {
   private Process getProcess(final Map<String, String> customLabels, final String entrypoint, final Map<String, String> files)
       throws WorkerException {
     return processFactory.create(ResourceType.DEFAULT, "tester", "some-id", 0, CONNECTION_ID, WORKSPACE_ID, Path.of("/tmp/job-root"),
-        "busybox:latest", false, false, files, entrypoint,
+        "busybox:1.36", false, false, files, entrypoint,
         AirbyteIntegrationLauncher.buildGenericConnectorResourceRequirements(DEFAULT_RESOURCE_REQUIREMENTS),
         null, customLabels, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
   }
