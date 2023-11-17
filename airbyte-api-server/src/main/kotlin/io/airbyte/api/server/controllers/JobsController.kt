@@ -25,6 +25,7 @@ import io.airbyte.api.server.problems.UnprocessableEntityProblem
 import io.airbyte.api.server.services.ConnectionService
 import io.airbyte.api.server.services.JobService
 import io.airbyte.api.server.services.UserService
+import io.airbyte.commons.enums.Enums
 import io.micronaut.http.annotation.Controller
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -264,8 +265,10 @@ open class JobsController(
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")
       }
-      field = OrderByFieldEnum.valueOf(matcher.group(1))
-      method = OrderByMethodEnum.valueOf(matcher.group(2))
+      field = Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
+        .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
+      method = Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
+        .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
     }
     return Pair(field, method)
   }
