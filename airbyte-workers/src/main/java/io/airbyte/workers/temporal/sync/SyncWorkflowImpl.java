@@ -112,21 +112,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    // In the default version, we pass the entire sync input into the replication activity. In the new
-    // version, we pass
-    // a single ReplicationActivityInput object. This will let us diverge, and generally make it easier
-    // to maintain.
-    final var version = Workflow.getVersion("SEPARATE_REPLICATION_INPUT", Workflow.DEFAULT_VERSION, 1);
-    StandardSyncOutput syncOutput;
-    if (version == Workflow.DEFAULT_VERSION) {
-      syncOutput =
-          replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
-    } else {
-      syncOutput =
-          replicationActivity
-              .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-                  refreshSchemaOutput));
-    }
+    StandardSyncOutput syncOutput = replicationActivity
+        .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+            refreshSchemaOutput));
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -206,7 +194,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final String taskQueue,
                                                                     final RefreshSchemaActivityOutput refreshSchemaOutput) {
     return new ReplicationActivityInput(
-        syncInput,
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
         syncInput.getSourceConfiguration(),

@@ -115,12 +115,6 @@ object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", 
 
 object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
 
-/**
- * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
- * the sync input.
- */
-object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-sync-inputs", default = false)
-
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

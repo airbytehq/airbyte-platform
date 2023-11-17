@@ -5,8 +5,6 @@
 package io.airbyte.workers;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +38,6 @@ import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -128,7 +125,6 @@ class ReplicationInputHydratorTest {
     when(airbyteApiClient.getConnectionApi()).thenReturn(connectionApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
     when(airbyteApiClient.getJobsApi()).thenReturn(jobsApi);
-    when(featureFlagClient.boolVariation(eq(RemoveLargeSyncInputs.INSTANCE), any())).thenReturn(true);
     when(connectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(new ConnectionRead()
         .connectionId(CONNECTION_ID)
         .syncCatalog(SYNC_CATALOG));
@@ -146,7 +142,6 @@ class ReplicationInputHydratorTest {
 
   private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
     return new ReplicationActivityInput(
-        null, // unused
         SOURCE_ID,
         DESTINATION_ID,
         SOURCE_CONFIG,

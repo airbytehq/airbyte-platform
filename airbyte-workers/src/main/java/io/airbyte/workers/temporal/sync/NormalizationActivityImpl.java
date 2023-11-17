@@ -37,8 +37,6 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RemoveLargeSyncInputs;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -189,9 +187,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     // Hydrate the destination config.
     final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
     // Retrieve the catalog.
-    final ConfiguredAirbyteCatalog catalog = featureFlagClient.boolVariation(RemoveLargeSyncInputs.INSTANCE, new Workspace(input.getWorkspaceId()))
-        ? retrieveCatalog(input.getConnectionId())
-        : input.getCatalog();
+    final ConfiguredAirbyteCatalog catalog = retrieveCatalog(input.getConnectionId());
     return input.withDestinationConfiguration(fullDestinationConfig).withCatalog(catalog);
   }
 

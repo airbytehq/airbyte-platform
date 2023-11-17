@@ -25,7 +25,6 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.secrets.hydration.SecretsHydrator;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.metrics.lib.MetricClient;
@@ -142,8 +141,6 @@ class NormalizationActivityImplTest {
 
   @Test
   void retrievesCatalog() throws Exception {
-    // Test that it retrieves the catalog via the API. This is enabled by feature flag currently.
-    when(mFeatureFlagClient.boolVariation(eq(RemoveLargeSyncInputs.INSTANCE), any())).thenReturn(true);
     when(mConnectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
         new ConnectionRead().syncCatalog(new AirbyteCatalog()));
     normalizationActivity.normalize(JOB_RUN_CONFIG, DESTINATION_CONFIG, new NormalizationInput()

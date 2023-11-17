@@ -245,11 +245,6 @@ class SyncWorkflowTest {
 
   @Test
   void testSuccess() throws Exception {
-    doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
@@ -271,11 +266,6 @@ class SyncWorkflowTest {
 
   @Test
   void testReplicationFailure() throws Exception {
-    doThrow(new IllegalArgumentException("induced exception")).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
     doThrow(new IllegalArgumentException("induced exception")).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
@@ -289,11 +279,6 @@ class SyncWorkflowTest {
 
   @Test
   void testReplicationFailedGracefully() throws Exception {
-    doReturn(replicationFailOutput).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
     doReturn(replicationFailOutput).when(replicationActivity).replicateV2(any());
 
     doReturn(normalizationSummary).when(normalizationActivity).normalize(
@@ -315,11 +300,6 @@ class SyncWorkflowTest {
 
   @Test
   void testNormalizationFailure() throws Exception {
-    doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doThrow(new IllegalArgumentException("induced exception")).when(normalizationActivity).normalize(
@@ -341,14 +321,6 @@ class SyncWorkflowTest {
     doAnswer(ignored -> {
       cancelWorkflow();
       return replicationSuccessOutput;
-    }).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
-    doAnswer(ignored -> {
-      cancelWorkflow();
-      return replicationSuccessOutput;
     }).when(replicationActivity).replicateV2(any());
 
     assertThrows(WorkflowFailedException.class, this::execute);
@@ -362,11 +334,6 @@ class SyncWorkflowTest {
 
   @Test
   void testCancelDuringNormalization() throws Exception {
-    doReturn(replicationSuccessOutput).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
     doReturn(replicationSuccessOutput).when(replicationActivity).replicateV2(any());
 
     doAnswer(ignored -> {
@@ -395,12 +362,6 @@ class SyncWorkflowTest {
         new StandardSyncOutput().withOutputCatalog(syncInput.getCatalog()).withStandardSyncSummary(standardSyncSummary);
     when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(false);
 
-    doReturn(replicationSuccessOutputNoRecordsCommitted).when(replicationActivity).replicate(
-        JOB_RUN_CONFIG,
-        SOURCE_LAUNCHER_CONFIG,
-        DESTINATION_LAUNCHER_CONFIG,
-        syncInput, SYNC_QUEUE);
-
     execute();
 
     verifyShouldRefreshSchema(refreshSchemaActivity);
@@ -412,7 +373,6 @@ class SyncWorkflowTest {
 
   @Test
   void testWebhookOperation() {
-    when(replicationActivity.replicate(any(), any(), any(), any(), any())).thenReturn(new StandardSyncOutput());
     when(replicationActivity.replicateV2(any())).thenReturn(new StandardSyncOutput());
     final StandardSyncOperation webhookOperation = new StandardSyncOperation()
         .withOperationId(UUID.randomUUID())
@@ -472,7 +432,6 @@ class SyncWorkflowTest {
 
   private static void verifyReplication(final ReplicationActivity replicationActivity, final StandardSyncInput syncInput) {
     verify(replicationActivity).replicateV2(new ReplicationActivityInput(
-        syncInput,
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
         syncInput.getSourceConfiguration(),
