@@ -34,8 +34,8 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
-    <OSSAuthService>
-      <NotificationService>
+    <NotificationService>
+      <OSSAuthService>
         <ConfirmationModalService>
           <ModalServiceProvider>
             <FormChangeTrackerService>
@@ -44,9 +44,9 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
               </ConnectorBuilderTestInputProvider>
             </FormChangeTrackerService>
           </ModalServiceProvider>
-        </ConfirmationModalService>
-      </NotificationService>
-    </OSSAuthService>
+        </ConfirmationModalService>{" "}
+      </OSSAuthService>
+    </NotificationService>
   </FeatureService>
 );
 

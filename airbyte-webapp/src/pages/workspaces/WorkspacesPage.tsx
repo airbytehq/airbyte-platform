@@ -15,10 +15,12 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { NoWorkspacePermissionsContent } from "area/workspace/NoWorkspacesPermissionWarning";
 import { useCreateWorkspace, useListWorkspacesInfinite } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 
+import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
 import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
 import WorkspacesList from "./components/WorkspacesList";
 import styles from "./WorkspacesPage.module.scss";
@@ -29,6 +31,8 @@ const WorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
+  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
+  const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
 
   const {
@@ -36,6 +40,7 @@ const WorkspacesPage: React.FC = () => {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
+    isFetching,
   } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
@@ -43,9 +48,12 @@ const WorkspacesPage: React.FC = () => {
   const { mutateAsync: createWorkspace } = useCreateWorkspace();
   const { logout } = useAuthService();
 
+  const showNoWorkspacesContent = !isFetching && !organizationsToCreateIn.length && !workspaces.length && isSearchEmpty;
+
   useDebounce(
     () => {
       setDebouncedSearchValue(searchValue);
+      setIsSearchEmpty(searchValue === "");
     },
     250,
     [searchValue]
@@ -81,17 +89,23 @@ const WorkspacesPage: React.FC = () => {
         }
       />
       <Box py="2xl" className={styles.content}>
-        <Box pb="xl">
-          <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
-        </Box>
-        <Box pb="lg">
-          <WorkspacesCreateControl createWorkspace={createWorkspace} />
-        </Box>
-        <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
-        {isFetchingNextPage && (
-          <Box py="2xl">
-            <LoadingSpinner />
-          </Box>
+        {showNoWorkspacesContent ? (
+          <NoWorkspacePermissionsContent organizations={organizationsMemberOnly} />
+        ) : (
+          <>
+            <Box pb="xl">
+              <SearchInput value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+            </Box>
+            <Box pb="lg">
+              <WorkspacesCreateControl createWorkspace={createWorkspace} />
+            </Box>
+            <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
+            {isFetchingNextPage && (
+              <Box py="2xl">
+                <LoadingSpinner />
+              </Box>
+            )}
+          </>
         )}
       </Box>
     </>

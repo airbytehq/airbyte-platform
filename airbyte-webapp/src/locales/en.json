@@ -1246,6 +1246,7 @@
   "login.sso.companyIdentifierFound": "Company identifier <b>{companyIdentifier}</b> found. Redirecting you to your SSO login...",
   "login.sso.backToSsoLogin": "Back to SSO login",
   "login.sso.invalidCompanyIdentifier": "Invalid company identifier",
+  "login.sso.unknownError": "An unknown error occurred during login. Please try again.",
 
   "signup.details.noCreditCard": "No credit card required",
   "signup.details.instantSetup": "Instant setup",
