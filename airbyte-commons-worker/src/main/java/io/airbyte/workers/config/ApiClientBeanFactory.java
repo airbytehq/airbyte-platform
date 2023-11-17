@@ -14,6 +14,7 @@ import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
+import io.airbyte.api.client.generated.SecretsPersistenceConfigApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.StateApi;
@@ -122,6 +123,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public SourceDefinitionApi sourceDefinitionApi(final ApiClient apiClient) {
     return new SourceDefinitionApi(apiClient);
+  }
+
+  @Singleton
+  public SecretsPersistenceConfigApi secretsPersistenceConfigApi(final ApiClient apiClient) {
+    return new SecretsPersistenceConfigApi(apiClient);
   }
 
   @Singleton
