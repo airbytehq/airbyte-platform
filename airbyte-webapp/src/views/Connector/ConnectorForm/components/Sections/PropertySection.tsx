@@ -9,6 +9,7 @@ import { StatusIcon } from "components/ui/StatusIcon";
 import { Text } from "components/ui/Text";
 
 import { FormBaseItem, FORM_PATTERN_ERROR } from "core/form/types";
+import { useOptionalDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./PropertySection.module.scss";
 import { ConnectorFormValues } from "../../types";
@@ -65,6 +66,7 @@ const FormatBlock = ({
 
 export const PropertySection: React.FC<PropertySectionProps> = ({ property, path, disabled }) => {
   const { control, getFieldState, watch, formState } = useFormContext();
+  const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
   const propertyPath = path ?? property.path;
   const { field } = useController({
     name: propertyPath,
@@ -90,6 +92,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
             htmlFor={switchId}
           />
         }
+        onFocus={() => setFocusedField?.(propertyPath)}
         value={field.value ?? property.default}
         disabled={disabled || property.readOnly}
       />
