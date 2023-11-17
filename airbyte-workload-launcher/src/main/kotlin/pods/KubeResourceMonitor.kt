@@ -8,6 +8,7 @@ import datadog.trace.api.Trace
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.KUBERENTES_RESOURCE_MONITOR_NAME
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
+import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -37,7 +38,7 @@ class KubeResourceMonitor(
   @Trace(operationName = KUBERENTES_RESOURCE_MONITOR_NAME)
   @Scheduled(fixedRate = "\${airbyte.kubernetes.resource-check-rate}")
   fun checkKubernetesResources() {
-    logger.info { "Scanning pending pods for any older than $pendingTimeLimitSec seconds..." }
+    logger.debug { "Scanning pending pods for any older than $pendingTimeLimitSec seconds..." }
 
     val pendingPods =
       kubernetesClient.pods()
@@ -45,7 +46,7 @@ class KubeResourceMonitor(
         .withField(STATUS_PHASE, PENDING)
         .list()
 
-    logger.info { "Found ${pendingPods.items.size} pending pods in the $namespace namespace..." }
+    logger.debug { "Found ${pendingPods.items.size} pending pods in the $namespace namespace..." }
 
     customMetricPublisher.gauge(
       WorkloadLauncherMetricMetadata.TOTAL_PENDING_PODS,
@@ -53,10 +54,10 @@ class KubeResourceMonitor(
       { pendingPods.items.size.toDouble() },
     )
 
-    val minPodPendingStartTime = pendingPods.items.minOfOrNull { p -> Instant.parse(p.status.startTime) }
+    val minPodPendingStartTime = pendingPods.items.minOfOrNull(this::selectLastTransitionTime)
     val pendingDurationSeconds = if (minPodPendingStartTime != null) Duration.between(Instant.now(), minPodPendingStartTime).abs().seconds else 0
 
-    logger.info { "Oldest pending pod has been pending for $pendingDurationSeconds seconds." }
+    logger.debug { "Oldest pending pod has been pending for $pendingDurationSeconds seconds." }
 
     if (pendingDurationSeconds > pendingTimeLimitSec) {
       logger.info { "At least one pod has been in a pending state for $pendingDurationSeconds seconds." }
@@ -67,6 +68,14 @@ class KubeResourceMonitor(
       )
     } else {
       logger.info { "No pods have been pending for longer than $pendingTimeLimitSec seconds." }
+    }
+  }
+
+  private fun selectLastTransitionTime(p: Pod): Instant {
+    if (p.status.conditions.size == 1) {
+      return Instant.parse(p.status.conditions.first().lastTransitionTime)
+    } else {
+      return Instant.now()
     }
   }
 

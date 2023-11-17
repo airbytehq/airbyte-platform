@@ -41,7 +41,12 @@ class KubeResourceMonitorTest {
 
     every { pod.status } returns
       mockk {
-        every { startTime } returns Instant.ofEpochMilli(0L).toString()
+        every { conditions } returns
+          listOf(
+            mockk {
+              every { lastTransitionTime } returns Instant.ofEpochMilli(0L).toString()
+            },
+          )
       }
 
     every { kubernetesClient.pods() } returns
@@ -102,7 +107,12 @@ class KubeResourceMonitorTest {
 
     every { pod.status } returns
       mockk {
-        every { startTime } returns Instant.now().toString()
+        every { conditions } returns
+          listOf(
+            mockk {
+              every { lastTransitionTime } returns Instant.now().toString()
+            },
+          )
       }
 
     every { kubernetesClient.pods() } returns
