@@ -5,8 +5,7 @@ import { useParams } from "react-router-dom";
 import { ChangesStatusIcon } from "components/EntityTable/components/ChangesStatusIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
-import { Tabs } from "components/ui/Tabs";
-import { LinkTab } from "components/ui/Tabs/LinkTab";
+import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { RoutePaths } from "pages/routePaths";

@@ -2,8 +2,7 @@ import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Tabs } from "components/ui/Tabs";
-import { ButtonTab } from "components/ui/Tabs/ButtonTab";
+import { Tabs, ButtonTab } from "components/ui/Tabs";
 
 import { DataMovedGraph } from "../DataMovedGraph";
 import { UptimeStatusGraph } from "../UptimeStatusGraph";

@@ -3,8 +3,7 @@ import { useState } from "react";
 
 import { Box } from "components/ui/Box";
 
-import { ButtonTab } from "./ButtonTab";
-import { Tabs } from "./Tabs";
+import { Tabs, ButtonTab } from ".";
 
 export default {
   title: "UI/Tabs",
