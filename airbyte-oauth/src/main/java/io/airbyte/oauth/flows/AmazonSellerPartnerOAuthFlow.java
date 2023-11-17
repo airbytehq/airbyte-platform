@@ -25,8 +25,59 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
 
-  private static final String AUTHORIZE_URL = "https://sellercentral.amazon.com/apps/authorize/consent";
   private static final String ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token";
+  private static final String sellerEuropeUrl = "https://sellercentral-europe.amazon.com";
+  private static Map<String, String> vendorCentralUrls = ImmutableMap.<String, String>builder()
+      .put("CA", "https://vendorcentral.amazon.ca")
+      .put("US", "https://vendorcentral.amazon.com")
+      .put("DE", "https://vendorcentral.amazon.de")
+      .put("MX", "https://vendorcentral.amazon.com.mx")
+      .put("JP", "https://vendorcentral.amazon.co.jp")
+      .put("IT", "https://vendorcentral.amazon.it")
+      .put("AU", "https://vendorcentral.amazon.com.au")
+      .put("BR", "https://vendorcentral.amazon.com.br")
+      .put("BE", "https://vendorcentral.amazon.com.be")
+      .put("ES", "https://vendorcentral.amazon.es")
+      .put("UK", "https://vendorcentral.amazon.co.uk")
+      .put("GB", "https://vendorcentral.amazon.co.uk")
+      .put("NL", "https://vendorcentral.amazon.nl")
+      .put("PL", "https://vendorcentral.amazon.pl")
+      .put("FR", "https://vendorcentral.amazon.fr")
+      .put("IN", "https://www.vendorcentral.in")
+      .put("SE", "https://vendorcentral.amazon.se")
+      .put("SG", "https://vendorcentral.amazon.com.sg")
+      .put("AE", "https://vendorcentral.amazon.me")
+      .put("TR", "https://vendorcentral.amazon.com.tr")
+      .put("SA", "https://vendorcentral.amazon.me")
+      .put("EG", "https://vendorcentral.amazon.me")
+      .put("ZA", "https://vendorcentral.amazon.co.za")
+      .build();
+
+  private static Map<String, String> sellerCentralUrls = ImmutableMap.<String, String>builder()
+      .put("CA", "https://sellercentral.amazon.ca")
+      .put("US", "https://sellercentral.amazon.com")
+      .put("MX", "https://sellercentral.amazon.com.mx")
+      .put("BR", "https://sellercentral.amazon.com.br")
+      .put("ES", sellerEuropeUrl)
+      .put("UK", sellerEuropeUrl)
+      .put("GB", sellerEuropeUrl)
+      .put("FR", sellerEuropeUrl)
+      .put("NL", "https://sellercentral.amazon.nl")
+      .put("DE", sellerEuropeUrl)
+      .put("IT", sellerEuropeUrl)
+      .put("SE", "https://sellercentral.amazon.se")
+      .put("ZA", "https://sellercentral.amazon.co.za")
+      .put("PL", "https://sellercentral.amazon.pl")
+      .put("EG", "https://sellercentral.amazon.eg")
+      .put("TR", "https://sellercentral.amazon.com.tr")
+      .put("SA", "https://sellercentral.amazon.sa")
+      .put("AE", "https://sellercentral.amazon.ae")
+      .put("IN", "https://sellercentral.amazon.in")
+      .put("BE", "https://sellercentral.amazon.com.be")
+      .put("SG", "https://sellercentral.amazon.sg")
+      .put("AU", "https://sellercentral.amazon.com.au")
+      .put("JP", "https://sellercentral.amazon.co.jp")
+      .build();
 
   @Override
   protected String getClientIdUnsafe(final JsonNode oauthConfig) {
@@ -65,7 +116,17 @@ public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
     }
 
     try {
-      return new URIBuilder(AUTHORIZE_URL)
+      final String accountType = getConfigValueUnsafe(inputOAuthConfiguration, "account_type");
+      final String region = getConfigValueUnsafe(inputOAuthConfiguration, "region");
+      String consentUrl;
+
+      if ("Vendor".equals(accountType)) {
+        consentUrl = vendorCentralUrls.get(region);
+      } else {
+        consentUrl = sellerCentralUrls.get(region);
+      }
+
+      return new URIBuilder(consentUrl + "/apps/authorize/consent")
           /*
            * Airbyte Amazon Seller Partner `application_id`, to provide native OAuth integration for
            * 3rd-parties.
