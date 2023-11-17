@@ -17,5 +17,4 @@ export const defaultCloudFeatures = [
   FeatureItem.ShowInviteUsersHint,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ConnectorBreakingChangeDeadlines,
-  FeatureItem.RBAC,
 ];

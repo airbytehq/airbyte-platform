@@ -18,7 +18,7 @@ interface AccountFormValues {
   email: string;
 }
 
-export const AccountForm: React.FC = () => {
+const AccountForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const workspace = useCurrentWorkspace();
@@ -60,3 +60,5 @@ export const AccountForm: React.FC = () => {
     </Form>
   );
 };
+
+export default AccountForm;

@@ -4,13 +4,8 @@ import { useEffectOnce } from "react-use";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
-import {
-  useGetInstanceConfiguration,
-  useInvalidateAllWorkspaceScopeOnChange,
-  useListWorkspacesInfinite,
-} from "core/api";
+import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
-import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useApiHealthPoll } from "hooks/services/Health";
@@ -22,7 +17,6 @@ import MainView from "views/layout/MainView";
 import { RoutePaths, DestinationPaths, SourcePaths } from "./routePaths";
 import { WorkspaceRead } from "../core/request/AirbyteClient";
 
-const DefaultView = React.lazy(() => import("pages/DefaultView"));
 const ConnectionsRoutes = React.lazy(() => import("./connections/ConnectionsRoutes"));
 const ConnectorBuilderRoutes = React.lazy(() => import("./connectorBuilder/ConnectorBuilderRoutes"));
 const AllDestinationsPage = React.lazy(() => import("./destination/AllDestinationsPage"));
@@ -97,19 +91,14 @@ const PreferencesRoutes = () => (
 
 export const AutoSelectFirstWorkspace: React.FC = () => {
   const location = useLocation();
-  const { data: workspacesData } = useListWorkspacesInfinite(2, "");
-  const workspaces = workspacesData?.pages?.[0]?.data.workspaces ?? [];
-
-  const currentWorkspace = workspaces.length ? workspaces[0] : undefined;
-
+  const { workspaces } = useListWorkspaces();
+  const currentWorkspace = workspaces[0];
   const [searchParams] = useSearchParams();
 
   return (
     <Navigate
       to={{
-        pathname: currentWorkspace
-          ? `/${RoutePaths.Workspaces}/${currentWorkspace.workspaceId}${location.pathname}`
-          : `/${RoutePaths.Workspaces}`,
+        pathname: `/${RoutePaths.Workspaces}/${currentWorkspace.workspaceId}${location.pathname}`,
         search: `?${searchParams.toString()}`,
       }}
       replace
@@ -118,20 +107,18 @@ export const AutoSelectFirstWorkspace: React.FC = () => {
 };
 
 const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) => {
+  const { initialSetupComplete } = useGetInstanceConfiguration();
   const workspace = useCurrentWorkspace();
-
   useAddAnalyticsContextForWorkspace(workspace);
   useApiHealthPoll();
 
   // invalidate everything in the workspace scope when the workspaceId changes
   useInvalidateAllWorkspaceScopeOnChange(workspace.workspaceId);
 
-  return element ?? <MainViewRoutes />;
+  return initialSetupComplete ? element ?? <MainViewRoutes /> : <PreferencesRoutes />;
 };
 
 export const Routing: React.FC = () => {
-  const { inited, user } = useAuthService();
-
   useBuildUpdateCheck();
   const { search } = useLocation();
 
@@ -139,26 +126,22 @@ export const Routing: React.FC = () => {
     storeUtmFromQuery(search);
   });
 
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const { initialSetupComplete } = useGetInstanceConfiguration();
+  // TODO: Remove this after it is verified there are no problems with current routing
+  const OldRoutes = useMemo(
+    () =>
+      Object.values(RoutePaths).map((r) => <Route path={`${r}/*`} key={r} element={<AutoSelectFirstWorkspace />} />),
+    []
+  );
 
-  if (!inited) {
-    return null;
-  }
+  const isNewWorkspacesUIEnabled = useFeature(FeatureItem.MultiWorkspaceUI);
 
   return (
     <Routes>
+      {OldRoutes}
       <Route path={RoutePaths.AuthFlow} element={<CompleteOauthRequest />} />
-      {user && !initialSetupComplete ? (
-        <Route path="*" element={<PreferencesRoutes />} />
-      ) : (
-        <>
-          {multiWorkspaceUI && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
-          <Route path="/" element={<DefaultView />} />
-          <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<RoutingWithWorkspace />} />
-          <Route path="*" element={<AutoSelectFirstWorkspace />} />
-        </>
-      )}
+      {isNewWorkspacesUIEnabled && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
+      <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<RoutingWithWorkspace />} />
+      <Route path="*" element={<AutoSelectFirstWorkspace />} />
     </Routes>
   );
 };

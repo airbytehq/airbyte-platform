@@ -4,12 +4,11 @@ import { useListCloudWorkspaces } from "core/api/cloud";
 
 import { RoutePaths } from "../../../pages/routePaths";
 
-export const CloudDefaultView: React.FC = () => {
+export const DefaultView: React.FC = () => {
   const { workspaces } = useListCloudWorkspaces();
 
-  // Only show the workspace creation list if there is not exactly one workspace
+  // Only show the workspace creation list if there is more than one workspace
   // otherwise redirect to the single workspace
-
   return (
     <Navigate
       to={
@@ -20,4 +19,4 @@ export const CloudDefaultView: React.FC = () => {
   );
 };
 
-export default CloudDefaultView;
+export default DefaultView;

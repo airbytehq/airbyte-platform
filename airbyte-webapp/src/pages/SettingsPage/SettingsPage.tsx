@@ -21,7 +21,7 @@ export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
+  const isAccessManagementEnabled = false;
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 

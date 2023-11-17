@@ -19,7 +19,6 @@ const featureSetFromInstanceConfig = (instanceConfig: InstanceConfigurationRespo
   return {
     [FeatureItem.KeycloakAuthentication]: !!instanceConfig.auth,
     [FeatureItem.MultiWorkspaceUI]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
-    [FeatureItem.RBAC]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
     [FeatureItem.EnterpriseBranding]: instanceConfig.edition === InstanceConfigurationResponseEdition.pro,
   };
 };
