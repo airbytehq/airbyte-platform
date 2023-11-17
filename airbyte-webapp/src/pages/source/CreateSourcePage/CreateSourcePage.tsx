@@ -65,27 +65,24 @@ export const CreateSourcePage: React.FC = () => {
   };
 
   return (
-    <>
+    <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
       <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-
-      <ConnectorDocumentationWrapper>
-        <FormPageContent>
-          <FlexContainer justifyContent="flex-start">
-            <Box mb="md">
-              <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-                <FormattedMessage id="connectorBuilder.backButtonLabel" />
-              </Button>
-            </Box>
-          </FlexContainer>
-          <SourceForm
-            onSubmit={onSubmitSourceStep}
-            sourceDefinitions={sourceDefinitions}
-            selectedSourceDefinitionId={sourceDefinitionId}
-          />
-          <CloudInviteUsersHint connectorType="source" />
-        </FormPageContent>
-      </ConnectorDocumentationWrapper>
-    </>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <SourceForm
+          onSubmit={onSubmitSourceStep}
+          sourceDefinitions={sourceDefinitions}
+          selectedSourceDefinitionId={sourceDefinitionId}
+        />
+        <CloudInviteUsersHint connectorType="source" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
   );
 };
