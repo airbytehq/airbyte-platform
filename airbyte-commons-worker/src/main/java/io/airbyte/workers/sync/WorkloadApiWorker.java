@@ -140,8 +140,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         new Workspace(input.getWorkspaceId()),
         new Connection(input.getConnectionId()),
         new Source(input.getSourceId()),
-        new Destination(input.getDestinationId())
-    ));
+        new Destination(input.getDestinationId())));
     final int workloadHeartbeatRate = featureFlagClient.intVariation(WorkloadHeartbeatRate.INSTANCE, context);
     final Instant cutoffTime = Instant.now().plus(workloadHeartbeatRate, ChronoUnit.SECONDS);
     do {

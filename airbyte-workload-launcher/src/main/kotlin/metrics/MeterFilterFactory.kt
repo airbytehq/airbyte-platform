@@ -49,5 +49,6 @@ class MeterFilterFactory(
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
     const val LAUNCH_PIPELINE_STAGE_OPERATION_NAME = "launch-pipeline-stage"
     const val RESUME_CLAIMED_OPERATION_NAME = "resume_claimed"
+    const val KUBERENTES_RESOURCE_MONITOR_NAME = "kuberentes-resource-monitor"
   }
 }
