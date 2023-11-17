@@ -50,7 +50,7 @@ podLabels: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 60
+  initialDelaySeconds: 120
   periodSeconds: 5
   timeoutSeconds: 5
   failureThreshold: 3
@@ -65,7 +65,7 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 30
+  initialDelaySeconds: 120
   periodSeconds: 5
   timeoutSeconds: 5
   failureThreshold: 10
