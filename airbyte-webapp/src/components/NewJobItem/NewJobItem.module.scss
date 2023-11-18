@@ -17,6 +17,11 @@
     flex-grow: 1;
   }
 
+  // fix for "dancing" scrollbar
+  &__spinnerContainer {
+    overflow: clip
+  }
+
   &__summary {
     overflow: hidden;
   }
