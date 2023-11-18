@@ -27,6 +27,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,12 +71,12 @@ public abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(getOAuthParamConfig());
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(getOAuthParamConfig());
-    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(destinationOAuthParameter));
+    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
   }
 
   /**
@@ -242,8 +243,8 @@ public abstract class BaseOAuthFlowTest {
 
   @Test
   void testGetConsentUrlEmptyOAuthParameters() throws JsonValidationException, IOException {
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of());
-    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of());
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
+    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.empty());
     assertThrows(ConfigNotFoundException.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
             null));
@@ -258,12 +259,12 @@ public abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject());
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(sourceOAuthParameter));
     DestinationOAuthParameter destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject());
-    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(destinationOAuthParameter));
+    when(configRepository.getDestinationOAuthParameterOptional(any(), any())).thenReturn(Optional.of(destinationOAuthParameter));
     assertThrows(IllegalArgumentException.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
             sourceOAuthParameter.getConfiguration()));

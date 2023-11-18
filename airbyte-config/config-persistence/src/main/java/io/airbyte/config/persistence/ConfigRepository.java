@@ -1367,18 +1367,6 @@ public class ConfigRepository {
   }
 
   /**
-   * List source oauth parameters.
-   *
-   * @return oauth parameters
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<SourceOAuthParameter> listSourceOAuthParam() throws JsonValidationException, IOException {
-    return oAuthService.listSourceOAuthParam();
-  }
-
-  /**
    * Get destination oauth parameter.
    *
    * @param workspaceId workspace id
@@ -1402,18 +1390,6 @@ public class ConfigRepository {
   @Deprecated
   public void writeDestinationOAuthParam(final DestinationOAuthParameter destinationOAuthParameter) throws IOException {
     oAuthService.writeDestinationOAuthParam(destinationOAuthParameter);
-  }
-
-  /**
-   * List destination oauth params.
-   *
-   * @return list destination oauth params
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Deprecated
-  public List<DestinationOAuthParameter> listDestinationOAuthParam() throws JsonValidationException, IOException {
-    return oAuthService.listDestinationOAuthParam();
   }
 
   /**
@@ -2248,6 +2224,18 @@ public class ConfigRepository {
   public Set<Long> listEarlySyncJobs(final int freeUsageInterval, final int jobsFetchRange)
       throws IOException {
     return connectionService.listEarlySyncJobs(freeUsageInterval, jobsFetchRange);
+  }
+
+  @Deprecated
+  public Optional<SourceOAuthParameter> getSourceOAuthParameterOptional(final UUID workspaceId, final UUID sourceDefinitionId)
+      throws IOException {
+    return oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
+  }
+
+  @Deprecated
+  public Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(final UUID workspaceId, final UUID sourceDefinitionId)
+      throws IOException {
+    return oAuthService.getDestinationOAuthParameterOptional(workspaceId, sourceDefinitionId);
   }
 
 }

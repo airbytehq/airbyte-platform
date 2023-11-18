@@ -46,7 +46,7 @@ public class TestConfigHelpers {
    *
    * @return sync config and sync input.
    */
-  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig() {
+  public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig(final UUID organizationId) {
     final ImmutablePair<StandardSync, ReplicationInput> replicationInputPair = createReplicationConfig();
     final var replicationInput = replicationInputPair.getRight();
     // For now, these are identical, so we delegate to createReplicationConfig and copy it over for
@@ -64,7 +64,7 @@ public class TestConfigHelpers {
         .withState(replicationInput.getState())
         .withOperationSequence(replicationInput.getOperationSequence())
         .withWorkspaceId(replicationInput.getWorkspaceId())
-        .withConnectionContext(new ConnectionContext()));
+        .withConnectionContext(new ConnectionContext().withOrganizationId(organizationId)));
   }
 
   public static ImmutablePair<StandardSync, ReplicationInput> createReplicationConfig() {

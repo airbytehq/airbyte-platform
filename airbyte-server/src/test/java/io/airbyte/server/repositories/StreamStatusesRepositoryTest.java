@@ -46,6 +46,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 class StreamStatusesRepositoryTest {
 
   private static final String DATA_SOURCE_NAME = "config";
+  private static final String DATA_SOURCES = "datasources.";
 
   static ApplicationContext context;
 
@@ -65,12 +66,12 @@ class StreamStatusesRepositoryTest {
     // set the micronaut datasource properties to match our container we started up
     context = ApplicationContext.run(PropertySource.of(
         "test", Map.of(
-            "datasources." + DATA_SOURCE_NAME + ".driverClassName", "org.postgresql.Driver",
-            "datasources." + DATA_SOURCE_NAME + ".db-type", "postgres",
-            "datasources." + DATA_SOURCE_NAME + ".dialect", "POSTGRES",
-            "datasources." + DATA_SOURCE_NAME + ".url", container.getJdbcUrl(),
-            "datasources." + DATA_SOURCE_NAME + ".username", container.getUsername(),
-            "datasources." + DATA_SOURCE_NAME + ".password", container.getPassword())));
+            DATA_SOURCES + DATA_SOURCE_NAME + ".driverClassName", "org.postgresql.Driver",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".db-type", "postgres",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".dialect", "POSTGRES",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".url", container.getJdbcUrl(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".username", container.getUsername(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".password", container.getPassword())));
 
     // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
     final var dataSource = ((DelegatingDataSource) context.getBean(DataSource.class, Qualifiers.byName(DATA_SOURCE_NAME))).getTargetDataSource();

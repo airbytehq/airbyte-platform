@@ -228,7 +228,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnAccept() {
-    Long startTime = currentAcceptCallStartTime.get();
+    final Long startTime = currentAcceptCallStartTime.get();
 
     if (startTime != null) {
       // by the time we get here, currentAcceptCallStartTime might have already been reset.
@@ -245,7 +245,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnNotifyEndOfInput() {
-    Long startTime = currentNotifyEndOfInputCallStartTime.get();
+    final Long startTime = currentNotifyEndOfInputCallStartTime.get();
 
     if (startTime != null) {
       // by the time we get here, currentNotifyEndOfInputCallStartTime might have already been reset.

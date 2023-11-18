@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import io.airbyte.commons.json.Jsons;
@@ -35,6 +36,9 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.CatalogServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
@@ -47,6 +51,8 @@ import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.Database;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
@@ -87,19 +93,40 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
     truncateAllTables();
+
+    final FeatureFlagClient featureFlagClient = mock(TestClient.class);
+    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
     configRepository = spy(
         new ConfigRepository(
             new ActorDefinitionServiceJooqImpl(database),
             new CatalogServiceJooqImpl(database),
             new ConnectionServiceJooqImpl(database),
             new ConnectorBuilderServiceJooqImpl(database),
-            new DestinationServiceJooqImpl(database),
+            new DestinationServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
             new HealthCheckServiceJooqImpl(database),
-            new OAuthServiceJooqImpl(database),
+            new OAuthServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretPersistenceConfigService),
             new OperationServiceJooqImpl(database),
             new OrganizationServiceJooqImpl(database),
-            new SourceServiceJooqImpl(database),
-            new WorkspaceServiceJooqImpl(database)));
+            new SourceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService),
+            new WorkspaceServiceJooqImpl(database,
+                featureFlagClient,
+                secretsRepositoryReader,
+                secretsRepositoryWriter,
+                secretPersistenceConfigService)));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }
@@ -253,7 +280,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
     configRepository.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
-    String expectedCatalog =
+    final String expectedCatalog =
         "{"
             + "\"streams\":["
             + "{"

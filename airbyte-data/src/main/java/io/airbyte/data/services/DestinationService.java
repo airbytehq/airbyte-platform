@@ -11,6 +11,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -67,5 +68,12 @@ public interface DestinationService {
       throws IOException;
 
   List<DestinationConnection> listDestinationsWithVersionIds(final List<UUID> actorDefinitionVersionIds) throws IOException;
+
+  DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
+
+  void writeDestinationConnectionWithSecrets(
+                                             DestinationConnection destination,
+                                             ConnectorSpecification connectorSpecification)
+      throws JsonValidationException, IOException, ConfigNotFoundException;
 
 }

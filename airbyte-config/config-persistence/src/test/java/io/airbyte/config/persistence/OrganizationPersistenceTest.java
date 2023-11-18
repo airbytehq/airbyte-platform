@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -16,8 +17,12 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.User.AuthProvider;
 import io.airbyte.config.persistence.ConfigRepository.ResourcesByUserQueryPaginated;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -34,13 +39,27 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
   private UserPersistence userPersistence;
   private PermissionPersistence permissionPersistence;
   private WorkspaceService workspaceService;
+  private TestClient featureFlagClient;
+  private SecretsRepositoryReader secretsRepositoryReader;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretPersistenceConfigService secretPersistenceConfigService;
 
   @BeforeEach
   void beforeEach() throws Exception {
     permissionPersistence = new PermissionPersistence(database);
     userPersistence = new UserPersistence(database);
     organizationPersistence = new OrganizationPersistence(database);
-    workspaceService = new WorkspaceServiceJooqImpl(database);
+    featureFlagClient = new TestClient();
+    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+
+    workspaceService = new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService);
     truncateAllTables();
 
     for (final Organization organization : MockData.organizations()) {

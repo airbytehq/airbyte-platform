@@ -20,9 +20,10 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.hydration.SecretsHydrator;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -53,7 +54,7 @@ class NormalizationActivityImplTest {
   private static ContainerOrchestratorConfig mContainerOrchestratorConfig;
   private static WorkerConfigsProvider mWorkerConfigsProvider;
   private static ProcessFactory mProcessFactory;
-  private static SecretsHydrator mSecretsHydrator;
+  private static SecretsRepositoryReader mSecretsRepositoryReader;
   private static final Path WORKSPACE_ROOT = Path.of("/unused/path");
   private static final Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
   private static CloudStorageConfigs mCloudStorageConfigs;
@@ -94,7 +95,7 @@ class NormalizationActivityImplTest {
     LOG_CONFIGS = new LogConfigs(Optional.of(mCloudStorageConfigs));
     when(mWorkerConfigsProvider.getConfig(any())).thenReturn(mWorkerConfigs);
     mProcessFactory = mock(ProcessFactory.class);
-    mSecretsHydrator = mock(SecretsHydrator.class);
+    mSecretsRepositoryReader = mock(SecretsRepositoryReader.class);
     mAirbyteConfigValidator = mock(AirbyteConfigValidator.class);
     mAirbyteApiClient = mock(AirbyteApiClient.class);
     mConnectionApi = mock(ConnectionApi.class);
@@ -105,7 +106,7 @@ class NormalizationActivityImplTest {
         Optional.of(mContainerOrchestratorConfig),
         mWorkerConfigsProvider,
         mProcessFactory,
-        mSecretsHydrator,
+        mSecretsRepositoryReader,
         WORKSPACE_ROOT,
         WORKER_ENVIRONMENT,
         LOG_CONFIGS,
@@ -145,7 +146,8 @@ class NormalizationActivityImplTest {
         new ConnectionRead().syncCatalog(new AirbyteCatalog()));
     normalizationActivity.normalize(JOB_RUN_CONFIG, DESTINATION_CONFIG, new NormalizationInput()
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(UUID.randomUUID()));
+        .withWorkspaceId(UUID.randomUUID())
+        .withConnectionContext(new ConnectionContext().withOrganizationId(UUID.randomUUID())));
     verify(mConnectionApi).getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
   }
 

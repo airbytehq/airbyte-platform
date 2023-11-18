@@ -26,7 +26,7 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.secrets.hydration.SecretsHydrator;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
@@ -72,8 +72,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
   private static final int MAX_TEMPORAL_MESSAGE_SIZE = 2 * 1024 * 1024;
 
+  private final SecretsRepositoryReader secretsRepositoryReader;
   private final ReplicationInputHydrator replicationInputHydrator;
-  private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
@@ -88,7 +88,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
 
-  public ReplicationActivityImpl(final SecretsHydrator secretsHydrator,
+  public ReplicationActivityImpl(final SecretsRepositoryReader secretsRepositoryReader,
                                  @Named("workspaceRoot") final Path workspaceRoot,
                                  final WorkerEnvironment workerEnvironment,
                                  final LogConfigs logConfigs,
@@ -102,12 +102,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final OrchestratorNameGenerator orchestratorNameGenerator,
                                  final MetricClient metricClient,
                                  final FeatureFlagClient featureFlagClient) {
+    this.secretsRepositoryReader = secretsRepositoryReader;
     this.replicationInputHydrator = new ReplicationInputHydrator(airbyteApiClient.getConnectionApi(),
         airbyteApiClient.getJobsApi(),
         airbyteApiClient.getStateApi(),
-        secretsHydrator,
+        airbyteApiClient.getSecretPersistenceConfigApi(), secretsRepositoryReader,
         featureFlagClient);
-    this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;

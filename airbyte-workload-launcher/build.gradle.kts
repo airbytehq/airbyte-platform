@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":airbyte-commons-worker"))
     implementation(project(":airbyte-config:config-models"))
     implementation(project(":airbyte-config:config-secrets"))
+    implementation(project(":airbyte-data"))
     implementation(project(":airbyte-featureflag"))
     implementation(project(":airbyte-metrics:metrics-lib"))
     implementation(project(":airbyte-micronaut-temporal"))

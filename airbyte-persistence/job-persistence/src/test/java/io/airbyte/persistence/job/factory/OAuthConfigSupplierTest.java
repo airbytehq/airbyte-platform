@@ -33,6 +33,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -264,12 +265,7 @@ class OAuthConfigSupplierTest {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(
-        new SourceOAuthParameter()
-            .withOauthParameterId(UUID.randomUUID())
-            .withSourceDefinitionId(UUID.randomUUID())
-            .withWorkspaceId(null)
-            .withConfiguration(Jsons.jsonNode(generateOAuthParameters())),
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
         new SourceOAuthParameter()
             .withOauthParameterId(UUID.randomUUID())
             .withSourceDefinitionId(sourceDefinitionId)
@@ -364,17 +360,12 @@ class OAuthConfigSupplierTest {
   }
 
   private void setupOAuthParamMocks(final Map<String, Object> oauthParameters) throws JsonValidationException, IOException {
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(
+    when(configRepository.getSourceOAuthParameterOptional(any(), any())).thenReturn(Optional.of(
         new SourceOAuthParameter()
             .withOauthParameterId(UUID.randomUUID())
             .withSourceDefinitionId(sourceDefinitionId)
             .withWorkspaceId(null)
-            .withConfiguration(Jsons.jsonNode(oauthParameters)),
-        new SourceOAuthParameter()
-            .withOauthParameterId(UUID.randomUUID())
-            .withSourceDefinitionId(UUID.randomUUID())
-            .withWorkspaceId(null)
-            .withConfiguration(Jsons.jsonNode(generateOAuthParameters()))));
+            .withConfiguration(Jsons.jsonNode(oauthParameters))));
   }
 
   private static ObjectNode generateJsonConfig() {

@@ -3623,7 +3623,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+              $ref: "#/components/schemas/SecretPersistenceConfigGetRequestBody"
         required: true
       responses:
         "200":
@@ -8830,7 +8830,7 @@ components:
         secretPersistenceType:
           $ref: "#/components/schemas/SecretPersistenceType"
         configuration:
-          type: object
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
         scopeType:
           $ref: "#/components/schemas/ScopeType"
         scopeId:
@@ -8843,6 +8843,18 @@ components:
         - google
         - vault
         - aws
+    SecretPersistenceConfigGetRequestBody:
+      description: Request body for getting secret persistence config
+      required:
+        - scopeType
+        - scopeId
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+    SecretPersistenceConfigurationJson:
+      type: object
 
   responses:
     NotFoundResponse:

@@ -16,6 +16,8 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.SourceService;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -27,6 +29,7 @@ import java.util.UUID;
  * Abstraction to manage the updating the configuration of a source or a destination. Helps with
  * secrets handling and make it easy to test these transitions.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @Singleton
 public class ConfigurationUpdate {
 
@@ -34,21 +37,29 @@ public class ConfigurationUpdate {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final JsonSecretsProcessor secretsProcessor;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final SourceService sourceService;
+  private final DestinationService destinationService;
 
   public ConfigurationUpdate(final ConfigRepository configRepository,
                              final SecretsRepositoryReader secretsRepositoryReader,
-                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
-    this(configRepository, secretsRepositoryReader, new JsonSecretsProcessor(true), actorDefinitionVersionHelper);
+                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                             final SourceService sourceService,
+                             final DestinationService destinationService) {
+    this(configRepository, secretsRepositoryReader, new JsonSecretsProcessor(true), actorDefinitionVersionHelper, sourceService, destinationService);
   }
 
   public ConfigurationUpdate(final ConfigRepository configRepository,
                              final SecretsRepositoryReader secretsRepositoryReader,
                              final JsonSecretsProcessor secretsProcessor,
-                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                             final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                             final SourceService sourceService,
+                             final DestinationService destinationService) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsProcessor = secretsProcessor;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.sourceService = sourceService;
+    this.destinationService = destinationService;
   }
 
   /**
@@ -62,10 +73,16 @@ public class ConfigurationUpdate {
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing source
-    final SourceConnection persistedSource = secretsRepositoryReader.getSourceConnectionWithSecrets(sourceId);
+    final SourceConnection persistedSource;
+    try {
+      persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
     persistedSource.setName(sourceName);
     // get spec
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(persistedSource.getSourceDefinitionId());
@@ -92,10 +109,16 @@ public class ConfigurationUpdate {
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing source
-    final SourceConnection persistedSource = secretsRepositoryReader.getSourceConnectionWithSecrets(sourceId);
+    final SourceConnection persistedSource;
+    try {
+      persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
@@ -116,10 +139,16 @@ public class ConfigurationUpdate {
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing destination
-    final DestinationConnection persistedDestination = secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationId);
+    final DestinationConnection persistedDestination;
+    try {
+      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
     persistedDestination.setName(destName);
     // get spec
     final StandardDestinationDefinition destinationDefinition = configRepository
@@ -147,10 +176,16 @@ public class ConfigurationUpdate {
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection partialDestination(final UUID destinationId, final String destinationName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing destination
-    final DestinationConnection persistedDestination = secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationId);
+    final DestinationConnection persistedDestination;
+    try {
+      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    }
     persistedDestination.setName(Optional.ofNullable(destinationName).orElse(persistedDestination.getName()));
 
     // Merge update configuration into the persisted configuration

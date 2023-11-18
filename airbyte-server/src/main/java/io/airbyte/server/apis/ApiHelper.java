@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Helpers for executing api code to and handling exceptions it might throw.
  */
+@SuppressWarnings("PMD.IdenticalCatchBranches")
 public class ApiHelper {
 
   @Trace(operationName = ENDPOINT_EXECUTION_OPERATION_NAME)
@@ -26,6 +27,10 @@ public class ApiHelper {
     try {
       return call.call();
     } catch (final ConfigNotFoundException e) {
+      ApmTraceUtils.recordErrorOnRootSpan(e);
+      throw new IdNotFoundKnownException(String.format("Could not find configuration for %s: %s.", e.getType(), e.getConfigId()),
+          e.getConfigId(), e);
+    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       ApmTraceUtils.recordErrorOnRootSpan(e);
       throw new IdNotFoundKnownException(String.format("Could not find configuration for %s: %s.", e.getType(), e.getConfigId()),
           e.getConfigId(), e);
@@ -48,7 +53,7 @@ public class ApiHelper {
 
   interface HandlerCall<T> {
 
-    T call() throws ConfigNotFoundException, IOException, JsonValidationException;
+    T call() throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException;
 
   }
 

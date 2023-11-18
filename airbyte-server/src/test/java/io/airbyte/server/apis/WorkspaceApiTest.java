@@ -26,7 +26,7 @@ import org.mockito.Mockito;
 class WorkspaceApiTest extends BaseControllerTest {
 
   @Test
-  void testCreateWorkspace() throws JsonValidationException, IOException {
+  void testCreateWorkspace() throws JsonValidationException, IOException, ConfigNotFoundException {
     Mockito.when(workspacesHandler.createWorkspace(Mockito.any()))
         .thenReturn(new WorkspaceRead());
     final String path = "/api/v1/workspaces/create";
