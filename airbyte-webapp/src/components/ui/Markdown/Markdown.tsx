@@ -37,6 +37,13 @@ function preprocessMarkdown(markdown: string): string {
     '<admonition type="$1">$2</admonition>\n'
   );
 
+  // Add a zero-width space character before every character that looks like the start of a
+  // list item, but actually isn't because it's not preceded by only whitespace characters.
+  // The reason is to prevent markdown-to-jsx from rendering them as separate sub-bullets
+  // as a result of the following linked issue. Once resolved, this can be removed:
+  // https://github.com/probablyup/markdown-to-jsx/issues/285#issuecomment-1813224435
+  preprocessed = preprocessed.replace(/(?<!<!-)(?<=\S)(- |\+ |[^*]\* |\d+\. )/g, "&ZeroWidthSpace;$1");
+
   // Ensure there's an empty line before and after tags with custom react logic if there
   // isn't one already, to ensure that it is parsed as its own component.
   // The motivation for this is that Docusaurus renders these properly even if
