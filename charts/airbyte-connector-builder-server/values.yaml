@@ -27,6 +27,10 @@ image:
   repository: airbyte/connector-builder-server
   pullPolicy: IfNotPresent
 
+## HTTP port of connector-builder-server container - option to switch to a non-privileged one
+ports:
+  http: 80
+
 ##  podAnnotations [object] Add extra annotations to the server pod
 ##
 podAnnotations: {}

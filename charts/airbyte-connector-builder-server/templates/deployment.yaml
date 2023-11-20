@@ -116,7 +116,7 @@ spec:
 
         ports:
         - name: http
-          containerPort: 80
+          containerPort: {{ .Values.ports.http }}
           protocol: TCP
         {{- if .Values.debug.enabled }}
         - name: debug 

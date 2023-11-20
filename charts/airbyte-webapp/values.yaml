@@ -25,6 +25,10 @@ image:
   repository: airbyte/webapp
   pullPolicy: IfNotPresent
 
+## HTTP port of webapp container - option to switch to a non-privileged one
+ports:
+  http: 80
+
 ##  webapp.podAnnotations [object] Add extra annotations to the webapp pod(s)
 ##
 podAnnotations: {}
