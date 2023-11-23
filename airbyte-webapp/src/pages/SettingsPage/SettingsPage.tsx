@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useIntent } from "core/utils/rbac/intent";
+import { useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";

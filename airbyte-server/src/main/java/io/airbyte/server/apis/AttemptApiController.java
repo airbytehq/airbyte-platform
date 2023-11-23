@@ -5,7 +5,9 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.AttemptApi;
 import io.airbyte.api.model.generated.AttemptInfoRead;
@@ -43,7 +45,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/get_for_job",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   public AttemptInfoRead getAttemptForJob(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper
@@ -55,7 +57,6 @@ public class AttemptApiController implements AttemptApi {
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured({ADMIN})
-  @SecuredWorkspace
   public CreateNewAttemptNumberResponse createNewAttemptNumber(final CreateNewAttemptNumberRequest requestBody) {
     return ApiHelper
         .execute(() -> attemptHandler.createNewAttemptNumber(requestBody.getJobId()));
@@ -65,7 +66,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/get_combined_stats",
         processes = MediaType.APPLICATION_JSON)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   public AttemptStats getAttemptCombinedStats(final GetAttemptStatsRequestBody requestBody) {
     return ApiHelper

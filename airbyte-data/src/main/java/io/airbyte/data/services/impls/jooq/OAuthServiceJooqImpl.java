@@ -5,17 +5,28 @@
 package io.airbyte.data.services.impls.jooq;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationOAuthParameter;
+import io.airbyte.config.ScopeType;
+import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceOAuthParameter;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.OAuthService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
-import io.airbyte.validation.json.JsonValidationException;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -24,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Record;
@@ -35,9 +45,18 @@ import org.jooq.SelectJoinStep;
 public class OAuthServiceJooqImpl implements OAuthService {
 
   private final ExceptionWrappingDatabase database;
+  private final FeatureFlagClient featureFlagClient;
+  private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
-  public OAuthServiceJooqImpl(@Named("configDatabase") Database database) {
+  public OAuthServiceJooqImpl(@Named("configDatabase") final Database database,
+                              final FeatureFlagClient featureFlagClient,
+                              final SecretsRepositoryReader secretsRepositoryReader,
+                              final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.featureFlagClient = featureFlagClient;
+    this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretPersistenceConfigService = secretPersistenceConfigService;
   }
 
   /**
@@ -75,16 +94,116 @@ public class OAuthServiceJooqImpl implements OAuthService {
     });
   }
 
+  private UUID getOrganizationIdFor(final UUID actorOAuthParameterId) throws IOException {
+    return database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)
+        .from(ACTOR_OAUTH_PARAMETER)
+        .join(WORKSPACE).on(WORKSPACE.ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
+        .where(ACTOR_OAUTH_PARAMETER.ID.eq(actorOAuthParameterId))
+        .fetchOne(WORKSPACE.ORGANIZATION_ID));
+  }
+
   /**
-   * List source oauth parameters.
+   * Gets Source OAuth Parameter based on the workspaceId and sourceDefinitionId.
    *
-   * @return oauth parameters
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with db.
+   * @return Optional<SourceOAuthParameter>
+   * @throws IOException
+   * @throws ConfigNotFoundException
    */
   @Override
-  public List<SourceOAuthParameter> listSourceOAuthParam() throws JsonValidationException, IOException {
-    return listSourceOauthParamQuery(Optional.empty()).toList();
+  public SourceOAuthParameter getSourceOAuthParameterWithSecrets(final UUID workspaceId, final UUID sourceDefinitionId)
+      throws IOException, ConfigNotFoundException {
+    SourceOAuthParameter sourceOAuthParameter =
+        getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId).orElseThrow(() -> new ConfigNotFoundException(
+            ConfigSchema.SOURCE_OAUTH_PARAM,
+            String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, sourceDefinitionId)));
+    final UUID organizationId = getOrganizationIdFor(sourceOAuthParameter.getOauthParameterId());
+    final JsonNode hydratedConfig;
+    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig =
+          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+      hydratedConfig =
+          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(sourceOAuthParameter.getConfiguration(),
+              new RuntimeSecretPersistence(secretPersistenceConfig));
+    } else {
+      hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(sourceOAuthParameter.getConfiguration());
+    }
+    sourceOAuthParameter.setConfiguration(hydratedConfig);
+    return sourceOAuthParameter;
+  }
+
+  /**
+   * Gets a source OAuth parameter based on the workspace ID and source definition Id. Defaults to the
+   * global param.
+   *
+   * @param workspaceId workspace ID
+   * @param sourceDefinitionId source definition Id
+   * @return the found source OAuth parameter
+   * @throws IOException it could happen
+   */
+  @Override
+  public Optional<SourceOAuthParameter> getSourceOAuthParameterOptional(final UUID workspaceId, final UUID sourceDefinitionId)
+      throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
+      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source),
+          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId).or(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNull()),
+          ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(sourceDefinitionId))
+          .orderBy(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNotNull().desc()).fetch();
+    });
+
+    return result.stream().findFirst().map(DbConverter::buildSourceOAuthParameter);
+  }
+
+  /**
+   * Gets Destination OAuth Parameter based on the workspaceId and sourceDefinitionId.
+   *
+   * @return Optional<DestinationOAuthParameter>
+   * @throws IOException
+   * @throws ConfigNotFoundException
+   */
+  @Override
+  public DestinationOAuthParameter getDestinationOAuthParameterWithSecrets(final UUID workspaceId, final UUID destinationDefinitionId)
+      throws IOException, ConfigNotFoundException {
+    DestinationOAuthParameter destinationOAuthParameter =
+        getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId).orElseThrow(() -> new ConfigNotFoundException(
+            ConfigSchema.SOURCE_OAUTH_PARAM,
+            String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, destinationDefinitionId)));
+    final UUID organizationId = getOrganizationIdFor(destinationOAuthParameter.getOauthParameterId());
+    final JsonNode hydratedConfig;
+    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
+      final SecretPersistenceConfig secretPersistenceConfig =
+          secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId);
+      hydratedConfig =
+          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(destinationOAuthParameter.getConfiguration(),
+              new RuntimeSecretPersistence(secretPersistenceConfig));
+    } else {
+      hydratedConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(destinationOAuthParameter.getConfiguration());
+    }
+    destinationOAuthParameter.setConfiguration(hydratedConfig);
+    return destinationOAuthParameter;
+  }
+
+  /**
+   * Gets a source OAuth parameter based on the workspace ID and source definition Id. Defaults to the
+   * global param.
+   *
+   * @param workspaceId workspace ID
+   * @param destinationDefinitionId source definition Id
+   * @return the found source OAuth parameter
+   * @throws IOException it could happen
+   */
+  @Override
+  public Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(final UUID workspaceId, final UUID destinationDefinitionId)
+      throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
+      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination),
+          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId).or(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNull()),
+          ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(destinationDefinitionId))
+          .orderBy(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNotNull().desc()).fetch();
+    });
+
+    return result.stream().findFirst().map(DbConverter::buildDestinationOAuthParameter);
   }
 
   /**
@@ -123,18 +242,6 @@ public class OAuthServiceJooqImpl implements OAuthService {
     });
   }
 
-  /**
-   * List destination oauth params.
-   *
-   * @return list destination oauth params
-   * @throws JsonValidationException if the workspace is or contains invalid json
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Override
-  public List<DestinationOAuthParameter> listDestinationOAuthParam() throws JsonValidationException, IOException {
-    return listDestinationOauthParamQuery(Optional.empty()).toList();
-  }
-
   private void writeSourceOauthParameter(final List<SourceOAuthParameter> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((sourceOAuthParameter) -> {
@@ -164,39 +271,6 @@ public class OAuthServiceJooqImpl implements OAuthService {
             .execute();
       }
     });
-  }
-
-  private Stream<SourceOAuthParameter> listSourceOauthParamQuery(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      if (configId.isPresent()) {
-        return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source), ACTOR_OAUTH_PARAMETER.ID.eq(configId.get())).fetch();
-      }
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source)).fetch();
-    });
-
-    return result.map(DbConverter::buildSourceOAuthParameter).stream();
-  }
-
-  /**
-   * List destination oauth param query. If configId is present only returns the config for that oauth
-   * parameter id. if not present then lists all.
-   *
-   * @param configId oauth parameter id optional.
-   * @return stream of destination oauth params
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  private Stream<DestinationOAuthParameter> listDestinationOauthParamQuery(final Optional<UUID> configId)
-      throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
-      if (configId.isPresent()) {
-        return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination), ACTOR_OAUTH_PARAMETER.ID.eq(configId.get())).fetch();
-      }
-      return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination)).fetch();
-    });
-
-    return result.map(DbConverter::buildDestinationOAuthParameter).stream();
   }
 
   private void writeDestinationOauthParameter(final List<DestinationOAuthParameter> configs, final DSLContext ctx) {

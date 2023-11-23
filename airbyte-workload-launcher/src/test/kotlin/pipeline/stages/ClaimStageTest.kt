@@ -1,16 +1,20 @@
-package pipeline.stages
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
 
-import io.airbyte.workload.api.client2.model.generated.ClaimResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadClaimRequest
-import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
+package io.airbyte.workload.launcher.pipeline.stages
+
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.ClaimResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
-import io.airbyte.workload.launcher.pipeline.stages.ClaimStage
+import io.airbyte.workload.launcher.pipeline.LauncherInput
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import pipeline.SharedMocks.Companion.metricPublisher
 import javax.ws.rs.ClientErrorException
 
 class ClaimStageTest {
@@ -25,15 +29,15 @@ class ClaimStageTest {
         dataplaneId,
       )
 
-    val workloadApiClient: WorkloadApiClient = mockk()
+    val workloadApiClient: WorkloadApi = mockk()
     every {
       workloadApiClient.workloadClaim(
         workloadClaimRequest,
       )
     } returns ClaimResponse(true)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -52,15 +56,15 @@ class ClaimStageTest {
         dataplaneId,
       )
 
-    val workloadApiClient: WorkloadApiClient = mockk()
+    val workloadApiClient: WorkloadApi = mockk()
     every {
       workloadApiClient.workloadClaim(
         workloadClaimRequest,
       )
     } returns ClaimResponse(false)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
     verify { workloadApiClient.workloadClaim(workloadClaimRequest) }
@@ -70,8 +74,8 @@ class ClaimStageTest {
 
   @Test
   fun `propagates error if claim request error`() {
-    val workloadId: String = "1"
-    val dataplaneId: String = "US"
+    val workloadId = "1"
+    val dataplaneId = "US"
 
     val workloadClaimRequest: WorkloadClaimRequest =
       WorkloadClaimRequest(
@@ -79,15 +83,15 @@ class ClaimStageTest {
         dataplaneId,
       )
 
-    val workloadApiClient: WorkloadApiClient = mockk()
+    val workloadApiClient: WorkloadApi = mockk()
     every {
       workloadApiClient.workloadClaim(
         workloadClaimRequest,
       )
     } throws ClientErrorException(400)
 
-    val claimStage = ClaimStage(workloadApiClient, dataplaneId)
-    val originalInput = LaunchStageIO(LauncherInputMessage(workloadId, "{}"))
+    val claimStage = ClaimStage(workloadApiClient, dataplaneId, metricPublisher)
+    val originalInput = LaunchStageIO(LauncherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
 
     assertThrows<ClientErrorException> { claimStage.applyStage(originalInput) }
 

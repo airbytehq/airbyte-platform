@@ -123,7 +123,7 @@ class SlackNotificationClientTest {
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     final String expectedNotificationMessage = String.format(
         """
-        Your connection from source-test to destination-test was automatically disabled because it failed 100 times consecutively or has been failing for 14 days in a row.
+        Your connection from source-test to destination-test was automatically disabled because it failed 20 times consecutively or has been failing for 14 days in a row.
 
         Please address the failing issues to ensure your syncs continue to run. The most recent attempted job description.
 
@@ -143,7 +143,7 @@ class SlackNotificationClientTest {
   void testNotifyConnectionDisabledWarning() throws IOException, InterruptedException {
     final String expectedNotificationWarningMessage = String.format(
         """
-        Your connection from source-test to destination-test is scheduled to be automatically disabled because it either failed 50 times consecutively or there were only failed jobs in the past 7 days. Once it has failed 100 times consecutively or has been failing for 14 days in a row, the connection will be automatically disabled.
+        Your connection from source-test to destination-test is scheduled to be automatically disabled because it either failed 10 times consecutively or there were only failed jobs in the past 7 days. Once it has failed 20 times consecutively or has been failing for 14 days in a row, the connection will be automatically disabled.
 
         Please address the failing issues to ensure your syncs continue to run. The most recent attempted job description.
 

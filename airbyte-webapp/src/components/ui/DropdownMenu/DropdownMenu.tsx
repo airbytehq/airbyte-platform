@@ -27,6 +27,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   onChange,
   placement = "bottom",
   displacement = 5,
+  ...restProps
 }) => {
   const { x, y, reference, floating, strategy } = useFloating({
     middleware: [offset(displacement)],
@@ -45,20 +46,21 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
   const elementProps = (item: DropdownMenuOptionType, active: boolean) => {
     return {
-      "data-id": item.displayName,
+      title: item.displayName,
+      onClick: () => onChange && onChange(item),
       className: classNames(styles.item, item?.className, {
         [styles.iconPositionLeft]: (item?.iconPosition === "left" && item.icon) || !item?.iconPosition,
         [styles.iconPositionRight]: item?.iconPosition === "right",
         [styles.active]: active,
         [styles.disabled]: item.disabled,
       }),
-      title: item.displayName,
-      onClick: () => onChange && onChange(item),
+      disabled: item.disabled,
+      "data-testid": item["data-testid"],
     } as LinkProps | AnchorHTMLAttributes<Element>;
   };
 
   return (
-    <Menu ref={reference} as="div">
+    <Menu ref={reference} as="div" {...(restProps["data-testid"] && { "data-testid": restProps["data-testid"] })}>
       {({ open }) => (
         <>
           <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>

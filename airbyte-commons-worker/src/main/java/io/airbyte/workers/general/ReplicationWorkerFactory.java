@@ -12,6 +12,7 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.concurrency.VoidCallable;
+import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
@@ -51,6 +52,9 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
+import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.time.Duration;
@@ -82,6 +86,10 @@ public class ReplicationWorkerFactory {
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
+  private final WorkloadApi workloadApi;
+
+  private final WorkloadIdGenerator workloadIdGenerator;
+  private final boolean workloadEnabled;
 
   public ReplicationWorkerFactory(
                                   final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
@@ -93,7 +101,10 @@ public class ReplicationWorkerFactory {
                                   final FeatureFlagClient featureFlagClient,
                                   final FeatureFlags featureFlags,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                  final MetricClient metricClient) {
+                                  final MetricClient metricClient,
+                                  final WorkloadApi workloadApi,
+                                  final WorkloadIdGenerator workloadIdGenerator,
+                                  @Value("${airbyte.workload.enabled}") final boolean workloadEnabled) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
     this.sourceApi = sourceApi;
     this.sourceDefinitionApi = sourceDefinitionApi;
@@ -105,6 +116,9 @@ public class ReplicationWorkerFactory {
     this.featureFlagClient = featureFlagClient;
     this.featureFlags = featureFlags;
     this.metricClient = metricClient;
+    this.workloadApi = workloadApi;
+    this.workloadIdGenerator = workloadIdGenerator;
+    this.workloadEnabled = workloadEnabled;
   }
 
   /**
@@ -152,7 +166,7 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, replicationInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning, metricClient, destinationTimeout);
+        onReplicationRunning, metricClient, destinationTimeout, workloadApi, workloadIdGenerator, workloadEnabled);
   }
 
   /**
@@ -277,7 +291,10 @@ public class ReplicationWorkerFactory {
                                                            final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper,
                                                            final VoidCallable onReplicationRunning,
                                                            final MetricClient metricClient,
-                                                           final DestinationTimeoutMonitor destinationTimeout) {
+                                                           final DestinationTimeoutMonitor destinationTimeout,
+                                                           final WorkloadApi workloadApi,
+                                                           final WorkloadIdGenerator workloadIdGenerator,
+                                                           final boolean workloadEnabled) {
     final Context flagContext = getFeatureFlagContext(replicationInput);
     final String workerImpl = featureFlagClient.stringVariation(ReplicationWorkerImpl.INSTANCE, flagContext);
     return buildReplicationWorkerInstance(
@@ -300,7 +317,10 @@ public class ReplicationWorkerFactory {
         replicationEventPublishingHelper,
         onReplicationRunning,
         metricClient,
-        destinationTimeout);
+        destinationTimeout,
+        workloadApi,
+        workloadIdGenerator,
+        workloadEnabled);
   }
 
   private static Context getFeatureFlagContext(final ReplicationInput replicationInput) {
@@ -341,17 +361,22 @@ public class ReplicationWorkerFactory {
                                                                   final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                                   final VoidCallable onReplicationRunning,
                                                                   final MetricClient metricClient,
-                                                                  final DestinationTimeoutMonitor destinationTimeout) {
+                                                                  final DestinationTimeoutMonitor destinationTimeout,
+                                                                  final WorkloadApi workloadApi,
+                                                                  final WorkloadIdGenerator workloadIdGenerator,
+                                                                  final boolean workloadEnabled) {
+    final ReplicationWorkerHelper replicationWorkerHelper =
+        new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
+            messageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi, workloadIdGenerator,
+            workloadEnabled);
     if ("buffered".equals(workerImpl)) {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
-      return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-          fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning, destinationTimeout);
+      return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
+          srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout);
     } else {
       metricClient.count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
-      return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-          fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
-          messageEventPublishingHelper, onReplicationRunning, destinationTimeout);
+      return new DefaultReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
+          srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeout);
     }
   }
 

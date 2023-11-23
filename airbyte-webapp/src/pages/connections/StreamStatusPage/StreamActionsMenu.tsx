@@ -45,7 +45,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamStat
     }
 
     if (value === "resetThisStream" && streamState) {
-      await resetStreams([{ streamNamespace: streamState.streamNamespace ?? "", streamName: streamState.streamName }]);
+      await resetStreams([{ streamNamespace: streamState.streamNamespace, streamName: streamState.streamName }]);
     }
   };
 

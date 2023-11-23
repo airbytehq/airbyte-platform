@@ -44,9 +44,14 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
+import io.airbyte.workers.workload.WorkloadIdGenerator
+import io.airbyte.workers.workload.WorkloadType
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.io.FileUtils
 import java.nio.file.Path
+import java.time.Duration
 import java.util.Collections
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
@@ -62,25 +67,69 @@ class ReplicationWorkerHelper(
   private val replicationAirbyteMessageEventPublishingHelper: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val onReplicationRunning: VoidCallable,
+  private val workloadApi: WorkloadApi,
+  private val workloadIdGenerator: WorkloadIdGenerator,
+  private val workloadEnabled: Boolean,
 ) {
   private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
   private val replicationFailures: MutableList<FailureReason> = Collections.synchronizedList(mutableListOf())
-  private val cancelled = AtomicBoolean()
+  private val _cancelled = AtomicBoolean()
   private val hasFailed = AtomicBoolean()
+  private val _shouldAbort = AtomicBoolean()
+
+  // The nuance between cancelled and abort is that cancelled is triggered by an external factor (typically user cancellation) while
+  // abort is the result of an internal detection that we should abort (typically heartbeat failure).
+  val cancelled: Boolean
+    get() = _cancelled.get()
+  val shouldAbort: Boolean
+    get() = _shouldAbort.get() || _cancelled.get()
 
   private var recordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
   private var currentDestinationStream: StreamDescriptor? = null
   private var ctx: ReplicationContext? = null
-  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
+  private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
 
-  fun markCancelled(): Unit = cancelled.set(true)
+  fun markCancelled(): Unit = _cancelled.set(true)
 
   fun markFailed(): Unit = hasFailed.set(true)
 
+  fun abort(): Unit = _shouldAbort.set(true)
+
   fun markReplicationRunning() {
     onReplicationRunning.call()
+  }
+
+  fun getWorkloadStatusHeartbeat(): Runnable {
+    return getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()))
+  }
+
+  fun getWorkloadStatusHeartbeat(heartbeatInterval: Duration): Runnable {
+    return Runnable {
+      logger.info { "Starting workload heartbeat" }
+      do {
+        Thread.sleep(heartbeatInterval.toMillis())
+        ctx?.let {
+          try {
+            workloadApi.workloadHeartbeat(
+              WorkloadHeartbeatRequest(
+                workloadIdGenerator.generate(
+                  it.connectionId,
+                  it.jobId,
+                  it.attempt,
+                  WorkloadType.SYNC,
+                ),
+              ),
+            )
+          } catch (e: Exception) {
+            logger.error(e) { "Heartbeat failed" }
+            markCancelled()
+            return@Runnable
+          }
+        }
+      } while (true)
+    }
   }
 
   fun initialize(
@@ -145,7 +194,7 @@ class ReplicationWorkerHelper(
     // If the sync has been cancelled, publish an incomplete event so that any streams in a non-terminal
     // status will be moved to incomplete/cancelled. Otherwise, publish a complete event to move those
     // streams to a complete status.
-    if (cancelled.get()) {
+    if (_cancelled.get()) {
       replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(
         stream = StreamDescriptor(),
         ctx = context,
@@ -208,7 +257,7 @@ class ReplicationWorkerHelper(
   fun getReplicationOutput(performanceMetrics: PerformanceMetrics? = null): ReplicationOutput {
     val outputStatus: ReplicationStatus =
       when {
-        cancelled.get() -> ReplicationStatus.CANCELLED
+        _cancelled.get() -> ReplicationStatus.CANCELLED
         hasFailed.get() -> ReplicationStatus.FAILED
         else -> ReplicationStatus.COMPLETED
       }
@@ -324,6 +373,10 @@ class ReplicationWorkerHelper(
     return internalProcessMessageFromSource(sourceRawMessage)
       .let { mapper.mapMessage(it) }
       .let { Optional.of(it) }
+  }
+
+  fun isWorkerV2TestEnabled(): Boolean {
+    return workloadEnabled
   }
 
   private fun getTotalStats(

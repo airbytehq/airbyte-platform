@@ -40,6 +40,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
@@ -401,7 +402,8 @@ public class ConnectionsHandler {
       eventRunner.createConnectionManagerWorkflow(connectionId);
     } catch (final Exception e) {
       LOGGER.error("Start of the connection manager workflow failed", e);
-      configRepository.deleteStandardSync(standardSync.getConnectionId());
+      // deprecate the newly created connection and also delete the newly created workflow.
+      deleteConnection(connectionId);
       throw e;
     }
 
@@ -922,6 +924,7 @@ public class ConnectionsHandler {
 
   public ConnectionAutoPropagateResult applySchemaChange(final ConnectionAutoPropagateSchemaChange request)
       throws JsonValidationException, ConfigNotFoundException, IOException {
+    LOGGER.info("Applying schema change for connection '{}' only", request.getConnectionId());
     final ConnectionRead connection = buildConnectionRead(request.getConnectionId());
     final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog =
         getConnectionAirbyteCatalog(request.getConnectionId());
@@ -938,7 +941,7 @@ public class ConnectionsHandler {
         connectorSpecHandler.getDestinationSpecification(new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId)
             .workspaceId(request.getWorkspaceId())).getSupportedDestinationSyncModes();
     final CatalogDiff appliedDiff;
-    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, request.getWorkspaceId(), connection, featureFlagClient)) {
+    if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
       // NOTE: appliedDiff is the part of the diff that were actually applied.
       appliedDiff = applySchemaChangeInternal(updateObject.getConnectionId(),
           request.getWorkspaceId(),
@@ -983,12 +986,20 @@ public class ConnectionsHandler {
 
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
-      final Map<String, Object> payload = new HashMap<>();
-      payload.put("workspace_id", workspaceId);
-      payload.put("connection_id", connectionId);
-      payload.put("event_date", Instant.now());
-      payload.put("changes", propagateResult.appliedDiff().getTransforms());
-      trackingClient.track(workspaceId, "schema-changes", payload);
+      final String changeEventTimeline = Instant.now().toString();
+      for (final StreamTransform streamTransform : propagateResult.appliedDiff().getTransforms()) {
+        final Map<String, Object> payload = new HashMap<>();
+        payload.put("workspace_id", workspaceId);
+        payload.put("connection_id", connectionId);
+        payload.put("schema_change_event_date", changeEventTimeline);
+        payload.put("stream_change_type", streamTransform.getTransformType().toString());
+        payload.put("stream_namespace", streamTransform.getStreamDescriptor().getNamespace());
+        payload.put("stream_name", streamTransform.getStreamDescriptor().getName());
+        if (streamTransform.getTransformType() == TransformTypeEnum.UPDATE_STREAM) {
+          payload.put("stream_field_changes", Jsons.serialize(streamTransform.getUpdateStream()));
+        }
+        trackingClient.track(workspaceId, "Schema Changes", payload);
+      }
     } catch (final Exception e) {
       LOGGER.error("Error while sending tracking event for schema change", e);
     }

@@ -2,7 +2,6 @@ import classNames from "classnames";
 import uniq from "lodash/uniq";
 import React from "react";
 import { FieldError, UseFormGetFieldState, useController, useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
 
 import { LabeledSwitch } from "components";
 import { FlexContainer } from "components/ui/Flex";
@@ -10,6 +9,7 @@ import { StatusIcon } from "components/ui/StatusIcon";
 import { Text } from "components/ui/Text";
 
 import { FormBaseItem, FORM_PATTERN_ERROR } from "core/form/types";
+import { useOptionalDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./PropertySection.module.scss";
 import { ConnectorFormValues } from "../../types";
@@ -24,24 +24,11 @@ interface PropertySectionProps {
   disabled?: boolean;
 }
 
-const ErrorMessage = ({ error, property }: { error?: string; property: FormBaseItem }) => {
+const ErrorMessage = ({ error }: { error?: string }) => {
   if (!error) {
     return null;
   }
-  return (
-    <PropertyError>
-      <FormattedMessage
-        id={error}
-        values={
-          error === FORM_PATTERN_ERROR
-            ? {
-                pattern: getPatternDescriptor(property) ?? property.pattern,
-              }
-            : undefined
-        }
-      />
-    </PropertyError>
-  );
+  return <PropertyError>{error}</PropertyError>;
 };
 
 const FormatBlock = ({
@@ -58,12 +45,12 @@ const FormatBlock = ({
     return null;
   }
 
-  const hasPatternError = isPatternError(fieldMeta.error);
+  const hasError = !!fieldMeta.error;
 
   const patternStatus =
-    value !== undefined && hasPatternError && fieldMeta.isTouched
+    value !== undefined && hasError && fieldMeta.isTouched
       ? "error"
-      : value !== undefined && !hasPatternError && property.pattern !== undefined
+      : value !== undefined && !hasError && property.pattern !== undefined
       ? "success"
       : "none";
 
@@ -79,6 +66,7 @@ const FormatBlock = ({
 
 export const PropertySection: React.FC<PropertySectionProps> = ({ property, path, disabled }) => {
   const { control, getFieldState, watch, formState } = useFormContext();
+  const setFocusedField = useOptionalDocumentationPanelContext()?.setFocusedField;
   const propertyPath = path ?? property.path;
   const { field } = useController({
     name: propertyPath,
@@ -104,6 +92,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
             htmlFor={switchId}
           />
         }
+        onFocus={() => setFocusedField?.(propertyPath)}
         value={field.value ?? property.default}
         disabled={disabled || property.readOnly}
       />
@@ -115,11 +104,11 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
   const errorMessage = Array.isArray(meta.error) ? (
     <FlexContainer direction="column" gap="none">
       {uniq(meta.error.map((error) => error?.message).filter(Boolean)).map((errorMessage, index) => {
-        return <ErrorMessage key={index} error={errorMessage} property={property} />;
+        return <ErrorMessage key={index} error={errorMessage} />;
       })}
     </FlexContainer>
   ) : (
-    <ErrorMessage error={meta.error?.message} property={property} />
+    <ErrorMessage error={meta.error?.message} />
   );
 
   return (

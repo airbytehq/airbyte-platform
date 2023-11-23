@@ -16,7 +16,6 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.featureflag.AutoPropagateNewStreams;
-import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
 import java.util.ArrayList;
@@ -165,23 +164,18 @@ public class AutoPropagateSchemaChangeHelper {
    * the diff.
    *
    * @param diff the diff to be applied
-   * @param workspaceId workspace of the connection
    * @param connectionRead the connection info
-   * @param featureFlagClient client to check flags
    * @return whether the diff should be propagated
    */
   public static boolean shouldAutoPropagate(final CatalogDiff diff,
-                                            final UUID workspaceId,
-                                            final ConnectionRead connectionRead,
-                                            final FeatureFlagClient featureFlagClient) {
+                                            final ConnectionRead connectionRead) {
     final boolean hasDiff = !diff.getTransforms().isEmpty();
     final boolean nonBreakingChange = !AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
     final boolean autoPropagationIsEnabledForConnection =
         connectionRead.getNonBreakingChangesPreference() != null
             && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
                 || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
+    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForConnection;
   }
 
   /**

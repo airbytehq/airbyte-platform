@@ -17,6 +17,7 @@ To enable one of the secret managers, set the `SECRET_PERSISTENCE` environment v
 * `GOOGLE_SECRET_MANAGER`
 * `TESTING_CONFIG_DB_TABLE`
 * `VAULT`
+* `NO_OP`
 
 ### AWS Secret Manager Configuration
 

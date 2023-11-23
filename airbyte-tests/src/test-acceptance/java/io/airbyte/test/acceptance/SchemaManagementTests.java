@@ -36,8 +36,10 @@ import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -70,6 +72,7 @@ class SchemaManagementTests {
   // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
   private static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   private static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
   public static final int JITTER_MAX_INTERVAL_SECS = 10;
   public static final int FINAL_INTERVAL_SECS = 60;
   public static final int MAX_TRIES = 3;
@@ -122,9 +125,10 @@ class SchemaManagementTests {
     // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.
-    final var underlyingApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
+    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
       underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));
@@ -132,9 +136,9 @@ class SchemaManagementTests {
     apiClient = new AirbyteApiClient(underlyingApiClient);
 
     // Set up the WebBackend API client.
-    final var underlyingWebBackendApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final var underlyingWebBackendApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     if (isGke) {
       underlyingWebBackendApiClient.setRequestInterceptor(builder -> builder.setHeader(GATEWAY_AUTH_HEADER, AIRBYTE_AUTH_HEADER));

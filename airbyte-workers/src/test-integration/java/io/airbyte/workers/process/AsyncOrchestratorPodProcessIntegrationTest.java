@@ -53,7 +53,7 @@ class AsyncOrchestratorPodProcessIntegrationTest {
 
     final var minioContainer = new ContainerBuilder()
         .withName("minio")
-        .withImage("minio/minio:latest")
+        .withImage("minio/minio:RELEASE.2023-11-15T20-43-25Z")
         .withArgs("server", "/home/shared")
         .withEnv(
             new EnvVar("MINIO_ACCESS_KEY", "minio", null),

@@ -22,12 +22,12 @@ export const LoadingSpinner: React.FC<SpinnerProps> = ({ className }) => (
     />
     <defs>
       <linearGradient id="paint0_linear_6258_114055" x1="11" y1="2" x2="11" y2="20" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#1A194D" stopOpacity="0.5" />
-        <stop offset="1" stopColor="#1A194D" />
+        <stop className={styles.stop} stopOpacity="0.5" />
+        <stop className={styles.stop} offset="1" />
       </linearGradient>
       <linearGradient id="paint1_linear_6258_114055" x1="11" y1="2" x2="11" y2="20" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#1A194D" stopOpacity="0.5" />
-        <stop offset="1" stopColor="#1A194D" stopOpacity="0.1" />
+        <stop className={styles.stop} stopOpacity="0.5" />
+        <stop className={styles.stop} offset="1" stopOpacity="0.1" />
       </linearGradient>
     </defs>
   </svg>

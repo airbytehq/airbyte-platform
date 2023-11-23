@@ -31,8 +31,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
-object AutoPropagateSchema : Temporary<Boolean>(key = "autopropagation.enabled", default = false)
-
 object AutoPropagateNewStreams : Temporary<Boolean>(key = "autopropagate-new-streams.enabled", default = false)
 
 object CanonicalCatalogSchema : Temporary<Boolean>(key = "canonical-catalog-schema", default = false)
@@ -115,11 +113,7 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
-/**
- * Control whether we should retrieve large inputs -- catalog, state -- via the API instead of passing them through
- * the sync input.
- */
-object RemoveLargeSyncInputs : Temporary<Boolean>(key = "platform.remove-large-sync-inputs", default = false)
+object AutoRechargeEnabled : Permanent<Boolean>(key = "billing.autoRecharge", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -158,4 +152,10 @@ object FailSyncIfTooBig : Temporary<Boolean>(key = "platform.fail-sync-if-too-bi
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 
+object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 60)
+
 object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-new-cron-schedule-calculation", default = false)
+
+object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
+
+object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)

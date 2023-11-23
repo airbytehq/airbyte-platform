@@ -1,47 +1,41 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
-import io.airbyte.workload.api.client2.generated.WorkloadApi
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatusUpdateRequest
-import io.airbyte.workload.launcher.client.KubeClient
+import datadog.trace.api.Trace
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.launcher.client.StatusUpdater
+import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_STAGE_OPERATION_NAME
+import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
+import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
 import io.airbyte.workload.launcher.pipeline.LaunchStage
 import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
-private val LOGGER = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class CheckStatusStage(
-  private val workloadApi: WorkloadApi,
-  private val kubeClient: KubeClient,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
+  private val statusClient: StatusUpdater,
+  private val kubeClient: KubePodClient,
+  private val customMetricPublisher: CustomMetricPublisher,
 ) : LaunchStage {
+  @Trace(operationName = LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
-    return if (kubeClient.podsExistForWorkload(input.msg.workloadId, namespace)) {
-      LOGGER.info {
-        "Found pods running for workload ${input.msg.workloadId}, setting status as running and skip flag as true"
+    return if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
+      logger.info {
+        "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true"
       }
-      val successfullyUpdatedStatusToRunning = updateStatusToRunning(input.msg.workloadId)
+      customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
+      statusClient.updateStatusToRunning(input.msg.workloadId)
       input.apply {
-        skip = successfullyUpdatedStatusToRunning
+        skip = true
       }
     } else {
-      LOGGER.info { "No pod found running for workload ${input.msg.workloadId}" }
+      logger.info { "No pod found running for workload ${input.msg.workloadId}" }
       input
     }
-  }
-
-  private fun updateStatusToRunning(workloadId: String): Boolean {
-    try {
-      val workloadStatusUpdateRequest =
-        WorkloadStatusUpdateRequest(workloadId, WorkloadStatus.rUNNING)
-      workloadApi.workloadStatusUpdate(workloadStatusUpdateRequest)
-    } catch (e: Exception) {
-      LOGGER.warn(e) { "Could not set the status for workload $workloadId to running even after re-tries" }
-    }
-    return true
   }
 
   override fun getStageName(): StageName {

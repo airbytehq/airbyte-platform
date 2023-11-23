@@ -38,6 +38,7 @@ dependencies {
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-config:specs')
     implementation project(':airbyte-data')
     implementation project(':airbyte-featureflag')

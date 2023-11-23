@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SSO_CONFIG;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
@@ -67,6 +68,22 @@ public class OrganizationPersistence {
     return Optional.of(createOrganizationFromRecord(result.get(0)));
   }
 
+  public Optional<Organization> getOrganizationByWorkspaceId(final UUID workspaceId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(ORGANIZATION)
+        .leftJoin(SSO_CONFIG).on(ORGANIZATION.ID.eq(SSO_CONFIG.ORGANIZATION_ID))
+        .join(WORKSPACE)
+        .on(ORGANIZATION.ID.eq(WORKSPACE.ORGANIZATION_ID))
+        .where(WORKSPACE.ID.eq(workspaceId)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createOrganizationFromRecord(result.get(0)));
+  }
+
   /**
    * Create a new organization and insert into the database.
    *
@@ -93,7 +110,7 @@ public class OrganizationPersistence {
    * @return updated organization
    * @throws IOException - when interaction with DB failed
    */
-  public Organization updateOrganization(Organization organization) throws IOException {
+  public Organization updateOrganization(final Organization organization) throws IOException {
     database.transaction(ctx -> {
       try {
         updateOrganizationInDB(ctx, organization);
@@ -200,7 +217,20 @@ public class OrganizationPersistence {
     return Optional.of(createSsoConfigFromRecord(result.get(0)));
   }
 
-  private void updateOrganizationInDB(final DSLContext ctx, Organization organization) throws IOException {
+  public Optional<SsoConfig> getSsoConfigByRealmName(final String realmName) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx
+        .select(asterisk())
+        .from(SSO_CONFIG)
+        .where(SSO_CONFIG.KEYCLOAK_REALM.eq(realmName)).fetch());
+
+    if (result.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(createSsoConfigFromRecord(result.get(0)));
+  }
+
+  private void updateOrganizationInDB(final DSLContext ctx, final Organization organization) throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -212,6 +242,10 @@ public class OrganizationPersistence {
     }
     ctx.update(ORGANIZATION)
         .set(ORGANIZATION.NAME, organization.getName())
+        .set(ORGANIZATION.EMAIL, organization.getEmail())
+        .set(ORGANIZATION.USER_ID, organization.getUserId())
+        .set(ORGANIZATION.PBA, organization.getPba())
+        .set(ORGANIZATION.ORG_LEVEL_BILLING, organization.getOrgLevelBilling())
         .set(ORGANIZATION.UPDATED_AT, timestamp)
         .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
         .execute();

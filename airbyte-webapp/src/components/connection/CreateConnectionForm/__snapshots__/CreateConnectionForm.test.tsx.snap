@@ -805,7 +805,6 @@ exports[`CreateConnectionForm should render 1`] = `
                           data-index="0"
                           data-item-index="0"
                           data-known-size="50"
-                          item="[object Object]"
                         >
                           <div
                             class="<removed-for-snapshot-test>"
@@ -932,7 +931,6 @@ exports[`CreateConnectionForm should render 1`] = `
                           data-index="1"
                           data-item-index="1"
                           data-known-size="50"
-                          item="[object Object]"
                         >
                           <div
                             class="<removed-for-snapshot-test>"
@@ -1059,7 +1057,6 @@ exports[`CreateConnectionForm should render 1`] = `
                           data-index="2"
                           data-item-index="2"
                           data-known-size="50"
-                          item="[object Object]"
                         >
                           <div
                             class="<removed-for-snapshot-test>"

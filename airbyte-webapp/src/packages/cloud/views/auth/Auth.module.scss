@@ -14,7 +14,7 @@
 
   &__right-side {
     display: none;
-    @media (min-width: 992px) {
+    @media (width >= 992px) {
       display: flex;
       width: 100%;
       height: 100%;

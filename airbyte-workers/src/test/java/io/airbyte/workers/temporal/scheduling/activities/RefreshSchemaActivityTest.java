@@ -36,7 +36,6 @@ import io.airbyte.api.client.model.generated.SynchronousJobRead;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
-import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Multi;
@@ -152,7 +151,6 @@ class RefreshSchemaActivityTest {
     final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(SOURCE_DEFINITION_ID), new Connection(CONNECTION_ID));
 
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     refreshSchemaActivity.refreshSchema(SOURCE_ID, CONNECTION_ID);
 
@@ -192,7 +190,6 @@ class RefreshSchemaActivityTest {
 
     when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId))).thenReturn(new SourceRead().sourceDefinitionId(sourceDefinitionId));
     when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any())).thenReturn(false);
     when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
         .thenReturn(new WorkspaceRead().workspaceId(workspaceId));
 
@@ -206,7 +203,6 @@ class RefreshSchemaActivityTest {
     // Test the version of schema refresh that will be used when we want to run backfills.
 
     when(mFeatureFlagClient.boolVariation(eq(ShouldRunRefreshSchema.INSTANCE), any())).thenReturn(true);
-    when(mFeatureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any())).thenReturn(true);
     when(mFeatureFlagClient.boolVariation(eq(AutoBackfillOnNewColumns.INSTANCE), any())).thenReturn(true);
 
     when(mConnectionApi.applySchemaChangeForConnection(new ConnectionAutoPropagateSchemaChange()

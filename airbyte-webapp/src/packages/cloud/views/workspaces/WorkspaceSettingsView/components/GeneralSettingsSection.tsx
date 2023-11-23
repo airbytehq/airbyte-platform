@@ -5,11 +5,8 @@ import { SchemaOf } from "yup";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { FlexContainer } from "components/ui/Flex";
 
-import { useSelectWorkspace } from "area/workspace/utils";
 import { useCurrentWorkspace, useInvalidateWorkspace } from "core/api";
 import { useUpdateCloudWorkspace } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
@@ -28,7 +25,6 @@ export const GeneralSettingsSection: React.FC = () => {
   const { mutateAsync: updateCloudWorkspace } = useUpdateCloudWorkspace();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const selectWorkspace = useSelectWorkspace();
   const { workspaceId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
 
@@ -60,16 +56,7 @@ export const GeneralSettingsSection: React.FC = () => {
   };
 
   return (
-    <Card
-      title={
-        <FlexContainer justifyContent="space-between">
-          <FormattedMessage id="settings.generalSettings" />
-          <Button type="button" onClick={() => selectWorkspace(null)} data-testid="button.changeWorkspace">
-            <FormattedMessage id="settings.generalSettings.changeWorkspace" />
-          </Button>
-        </FlexContainer>
-      }
-    >
+    <Card title={<FormattedMessage id="settings.generalSettings" />}>
       <Card withPadding>
         <Form<WorkspaceFormValues>
           defaultValues={{

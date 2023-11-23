@@ -19,7 +19,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
-
+    implementation libs.micronaut.http
     implementation libs.kotlin.logging
     implementation libs.micronaut.kotlin.extensions
 
@@ -37,7 +37,9 @@ dependencies {
     annotationProcessor libs.lombok
     implementation libs.bundles.apache
     implementation libs.bundles.log4j
+    implementation libs.failsafe.okhttp
     implementation libs.google.cloud.storage
+    implementation libs.okhttp
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
     implementation libs.s3
@@ -45,6 +47,7 @@ dependencies {
 
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-auth')
     implementation project(':airbyte-commons-converters')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
@@ -52,6 +55,7 @@ dependencies {
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-featureflag')
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-metrics:metrics-lib')

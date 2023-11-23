@@ -6,7 +6,12 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.SELF;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.WorkspaceApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -17,6 +22,7 @@ import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
@@ -52,7 +58,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/delete")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @Override
   @Status(HttpStatus.NO_CONTENT)
@@ -63,8 +69,17 @@ public class WorkspaceApiController implements WorkspaceApi {
     });
   }
 
+  @Post("/get_organization_info")
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public WorkspaceOrganizationInfoRead getOrganizationInfo(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> workspacesHandler.getWorkspaceOrganizationInfo(workspaceIdRequestBody));
+  }
+
   @Post("/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -73,7 +88,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_slug")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -98,7 +113,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post(uri = "/list_paginated")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -107,7 +122,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -116,7 +131,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/tag_feedback_status_as_done")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -128,7 +143,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/update_name")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -137,7 +152,8 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/get_by_connection_id")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
+  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -151,7 +167,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   }
 
   @Post("/list_by_user_id")
-  @Secured({READER})
+  @Secured({READER, SELF})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WorkspaceReadList listWorkspacesByUser(@Body final ListWorkspacesByUserRequestBody request) {

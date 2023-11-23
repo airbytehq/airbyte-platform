@@ -4,6 +4,7 @@ plugins {
     id "io.airbyte.gradle.jvm.lib"
     id "io.airbyte.gradle.publish"
     id "com.github.eirnym.js2p"
+    id "org.jetbrains.kotlin.jvm"
 }
 
 dependencies {
@@ -59,6 +60,10 @@ test {
     useJUnitPlatform {
         excludeTags 'log4j2-config', 'logger-client'
     }
+}
+
+tasks.named("compileKotlin") {
+    dependsOn tasks.named("generateJsonSchema2Pojo")
 }
 
 tasks.register("log4j2IntegrationTest", Test) {

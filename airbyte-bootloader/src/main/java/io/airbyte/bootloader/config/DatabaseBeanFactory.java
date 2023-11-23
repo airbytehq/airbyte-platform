@@ -4,6 +4,9 @@
 
 package io.airbyte.bootloader.config;
 
+import static io.airbyte.data.services.shared.DataSourceUnwrapper.unwrapContext;
+import static io.airbyte.data.services.shared.DataSourceUnwrapper.unwrapDataSource;
+
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.OrganizationPersistence;
@@ -57,13 +60,13 @@ public class DatabaseBeanFactory {
   @Singleton
   @Named("configDatabase")
   public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
-    return new Database(dslContext);
+    return new Database(unwrapContext(dslContext));
   }
 
   @Singleton
   @Named("jobsDatabase")
   public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
-    return new Database(dslContext);
+    return new Database(unwrapContext(dslContext));
   }
 
   /**
@@ -80,7 +83,7 @@ public class DatabaseBeanFactory {
                              @Named("config") final DataSource configDataSource,
                              @Value("${airbyte.bootloader.migration-baseline-version}") final String baselineVersion) {
     return configFlywayConfigurationProperties.getFluentConfiguration()
-        .dataSource(configDataSource)
+        .dataSource(unwrapDataSource(configDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
@@ -103,7 +106,7 @@ public class DatabaseBeanFactory {
                            @Named("jobs") final DataSource jobsDataSource,
                            @Value("${airbyte.bootloader.migration-baseline-version}") final String baselineVersion) {
     return jobsFlywayConfigurationProperties.getFluentConfiguration()
-        .dataSource(jobsDataSource)
+        .dataSource(unwrapDataSource(jobsDataSource))
         .baselineVersion(baselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
@@ -155,7 +158,7 @@ public class DatabaseBeanFactory {
   public DatabaseInitializer configsDatabaseInitializer(@Named("config") final DSLContext configsDslContext,
                                                         @Value("${airbyte.flyway.configs.initialization-timeout-ms}") final Long configsDatabaseInitializationTimeoutMs)
       throws IOException {
-    return DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
+    return DatabaseCheckFactory.createConfigsDatabaseInitializer(unwrapContext(configsDslContext),
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
   }
 
@@ -165,14 +168,14 @@ public class DatabaseBeanFactory {
   public DatabaseInitializer jobsDatabaseInitializer(@Named("jobs") final DSLContext jobsDslContext,
                                                      @Value("${airbyte.flyway.jobs.initialization-timeout-ms}") final Long jobsDatabaseInitializationTimeoutMs)
       throws IOException {
-    return DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
+    return DatabaseCheckFactory.createJobsDatabaseInitializer(unwrapContext(jobsDslContext),
         jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
   }
 
   @Singleton
   @Named("jobsDatabaseAvailabilityCheck")
   public JobsDatabaseAvailabilityCheck jobsDatabaseAvailabilityCheck(@Named("jobs") final DSLContext dslContext) {
-    return new JobsDatabaseAvailabilityCheck(dslContext, DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS);
+    return new JobsDatabaseAvailabilityCheck(unwrapContext(dslContext), DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS);
   }
 
   @Singleton

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useConfig } from "config";
@@ -130,7 +131,7 @@ const useDeleteSource = () => {
           (lst: SourceList | undefined) =>
             ({
               sources: lst?.sources.filter((conn) => conn.sourceId !== ctx.source.sourceId) ?? [],
-            } as SourceList)
+            }) as SourceList
         );
 
         const connectionIds = ctx.connectionsWithSource.map((item) => item.connectionId);
@@ -170,13 +171,13 @@ const useDiscoverSchema = (
   disableCache?: boolean
 ): {
   isLoading: boolean;
-  schema: SyncSchema;
+  schema: SyncSchema | undefined;
   schemaErrorStatus: SchemaError;
   catalogId: string | undefined;
   onDiscoverSchema: () => Promise<void>;
 } => {
   const service = useSourceService();
-  const [schema, setSchema] = useState<SyncSchema>({ streams: [] });
+  const [schema, setSchema] = useState<SyncSchema | undefined>(undefined);
   const [catalogId, setCatalogId] = useState<string | undefined>("");
   const [isLoading, setIsLoading] = useState(false);
   const [schemaErrorStatus, setSchemaErrorStatus] = useState<SchemaError>(null);
@@ -186,8 +187,10 @@ const useDiscoverSchema = (
     setSchemaErrorStatus(null);
     try {
       const data = await service.discoverSchema(sourceId || "", disableCache);
-      setSchema(data.catalog);
-      setCatalogId(data.catalogId);
+      flushSync(() => {
+        setSchema(data.catalog);
+        setCatalogId(data.catalogId);
+      });
     } catch (e) {
       setSchemaErrorStatus(e);
     } finally {

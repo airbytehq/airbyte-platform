@@ -100,7 +100,7 @@ const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderState>; def
   return (
     <CheckBox
       id={path}
-      data-testid="toggle"
+      data-testid={`toggle-${path}`}
       checked={value !== undefined}
       onChange={(event) => {
         if (event.target.checked) {

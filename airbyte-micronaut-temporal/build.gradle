@@ -15,7 +15,7 @@ dependencies {
         exclude module: 'guava'
     }
 
-    testImplementation project(':airbyte-commons-temporal-core')
+    implementation project(':airbyte-commons-temporal-core')
 
     testImplementation libs.assertj.core
     testImplementation libs.bundles.junit

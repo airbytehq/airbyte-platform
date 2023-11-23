@@ -1,14 +1,17 @@
-import { JSONSchema7, JSONSchema7Type } from "json-schema";
+import { JSONSchema7Type } from "json-schema";
+import { MessageDescriptor } from "react-intl";
 import * as yup from "yup";
 
 import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem, FORM_PATTERN_ERROR } from "core/form/types";
+import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
 import { FormBuildError } from "./FormBuildError";
 
 /**
  * Returns yup.schema for validation
  *
- * This method builds yup schema based on jsonSchema ${@link JSONSchema7} and the derived ${@link FormBlock}.
+ * This method builds yup schema based on jsonSchema ${@link AirbyteJSONSchema} and the derived ${@link FormBlock}.
  * Every property is walked through recursively in case it is condition | object | array.
  *
  * @param jsonSchema
@@ -18,9 +21,10 @@ import { FormBuildError } from "./FormBuildError";
  * @param propertyPath constructs path of property
  */
 export const buildYupFormForJsonSchema = (
-  jsonSchema: JSONSchema7,
+  jsonSchema: AirbyteJSONSchema,
   formField: FormBlock,
-  parentSchema?: JSONSchema7,
+  formatMessage: (message: MessageDescriptor, values?: Record<string, string | number>) => string,
+  parentSchema?: AirbyteJSONSchema,
   propertyKey?: string,
   propertyPath: string | undefined = propertyKey
 ): yup.AnySchema => {
@@ -69,6 +73,7 @@ export const buildYupFormForJsonSchema = (
               : buildYupFormForJsonSchema(
                   prop,
                   selectionFormField.properties[propertyIndex],
+                  formatMessage,
                   condition,
                   key,
                   propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -127,7 +132,7 @@ export const buildYupFormForJsonSchema = (
     }
 
     // Otherwise require that all oneOfs have an option selected, as the user has no way to unselect an option.
-    return oneOfSchema.required("form.empty.error");
+    return oneOfSchema.required(formatMessage({ id: "form.empty.error" }));
   }
 
   switch (jsonSchema.type) {
@@ -138,7 +143,10 @@ export const buildYupFormForJsonSchema = (
         .trim();
 
       if (jsonSchema?.pattern !== undefined) {
-        schema = schema.matches(new RegExp(jsonSchema.pattern), FORM_PATTERN_ERROR);
+        schema = schema.matches(
+          new RegExp(jsonSchema.pattern),
+          formatMessage({ id: FORM_PATTERN_ERROR }, { pattern: getPatternDescriptor(jsonSchema) ?? jsonSchema.pattern })
+        );
       }
 
       break;
@@ -150,11 +158,11 @@ export const buildYupFormForJsonSchema = (
       schema = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
       if (jsonSchema?.minimum !== undefined) {
-        schema = schema.min(jsonSchema?.minimum);
+        schema = schema.min(jsonSchema.minimum, (value) => formatMessage({ id: "form.min.error" }, { min: value.min }));
       }
 
       if (jsonSchema?.maximum !== undefined) {
-        schema = schema.max(jsonSchema?.maximum);
+        schema = schema.max(jsonSchema.maximum, (value) => formatMessage({ id: "form.max.error" }, { max: value.max }));
       }
       break;
     case "array":
@@ -165,6 +173,7 @@ export const buildYupFormForJsonSchema = (
             buildYupFormForJsonSchema(
               jsonSchema.items,
               (formField as FormObjectArrayItem).properties,
+              formatMessage,
               jsonSchema,
               propertyKey,
               propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -188,6 +197,7 @@ export const buildYupFormForJsonSchema = (
             ? buildYupFormForJsonSchema(
                 propertySchema,
                 correspondingFormField,
+                formatMessage,
                 jsonSchema,
                 propertyKey,
                 propertyPath ? `${propertyPath}.${propertyKey}` : propertyKey
@@ -217,7 +227,7 @@ export const buildYupFormForJsonSchema = (
       parentSchema.required.find((item) => item === propertyKey);
 
     if (schema && isRequired) {
-      schema = schema.required("form.empty.error");
+      schema = schema.required(formatMessage({ id: "form.empty.error" }));
     }
   }
 

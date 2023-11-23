@@ -356,12 +356,25 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return upgradeMessage(m.get());
     }
 
-    // If a line cannot be deserialized into an AirbyteMessage,
-    // we assume it is a log message that is mistakenly not an
-    // Airbyte Log Message.
-    //
-    // This is because some sources actually log their process on stdout,
-    // so we want to make sure this info is available in the logs.
+    handleCannotDeserialize(line);
+    return m.stream();
+  }
+
+  /**
+   * If a line cannot be deserialized into an AirbyteMessage, either:
+   * <p>
+   * 1) We ran into serialization errors, e.g. too big, garbled etc. The most common error being too
+   * big.
+   * <p>
+   * 2) It is a log message that should be an Airbyte Log Message. Currently, the protocol allows for
+   * connectors to log to standard out. This is not ideal as it makes it difficult to distinguish
+   * between proper and garbled messages. However, since all Java connectors (both source and
+   * destination) currently do this, we cannot change this behaviour today, though in the long term we
+   * want to amend the Protocol and strictly enforce this.
+   * <p>
+   *
+   */
+  private void handleCannotDeserialize(String line) {
     try (final var mdcScope = containerLogMdcBuilder.build()) {
       if (line.length() >= MAXIMUM_CHARACTERS_ALLOWED) {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_TOO_LONG, 1);
@@ -374,12 +387,14 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
             throw new IllegalStateException("Record is too long, the size is: " + line.length());
           }
         }
-      } else if (line.toLowerCase().contains("\"record\"")) {
-        // Malformed records cannot be logged. Fail fast.
-        // Match on 'record' can catch non-record messages. This is ok as we rather be safe than sorry.
+      }
+
+      if (line.toLowerCase().contains("\"record\"")) {
+        // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
+        // Filter on record into debug to try and prevent such cases. Though this catches non-record
+        // messages, this is ok as we rather be safe than sorry.
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD, 1);
         logger.debug(line);
-        throw new IllegalStateException("Malformed log record line. Please turn on debug logging to see the line.");
       } else {
         MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE, 1);
         logger.info(line);
@@ -387,7 +402,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     } catch (final Exception e) {
       throw e;
     }
-    return m.stream();
   }
 
   private void throwExceptionClass(final String message) {

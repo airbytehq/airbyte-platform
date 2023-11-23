@@ -37,6 +37,7 @@ def genApiServer = tasks.register("generateApiServer", GenerateTask) {
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
             'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -82,6 +83,7 @@ def genApiClient = tasks.register("generateApiClient", GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     library = "native"
@@ -118,6 +120,7 @@ def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'SecretPersistenceConfigurationJson': 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false
@@ -147,7 +150,7 @@ def genApiClient2 = tasks.register("genApiClient2", GenerateTask) {
         val response: Response = failsafeCall.execute()''')
 
         // add imports if not exist
-        if(!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+        if (!apiClientFileText.contains("import dev.failsafe.RetryPolicy")) {
             def newImports = '''import dev.failsafe.RetryPolicy
 import dev.failsafe.okhttp.FailsafeCall'''
             apiClientFileText = apiClientFileText.replaceFirst('import ', newImports + '\nimport ')
@@ -155,28 +158,8 @@ import dev.failsafe.okhttp.FailsafeCall'''
         }
         apiClientFile.write(apiClientFileText)
 
-        /*
-         * UPDATE domain clients to use Failsafe.
-         */
-        def dir = file('build/generated/api/client2/src/main/kotlin/io/airbyte/api/client2/generated')
-        dir.eachFile { domainClient ->
-            if (domainClient.name.endsWith('.kt')) {
-                def domainClientFileText = domainClient.text
-
-                // replace class declaration
-                domainClientFileText = domainClientFileText.replaceAll(
-                        /class (\S+)\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\) : ApiClient\(basePath, client\)/,
-                        'class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)'
-                )
-
-                // add imports if not exist
-                if(!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
-                    def newImports = "import dev.failsafe.RetryPolicy"
-                    domainClientFileText = domainClientFileText.replaceFirst('import ', newImports + '\nimport ')
-                }
-                domainClient.write(domainClientFileText)
-            }
-        }
+        // Update domain clients to use Failesafe
+        updateDomainClientsWithFailsafe('build/generated/api/client2/src/main/kotlin/io/airbyte/api/client2/generated')
     }
 }
 
@@ -248,8 +231,8 @@ def genAirbyteApiServer = tasks.register('generateAirbyteApiServer', GenerateTas
 }
 
 // TODO: Linked to document okhhtp
-def genWorkloadApiClient2 = tasks.register("genWorkloadApiClient2", GenerateTask) {
-    def clientOutputDir = "$buildDir/generated/workloadapi/client2"
+def genWorkloadApiClient = tasks.register("genWorkloadApiClient", GenerateTask) {
+    def clientOutputDir = "$buildDir/generated/workloadapi/client"
 
     inputs.file workloadSpecFile
     outputs.dir clientOutputDir
@@ -258,9 +241,9 @@ def genWorkloadApiClient2 = tasks.register("genWorkloadApiClient2", GenerateTask
     inputSpec = workloadSpecFile
     outputDir = clientOutputDir
 
-    apiPackage = "io.airbyte.workload.api.client2.generated"
-    invokerPackage = "io.airbyte.workload.api.client2.invoker.generated"
-    modelPackage = "io.airbyte.workload.api.client2.model.generated"
+    apiPackage = "io.airbyte.workload.api.client.generated"
+    invokerPackage = "io.airbyte.workload.api.client.invoker.generated"
+    modelPackage = "io.airbyte.workload.api.client.model.generated"
 
     schemaMappings = [
             'OAuthConfiguration'                : 'com.fasterxml.jackson.databind.JsonNode',
@@ -276,14 +259,16 @@ def genWorkloadApiClient2 = tasks.register("genWorkloadApiClient2", GenerateTask
     generateApiDocumentation = false
 
     configOptions = [
+            enumPropertyNaming  : "UPPERCASE",
             generatePom         : "false",
             interfaceOnly       : "true"
     ]
 
     doLast {
-        def dir = file('build/generated/workloadapi/client2/src/main/kotlin/org')
         // Delete file generated by the client2 task
-        dir.deleteDir()
+        def dir = file('build/generated/workloadapi/client/src/main/kotlin/org').deleteDir()
+        // Update domain clients to use Failsafe
+        updateDomainClientsWithFailsafe('build/generated/workloadapi/client/src/main/kotlin/io/airbyte/workload/api/client/generated')
     }
 
     dependsOn(':airbyte-workload-api-server:compileKotlin', 'genApiClient2')
@@ -300,22 +285,24 @@ kapt {
 afterEvaluate {
     tasks.named('kaptGenerateStubsKotlin').configure {
         mustRunAfter genApiDocs, genApiClient, genApiClient2, genApiServer, genAirbyteApiServer,
-                genWorkloadApiClient2
+                genWorkloadApiClient
     }
 }
 
 tasks.named("compileKotlin") {
     dependsOn tasks.named("genApiClient2")
-    dependsOn tasks.named("genWorkloadApiClient2")
+    dependsOn tasks.named("genWorkloadApiClient")
 }
 
 dependencies {
-    annotationProcessor("io.micronaut.openapi:micronaut-openapi:4.10.0")
-    kapt("io.micronaut.openapi:micronaut-openapi:4.10.0")
+    annotationProcessor libs.micronaut.openapi
+    kapt libs.micronaut.openapi
 
-    compileOnly("io.swagger.core.v3:swagger-annotations:2.2.16")
-    kapt("io.swagger.core.v3:swagger-annotations:2.2.16")
+    compileOnly libs.v3.swagger.annotations
+    kapt libs.v3.swagger.annotations
 
+    implementation platform(libs.micronaut.bom)
+    implementation libs.bundles.micronaut
     implementation libs.commons.io
     implementation libs.failsafe.okhttp
     implementation libs.guava
@@ -334,10 +321,8 @@ dependencies {
     testImplementation libs.bundles.junit
     testImplementation libs.assertj.core
     testImplementation libs.junit.pioneer
-
-    implementation platform(libs.micronaut.bom)
-    implementation libs.bundles.micronaut
-
+    testImplementation libs.mockk
+    testImplementation libs.kotlin.test.runner.junit5
 }
 
 sourceSets {
@@ -347,7 +332,7 @@ sourceSets {
                     "$buildDir/generated/airbyte_api/server/src/gen/java",
                     "$buildDir/generated/api/client/src/main/java",
                     "$buildDir/generated/api/client2/src/main/kotlin",
-                    "$buildDir/generated/workloadapi/client2/src/main/kotlin"
+                    "$buildDir/generated/workloadapi/client/src/main/kotlin"
                     "$projectDir/src/main/java"
         }
         resources {
@@ -360,4 +345,35 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs = [
             '-parameters'
     ]
+}
+
+airbyte {
+    spotless {
+        excludes = ["src/main/openapi/workload-openapi.yaml"]
+    }
+}
+
+private def updateDomainClientsWithFailsafe(def clientPath) {
+    /*
+     * UPDATE domain clients to use Failsafe.
+     */
+    def dir = file(clientPath)
+    dir.eachFile { domainClient ->
+        if (domainClient.name.endsWith('.kt')) {
+            def domainClientFileText = domainClient.text
+
+            // replace class declaration
+            domainClientFileText = domainClientFileText.replaceAll(
+                    /class (\S+)\(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient\) : ApiClient\(basePath, client\)/,
+                    'class $1(basePath: kotlin.String = defaultBasePath, client: OkHttpClient = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)'
+            )
+
+            // add imports if not exist
+            if(!domainClientFileText.contains("import dev.failsafe.RetryPolicy")) {
+                def newImports = "import dev.failsafe.RetryPolicy"
+                domainClientFileText = domainClientFileText.replaceFirst('import ', newImports + '\nimport ')
+            }
+            domainClient.write(domainClientFileText)
+        }
+    }
 }

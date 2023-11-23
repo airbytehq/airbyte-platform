@@ -5,7 +5,7 @@
 package io.airbyte.micronaut.temporal;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.micronaut.context.BeanRegistration;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.workflow.Workflow;

@@ -6,7 +6,11 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.ConnectionApi;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
@@ -76,7 +80,6 @@ public class ConnectionApiController implements ConnectionApi {
   @Override
   @Post(uri = "/auto_disable")
   @Secured({ADMIN})
-  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public InternalOperationResult autoDisableConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.autoDisableConnection(connectionIdRequestBody.getConnectionId()));
@@ -84,7 +87,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/create")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public ConnectionRead createConnection(@Body final ConnectionCreate connectionCreate) {
@@ -93,7 +96,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
@@ -102,7 +105,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/list")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList listConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -111,7 +114,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/list_paginated")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -122,7 +125,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/list_all")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList listAllConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -145,7 +148,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionRead getConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -154,7 +157,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/history/data")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionDataHistoryReadItem> getConnectionDataHistory(ConnectionDataHistoryRequestBody connectionDataHistoryRequestBody) {
@@ -163,7 +166,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/connections/status")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStatusRead> getConnectionStatuses(@Body final ConnectionStatusesRequestBody connectionStatusesRequestBody) {
@@ -172,7 +175,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/stream_history")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionStreamHistoryReadItem> getConnectionStreamHistory(ConnectionStreamHistoryRequestBody connectionStreamHistoryRequestBody) {
@@ -181,7 +184,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/sync_progress")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncProgressReadItem> getConnectionSyncProgress(ConnectionIdRequestBody connectionIdRequestBody) {
@@ -190,7 +193,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/history/uptime")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public List<ConnectionSyncResultRead> getConnectionUptimeHistory(ConnectionUptimeHistoryRequestBody connectionUptimeHistoryRequestBody) {
@@ -200,7 +203,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Override
   @Post(uri = "/delete")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void deleteConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -213,7 +216,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/sync")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead syncConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -222,7 +225,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/reset")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -231,7 +234,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/reset/stream")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
@@ -240,7 +243,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/apply_schema_change")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionAutoPropagateResult applySchemaChangeForConnection(final ConnectionAutoPropagateSchemaChange request) {
@@ -250,7 +253,6 @@ public class ConnectionApiController implements ConnectionApi {
   @Override
   @Post(uri = "/get_task_queue_name")
   @Secured({ADMIN})
-  @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public TaskQueueNameRead getTaskQueueName(final GetTaskQueueNameRequest request) {
     final TemporalJobType jobType;

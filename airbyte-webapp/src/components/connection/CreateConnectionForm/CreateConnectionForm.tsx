@@ -1,5 +1,5 @@
 import { Form, Formik, FormikHelpers } from "formik";
-import React, { Suspense, useCallback, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
@@ -28,6 +28,7 @@ import styles from "./CreateConnectionForm.module.scss";
 import { CreateConnectionNameField } from "./CreateConnectionNameField";
 import { DataResidency } from "./DataResidency";
 import { SchemaError } from "./SchemaError";
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 
 interface CreateConnectionPropsInner {
   schemaError: SchemaErrorType;
@@ -121,11 +122,24 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
 export const CreateConnectionForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const { trackFailure } = useAnalyticsTrackFunctions();
 
   const { schema, isLoading, schemaErrorStatus, catalogId, onDiscoverSchema } = useDiscoverSchema(
     source.sourceId,
     true
   );
+
+  useEffect(() => {
+    if (schemaErrorStatus) {
+      trackFailure(source, destination, schemaErrorStatus);
+    }
+    // we need to track the schemaErrorStatus changes only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaErrorStatus]);
+
+  if (!schema) {
+    return <LoadingSchema />;
+  }
 
   const partialConnection = {
     syncCatalog: schema,

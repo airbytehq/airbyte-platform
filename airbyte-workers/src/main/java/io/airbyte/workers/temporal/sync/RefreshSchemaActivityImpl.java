@@ -22,7 +22,6 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.featureflag.AutoBackfillOnNewColumns;
-import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -119,22 +118,18 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId(),
         "Get the workspace by connection Id");
 
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
+    final SourceAutoPropagateChange sourceAutoPropagateChange = new SourceAutoPropagateChange()
+        .sourceId(sourceId)
+        .catalog(sourceDiscoverSchemaRead.getCatalog())
+        .workspaceId(workspaceId)
+        .catalogId(sourceDiscoverSchemaRead.getCatalogId());
 
-    if (autoPropagationIsEnabledForWorkspace) {
-      final SourceAutoPropagateChange sourceAutoPropagateChange = new SourceAutoPropagateChange()
-          .sourceId(sourceId)
-          .catalog(sourceDiscoverSchemaRead.getCatalog())
-          .workspaceId(workspaceId)
-          .catalogId(sourceDiscoverSchemaRead.getCatalogId());
-
-      AirbyteApiClient.retryWithJitterThrows(
-          () -> {
-            sourceApi.applySchemaChangeForSource(sourceAutoPropagateChange);
-            return null;
-          },
-          "Auto propagate the schema change");
-    }
+    AirbyteApiClient.retryWithJitterThrows(
+        () -> {
+          sourceApi.applySchemaChangeForSource(sourceAutoPropagateChange);
+          return null;
+        },
+        "Auto propagate the schema change");
   }
 
   @Override
@@ -156,20 +151,16 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
       log.warn("Failed to refresh schema; proceeding with sync.");
       return new RefreshSchemaActivityOutput(null);
     }
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
 
-    if (autoPropagationIsEnabledForWorkspace) {
-      final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
-          .catalog(sourceDiscoverSchemaRead.getCatalog())
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .catalogId(sourceDiscoverSchemaRead.getCatalogId());
+    final ConnectionAutoPropagateSchemaChange request = new ConnectionAutoPropagateSchemaChange()
+        .catalog(sourceDiscoverSchemaRead.getCatalog())
+        .workspaceId(workspaceId)
+        .connectionId(connectionId)
+        .catalogId(sourceDiscoverSchemaRead.getCatalogId());
 
-      return new RefreshSchemaActivityOutput(AirbyteApiClient.retryWithJitterThrows(
-          () -> connectionApi.applySchemaChangeForConnection(request),
-          "Auto propagate the schema change").getPropagatedDiff());
-    }
-    return new RefreshSchemaActivityOutput(null);
+    return new RefreshSchemaActivityOutput(AirbyteApiClient.retryWithJitterThrows(
+        () -> connectionApi.applySchemaChangeForConnection(request),
+        "Auto propagate the schema change").getPropagatedDiff());
   }
 
   private boolean schemaRefreshRanRecently(final UUID sourceCatalogId) {

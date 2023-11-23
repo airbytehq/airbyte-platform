@@ -52,7 +52,7 @@ public class ContainerOrchestratorConfigBeanFactory {
 
   // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
   // version is deployed!
-  private static final Path STATE_STORAGE_PREFIX = Path.of("/state");
+  public static final Path STATE_STORAGE_PREFIX = Path.of("/state");
 
   @SuppressWarnings("LineLength")
   @Singleton

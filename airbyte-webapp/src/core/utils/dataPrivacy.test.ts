@@ -8,9 +8,9 @@ const mockTimeZone = (timeZone: string) => {
           ({
             timeZone,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any),
+          }) as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any)
+      }) as any
   );
 };
 

@@ -1,7 +1,6 @@
 package io.airbyte.workload.launcher.pipeline
 
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
 
 /**
  * Input/Output object for LaunchPipeline.
@@ -9,11 +8,11 @@ import io.airbyte.workload.launcher.mocks.LauncherInputMessage
  * @param skip - whether to skip the stage
  */
 sealed class StageIO {
-  abstract val msg: LauncherInputMessage
+  abstract val msg: LauncherInput
   var skip: Boolean = false
 }
 
 data class LaunchStageIO(
-  override val msg: LauncherInputMessage,
+  override val msg: LauncherInput,
   var replicationInput: ReplicationInput? = null,
 ) : StageIO()

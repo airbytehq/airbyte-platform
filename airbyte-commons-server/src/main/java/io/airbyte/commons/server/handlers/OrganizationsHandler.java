@@ -53,6 +53,16 @@ public class OrganizationsHandler {
     this.uuidGenerator = uuidGenerator;
   }
 
+  private static OrganizationRead buildOrganizationRead(final Organization organization) {
+    return new OrganizationRead()
+        .organizationId(organization.getOrganizationId())
+        .organizationName(organization.getName())
+        .email(organization.getEmail())
+        .pba(organization.getPba())
+        .orgLevelBilling(organization.getOrgLevelBilling())
+        .ssoRealm(organization.getSsoRealm());
+  }
+
   public OrganizationRead createOrganization(final OrganizationCreateRequestBody organizationCreateRequestBody)
       throws IOException {
     final String organizationName = organizationCreateRequestBody.getOrganizationName();
@@ -61,7 +71,7 @@ public class OrganizationsHandler {
     final UUID orgId = uuidGenerator.get();
     final Boolean pba = organizationCreateRequestBody.getPba() != null && organizationCreateRequestBody.getPba();
     final Boolean orgLevelBilling = organizationCreateRequestBody.getOrgLevelBilling() != null && organizationCreateRequestBody.getOrgLevelBilling();
-    Organization organization = new Organization()
+    final Organization organization = new Organization()
         .withOrganizationId(orgId)
         .withName(organizationName)
         .withEmail(email)
@@ -82,7 +92,7 @@ public class OrganizationsHandler {
   public OrganizationRead updateOrganization(final OrganizationUpdateRequestBody organizationUpdateRequestBody)
       throws IOException, ConfigNotFoundException {
     final UUID organizationId = organizationUpdateRequestBody.getOrganizationId();
-    Organization organization = organizationPersistence.getOrganization(organizationId)
+    final Organization organization = organizationPersistence.getOrganization(organizationId)
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId));
     boolean hasChanged = false;
     if (!organization.getName().equals(organizationUpdateRequestBody.getOrganizationName())) {
@@ -114,35 +124,25 @@ public class OrganizationsHandler {
   }
 
   public OrganizationReadList listOrganizationsByUser(final ListOrganizationsByUserRequestBody request) throws IOException {
-    Optional<String> keyword = StringUtils.isBlank(request.getKeyword()) ? Optional.empty() : Optional.of(request.getKeyword());
-    List<OrganizationRead> organizationReadList;
+    final Optional<String> nameContains = StringUtils.isBlank(request.getNameContains()) ? Optional.empty() : Optional.of(request.getNameContains());
+    final List<OrganizationRead> organizationReadList;
     if (request.getPagination() != null) {
       organizationReadList = organizationPersistence
           .listOrganizationsByUserIdPaginated(
               new ResourcesByUserQueryPaginated(request.getUserId(),
                   false, request.getPagination().getPageSize(), request.getPagination().getRowOffset()),
-              keyword)
+              nameContains)
           .stream()
           .map(OrganizationsHandler::buildOrganizationRead)
           .collect(Collectors.toList());
     } else {
       organizationReadList = organizationPersistence
-          .listOrganizationsByUserId(request.getUserId(), keyword)
+          .listOrganizationsByUserId(request.getUserId(), nameContains)
           .stream()
           .map(OrganizationsHandler::buildOrganizationRead)
           .collect(Collectors.toList());
     }
     return new OrganizationReadList().organizations(organizationReadList);
-  }
-
-  private static OrganizationRead buildOrganizationRead(final Organization organization) {
-    return new OrganizationRead()
-        .organizationId(organization.getOrganizationId())
-        .organizationName(organization.getName())
-        .email(organization.getEmail())
-        .pba(organization.getPba())
-        .orgLevelBilling(organization.getOrgLevelBilling())
-        .ssoRealm(organization.getSsoRealm());
   }
 
 }

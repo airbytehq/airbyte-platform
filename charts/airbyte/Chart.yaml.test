@@ -57,6 +57,14 @@ dependencies:
     name: worker
     repository: "file://../airbyte-worker"
     version: "*"
+  - condition: workload-api.enabled
+    name: workload-api
+    repository: "file://../airbyte-workload-api-server"
+    version: "*"
+  - condition: workload-launcher.enabled
+    name: workload-launcher
+    repository: "file://../airbyte-workload-launcher"
+    version: "*"
   - condition: pod-sweeper.enabled
     name: pod-sweeper
     repository: "file://../airbyte-pod-sweeper"

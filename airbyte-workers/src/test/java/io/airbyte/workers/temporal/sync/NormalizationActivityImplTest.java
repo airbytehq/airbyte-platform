@@ -20,12 +20,12 @@ import io.airbyte.commons.workers.config.WorkerConfigs;
 import io.airbyte.commons.workers.config.WorkerConfigsProvider;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.RemoveLargeSyncInputs;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseCustomK8sScheduler;
 import io.airbyte.metrics.lib.MetricClient;
@@ -54,21 +54,21 @@ class NormalizationActivityImplTest {
   private static ContainerOrchestratorConfig mContainerOrchestratorConfig;
   private static WorkerConfigsProvider mWorkerConfigsProvider;
   private static ProcessFactory mProcessFactory;
-  private static SecretsHydrator mSecretsHydrator;
-  private static Path WORKSPACE_ROOT = Path.of("/unused/path");
-  private static Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
+  private static SecretsRepositoryReader mSecretsRepositoryReader;
+  private static final Path WORKSPACE_ROOT = Path.of("/unused/path");
+  private static final Configs.WorkerEnvironment WORKER_ENVIRONMENT = Configs.WorkerEnvironment.KUBERNETES;
   private static CloudStorageConfigs mCloudStorageConfigs;
   private static LogConfigs LOG_CONFIGS;
-  private static String AIRBYTE_VERSION = "1.0";
-  private static Integer SERVER_PORT = 8888;
+  private static final String AIRBYTE_VERSION = "1.0";
+  private static final Integer SERVER_PORT = 8888;
   private static AirbyteConfigValidator mAirbyteConfigValidator;
   private static AirbyteApiClient mAirbyteApiClient;
   private static ConnectionApi mConnectionApi;
   private static FeatureFlagClient mFeatureFlagClient;
   private static NormalizationActivityImpl normalizationActivityImpl;
   private static NormalizationActivity normalizationActivity;
-  private static JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
-  private static IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
+  private static final JobRunConfig JOB_RUN_CONFIG = new JobRunConfig().withJobId("unused").withAttemptId(0L);
+  private static final IntegrationLauncherConfig DESTINATION_CONFIG = new IntegrationLauncherConfig()
       .withDockerImage("unused")
       .withNormalizationDockerImage("unused:unused");
   private static WorkerConfigs mWorkerConfigs;
@@ -95,7 +95,7 @@ class NormalizationActivityImplTest {
     LOG_CONFIGS = new LogConfigs(Optional.of(mCloudStorageConfigs));
     when(mWorkerConfigsProvider.getConfig(any())).thenReturn(mWorkerConfigs);
     mProcessFactory = mock(ProcessFactory.class);
-    mSecretsHydrator = mock(SecretsHydrator.class);
+    mSecretsRepositoryReader = mock(SecretsRepositoryReader.class);
     mAirbyteConfigValidator = mock(AirbyteConfigValidator.class);
     mAirbyteApiClient = mock(AirbyteApiClient.class);
     mConnectionApi = mock(ConnectionApi.class);
@@ -106,7 +106,7 @@ class NormalizationActivityImplTest {
         Optional.of(mContainerOrchestratorConfig),
         mWorkerConfigsProvider,
         mProcessFactory,
-        mSecretsHydrator,
+        mSecretsRepositoryReader,
         WORKSPACE_ROOT,
         WORKER_ENVIRONMENT,
         LOG_CONFIGS,
@@ -142,13 +142,12 @@ class NormalizationActivityImplTest {
 
   @Test
   void retrievesCatalog() throws Exception {
-    // Test that it retrieves the catalog via the API. This is enabled by feature flag currently.
-    when(mFeatureFlagClient.boolVariation(eq(RemoveLargeSyncInputs.INSTANCE), any())).thenReturn(true);
     when(mConnectionApi.getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID))).thenReturn(
         new ConnectionRead().syncCatalog(new AirbyteCatalog()));
     normalizationActivity.normalize(JOB_RUN_CONFIG, DESTINATION_CONFIG, new NormalizationInput()
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(UUID.randomUUID()));
+        .withWorkspaceId(UUID.randomUUID())
+        .withConnectionContext(new ConnectionContext().withOrganizationId(UUID.randomUUID())));
     verify(mConnectionApi).getConnection(new ConnectionIdRequestBody().connectionId(CONNECTION_ID));
   }
 

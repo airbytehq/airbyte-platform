@@ -32,7 +32,10 @@ const StyledButton = styled.button<ButtonProps>`
   }
 
   &:hover {
-    box-shadow: 0 1px 3px rgba(53, 53, 66, 0.2), 0 1px 2px rgba(53, 53, 66, 0.12), 0 1px 1px rgba(53, 53, 66, 0.14);
+    box-shadow:
+      0 1px 3px rgba(53, 53, 66, 0.2),
+      0 1px 2px rgba(53, 53, 66, 0.12),
+      0 1px 1px rgba(53, 53, 66, 0.14);
   }
 `;
 

@@ -8,8 +8,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
-import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
@@ -27,15 +25,10 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
-import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
-import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
@@ -85,7 +78,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
   private volatile boolean isReadFromDestRunning;
   private volatile boolean writeToDestFailed;
-  private volatile boolean cancelled;
 
   private final Stopwatch readFromSourceStopwatch;
   private final Stopwatch processFromSourceStopwatch;
@@ -101,25 +93,19 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   public BufferedReplicationWorker(final String jobId,
                                    final int attempt,
                                    final AirbyteSource source,
-                                   final AirbyteMapper mapper,
                                    final AirbyteDestination destination,
-                                   final AirbyteMessageTracker messageTracker,
                                    final SyncPersistence syncPersistence,
                                    final RecordSchemaValidator recordSchemaValidator,
-                                   final FieldSelector fieldSelector,
                                    final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
-                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
-                                   final VoidCallable onReplicationRunning,
+                                   final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
     this.destination = destination;
+    this.replicationWorkerHelper = replicationWorkerHelper;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
-    this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning);
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
@@ -127,12 +113,11 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.messagesFromSourceQueue = new BoundedConcurrentLinkedQueue<>(sourceMaxBufferSize);
     this.messagesForDestinationQueue = new BoundedConcurrentLinkedQueue<>(destinationMaxBufferSize);
     // readFromSource + processMessage + writeToDestination + readFromDestination +
-    // source heartbeat + dest timeout monitor = 6 threads
-    this.executors = Executors.newFixedThreadPool(6);
+    // source heartbeat + dest timeout monitor + workload heartbeat = 7 threads
+    this.executors = Executors.newFixedThreadPool(7);
     this.scheduledExecutors = Executors.newSingleThreadScheduledExecutor();
     this.isReadFromDestRunning = true;
     this.writeToDestFailed = false;
-    this.cancelled = false;
 
     this.destMessagesRead = new AtomicLong();
     this.destMessagesSent = new AtomicLong();
@@ -157,9 +142,10 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
       replicationWorkerHelper.initialize(replicationContext, flags, jobRoot);
 
+      final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
       // note: resources are closed in the opposite order in which they are declared. thus source will be
       // closed first (which is what we want).
-      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source) {
+      try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source; destinationTimeoutMonitor; destinationWithCloseTimeout) {
         scheduledExecutors.scheduleAtFixedRate(this::reportObservabilityMetrics, 0, observabilityMetricsPeriodInSeconds, TimeUnit.SECONDS);
 
         CompletableFuture.allOf(
@@ -167,6 +153,12 @@ public class BufferedReplicationWorker implements ReplicationWorker {
             runAsync(() -> replicationWorkerHelper.startSource(source, replicationInput, jobRoot), mdc)).join();
 
         replicationWorkerHelper.markReplicationRunning();
+
+        if (replicationWorkerHelper.isWorkerV2TestEnabled()) {
+          CompletableFuture.runAsync(
+              replicationWorkerHelper.getWorkloadStatusHeartbeat(),
+              executors);
+        }
 
         CompletableFuture.allOf(
             runAsyncWithHeartbeatCheck(this::readFromSource, mdc),
@@ -184,8 +176,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         replicationWorkerHelper.trackFailure(e);
         replicationWorkerHelper.markFailed();
       } finally {
-        // not closing in try-with-resources block since we want to monitor timeouts when closing
-        closeDestination(mdc, flags);
         executors.shutdownNow();
         scheduledExecutors.shutdownNow();
 
@@ -204,7 +194,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
 
-      if (!cancelled) {
+      if (!replicationWorkerHelper.getCancelled()) {
+        // We don't call endOfReplication on cancelled because it should be called from the cancel method.
         replicationWorkerHelper.endOfReplication();
       }
 
@@ -220,22 +211,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       throw new WorkerException("Sync failed", e);
     }
 
-  }
-
-  private void closeDestination(final Map<String, String> mdc, final ReplicationFeatureFlags flags) throws Exception {
-    if (flags.isDestinationTimeoutEnabled()) {
-      runAsyncWithTimeout(() -> {
-        try {
-          destination.close();
-        } catch (final Exception e) {
-          throw new RuntimeException(e);
-        }
-      }, mdc).join();
-    } else {
-      destination.close();
-    }
-
-    destinationTimeoutMonitor.close();
   }
 
   private void reportObservabilityMetrics() {
@@ -313,7 +288,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
   public void cancel() {
     boolean wasInterrupted = false;
 
-    cancelled = true;
     replicationWorkerHelper.markCancelled();
 
     LOGGER.info("Cancelling replication worker...");
@@ -370,14 +344,19 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("readFromSource: start");
 
-      while (!cancelled && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
+      while (!replicationWorkerHelper.getShouldAbort() && !(sourceIsFinished = sourceIsFinished()) && !messagesFromSourceQueue.isClosed()) {
         final Optional<AirbyteMessage> messageOptional = source.attemptRead();
         if (messageOptional.isPresent()) {
           sourceMessagesRead.incrementAndGet();
-          while (!messagesFromSourceQueue.add(messageOptional.get()) && !messagesFromSourceQueue.isClosed()) {
+          while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.add(messageOptional.get())
+              && !messagesFromSourceQueue.isClosed()) {
             Thread.sleep(100);
           }
         }
+      }
+
+      if (replicationWorkerHelper.isWorkerV2TestEnabled() && replicationWorkerHelper.getShouldAbort()) {
+        source.cancel();
       }
 
       if (source.getExitValue() == 0) {
@@ -406,7 +385,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("processMessage: start");
 
-      while (!messagesFromSourceQueue.isDone() && !messagesForDestinationQueue.isClosed()) {
+      while (!replicationWorkerHelper.getShouldAbort() && !messagesFromSourceQueue.isDone() && !messagesForDestinationQueue.isClosed()) {
         final AirbyteMessage message;
         message = messagesFromSourceQueue.poll();
         if (message == null) {
@@ -447,7 +426,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try {
       LOGGER.info("writeToDestination: start");
       try {
-        while (!messagesForDestinationQueue.isDone() && isReadFromDestRunning) {
+        while (!replicationWorkerHelper.getShouldAbort() && !messagesForDestinationQueue.isDone() && isReadFromDestRunning) {
           final AirbyteMessage message;
           message = messagesForDestinationQueue.poll();
           if (message == null) {
@@ -480,7 +459,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     LOGGER.info("readFromDestination: start");
     try {
-      while (!writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
+      while (!replicationWorkerHelper.getShouldAbort() && !writeToDestFailed && !(destinationIsFinished = destinationIsFinished())) {
         final Optional<AirbyteMessage> messageOptional;
         try (final var t = readFromDestStopwatch.start()) {
           messageOptional = destination.attemptRead();
@@ -519,6 +498,35 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     try (final var t = readFromDestStopwatch.start()) {
       return destination.isFinished();
     }
+  }
+
+  private class CloseableWithTimeout implements AutoCloseable {
+
+    AutoCloseable autoCloseable;
+    private final Map<String, String> mdc;
+    private final ReplicationFeatureFlags flags;
+
+    public CloseableWithTimeout(final AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+      this.autoCloseable = autoCloseable;
+      this.mdc = mdc;
+      this.flags = flags;
+    }
+
+    @Override
+    public void close() throws Exception {
+      if (flags.isDestinationTimeoutEnabled()) {
+        runAsyncWithTimeout(() -> {
+          try {
+            autoCloseable.close();
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        }, mdc).join();
+      } else {
+        autoCloseable.close();
+      }
+    }
+
   }
 
 }

@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
+import { LoadingPage } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll/MainPageWithScroll";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm";
@@ -49,7 +51,9 @@ export const ConfigureConnectionPage = () => {
         </PageHeaderWithNavigation>
       }
     >
-      {doUseCreateConnectionHookForm ? <CreateConnectionHookForm /> : <CreateConnectionForm />}
+      <Suspense fallback={<LoadingPage />}>
+        {doUseCreateConnectionHookForm ? <CreateConnectionHookForm /> : <CreateConnectionForm />}
+      </Suspense>
     </MainPageWithScroll>
   );
 };

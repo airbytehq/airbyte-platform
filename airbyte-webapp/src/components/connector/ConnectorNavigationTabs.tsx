@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { Tabs } from "components/ui/Tabs";
-import { LinkTab } from "components/ui/Tabs/LinkTab";
+import { Tabs, LinkTab } from "components/ui/Tabs";
 
 import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";

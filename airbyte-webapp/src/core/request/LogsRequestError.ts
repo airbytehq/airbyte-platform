@@ -4,7 +4,10 @@ import { CommonRequestError } from "./CommonRequestError";
 export class LogsRequestError extends CommonRequestError {
   __type = "common.errorWithLogs";
 
-  constructor(private jobInfo: SynchronousJobRead, msg?: string) {
+  constructor(
+    private jobInfo: SynchronousJobRead,
+    msg?: string
+  ) {
     super(undefined, { message: msg });
     this._status = 400;
   }

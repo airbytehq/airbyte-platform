@@ -81,11 +81,13 @@ import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.Asserts;
 import io.airbyte.test.utils.TestConnectionCreate;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -121,10 +123,14 @@ public class AirbyteApiAcceptanceTests {
   // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
   private static final String AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K";
   private static final String AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID";
+  private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
+  private static final String AIRBYTE_PUBLIC_API_SERVER_HOST =
+      Optional.ofNullable(System.getenv("AIRBYTE_PUBLIC_API_SERVER_HOST")).orElse("http://localhost:8006");
   private static final String LOCAL_PUBLIC_API_SERVER_URL = "http://localhost:8006/v1";
   private static final String AUTHORIZATION_HEADER = "AUTHORIZATION";
   // NOTE: this is just the default airbyte/password user's basic auth header.
   private static final String AIRBYTE_BASIC_AUTH_HEADER = "Basic YWlyYnl0ZTpwYXNzd29yZA==";
+
   private static UUID workspaceId;
 
   private static final String TEST_ACTOR_NAME = "test-actor-name";
@@ -142,9 +148,10 @@ public class AirbyteApiAcceptanceTests {
 
     final boolean isGke = System.getenv().containsKey(IS_GKE);
     // Set up the API client.
-    final var underlyingApiClient = new ApiClient().setScheme("http")
-        .setHost("localhost")
-        .setPort(8001)
+    final URI url = new URI(AIRBYTE_SERVER_HOST);
+    final var underlyingApiClient = new ApiClient().setScheme(url.getScheme())
+        .setHost(url.getHost())
+        .setPort(url.getPort())
         .setBasePath("/api");
     underlyingApiClient.setRequestInterceptor(builder -> builder.setHeader(AUTHORIZATION_HEADER, AIRBYTE_BASIC_AUTH_HEADER));
     if (isGke) {
@@ -166,8 +173,9 @@ public class AirbyteApiAcceptanceTests {
     testHarness = new AcceptanceTestHarness(configApiClient, workspaceId);
 
     testHarness.ensureCleanSlate();
+    final URI publicApiUrl = new URI(AIRBYTE_PUBLIC_API_SERVER_HOST);
     airbyteApiClient = Airbyte.builder()
-        .setServerURL(LOCAL_PUBLIC_API_SERVER_URL)
+        .setServerURL(publicApiUrl.toString())
         .setSecurity(new Security() {
 
           {

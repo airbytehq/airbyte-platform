@@ -1,13 +1,13 @@
 package io.airbyte.workload.api.domain
 
-import io.swagger.annotations.ApiModelProperty
-import java.time.OffsetDateTime
+import io.swagger.v3.oas.annotations.media.Schema
 
 data class Workload(
-  @ApiModelProperty(required = true)
+  @Schema(required = true)
   var id: String = "",
   var dataplaneId: String? = null,
   var status: WorkloadStatus? = null,
-  var lastHeartbeatAt: OffsetDateTime? = null,
-  var labels: MutableList<WorkloadLabel>? = null,
+  var labels: MutableList<WorkloadLabel> = mutableListOf(),
+  var inputPayload: String = "",
+  var logPath: String = "",
 )

@@ -29,6 +29,8 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,7 +58,10 @@ class ReplicationWorkerHelperTest {
         mock(SyncPersistence.class),
         mock(ReplicationAirbyteMessageEventPublishingHelper.class),
         mock(ThreadedTimeTracker.class),
-        mock(VoidCallable.class)));
+        mock(VoidCallable.class),
+        mock(WorkloadApi.class),
+        new WorkloadIdGenerator(),
+        false));
   }
 
   @Test
@@ -77,7 +82,7 @@ class ReplicationWorkerHelperTest {
     when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(50L);
     when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(5L);
 
-    var summary = replicationWorkerHelper.getReplicationOutput();
+    final var summary = replicationWorkerHelper.getReplicationOutput();
     assertEquals(50L, summary.getReplicationAttemptSummary().getBytesSynced());
     assertEquals(5L, summary.getReplicationAttemptSummary().getRecordsSynced());
   }

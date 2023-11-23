@@ -8,12 +8,12 @@ import {
 import { appendRandomString, deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
   createJsonDestinationViaApi,
+  createNewConnectionViaApi,
   createPokeApiSourceViaApi,
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
-  createNewConnectionViaApi,
-  startManualSync,
   startManualReset,
+  startManualSync,
 } from "@cy/commands/connection";
 import { runDbQuery } from "@cy/commands/db/db";
 import { createUsersTableQuery, dropUsersTableQuery } from "@cy/commands/db/queries";
@@ -29,13 +29,13 @@ import { visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
 import {
-  WebBackendConnectionRead,
+  AirbyteStreamAndConfiguration,
+  ConnectionStatus,
   DestinationRead,
+  DestinationSyncMode,
   SourceRead,
   SyncMode,
-  DestinationSyncMode,
-  ConnectionStatus,
-  AirbyteStreamAndConfiguration,
+  WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
 
@@ -81,10 +81,14 @@ describe("Connection Configuration", () => {
       requestDeleteSource({ sourceId: postgresSource.sourceId });
     }
     if (jsonDestination) {
-      requestDeleteDestination({ destinationId: jsonDestination.destinationId });
+      requestDeleteDestination({
+        destinationId: jsonDestination.destinationId,
+      });
     }
     if (postgresDestination) {
-      requestDeleteDestination({ destinationId: postgresDestination.destinationId });
+      requestDeleteDestination({
+        destinationId: postgresDestination.destinationId,
+      });
     }
     runDbQuery(dropUsersTableQuery);
   });
@@ -114,7 +118,11 @@ describe("Connection Configuration", () => {
         // sync & verify the button enters and exits its disabled state as the status updates
         startManualSync();
         cy.get("[data-testid='manual-sync-button']").should("be.disabled");
-        cy.get("[data-testid='connection-status-text']").contains("On time", { timeout: 20000 }).should("exist");
+        cy.get("[data-testid='connection-status-text']")
+          .contains("On time", {
+            timeout: 30000,
+          })
+          .should("exist");
         cy.get("[data-testid='manual-sync-button']").should("not.be.disabled");
       });
     });
@@ -125,9 +133,21 @@ describe("Connection Configuration", () => {
 
         // reset & verify the button enters and exits its disabled state as the status updates
         startManualReset();
-        cy.get("[data-testid='manual-reset-button']").should("be.disabled");
-        cy.get("[data-testid='connection-status-text']").contains("Pending").should("exist");
-        cy.get("[data-testid='manual-reset-button']").should("not.be.disabled");
+
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+        cy.get("[data-testid='reset-data-dropdown-option']").should("be.disabled");
+
+        cy.get("[data-testid='connection-status-text']")
+          .contains("Pending", {
+            timeout: 30000,
+          })
+          .should("exist");
+
+        cy.get("[data-testid='job-history-dropdown-menu']").should("not.be.disabled");
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
+        cy.get("[data-testid='reset-data-dropdown-option']").should("not.be.disabled");
       });
     });
   });
@@ -168,7 +188,10 @@ describe("Connection Configuration", () => {
           const { scheduleType, scheduleData, schedule, ...connectionUpdate } = interception.response?.body;
           expect(scheduleType).to.eq("cron");
 
-          expect(scheduleData.cron).to.deep.eq({ cronTimeZone: "UTC", cronExpression: "0 0 12 * * ?" });
+          expect(scheduleData.cron).to.deep.eq({
+            cronTimeZone: "UTC",
+            cronExpression: "0 0 12 * * ?",
+          });
           expect(loadedConnection).to.deep.eq(connectionUpdate);
         });
         replicationPage.checkSuccessResult();
@@ -422,7 +445,9 @@ describe("Connection Configuration", () => {
           (stream) => stream.stream?.name === "users" && stream.stream.namespace === "public"
         );
 
-        const newSyncCatalog = { streams: [...postgresConnection.syncCatalog.streams] };
+        const newSyncCatalog = {
+          streams: [...postgresConnection.syncCatalog.streams],
+        };
         // update so one stream is enabled, to test that you can still filter by enabled/disabled streams
         newSyncCatalog.streams[streamToUpdate].config = {
           ...newSyncCatalog.streams[streamToUpdate].config,
@@ -435,7 +460,9 @@ describe("Connection Configuration", () => {
           getPostgresToPostgresUpdateConnectionBody(postgresConnection.connectionId, { syncCatalog: newSyncCatalog })
         );
 
-        requestDeleteConnection({ connectionId: postgresConnection.connectionId });
+        requestDeleteConnection({
+          connectionId: postgresConnection.connectionId,
+        });
       });
     });
 
@@ -456,6 +483,7 @@ describe("Connection Configuration", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
           getSyncEnabledSwitch().should("be.disabled");
+          cy.get("[data-testid='job-history-dropdown-menu']").click();
           cy.contains("Reset your data").should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
         });
@@ -540,7 +568,9 @@ describe("Connection Configuration", () => {
       createNewConnectionViaApi(postgresSource, postgresDestination)
         .then((connection) => {
           requestUpdateConnection(
-            getPostgresToPostgresUpdateConnectionBody(connection.connectionId, { status: ConnectionStatus.inactive })
+            getPostgresToPostgresUpdateConnectionBody(connection.connectionId, {
+              status: ConnectionStatus.inactive,
+            })
           );
         })
         .as("postgresConnection");
@@ -549,6 +579,7 @@ describe("Connection Configuration", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
         cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
         cy.contains(/Sync \d+ enabled streams?/).should("be.disabled");
+        cy.get("[data-testid='job-history-dropdown-menu']").click();
         cy.contains("Reset your data").should("be.disabled");
       });
     });

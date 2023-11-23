@@ -31,54 +31,6 @@ public class MoreOAuthParameters {
   public static final String SECRET_MASK = "******";
 
   /**
-   * Get source OAuth param from stream. If the boolean is set, throws when there's a row in the
-   * actor_oauth_params table that corresponds to the definitionId & workspaceId.
-   *
-   * @param stream oauth param stream
-   * @param workspaceId workspace id
-   * @param sourceDefinitionId source definition id
-   * @return oauth params
-   */
-  public static Optional<SourceOAuthParameter> getSourceOAuthParameter(final Stream<SourceOAuthParameter> stream,
-                                                                       final UUID workspaceId,
-                                                                       final UUID sourceDefinitionId)
-      throws ConfigNotFoundException {
-
-    final Optional<SourceOAuthParameter> sourceOAuthParameter = stream
-        .filter(p -> sourceDefinitionId.equals(p.getSourceDefinitionId()))
-        .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
-        // we prefer params specific to a workspace before global ones (ie workspace is null)
-        .min(Comparator.comparing(SourceOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(SourceOAuthParameter::getOauthParameterId));
-
-    return sourceOAuthParameter;
-  }
-
-  /**
-   * Get destination OAuth param from stream. If the boolean is set, throws when there's a row in the
-   * actor_oauth_params table that corresponds to the definitionId & workspaceId.
-   *
-   * @param stream oauth param stream
-   * @param workspaceId workspace id
-   * @param destinationDefinitionId destination definition id
-   * @return oauth params
-   */
-  public static Optional<DestinationOAuthParameter> getDestinationOAuthParameter(
-                                                                                 final Stream<DestinationOAuthParameter> stream,
-                                                                                 final UUID workspaceId,
-                                                                                 final UUID destinationDefinitionId)
-      throws ConfigNotFoundException {
-    final Optional<DestinationOAuthParameter> destinationOAuthParameter = stream
-        .filter(p -> destinationDefinitionId.equals(p.getDestinationDefinitionId()))
-        .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
-        // we prefer params specific to a workspace before global ones (ie workspace is null)
-        .min(Comparator.comparing(DestinationOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(DestinationOAuthParameter::getOauthParameterId));
-
-    return destinationOAuthParameter;
-  }
-
-  /**
    * Flatten config.
    *
    * @param config to flatten

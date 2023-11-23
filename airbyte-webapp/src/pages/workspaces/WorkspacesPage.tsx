@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { HeadTitle } from "components/common/HeadTitle";
-import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -29,14 +29,14 @@ const WorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
 
   const {
     data: workspacesData,
-    refetch,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, searchValue);
+  } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
@@ -45,7 +45,7 @@ const WorkspacesPage: React.FC = () => {
 
   useDebounce(
     () => {
-      refetch();
+      setDebouncedSearchValue(searchValue);
     },
     250,
     [searchValue]
@@ -89,7 +89,7 @@ const WorkspacesPage: React.FC = () => {
         </Box>
         <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
         {isFetchingNextPage && (
-          <Box py="2xl" className={styles.loadingSpinner}>
+          <Box py="2xl">
             <LoadingSpinner />
           </Box>
         )}

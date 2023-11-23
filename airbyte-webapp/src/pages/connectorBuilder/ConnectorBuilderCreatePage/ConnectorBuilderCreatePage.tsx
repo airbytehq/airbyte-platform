@@ -27,9 +27,9 @@ import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
 import styles from "./ConnectorBuilderCreatePage.module.scss";
-import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
-import { ReactComponent as LoadExistingConnectorImage } from "./load-existing-connector.svg";
-import { ReactComponent as StartFromScratchImage } from "./start-from-scratch.svg";
+import ImportYamlImage from "./import-yaml.svg?react";
+import LoadExistingConnectorImage from "./load-existing-connector.svg?react";
+import StartFromScratchImage from "./start-from-scratch.svg?react";
 import { AirbyteTitle } from "../components/AirbyteTitle";
 import { BackButton } from "../components/BackButton";
 import { useCreateAndNavigate } from "../components/useCreateAndNavigate";

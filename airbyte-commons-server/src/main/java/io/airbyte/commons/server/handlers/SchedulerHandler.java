@@ -61,13 +61,14 @@ import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.NotificationItem;
 import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopeType;
+import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -75,17 +76,19 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.featureflag.AutoPropagateSchema;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.UseNewSchemaUpdateNotification;
+import io.airbyte.featureflag.Organization;
+import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -102,6 +105,7 @@ import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
@@ -150,16 +154,18 @@ public class SchedulerHandler {
   private final SyncJobFactory jobFactory;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
+  private final WorkspaceService workspaceService;
+  private final SecretPersistenceConfigService secretPersistenceConfigService;
 
-  // TODO: Convert to be fully using micronaut
+  @VisibleForTesting
   public SchedulerHandler(final ConfigRepository configRepository,
-                          final SecretsRepositoryReader secretsRepositoryReader,
                           final SecretsRepositoryWriter secretsRepositoryWriter,
                           final SynchronousSchedulerClient synchronousSchedulerClient,
+                          final ConfigurationUpdate configurationUpdate,
+                          final JsonSchemaValidator jsonSchemaValidator,
                           final JobPersistence jobPersistence,
-                          final WorkerEnvironment workerEnvironment,
-                          final LogConfigs logConfigs,
                           final EventRunner eventRunner,
+                          final JobConverter jobConverter,
                           final ConnectionsHandler connectionsHandler,
                           final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
@@ -171,51 +177,9 @@ public class SchedulerHandler {
                           final SyncJobFactory jobFactory,
                           final JobNotifier jobNotifier,
                           final JobTracker jobTracker,
-                          final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
-    this(
-        configRepository,
-        secretsRepositoryWriter,
-        synchronousSchedulerClient,
-        new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
-        new JsonSchemaValidator(),
-        jobPersistence,
-        eventRunner,
-        new JobConverter(workerEnvironment, logConfigs),
-        connectionsHandler,
-        envVariableFeatureFlags,
-        webUrlHelper,
-        actorDefinitionVersionHelper,
-        featureFlagClient,
-        streamResetPersistence,
-        oAuthConfigSupplier,
-        jobCreator,
-        jobFactory,
-        jobNotifier,
-        jobTracker,
-        connectorDefinitionSpecificationHandler);
-  }
-
-  @VisibleForTesting
-  SchedulerHandler(final ConfigRepository configRepository,
-                   final SecretsRepositoryWriter secretsRepositoryWriter,
-                   final SynchronousSchedulerClient synchronousSchedulerClient,
-                   final ConfigurationUpdate configurationUpdate,
-                   final JsonSchemaValidator jsonSchemaValidator,
-                   final JobPersistence jobPersistence,
-                   final EventRunner eventRunner,
-                   final JobConverter jobConverter,
-                   final ConnectionsHandler connectionsHandler,
-                   final FeatureFlags envVariableFeatureFlags,
-                   final WebUrlHelper webUrlHelper,
-                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                   final FeatureFlagClient featureFlagClient,
-                   final StreamResetPersistence streamResetPersistence,
-                   final OAuthConfigSupplier oAuthConfigSupplier,
-                   final JobCreator jobCreator,
-                   final SyncJobFactory jobFactory,
-                   final JobNotifier jobNotifier,
-                   final JobTracker jobTracker,
-                   final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler) {
+                          final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
+                          final WorkspaceService workspaceService,
+                          final SecretPersistenceConfigService secretPersistenceConfigService) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -234,6 +198,8 @@ public class SchedulerHandler {
     this.jobCreator = jobCreator;
     this.jobFactory = jobFactory;
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
+    this.workspaceService = workspaceService;
+    this.secretPersistenceConfigService = secretPersistenceConfigService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
         jobPersistence,
         configRepository,
@@ -263,7 +229,9 @@ public class SchedulerHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceConfig.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConfig.getWorkspaceId(), sourceConfig.getSourceId());
-    final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    // split out secrets
+    final JsonNode partialConfig = sanitizePartialConfig(
+        sourceConfig.getWorkspaceId(),
         sourceConfig.getConnectionConfiguration(),
         sourceVersion.getSpec());
 
@@ -326,7 +294,8 @@ public class SchedulerHandler {
     final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(destinationConfig.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destDef, destinationConfig.getWorkspaceId(), destinationConfig.getDestinationId());
-    final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    final var partialConfig = sanitizePartialConfig(
+        destinationConfig.getWorkspaceId(),
         destinationConfig.getConnectionConfiguration(),
         destinationVersion.getSpec());
     final boolean isCustomConnector = destDef.getCustom();
@@ -420,7 +389,10 @@ public class SchedulerHandler {
 
   public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
       throws IOException, JsonValidationException, ConfigNotFoundException {
+    LOGGER.info("Applying schema changes for source '{}' in workspace '{}'",
+        sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId());
     if (sourceAutoPropagateChange.getSourceId() == null) {
+      LOGGER.warn("Missing required field sourceId for applying schema change.");
       return;
     }
 
@@ -429,18 +401,15 @@ public class SchedulerHandler {
         || sourceAutoPropagateChange.getCatalog() == null) {
       MetricClientFactory.getMetricClient().count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT, 1,
           new MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.getSourceId().toString()));
+      LOGGER.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
+          sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId(), sourceAutoPropagateChange.getCatalogId(),
+          sourceAutoPropagateChange.getCatalog());
       return;
     }
 
-    final boolean autoPropagationIsEnabledForWorkspace =
-        featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
-    if (!autoPropagationIsEnabledForWorkspace) {
-      return;
-    }
-
-    StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(sourceAutoPropagateChange.getWorkspaceId(), true);
-    SourceConnection source = configRepository.getSourceConnection(sourceAutoPropagateChange.getSourceId());
-    NotificationSettings notificationSettings = workspace.getNotificationSettings();
+    final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(sourceAutoPropagateChange.getWorkspaceId(), true);
+    final SourceConnection source = configRepository.getSourceConnection(sourceAutoPropagateChange.getSourceId());
+    final NotificationSettings notificationSettings = workspace.getNotificationSettings();
     final ConnectionReadList connectionsForSource =
         connectionsHandler.listConnectionsForSource(sourceAutoPropagateChange.getSourceId(), false);
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
@@ -463,8 +432,8 @@ public class SchedulerHandler {
                   .workspaceId(sourceAutoPropagateChange.getWorkspaceId()))
               .getSupportedDestinationSyncModes();
 
-      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead, featureFlagClient)) {
-        UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
+      if (AutoPropagateSchemaChangeHelper.shouldAutoPropagate(diff, connectionRead)) {
+        final UpdateSchemaResult result = applySchemaChange(updateObject.getConnectionId(),
             sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
             syncCatalog,
@@ -475,37 +444,40 @@ public class SchedulerHandler {
         connectionsHandler.updateConnection(updateObject);
         connectionsHandler.trackSchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject.getConnectionId(), result);
-        boolean newNotificationsEnabled = featureFlagClient.boolVariation(
+        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
+        final boolean newNotificationsEnabled = featureFlagClient.boolVariation(
             UseNewSchemaUpdateNotification.INSTANCE, new Workspace(sourceAutoPropagateChange.getWorkspaceId()));
         if (notificationSettings != null && newNotificationsEnabled && notificationSettings.getSendOnConnectionUpdate() != null) {
           notifySchemaPropagated(notificationSettings, diff, connectionRead.getConnectionId(), source,
               workspace.getEmail(), result);
         }
-        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+      } else {
+        LOGGER.info("Not propagating changes for connectionId: '{}', new catalogId '{}'",
             connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
       }
     }
   }
 
-  public void notifySchemaPropagated(NotificationSettings notificationSettings,
-                                     CatalogDiff diff,
-                                     UUID connectionId,
-                                     SourceConnection source,
-                                     String email,
-                                     UpdateSchemaResult result)
+  public void notifySchemaPropagated(final NotificationSettings notificationSettings,
+                                     final CatalogDiff diff,
+                                     final UUID connectionId,
+                                     final SourceConnection source,
+                                     final String email,
+                                     final UpdateSchemaResult result)
       throws IOException {
-    NotificationItem item;
-    boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
+    final NotificationItem item;
+    final boolean isBreakingChange = AutoPropagateSchemaChangeHelper.containsBreakingChange(diff);
     if (isBreakingChange) {
       item = notificationSettings.getSendOnConnectionUpdateActionRequired();
     } else {
       item = notificationSettings.getSendOnConnectionUpdate();
     }
-    for (NotificationType type : item.getNotificationType()) {
+    for (final NotificationType type : item.getNotificationType()) {
       try {
         switch (type) {
           case SLACK -> {
-            SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
+            final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
             slackNotificationClient.notifySchemaPropagated(
                 connectionId,
                 source.getName(),
@@ -515,7 +487,7 @@ public class SchedulerHandler {
                 isBreakingChange);
           }
           case CUSTOMERIO -> {
-            CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
+            final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
             emailNotificationClient.notifySchemaPropagated(
                 connectionId,
                 source.getName(),
@@ -528,7 +500,7 @@ public class SchedulerHandler {
             LOGGER.warn("Notification type {} not supported", type);
           }
         }
-      } catch (InterruptedException e) {
+      } catch (final InterruptedException e) {
         LOGGER.error("Failed to send notification for connectionId: '{}'", connectionId, e);
       }
     }
@@ -539,7 +511,8 @@ public class SchedulerHandler {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.getWorkspaceId(), sourceCreate.getSourceId());
-    final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+    final var partialConfig = sanitizePartialConfig(
+        sourceCreate.getWorkspaceId(),
         sourceCreate.getConnectionConfiguration(),
         sourceVersion.getSpec());
 
@@ -706,7 +679,7 @@ public class SchedulerHandler {
       // on workspace where the new detailed schema change notification is enabled, notifications are sent
       // right after the diff is computed, and we
       // don't need to send them here.
-      boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
+      final boolean newNotificationsEnabled = featureFlagClient.boolVariation(UseNewSchemaUpdateNotification.INSTANCE, new Workspace(workspaceId));
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody) && !newNotificationsEnabled) {
         final String url = webUrlHelper.getConnectionReplicationPageUrl(workspaceId, connectionRead.getConnectionId());
         final String sourceName = configRepository.getSourceConnection(connectionRead.getSourceId()).getName();
@@ -831,6 +804,40 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(manualOperationResult.getJobId().get());
 
     return jobConverter.getJobInfoRead(job);
+  }
+
+  /**
+   * Wrapper around
+   * {@link SecretsRepositoryWriter#statefulSplitSecretsToDefaultSecretPersistence(JsonNode, ConnectorSpecification)}.
+   *
+   * @param workspaceId workspaceId
+   * @param connectionConfiguration connectionConfiguration
+   * @param connectorSpecification connector specification
+   * @return config with secrets replaced with secret json
+   */
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  private JsonNode sanitizePartialConfig(final UUID workspaceId,
+                                         final JsonNode connectionConfiguration,
+                                         final ConnectorSpecification connectorSpecification)
+      throws IOException, ConfigNotFoundException {
+    // split out secrets
+    final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+      final SecretPersistenceConfig secretPersistenceConfig;
+      try {
+        secretPersistenceConfig = secretPersistenceConfigService.getSecretPersistenceConfig(ScopeType.ORGANIZATION, organizationId.get());
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
+      return secretsRepositoryWriter.statefulSplitSecretsToRuntimeSecretPersistence(
+          connectionConfiguration,
+          connectorSpecification,
+          new RuntimeSecretPersistence(secretPersistenceConfig));
+    } else {
+      return secretsRepositoryWriter.statefulSplitSecretsToDefaultSecretPersistence(
+          connectionConfiguration,
+          connectorSpecification);
+    }
   }
 
 }

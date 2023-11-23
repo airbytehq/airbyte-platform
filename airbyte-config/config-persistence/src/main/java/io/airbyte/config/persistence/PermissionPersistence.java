@@ -52,51 +52,65 @@ public class PermissionPersistence {
    * @throws IOException in case of a db error.
    */
   public void writePermission(final Permission permission) throws IOException {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType newPermissionType =
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType permissionType =
         PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(permission.getPermissionType());
+
     database.transaction(ctx -> {
-      try {
-        final Permission existingPermission = getPermission(permission.getPermissionId()).orElse(null);
-        if (existingPermission != null) {
-          updatePermission(ctx, existingPermission, permission, newPermissionType, timestamp);
-        } else {
-          ctx.insertInto(PERMISSION)
-              .set(PERMISSION.ID, permission.getPermissionId())
-              .set(PERMISSION.PERMISSION_TYPE, newPermissionType) //
-              .set(PERMISSION.USER_ID, permission.getUserId())
-              .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
-              .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
-              .set(PERMISSION.CREATED_AT, timestamp)
-              .set(PERMISSION.UPDATED_AT, timestamp)
-              .execute();
-        }
-        return null;
-      } catch (final IOException e) {
-        throw new SQLException(e);
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(PERMISSION)
+          .where(PERMISSION.ID.eq(permission.getPermissionId())));
+
+      if (isExistingConfig) {
+        updatePermission(ctx, permission, timestamp);
+      } else {
+        ctx.insertInto(PERMISSION)
+            .set(PERMISSION.ID, permission.getPermissionId())
+            .set(PERMISSION.PERMISSION_TYPE, permissionType)
+            .set(PERMISSION.USER_ID, permission.getUserId())
+            .set(PERMISSION.WORKSPACE_ID, permission.getWorkspaceId())
+            .set(PERMISSION.ORGANIZATION_ID, permission.getOrganizationId())
+            .set(PERMISSION.CREATED_AT, timestamp)
+            .set(PERMISSION.UPDATED_AT, timestamp)
+            .execute();
       }
+      return null;
     });
   }
 
-  private void updatePermission(final DSLContext transactionCtx,
-                                final Permission existingPermission,
-                                final Permission updatedPermission,
-                                final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType updatedPermissionType,
-                                final OffsetDateTime timestamp)
-      throws SQLOperationNotAllowedException {
+  private void updatePermission(final DSLContext transactionCtx, final Permission updatedPermission, final OffsetDateTime timestamp)
+      throws SQLException {
+
+    final Permission priorPermission;
+    try {
+      priorPermission = getPermission(updatedPermission.getPermissionId()).orElseThrow();
+    } catch (IOException e) {
+      throw new SQLException(e);
+    }
+
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType priorPermissionType =
+        PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(priorPermission.getPermissionType());
+
+    final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType newPermissionType =
+        PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(updatedPermission.getPermissionType());
 
     transactionCtx.update(PERMISSION)
-        .set(PERMISSION.ID, updatedPermission.getPermissionId())
-        .set(PERMISSION.PERMISSION_TYPE, updatedPermissionType)
+        .set(PERMISSION.PERMISSION_TYPE, newPermissionType)
+        .set(PERMISSION.WORKSPACE_ID, updatedPermission.getWorkspaceId())
+        .set(PERMISSION.ORGANIZATION_ID, updatedPermission.getOrganizationId())
+        .set(PERMISSION.USER_ID, updatedPermission.getUserId())
         .set(PERMISSION.UPDATED_AT, timestamp)
         .where(PERMISSION.ID.eq(updatedPermission.getPermissionId()))
         .execute();
 
-    // check if this update removed the last OrganizationAdmin from the organization
-    final boolean wasOrganizationAdminDemotion = existingPermission.getPermissionType().equals(PermissionType.ORGANIZATION_ADMIN)
-        && !updatedPermission.getPermissionType().equals(PermissionType.ORGANIZATION_ADMIN);
+    // if the updated permission started off as an organization admin, check to see if the org still
+    // has an admin after the update is applied. if not, roll back the transaction.
+    final boolean wasOrganizationAdminUpdate =
+        priorPermissionType.equals(io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.organization_admin);
 
-    if (wasOrganizationAdminDemotion && countOrganizationAdmins(transactionCtx, updatedPermission.getOrganizationId()) < 1) {
+    // use priorPermission instead of updatedPermission in case the organization ID changed in the
+    // update.
+    if (wasOrganizationAdminUpdate && countOrganizationAdmins(transactionCtx, priorPermission.getOrganizationId()) < 1) {
       // trigger a transaction rollback
       throw new SQLOperationNotAllowedException(
           "Preventing update that would have removed the last OrganizationAdmin from organization " + updatedPermission.getOrganizationId());

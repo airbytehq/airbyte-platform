@@ -21,7 +21,7 @@ import { useSourceDefinitionList } from "services/connector/SourceDefinitionServ
 
 import { AirbyteIllustration, HighlightIndex } from "./AirbyteIllustration";
 import styles from "./ConnectionOnboarding.module.scss";
-import { ReactComponent as PlusIcon } from "./plusIcon.svg";
+import PlusIcon from "./plusIcon.svg?react";
 import { SOURCE_DEFINITION_PARAM } from "../CreateConnection/CreateNewSource";
 import { NEW_SOURCE_TYPE, SOURCE_TYPE_PARAM } from "../CreateConnection/SelectSource";
 

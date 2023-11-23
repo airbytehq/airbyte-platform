@@ -16,8 +16,7 @@ export default {
 
 const Template =
   <T,>(): Story<TableProps<T>> =>
-  (args) =>
-    <Table<T> {...args} />;
+  (args) => <Table<T> {...args} />;
 
 const data: Item[] = [
   { name: "2017", value: 100 },

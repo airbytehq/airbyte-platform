@@ -116,7 +116,7 @@ describe("useRbac", () => {
 
       expect(() =>
         renderHook(() => useRbac({ resourceType: "INSTANCE", role: "ADMIN", resourceId: "some-workspace" }))
-      ).toThrowError("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
+      ).toThrow("Invalid RBAC query: resource INSTANCE with resourceId some-workspace");
 
       mockUseListPermissions.mockImplementation(() => ({
         permissions: [{ permissionType: "instance_admin" }],
@@ -130,7 +130,7 @@ describe("useRbac", () => {
       }));
 
       mockUseRbacPermissionsQuery.mockClear();
-      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrowError(
+      expect(() => renderHook(() => useRbac({ resourceType: "WORKSPACE", role: "ADMIN" }))).toThrow(
         "Invalid RBAC query: resource WORKSPACE with resourceId undefined"
       );
     });

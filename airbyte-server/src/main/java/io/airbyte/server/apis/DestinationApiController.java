@@ -5,7 +5,11 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.DestinationApi;
 import io.airbyte.api.model.generated.CheckConnectionRead;
@@ -45,7 +49,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/check_connection")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -54,7 +58,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/check_connection_for_update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -70,7 +74,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/create")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -79,7 +83,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/delete")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -92,7 +96,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -101,7 +105,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/list")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -111,7 +115,7 @@ public class DestinationApiController implements DestinationApi {
 
   @SuppressWarnings("LineLength")
   @Post(uri = "/list_paginated")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -127,7 +131,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -136,7 +140,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post("/upgrade_version")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
@@ -149,7 +153,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/partial_update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

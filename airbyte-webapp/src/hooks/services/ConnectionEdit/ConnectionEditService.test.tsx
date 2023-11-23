@@ -138,7 +138,7 @@ describe("ConnectionEditService", () => {
   it("should refresh schema only if the sync catalog has diffs", async () => {
     // Need to combine the hooks so both can be used.
     const useMyTestHook = () =>
-      ({ editService: useConnectionEditService(), formService: useConnectionFormService() } as const);
+      ({ editService: useConnectionEditService(), formService: useConnectionFormService() }) as const;
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,
@@ -174,7 +174,7 @@ describe("ConnectionEditService", () => {
 
   it("should discard the refreshed schema", async () => {
     const useMyTestHook = () =>
-      ({ editService: useConnectionEditService(), formService: useConnectionFormService() } as const);
+      ({ editService: useConnectionEditService(), formService: useConnectionFormService() }) as const;
 
     const { result } = renderHook(useMyTestHook, {
       wrapper: Wrapper,

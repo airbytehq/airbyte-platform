@@ -94,7 +94,9 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
           text: (
             <FlexContainer alignItems="center">
               <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />
-              <LoadingSpinner />
+              <div className={styles.newJobItem__spinnerContainer}>
+                <LoadingSpinner />
+              </div>
             </FlexContainer>
           ),
           id: notificationId,

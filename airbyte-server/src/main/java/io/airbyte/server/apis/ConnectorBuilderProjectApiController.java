@@ -5,6 +5,8 @@
 package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
 
 import io.airbyte.api.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
@@ -41,7 +43,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/create")
   @Status(HttpStatus.CREATED)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(
@@ -52,7 +54,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/delete")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
@@ -65,7 +67,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/get_with_manifest")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectRead getConnectorBuilderProject(
@@ -76,7 +78,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/list")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody) {
@@ -86,7 +88,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/publish")
   @Status(HttpStatus.OK)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(connectorBuilderPublishRequestBody));
@@ -95,7 +97,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Override
   @Post(uri = "/update")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId existingConnectorBuilderProjectWithWorkspaceId) {

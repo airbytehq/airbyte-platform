@@ -5,23 +5,40 @@ micronaut:
     port: 8016
     netty:
       access-logger:
-        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
     idle-timeout: ${HTTP_IDLE_TIMEOUT:10m}
+  metrics:
+    enabled: true
+    export:
+      statsd:
+        enabled: true
+        flavor: ${MICROMENTER_METRICS_STATSD_FLAVOR:datadog}
+        step: PT30S
+        host: ${DD_AGENT_HOST:airbyte-datadog}
+        port: ${DD_DOGSTATSD_PORT:8125}
 
 airbyte:
+  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data-plane-id: ${DATA_PLANE_ID}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
+  kubernetes:
+    pending-time-limit-sec: ${WORKLOAD_LAUNCHER_POD_PENDING_TIME_LIMIT:600}
+    resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   workload-api:
-    basepath: ${WORKLOAD_API_BASE_PATH:}
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-    service-account:
-      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
-      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  data-plane-id: ${DATA_PLANE_ID:}
-  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
+  workload-launcher:
+    queue: ${WORKLOAD_LAUNCHER_QUEUE_NAME:launcher-queue}
+    workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
+    parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
   secret:
     persistence: ${SECRET_PERSISTENCE}
     store:
@@ -83,11 +100,12 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
-  internal.api:
-    host: ${INTERNAL_API_HOST}
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+  internal:
+    api:
+      host: ${INTERNAL_API_HOST}
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
   data.plane.service-account:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
@@ -95,22 +113,21 @@ airbyte:
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
     storage:
-      # TODO: do we need any of this logs stuff
-      #      logs:
-      #        type: ${WORKER_LOGS_STORAGE_TYPE:}
-      #        gcs:
-      #          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-      #          bucket: ${GCS_LOG_BUCKET:}
-      #        minio:
-      #          access-key: ${AWS_ACCESS_KEY_ID:}
-      #          bucket: ${S3_LOG_BUCKET:}
-      #          endpoint: ${S3_MINIO_ENDPOINT:}
-      #          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-      #        s3:
-      #          access-key: ${AWS_ACCESS_KEY_ID:}
-      #          bucket: ${S3_LOG_BUCKET:}
-      #          region: ${S3_LOG_BUCKET_REGION:}
-      #          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      logs:
+        type: ${WORKER_LOGS_STORAGE_TYPE:}
+        gcs:
+          application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+          bucket: ${GCS_LOG_BUCKET:}
+        minio:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          endpoint: ${S3_MINIO_ENDPOINT:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+        s3:
+          access-key: ${AWS_ACCESS_KEY_ID:}
+          bucket: ${S3_LOG_BUCKET:}
+          region: ${S3_LOG_BUCKET_REGION:}
+          secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -129,6 +146,7 @@ airbyte:
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
+
 datadog:
   agent:
     host: ${DD_AGENT_HOST:}
@@ -163,6 +181,25 @@ endpoints:
   threaddump:
     enabled: true
     sensitive: true
+  metrics:
+    enabled: true
+    sensitive: false
+
+temporal:
+  cloud:
+    client:
+      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+    host: ${TEMPORAL_CLOUD_HOST:}
+    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+  sdk:
+    timeouts:
+      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 logger:
   levels:

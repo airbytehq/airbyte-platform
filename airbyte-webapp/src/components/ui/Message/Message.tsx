@@ -41,7 +41,7 @@ const STYLES_BY_TYPE: Readonly<Record<MessageType, string>> = {
   info: styles.info,
 };
 
-const MESSAGE_SEVERITY_LEVELS: Readonly<Record<MessageType, number>> = {
+export const MESSAGE_SEVERITY_LEVELS: Readonly<Record<MessageType, number>> = {
   error: 3,
   warning: 2,
   info: 1,

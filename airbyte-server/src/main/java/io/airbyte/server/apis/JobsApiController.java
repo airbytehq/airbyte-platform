@@ -6,7 +6,11 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.JobsApi;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusReadList;
@@ -70,7 +74,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/cancel")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -80,7 +84,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/create")
   @SecuredWorkspace
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public JobInfoRead createJob(final JobCreate jobCreate) {
@@ -88,7 +92,6 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/fail_non_terminal")
-  @SecuredWorkspace
   @Secured({ADMIN})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -108,7 +111,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_check_input")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -117,7 +120,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_debug_info")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -126,7 +129,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -135,7 +138,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_without_logs")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -144,7 +147,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_input")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -153,7 +156,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_light")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -162,7 +165,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/get_last_replication_job")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
@@ -187,7 +190,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/list")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -196,7 +199,7 @@ public class JobsApiController implements JobsApi {
   }
 
   @Post("/list_for_workspaces")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

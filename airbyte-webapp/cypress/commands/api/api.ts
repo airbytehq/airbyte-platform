@@ -15,11 +15,11 @@ import {
   WebBackendConnectionReadList,
   WebBackendConnectionRequestBody,
   WebBackendConnectionUpdate,
-} from "@src/core/api/generated/AirbyteClient.schemas";
+} from "@src/core/api/types/AirbyteClient";
 
 import { getWorkspaceId, setWorkspaceId } from "./workspace";
 
-const getApiUrl = (path: string): string => `http://localhost:8001/api/v1${path}`;
+const getApiUrl = (path: string): string => `${Cypress.env("AIRBYTE_SERVER_BASE_URL")}/api/v1${path}`;
 
 const apiRequest = <T = void>(
   method: Cypress.HttpMethod,
@@ -47,7 +47,9 @@ export const completeInitialSetup = () =>
   });
 
 export const requestConnectionsList = () =>
-  apiRequest<WebBackendConnectionReadList>("POST", "/connections/list", { workspaceId: getWorkspaceId() });
+  apiRequest<WebBackendConnectionReadList>("POST", "/connections/list", {
+    workspaceId: getWorkspaceId(),
+  });
 
 export const requestCreateConnection = (body: ConnectionCreate) =>
   apiRequest<WebBackendConnectionRead>("POST", "/web_backend/connections/create", body);
@@ -62,7 +64,9 @@ export const requestDeleteConnection = (body: ConnectionIdRequestBody) =>
   apiRequest("POST", "/connections/delete", body, 204);
 
 export const requestSourcesList = () =>
-  apiRequest<SourceReadList>("POST", "/sources/list", { workspaceId: getWorkspaceId() });
+  apiRequest<SourceReadList>("POST", "/sources/list", {
+    workspaceId: getWorkspaceId(),
+  });
 
 export const requestSourceDiscoverSchema = (body: SourceDiscoverSchemaRequestBody) =>
   apiRequest<SourceDiscoverSchemaRead>("POST", "/sources/discover_schema", body);
@@ -72,7 +76,9 @@ export const requestCreateSource = (body: SourceCreate) => apiRequest<SourceRead
 export const requestDeleteSource = (body: SourceIdRequestBody) => apiRequest("POST", "/sources/delete", body, 204);
 
 export const requestDestinationsList = () =>
-  apiRequest<DestinationReadList>("POST", "/destinations/list", { workspaceId: getWorkspaceId() });
+  apiRequest<DestinationReadList>("POST", "/destinations/list", {
+    workspaceId: getWorkspaceId(),
+  });
 
 export const requestCreateDestination = (body: DestinationCreate) =>
   apiRequest<DestinationRead>("POST", "/destinations/create", body);

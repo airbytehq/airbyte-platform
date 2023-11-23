@@ -13,6 +13,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.config.NormalizationInput;
 import io.airbyte.config.NormalizationSummary;
@@ -31,7 +32,6 @@ import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.models.RefreshSchemaActivityInput;
@@ -112,21 +112,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
       return output;
     }
 
-    // In the default version, we pass the entire sync input into the replication activity. In the new
-    // version, we pass
-    // a single ReplicationActivityInput object. This will let us diverge, and generally make it easier
-    // to maintain.
-    final var version = Workflow.getVersion("SEPARATE_REPLICATION_INPUT", Workflow.DEFAULT_VERSION, 1);
-    StandardSyncOutput syncOutput;
-    if (version == Workflow.DEFAULT_VERSION) {
-      syncOutput =
-          replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
-    } else {
-      syncOutput =
-          replicationActivity
-              .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
-                  refreshSchemaOutput));
-    }
+    StandardSyncOutput syncOutput = replicationActivity
+        .replicateV2(generateReplicationActivityInput(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, taskQueue,
+            refreshSchemaOutput));
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -196,7 +184,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
         syncOutput.getOutputCatalog(),
         syncInput.getWorkspaceId(),
-        syncInput.getConnectionId());
+        syncInput.getConnectionId(),
+        syncInput.getConnectionContext().getOrganizationId());
   }
 
   private ReplicationActivityInput generateReplicationActivityInput(final StandardSyncInput syncInput,
@@ -206,7 +195,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
                                                                     final String taskQueue,
                                                                     final RefreshSchemaActivityOutput refreshSchemaOutput) {
     return new ReplicationActivityInput(
-        syncInput,
         syncInput.getSourceId(),
         syncInput.getDestinationId(),
         syncInput.getSourceConfiguration(),

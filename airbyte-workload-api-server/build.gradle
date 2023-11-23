@@ -21,18 +21,30 @@ dependencies {
     annotationProcessor libs.micronaut.jaxrs.processor
 
     implementation libs.bundles.jackson
-
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
     implementation libs.bundles.micronaut.data.jdbc
+    implementation libs.failsafe.okhttp
+    implementation libs.jakarta.transaction.api
+    implementation libs.bundles.temporal
     implementation libs.log4j.impl
     implementation libs.micronaut.jaxrs.server
-    implementation libs.micronaut.problem.json
     implementation libs.micronaut.security
-
-    implementation libs.sentry.java
-    implementation libs.swagger.annotations
+    implementation libs.okhttp
+    implementation libs.v3.swagger.annotations
     implementation libs.javax.ws.rs.api
+    implementation libs.reactor.core
+    implementation libs.kotlin.logging
+    implementation libs.bundles.micronaut.metrics
+    implementation libs.micronaut.micrometer.registry.statsd
+    implementation libs.bundles.datadog
+
+    implementation(project(":airbyte-commons"))
+    implementation(project(":airbyte-commons-temporal-core"))
+    implementation(project(":airbyte-config:config-models"))
+    implementation project(':airbyte-db:db-lib')
+    implementation project(':airbyte-db:jooq')
+    implementation(project(":airbyte-metrics:metrics-lib"))
 
     runtimeOnly libs.javax.databind
 
@@ -46,7 +58,8 @@ dependencies {
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
     testImplementation libs.mockito.inline
-
+    testImplementation libs.reactor.test
+    testImplementation libs.mockk
 }
 
 kapt {
@@ -58,14 +71,15 @@ rootProject.file('.env.dev').withInputStream { env.load(it) }
 
 airbyte {
     application {
-        mainClass = 'io.airbyte.api.server.ApplicationKt'
+        mainClass = 'io.airbyte.workload.server.Application'
         defaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
         localEnvVars = env + [
-                "AIRBYTE_ROLE"          : System.getenv("AIRBYTE_ROLE") ?: "undefined",
-                "AIRBYTE_VERSION"       : env.VERSION,
-                "MICRONAUT_ENVIRONMENTS": "control-plane",
-                "SERVICE_NAME"          : project.name,
-                "TRACKING_STRATEGY"     : env.TRACKING_STRATEGY
+                "AIRBYTE_ROLE"                  : System.getenv("AIRBYTE_ROLE") ?: "undefined",
+                "AIRBYTE_VERSION"               : env.VERSION,
+                "MICRONAUT_ENVIRONMENTS"        : "control-plane",
+                "SERVICE_NAME"                  : project.name,
+                "TRACKING_STRATEGY"             : env.TRACKING_STRATEGY,
+                "WORKLOAD_API_BEARER_TOKEN"     : "ItsASecret"
         ] as Map<String, String>
     }
     docker {
@@ -78,3 +92,8 @@ test {
     environment 'MICRONAUT_ENVIRONMENTS', 'test'
     environment 'SERVICE_NAME', project.name
 }
+
+// Even though Kotlin is excluded on Spotbugs, this projects
+// still runs into spotbug issues. Working theory is that
+// generated code is being picked up. Disable as a short-term fix.
+tasks.spotbugsMain.enabled = false

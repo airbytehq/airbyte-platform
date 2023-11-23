@@ -1,12 +1,12 @@
 package io.airbyte.workload.api.domain
 
-import io.swagger.annotations.ApiModelProperty
+import io.swagger.v3.oas.annotations.media.Schema
 
 data class WorkloadCancelRequest(
-  @ApiModelProperty(required = true)
-  var workload: MutableList<String> = ArrayList(),
-  @ApiModelProperty(required = true, value = "Reason for the cancellation")
+  @Schema(required = true)
+  var workloadId: String = "",
+  @Schema(required = true)
   var reason: String = "",
-  @ApiModelProperty(required = true, value = "Origin of the cancellation")
+  @Schema(required = true)
   var source: String = "",
 )

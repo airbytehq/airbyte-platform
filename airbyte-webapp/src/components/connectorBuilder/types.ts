@@ -132,15 +132,14 @@ export interface BuilderPaginator {
   pageSizeOption?: RequestOption;
 }
 
-export interface BuilderSubstreamPartitionRouter {
-  type: SubstreamPartitionRouterType;
+export interface BuilderParentStream {
   parent_key: string;
   partition_field: string;
   parentStreamReference: string;
   request_option?: RequestOption;
 }
 
-export interface BuilderListPartitionRouter extends Omit<ListPartitionRouter, "values"> {
+export interface BuilderParameterizedRequests extends Omit<ListPartitionRouter, "values"> {
   values: { type: "list"; value: string[] } | { type: "variable"; value: string };
 }
 
@@ -218,7 +217,8 @@ export interface BuilderStream {
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
   incrementalSync?: BuilderIncrementalSync;
-  partitionRouter?: Array<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>;
+  parentStreams?: BuilderParentStream[];
+  parameterizedRequests?: BuilderParameterizedRequests[];
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, object>;
@@ -827,41 +827,29 @@ export const streamSchema = yup.object().shape({
     })
     .notRequired()
     .default(undefined),
-  partitionRouter: yup
+  parentStreams: yup
     .array(
       yup.object().shape({
-        cursor_field: yup.mixed().when("type", {
-          is: (val: string) => val === LIST_PARTITION_ROUTER,
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
-        values: yup.mixed().when("type", {
-          is: LIST_PARTITION_ROUTER,
-          then: yup.object().shape({
-            value: yup.mixed().when("type", {
-              is: "list",
-              then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-              otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-            }),
+        parent_key: yup.string().required(REQUIRED_ERROR),
+        parentStreamReference: yup.string().required(REQUIRED_ERROR),
+        partition_field: yup.string().required(REQUIRED_ERROR),
+        request_option: nonPathRequestOptionSchema,
+      })
+    )
+    .notRequired()
+    .default(undefined),
+  parameterizedRequests: yup
+    .array(
+      yup.object().shape({
+        cursor_field: yup.string().required(REQUIRED_ERROR),
+        values: yup.object().shape({
+          value: yup.mixed().when("type", {
+            is: "list",
+            then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+            otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
           }),
-          otherwise: strip,
         }),
         request_option: nonPathRequestOptionSchema,
-        parent_key: yup.mixed().when("type", {
-          is: SUBSTREAM_PARTITION_ROUTER,
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
-        parentStreamReference: yup.mixed().when("type", {
-          is: SUBSTREAM_PARTITION_ROUTER,
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
-        partition_field: yup.mixed().when("type", {
-          is: SUBSTREAM_PARTITION_ROUTER,
-          then: yup.string().required(REQUIRED_ERROR),
-          otherwise: strip,
-        }),
       })
     )
     .notRequired()
@@ -1115,49 +1103,53 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
 
 function builderStreamPartitionRouterToManifest(
   values: BuilderFormValues,
-  partitionRouter: BuilderStream["partitionRouter"],
+  parentStreams: BuilderStream["parentStreams"],
+  parameterizedRequests: BuilderStream["parameterizedRequests"],
   visitedStreams: string[]
 ): Array<ListPartitionRouter | SubstreamPartitionRouter> | undefined {
-  if (!partitionRouter) {
-    return undefined;
-  }
-  if (partitionRouter.length === 0) {
-    return undefined;
-  }
-  return partitionRouter.map((subRouter) => {
-    if (subRouter.type === "ListPartitionRouter") {
-      return {
-        ...subRouter,
-        values: subRouter.values.value,
-      };
-    }
-    const parentStream = values.streams.find(({ id }) => id === subRouter.parentStreamReference);
-    if (!parentStream) {
-      return {
-        type: "SubstreamPartitionRouter",
-        parent_stream_configs: [],
-      };
-    }
-    if (visitedStreams.includes(parentStream.id)) {
-      // circular dependency
+  let substreamPartitionRouters: SubstreamPartitionRouter[] | undefined = undefined;
+  if (parentStreams && parentStreams.length > 0) {
+    substreamPartitionRouters = parentStreams.map((parentStreamConfiguration) => {
+      const parentStream = values.streams.find(({ id }) => id === parentStreamConfiguration.parentStreamReference);
+      if (!parentStream) {
+        return {
+          type: "SubstreamPartitionRouter",
+          parent_stream_configs: [],
+        };
+      }
+      if (visitedStreams.includes(parentStream.id)) {
+        // circular dependency
+        return {
+          type: "SubstreamPartitionRouter",
+          parent_stream_configs: [],
+        };
+      }
       return {
         type: "SubstreamPartitionRouter",
-        parent_stream_configs: [],
+        parent_stream_configs: [
+          {
+            type: "ParentStreamConfig",
+            parent_key: parentStreamConfiguration.parent_key,
+            request_option: parentStreamConfiguration.request_option,
+            partition_field: parentStreamConfiguration.partition_field,
+            stream: builderStreamToDeclarativeSteam(values, parentStream, visitedStreams),
+          },
+        ],
       };
-    }
-    return {
-      type: "SubstreamPartitionRouter",
-      parent_stream_configs: [
-        {
-          type: "ParentStreamConfig",
-          parent_key: subRouter.parent_key,
-          request_option: subRouter.request_option,
-          partition_field: subRouter.partition_field,
-          stream: builderStreamToDeclarativeSteam(values, parentStream, visitedStreams),
-        },
-      ],
-    };
-  });
+    });
+  }
+
+  let listPartitionRouters: ListPartitionRouter[] | undefined = undefined;
+  if (parameterizedRequests && parameterizedRequests.length > 0) {
+    listPartitionRouters = parameterizedRequests.map((parameterizedRequest) => {
+      return {
+        ...parameterizedRequest,
+        values: parameterizedRequest.values.value,
+      };
+    });
+  }
+
+  return [...(substreamPartitionRouters ?? []), ...(listPartitionRouters ?? [])];
 }
 
 function buildCompositeErrorHandler(errorHandlers: BuilderStream["errorHandler"]): CompositeErrorHandler | undefined {
@@ -1271,10 +1263,12 @@ function builderStreamToDeclarativeSteam(
         },
       },
       paginator: builderPaginatorToManifest(stream.paginator),
-      partition_router: builderStreamPartitionRouterToManifest(values, stream.partitionRouter, [
-        ...visitedStreams,
-        stream.id,
-      ]),
+      partition_router: builderStreamPartitionRouterToManifest(
+        values,
+        stream.parentStreams,
+        stream.parameterizedRequests,
+        [...visitedStreams, stream.id]
+      ),
     },
     transformations: builderTransformationsToManifest(stream.transformations),
     incremental_sync: builderIncrementalToManifest(stream.incrementalSync),

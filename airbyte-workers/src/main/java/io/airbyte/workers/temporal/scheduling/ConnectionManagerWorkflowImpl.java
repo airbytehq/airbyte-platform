@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
+import io.airbyte.commons.temporal.annotations.TemporalActivityStub;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
@@ -35,10 +36,10 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.micronaut.temporal.annotations.TemporalActivityStub;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.helpers.ContextConversionHelper;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity;
@@ -498,12 +499,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     final StandardCheckConnectionInput standardCheckInputSource = new StandardCheckConnectionInput()
         .withActorType(ActorType.SOURCE)
         .withActorId(syncInput.getSourceId())
-        .withConnectionConfiguration(sourceConfig);
+        .withConnectionConfiguration(sourceConfig)
+        .withActorContext(ContextConversionHelper.connectionContextToSourceContext(syncInput.getConnectionContext()));
 
     final StandardCheckConnectionInput standardCheckInputDestination = new StandardCheckConnectionInput()
         .withActorType(ActorType.DESTINATION)
         .withActorId(syncInput.getDestinationId())
-        .withConnectionConfiguration(destinationConfig);
+        .withConnectionConfiguration(destinationConfig)
+        .withActorContext(ContextConversionHelper.connectionContextToDestinationContext(syncInput.getConnectionContext()));
 
     return new SyncJobCheckConnectionInputs(
         sourceLauncherConfig,
@@ -546,7 +549,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           .withActorType(ActorType.SOURCE)
           .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
           .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration())
-          .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements()));
+          .withResourceRequirements(checkInputs.getSourceCheckConnectionInput().getResourceRequirements())
+          .withActorContext(ContextConversionHelper.buildSourceContextFrom(jobInputs, checkInputs)));
 
       if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
@@ -566,7 +570,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           new StandardCheckConnectionInput()
               .withActorType(ActorType.DESTINATION)
               .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
-              .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration()));
+              .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration())
+              .withActorContext(ContextConversionHelper.buildDestinationContextFrom(jobInputs, checkInputs)));
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { ValidationError } from "yup";
 
 import { Heading } from "components/ui/Heading";
@@ -27,11 +27,13 @@ import { useBuilderWatch } from "../types";
 const EMPTY_SCHEMA = {};
 
 function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec?: Spec): number {
+  const { formatMessage } = useIntl();
+
   return useMemo(() => {
     try {
       const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
       const formFields = jsonSchemaToFormBlock(jsonSchema);
-      const validationSchema = buildYupFormForJsonSchema(jsonSchema, formFields);
+      const validationSchema = buildYupFormForJsonSchema(jsonSchema, formFields, formatMessage);
       validationSchema.validateSync(testInputJson, { abortEarly: false });
       return 0;
     } catch (e) {
@@ -40,7 +42,7 @@ function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec
       }
       return 1;
     }
-  }, [testInputJson, spec]);
+  }, [spec, formatMessage, testInputJson]);
 }
 
 export const StreamTestingPanel: React.FC<unknown> = () => {

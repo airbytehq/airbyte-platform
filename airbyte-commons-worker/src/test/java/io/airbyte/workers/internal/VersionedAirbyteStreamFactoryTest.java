@@ -178,14 +178,15 @@ class VersionedAirbyteStreamFactoryTest {
       "{\"type\": \"RECORD\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}",
       // Infinity is invalid json. Lowercase types.
       "{\"type\": \"record\", \"record\": {\"stream\": \"transactions\", \"data\": {\"transaction_id\": Infinity }}}"})
-    void testMalformedRecordFailFastAndOnlyDebugLog(String invalidRecord) {
-      assertThrows(IllegalStateException.class, () -> stringToMessageStream(invalidRecord).collect(Collectors.toList()));
+    void testMalformedRecordShouldOnlyDebugLog(final String invalidRecord) {
+      stringToMessageStream(invalidRecord).collect(Collectors.toList());
       verify(logger).debug(invalidRecord);
     }
 
     private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, failTooLongMessage);
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
+              failTooLongMessage);
     }
 
     private static final String VALID_MESSAGE_TEMPLATE =
@@ -201,13 +202,21 @@ class VersionedAirbyteStreamFactoryTest {
 
     @Test
     void testToAirbyteMessageRandomLog() {
-      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages")).isEmpty();
+      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
+          .isEmpty();
     }
 
     @Test
-    void testToAirbyteMessageMixedUpRecord() {
+    void testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      assertThrows(IllegalStateException.class, () -> getFactory(false).toAirbyteMessage(messageLine));
+      getFactory(false).toAirbyteMessage(messageLine);
+      verify(logger).debug(messageLine);
+    }
+
+    @Test
+    void testToAirbyteMessageMixedUpRecordFailureDisable() {
+      final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
+      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     @Test

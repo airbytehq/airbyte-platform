@@ -17,7 +17,7 @@ import { useAnalyticsService } from "core/services/analytics";
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
+import PlusIcon from "../../connection/ConnectionOnboarding/plusIcon.svg?react";
 import {
   BuilderStream,
   DEFAULT_BUILDER_STREAM_VALUES,

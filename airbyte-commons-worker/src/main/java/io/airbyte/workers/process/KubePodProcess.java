@@ -4,6 +4,10 @@
 
 package io.airbyte.workers.process;
 
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.INIT_CONTAINER_STARTUP_TIMEOUT;
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.INIT_CONTAINER_TERMINATION_TIMEOUT;
+import static io.airbyte.commons.constants.WorkerConstants.KubeConstants.POD_READY_TIMEOUT;
+
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.list.Lists;
@@ -37,7 +41,6 @@ import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.readiness.Readiness;
 import java.io.IOException;
@@ -314,7 +317,8 @@ public class KubePodProcess implements KubePod {
           // Copying the success indicator file to the init container causes the container to immediately
           // exit, causing the `kubectl cp` command to exit with code 137. This check ensures that an error is
           // not thrown in this case if the init container exits successfully.
-          if (SUCCESS_FILE_NAME.equals(file.getKey()) && waitForInitPodToTerminate(client, podDefinition, 5, TimeUnit.MINUTES) == 0) {
+          if (SUCCESS_FILE_NAME.equals(file.getKey())
+              && waitForInitPodToTerminate(client, podDefinition, INIT_CONTAINER_TERMINATION_TIMEOUT.toMinutes(), TimeUnit.MINUTES) == 0) {
             LOGGER.info("Init was successful; ignoring non-zero kubectl cp exit code for success indicator file.");
           } else {
             throw new IOException("kubectl cp failed with exit code " + exitCode);
@@ -348,12 +352,10 @@ public class KubePodProcess implements KubePod {
   private static void waitForInitPodToRun(final KubernetesClient client, final Pod podDefinition) throws InterruptedException {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
-    final PodResource pod =
-        client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName());
-    pod.waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().size() != 0, 5, TimeUnit.MINUTES);
-    LOGGER.info("Init container present..");
     client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName())
-        .waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, 5, TimeUnit.MINUTES);
+        .waitUntilCondition(p -> !p.getStatus().getInitContainerStatuses().isEmpty()
+            && p.getStatus().getInitContainerStatuses().get(0).getState().getRunning() != null, INIT_CONTAINER_STARTUP_TIMEOUT.toMinutes(),
+            TimeUnit.MINUTES);
     LOGGER.info("Init container ready..");
   }
 
@@ -636,7 +638,7 @@ public class KubePodProcess implements KubePod {
         final boolean isReady = Objects.nonNull(p) && Readiness.getInstance().isReady(p);
         final boolean isTerminal = Objects.nonNull(p) && KubePodResourceHelper.isTerminal(p);
         return isReady || isTerminal;
-      }, 10, TimeUnit.MINUTES);
+      }, POD_READY_TIMEOUT.toMinutes(), TimeUnit.MINUTES);
       MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS,
           System.currentTimeMillis() - start);
 

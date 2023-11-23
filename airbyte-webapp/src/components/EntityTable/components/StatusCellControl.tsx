@@ -8,8 +8,6 @@ import { useSyncConnection, useUpdateConnection } from "core/api";
 import { ConnectionStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { Action, Namespace, getFrequencyFromScheduleData, useAnalyticsService } from "core/services/analytics";
 
-import styles from "./StatusCellControl.module.scss";
-
 interface StatusCellControlProps {
   hasBreakingChange?: boolean;
   enabled?: boolean;
@@ -76,19 +74,11 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
     );
   }
 
-  if (isSyncing) {
-    return (
-      <div className={styles.inProgressLabel}>
-        <FormattedMessage id="connection.syncInProgress" />
-      </div>
-    );
-  }
-
   return (
     <Button
       onClick={onRunManualSync}
-      isLoading={isSyncStarting}
-      disabled={!enabled || hasBreakingChange || isSyncStarting}
+      isLoading={isSyncStarting || isSyncing}
+      disabled={!enabled || hasBreakingChange || isSyncStarting || isSyncing}
       data-testid="manual-sync-button"
     >
       <FormattedMessage id="connection.startSync" />

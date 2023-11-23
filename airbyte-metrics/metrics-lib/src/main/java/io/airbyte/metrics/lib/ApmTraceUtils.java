@@ -67,7 +67,7 @@ public class ApmTraceUtils {
    */
   public static void addTagsToTrace(final Span span, final Map<String, Object> tags, final String tagPrefix) {
     if (span != null) {
-      tags.entrySet().forEach(entry -> {
+      tags.entrySet().stream().filter(e -> e.getKey() != null && e.getValue() != null).forEach(entry -> {
         span.setTag(formatTag(entry.getKey(), tagPrefix), entry.getValue().toString());
       });
     }

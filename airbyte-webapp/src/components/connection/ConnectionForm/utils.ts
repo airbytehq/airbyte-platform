@@ -14,12 +14,7 @@ export const isSameSyncStream = (
   streamNode: AirbyteStreamAndConfiguration,
   streamName: string | undefined,
   streamNamespace: string | undefined
-) => {
-  if (streamName === undefined || streamNamespace === undefined) {
-    console.warn("streamName or streamNamespace is undefined");
-  }
-  return streamNode.stream?.name === streamName && streamNode.stream?.namespace === streamNamespace;
-};
+) => streamNode.stream?.name === streamName && streamNode.stream?.namespace === streamNamespace;
 /**
  * map the normalization option to the operation
  */

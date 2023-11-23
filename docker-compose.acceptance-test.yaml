@@ -12,15 +12,15 @@ services:
     ports:
       - 7233:7233
   airbyte-temporal-ui:
-    image: temporalio/web:1.15.0
+    image: temporalio/ui:2.20.0
     logging: *default-logging
     container_name: airbyte-temporal-ui
     restart: unless-stopped
     environment:
-      - TEMPORAL_GRPC_ENDPOINT=airbyte-temporal:7233
-      - TEMPORAL_PERMIT_WRITE_API=true
+      - TEMPORAL_ADDRESS=airbyte-temporal:7233
+      - TEMPORAL_CORS_ORIGINS=true
     ports:
-      - 8012:8088
+      - 8012:8080
     networks:
       - airbyte_internal
       - airbyte_public

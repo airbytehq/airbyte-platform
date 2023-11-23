@@ -48,8 +48,8 @@ dependencies {
     implementation libs.sts
     implementation libs.aws.java.sdk.s3
     implementation libs.aws.java.sdk.sts
-    implementation 'com.google.auth:google-auth-library-oauth2-http:1.4.0'
-    implementation 'com.auth0:java-jwt:3.19.2'
+    implementation libs.google.auth.library.oauth2.http
+    implementation libs.java.jwt
     implementation libs.kubernetes.client
     implementation libs.guava
     implementation(libs.temporal.sdk) {
@@ -75,6 +75,7 @@ dependencies {
     implementation project(':airbyte-commons-with-dependencies')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:config-secrets')
     implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-db:jooq')

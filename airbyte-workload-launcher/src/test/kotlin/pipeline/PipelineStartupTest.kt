@@ -1,43 +1,48 @@
-package pipeline
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
 
-import io.airbyte.workload.api.client2.model.generated.Workload
-import io.airbyte.workload.api.client2.model.generated.WorkloadListRequest
-import io.airbyte.workload.api.client2.model.generated.WorkloadListResponse
-import io.airbyte.workload.api.client2.model.generated.WorkloadStatus
-import io.airbyte.workload.launcher.PipelineRunner
+package io.airbyte.workload.launcher.pipeline
+
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadListRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadListResponse
+import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.airbyte.workload.launcher.StartupApplicationEventListener
-import io.airbyte.workload.launcher.client.WorkloadApiClient
-import io.airbyte.workload.launcher.mocks.LauncherInputMessage
-import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.temporal.worker.WorkerFactory
 import org.junit.jupiter.api.Test
+import pipeline.SharedMocks.Companion.metricPublisher
 
 class PipelineStartupTest {
   @Test
   fun `should process claimed workloads`() {
     val workloadId = "1"
     val dataplaneId = "US"
-    val launcherInputMessage = LauncherInputMessage(workloadId, "workload-input")
+    val payload = "payload"
+    val logPath = "/log/path"
+    val launcherInput = LauncherInput(workloadId, payload, mapOf(), logPath)
 
-    val workloadApiClient: WorkloadApiClient = mockk()
-    val pipelineRunner: PipelineRunner = mockk()
+    val workloadApiClient: WorkloadApi = mockk()
+    val workerFactory: WorkerFactory = mockk()
     val launchPipeline: LaunchPipeline = mockk()
 
     every {
-      launchPipeline.accept(launcherInputMessage)
+      launchPipeline.processClaimed(launcherInput)
     } returns Unit
 
     val workloadListRequest =
       WorkloadListRequest(
         listOf(dataplaneId),
-        listOf(WorkloadStatus.cLAIMED),
+        listOf(WorkloadStatus.CLAIMED),
       )
 
-    val workload: Workload =
-      Workload(workloadId, dataplaneId, WorkloadStatus.cLAIMED)
+    val workload =
+      Workload(workloadId, listOf(), payload, logPath, dataplaneId, WorkloadStatus.CLAIMED)
 
     val workloadListResponse = WorkloadListResponse(listOf(workload))
 
@@ -50,17 +55,17 @@ class PipelineStartupTest {
     val startupApplicationEventListener =
       spyk(
         StartupApplicationEventListener(
-          pipelineRunner,
           workloadApiClient,
           launchPipeline,
+          workerFactory,
           dataplaneId,
+          metricPublisher,
         ),
       )
 
-    startupApplicationEventListener.rehydrateAndProcessClaimed()
+    startupApplicationEventListener.retrieveAndProcessClaimed()
 
     verify { workloadApiClient.workloadList(workloadListRequest) }
-    verify { startupApplicationEventListener.convertToInputMessage(workload) }
-    verify { launchPipeline.accept(launcherInputMessage) }
+    verify { launchPipeline.processClaimed(launcherInput) }
   }
 }

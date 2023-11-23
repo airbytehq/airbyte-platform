@@ -6,7 +6,11 @@ package io.airbyte.server.apis;
 
 import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.ORGANIZATION_READER;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_EDITOR;
+import static io.airbyte.commons.auth.AuthRoleConstants.WORKSPACE_READER;
 
 import io.airbyte.api.generated.WebBackendApi;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -50,7 +54,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/state/get_type")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -62,7 +66,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/check_updates")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendCheckUpdatesRead webBackendCheckUpdates() {
@@ -70,7 +74,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/create")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
@@ -82,7 +86,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/get")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -94,7 +98,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/workspace/state")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -107,7 +111,7 @@ public class WebBackendApiController implements WebBackendApi {
 
   @SuppressWarnings("LineLength")
   @Post("/connections/list")
-  @Secured({READER})
+  @Secured({READER, WORKSPACE_READER, ORGANIZATION_READER})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
@@ -127,7 +131,7 @@ public class WebBackendApiController implements WebBackendApi {
   }
 
   @Post("/connections/update")
-  @Secured({EDITOR})
+  @Secured({EDITOR, WORKSPACE_EDITOR, ORGANIZATION_EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override

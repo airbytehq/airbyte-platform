@@ -8,10 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
+import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
+import io.airbyte.workers.workload.WorkloadIdGenerator;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,22 +25,20 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
 
   @Override
   ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
-    final FieldSelector fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
+    final var fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
+    replicationWorkerHelper = spy(new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApi,
+        new WorkloadIdGenerator(), false));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
         source,
-        mapper,
         destination,
-        messageTracker,
         syncPersistence,
         recordSchemaValidator,
-        fieldSelector,
         heartbeatTimeoutChaperone,
         replicationFeatureFlagReader,
-        airbyteMessageDataExtractor,
-        replicationAirbyteMessageEventPublishingHelper,
-        onReplicationRunning,
+        replicationWorkerHelper,
         destinationTimeoutMonitor);
   }
 

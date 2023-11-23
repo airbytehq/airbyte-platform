@@ -50,9 +50,9 @@ podLabels: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 10
+  initialDelaySeconds: 120
+  periodSeconds: 5
+  timeoutSeconds: 5
   failureThreshold: 3
   successThreshold: 1
 
@@ -65,10 +65,10 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  timeoutSeconds: 10
-  failureThreshold: 3
+  initialDelaySeconds: 120
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 10
   successThreshold: 1
 
 ##  containerSecurityContext Security context for the container
@@ -94,6 +94,9 @@ tolerations: []
 service:
   type: ClusterIP
   port: 8180
+  annotations: {}
+
+headlessService:
   annotations: {}
 
 ## Keycloak resource requests and limits

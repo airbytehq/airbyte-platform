@@ -54,7 +54,7 @@ describe("SecretTextArea", () => {
 
     await userEvent.type(textarea, value);
 
-    expect(onChange).toBeCalledTimes(value.length);
+    expect(onChange).toHaveBeenCalledTimes(value.length);
   });
 
   it("renders on textarea when clicked visibility button", async () => {

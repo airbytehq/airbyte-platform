@@ -1,79 +1,117 @@
 package io.airbyte.workload.launcher.pods
 
-import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.workers.config.WorkerConfigs
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.ContainerOrchestratorConfig
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_DESTINATION_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.INIT_FILE_SOURCE_LAUNCHER_CONFIG
-import io.airbyte.workers.sync.ReplicationLauncherWorker.POD_NAME_PREFIX
-import io.airbyte.workers.sync.ReplicationLauncherWorker.REPLICATION
+import io.airbyte.workload.launcher.model.setDestinationLabels
+import io.airbyte.workload.launcher.model.setSourceLabels
 import io.airbyte.workload.launcher.pods.KubePodClient.Constants.WORKLOAD_ID
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
+import io.fabric8.kubernetes.api.model.Pod
 import jakarta.inject.Singleton
-import pods.VendoredLauncher
-import java.nio.file.Path
+import java.lang.RuntimeException
+import java.time.Duration
 
+/**
+ * Interface layer between domain and Kube layers.
+ * Composes raw Kube layer atomic operations to perform business operations.
+ */
 @Singleton
 class KubePodClient(
-  val launcher: VendoredLauncher,
-  @Named("containerOrchestratorConfig") val containerOrchestratorConfig: ContainerOrchestratorConfig,
-  @Value("\${micronaut.server.port}") val serverPort: Int,
-  @Value("\${airbyte.workspace.root}") val workspaceRoot: String,
-  private val featureFlagClient: FeatureFlagClient,
-  private val metricClient: MetricClient,
-  private val workerConfigs: WorkerConfigs,
+  private val orchestratorLauncher: OrchestratorPodLauncher,
+  private val labeler: PodLabeler,
+  private val mapper: PayloadKubeInputMapper,
 ) {
   object Constants {
     const val WORKLOAD_ID = "workload_id"
+    const val MUTEX_KEY = "mutex_key"
+  }
+
+  fun podsExistForWorkload(workloadId: String): Boolean {
+    return orchestratorLauncher.podsExist(mapOf(Pair(WORKLOAD_ID, workloadId)))
   }
 
   fun launchReplication(
     input: ReplicationInput,
     workloadId: String,
+    passThroughLabels: Map<String, String>,
   ) {
-    val jobRoot =
-      buildJobRoot(
-        workspaceRoot,
-        input.jobRunConfig.jobId,
-        input.jobRunConfig.attemptId,
+    val sharedLabels = labeler.getSharedLabels(input, workloadId, passThroughLabels)
+
+    val inputWithLabels =
+      input
+        .setSourceLabels(sharedLabels)
+        .setDestinationLabels(sharedLabels)
+
+    val kubeInput = mapper.toKubeInput(inputWithLabels, workloadId, passThroughLabels)
+
+    val pod: Pod
+    try {
+      pod =
+        orchestratorLauncher.create(
+          kubeInput.orchestratorLabels,
+          kubeInput.resourceReqs,
+          kubeInput.nodeSelectors,
+          kubeInput.kubePodInfo,
+        )
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Failed to create pod ${kubeInput.kubePodInfo.name}.",
+        e,
       )
+    }
 
-    val labels = mapOf(Pair(WORKLOAD_ID, workloadId))
+    try {
+      orchestratorLauncher.waitForPodInit(kubeInput.orchestratorLabels, ORCHESTRATOR_INIT_TIMEOUT_VALUE)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Orchestrator pod failed to start within allotted timeout.",
+        e,
+      )
+    }
 
-    launcher.launchPod(
-      input,
-      jobRoot,
-      labels,
-      input.connectionId,
-      input.workspaceId,
-      REPLICATION,
-      POD_NAME_PREFIX,
-      input.jobRunConfig,
-      mapOf(
-        INIT_FILE_SOURCE_LAUNCHER_CONFIG to Jsons.serialize(input.sourceLauncherConfig),
-        INIT_FILE_DESTINATION_LAUNCHER_CONFIG to Jsons.serialize(input.destinationLauncherConfig),
-      ),
-      containerOrchestratorConfig,
-      input.syncResourceRequirements?.orchestrator,
-      serverPort,
-      workerConfigs,
-      featureFlagClient,
-      input.sourceLauncherConfig.isCustomConnector || input.destinationLauncherConfig.isCustomConnector,
-      metricClient,
-    )
+    try {
+      orchestratorLauncher.copyFilesToKubeConfigVolumeMain(pod, kubeInput.fileMap)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Failed to copy files to orchestrator pod ${kubeInput.kubePodInfo.name}.",
+        e,
+      )
+    }
+
+    try {
+      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.sourceLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Source pod failed to start within allotted timeout.",
+        e,
+      )
+    }
+
+    try {
+      orchestratorLauncher.waitForPodReadyOrTerminal(kubeInput.destinationLabels, CONNECTOR_STARTUP_TIMEOUT_VALUE)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw KubePodInitException(
+        "Destination pod failed to start within allotted timeout.",
+        e,
+      )
+    }
   }
 
-  private fun buildJobRoot(
-    workspaceRoot: String,
-    jobId: String,
-    attemptId: Long,
-  ): Path {
-    return Path.of(workspaceRoot)
-      .resolve(jobId)
-      .resolve(attemptId.toString())
+  fun deleteMutexPods(input: ReplicationInput): Boolean {
+    val labels = labeler.getMutexLabels(input)
+
+    val deleted = orchestratorLauncher.deletePods(labels)
+    return deleted.isNotEmpty()
+  }
+
+  companion object {
+    private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
+    val CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
+    val ORCHESTRATOR_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(5)
   }
 }

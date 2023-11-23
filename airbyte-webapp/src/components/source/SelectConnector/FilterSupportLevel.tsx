@@ -53,6 +53,8 @@ export const FilterSupportLevel: React.FC<FilterSupportLevelProps> = ({
                 </Text>,
               ]
             : []),
+          // rule doesn't understand SupportLevelBadge renders text
+          // eslint-disable-next-line jsx-a11y/label-has-associated-control
           <label htmlFor={id} className={styles.checkboxLabel} key={id}>
             <FlexContainer alignItems="center" gap="sm">
               <CheckBox

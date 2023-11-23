@@ -532,7 +532,7 @@ describe("Conversion successfully results in", () => {
     expect(formValues.streams[0].primaryKey).toEqual(["id"]);
   });
 
-  it("multi stream partition router converted to builder partition router", async () => {
+  it("multi list partition router converted to builder parameterized requests", async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,
       streams: [
@@ -555,7 +555,7 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues.streams[0].partitionRouter).toEqual([
+    expect(formValues.streams[0].parameterizedRequests).toEqual([
       {
         type: "ListPartitionRouter",
         cursor_field: "id",
@@ -569,7 +569,7 @@ describe("Conversion successfully results in", () => {
     ]);
   });
 
-  it("substream partition router converted to builder partition router", async () => {
+  it("substream partition router converted to builder parent streams", async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,
       streams: [
@@ -592,9 +592,8 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues.streams[1].partitionRouter).toEqual([
+    expect(formValues.streams[1].parentStreams).toEqual([
       {
-        type: "SubstreamPartitionRouter",
         parent_key: "key",
         partition_field: "field",
         parentStreamReference: "0",

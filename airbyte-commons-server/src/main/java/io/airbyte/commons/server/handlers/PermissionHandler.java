@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionReadList;
@@ -91,24 +92,28 @@ public class PermissionHandler {
         .withOrganizationId(permissionCreate.getOrganizationId());
 
     permissionPersistence.writePermission(permission);
-    PermissionRead result;
+    final PermissionRead result;
     try {
       result = buildPermissionRead(permissionId);
-    } catch (ConfigNotFoundException ex) {
+    } catch (final ConfigNotFoundException ex) {
       LOGGER.error("Config not found for permissionId: {} in CreatePermission.", permissionId);
       throw new IOException(ex);
     }
     return result;
   }
 
-  private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
+  private Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
     final Optional<Permission> permission =
         permissionPersistence.getPermission(permissionId);
     if (permission.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.PERMISSION, permissionId);
     }
+    return permission.get();
+  }
 
-    return buildPermissionRead(permission.get());
+  private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
+    final Permission permission = getPermissionById(permissionId);
+    return buildPermissionRead(permission);
   }
 
   private static PermissionRead buildPermissionRead(final Permission permission) {
@@ -193,9 +198,14 @@ public class PermissionHandler {
       throw new JsonValidationException("Cannot update permission record to INSTANCE_ADMIN.");
     }
 
+    final Permission existingPermission = getPermissionById(permissionUpdate.getPermissionId());
+
     final Permission updatedPermission = new Permission()
         .withPermissionId(permissionUpdate.getPermissionId())
-        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class));
+        .withPermissionType(Enums.convertTo(permissionUpdate.getPermissionType(), Permission.PermissionType.class))
+        .withOrganizationId(existingPermission.getOrganizationId()) // cannot be updated
+        .withWorkspaceId(existingPermission.getWorkspaceId()) // cannot be updated
+        .withUserId(existingPermission.getUserId()); // cannot be updated
     try {
       permissionPersistence.writePermission(updatedPermission);
     } catch (final DataAccessException e) {
@@ -234,7 +244,7 @@ public class PermissionHandler {
    * to.
    */
   private boolean checkPermissions(final PermissionCheckRequest permissionCheckRequest, final PermissionRead userPermission)
-      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
 
     if (mismatchedUserIds(userPermission, permissionCheckRequest)) {
       return false;
@@ -285,15 +295,20 @@ public class PermissionHandler {
 
   // check if this permission request is for a workspace that belongs to a different organization than
   // the user permission.
+  @SuppressWarnings("PMD.PreserveStackTrace")
   private boolean requestedWorkspaceNotInOrganization(final PermissionRead userPermission, final PermissionCheckRequest request)
-      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
 
     // if the user permission is for an organization, and the request is for a workspace, return true if
     // the workspace
     // does not belong to the organization.
     if (userPermission.getOrganizationId() != null && request.getWorkspaceId() != null) {
-      final UUID requestedWorkspaceOrganizationId =
-          workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
+      final UUID requestedWorkspaceOrganizationId;
+      try {
+        requestedWorkspaceOrganizationId = workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
+      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      }
       return !requestedWorkspaceOrganizationId.equals(userPermission.getOrganizationId());
     }
 
@@ -325,7 +340,7 @@ public class PermissionHandler {
         .map(permissionCheckRequest -> {
           try {
             return checkPermissions(permissionCheckRequest);
-          } catch (IOException e) {
+          } catch (final IOException e) {
             LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest);
             return new PermissionCheckRead().status(StatusEnum.FAILED);
           }
@@ -397,6 +412,19 @@ public class PermissionHandler {
         throw new IOException(e);
       }
     }
+  }
+
+  /**
+   * Delete all permission records that match a particular userId and workspaceId.
+   */
+  public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody deleteUserFromWorkspaceRequestBody) throws IOException {
+    final UUID userId = deleteUserFromWorkspaceRequestBody.getUserIdToRemove();
+    final UUID workspaceId = deleteUserFromWorkspaceRequestBody.getWorkspaceId();
+
+    // delete all workspace-level permissions that match the userId and workspaceId
+    permissionPersistence.listPermissionsByUser(userId).stream()
+        .filter(permission -> permission.getWorkspaceId() != null && permission.getWorkspaceId().equals(workspaceId))
+        .forEach(permission -> Exceptions.toRuntime(() -> permissionPersistence.deletePermissionById(permission.getPermissionId())));
   }
 
 }

@@ -27,7 +27,8 @@ import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
-import { PartitionSection } from "./PartitionSection";
+import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
+import { ParentStreamsSection } from "./ParentStreamsSection";
 import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
@@ -101,7 +102,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <ParentStreamsSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <ParameterizedRequestsSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection
             inline={false}
             basePath={streamFieldPath("errorHandler")}

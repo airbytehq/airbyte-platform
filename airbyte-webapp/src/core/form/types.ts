@@ -67,7 +67,7 @@ export interface FormConditionItem extends FormItem {
 
 export interface FormObjectArrayItem extends FormItem {
   _type: "objectArray";
-  properties: FormBlock;
+  properties: FormGroupItem;
 }
 
 export type FormBlock = FormGroupItem | FormBaseItem | FormConditionItem | FormObjectArrayItem;

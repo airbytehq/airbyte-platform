@@ -4,33 +4,27 @@
 
 package io.airbyte.commons.temporal;
 
-import com.uber.m3.tally.RootScopeBuilder;
-import com.uber.m3.tally.Scope;
-import com.uber.m3.tally.StatsReporter;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
+import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
+import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
+import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
+import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
 import io.airbyte.config.helpers.LogClientSingleton;
-import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.temporal.api.namespace.v1.NamespaceConfig;
 import io.temporal.api.namespace.v1.NamespaceInfo;
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest;
 import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest;
-import io.temporal.common.reporter.MicrometerClientStatsReporter;
-import io.temporal.serviceclient.SimpleSslContextBuilder;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import jakarta.inject.Singleton;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.function.Supplier;
-import javax.net.ssl.SSLException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
@@ -48,12 +42,9 @@ public class TemporalUtils {
   public static final String DEFAULT_NAMESPACE = "default";
   private static final double REPORT_INTERVAL_SECONDS = 120.0;
 
-  private final String temporalCloudClientCert;
-  private final String temporalCloudClientKey;
+  private final TemporalCloudConfig temporalCloudConfig;
+  private final WorkflowServiceStubsFactory workflowServiceStubsFactory;
   private final Boolean temporalCloudEnabled;
-  private final String temporalCloudHost;
-  private final String temporalCloudNamespace;
-  private final String temporalHost;
   private final Integer temporalRetentionInDays;
 
   public TemporalUtils(@Property(name = "temporal.cloud.client.cert") final String temporalCloudClientCert,
@@ -65,12 +56,12 @@ public class TemporalUtils {
                        @Value("${temporal.host}") final String temporalHost,
                        @Property(name = "temporal.retention",
                                  defaultValue = "30") final Integer temporalRetentionInDays) {
-    this.temporalCloudClientCert = temporalCloudClientCert;
-    this.temporalCloudClientKey = temporalCloudClientKey;
-    this.temporalCloudEnabled = temporalCloudEnabled;
-    this.temporalCloudHost = temporalCloudHost;
-    this.temporalCloudNamespace = temporalCloudNamespace;
-    this.temporalHost = temporalHost;
+    this.temporalCloudEnabled = Objects.requireNonNullElse(temporalCloudEnabled, false);
+    this.temporalCloudConfig = new TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace);
+    this.workflowServiceStubsFactory = new WorkflowServiceStubsFactory(
+        temporalCloudConfig,
+        new TemporalSelfHostedConfig(temporalHost, this.temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE),
+        this.temporalCloudEnabled);
     this.temporalRetentionInDays = temporalRetentionInDays;
   }
 
@@ -93,57 +84,21 @@ public class TemporalUtils {
   /**
    * Create temporal service client.
    *
-   * @param isCloud is a cloud deployment
    * @return temporal service client
    */
-  // TODO consider consolidating this method's logic into createTemporalService() after the Temporal
-  // Cloud migration is complete.
-  // The Temporal Migration migrator is the only reason this public method exists.
-  public WorkflowServiceStubs createTemporalService(final boolean isCloud, final TemporalSdkTimeouts temporalSdkTimeouts) {
-    final WorkflowServiceStubsOptions options =
-        isCloud ? getCloudTemporalOptions(temporalSdkTimeouts) : TemporalWorkflowUtils.getAirbyteTemporalOptions(temporalHost, temporalSdkTimeouts);
-    final String namespace = isCloud ? temporalCloudNamespace : DEFAULT_NAMESPACE;
+  public WorkflowServiceStubs createTemporalService(final TemporalSdkTimeouts temporalSdkTimeouts) {
+    final var timeouts = new WorkflowServiceStubsTimeouts(temporalSdkTimeouts.getRpcTimeout(),
+        temporalSdkTimeouts.getRpcLongPollTimeout(),
+        temporalSdkTimeouts.getRpcQueryTimeout(),
+        MAX_TIME_TO_CONNECT);
+    final WorkflowServiceStubsOptions options = workflowServiceStubsFactory.createWorkflowServiceStubsOptions(timeouts);
+    final String namespace = temporalCloudEnabled ? temporalCloudConfig.getNamespace() : DEFAULT_NAMESPACE;
 
     return createTemporalService(options, namespace);
   }
 
-  public WorkflowServiceStubs createTemporalService(final TemporalSdkTimeouts temporalSdkTimeouts) {
-    return createTemporalService(temporalCloudEnabled, temporalSdkTimeouts);
-  }
-
-  private WorkflowServiceStubsOptions getCloudTemporalOptions(final TemporalSdkTimeouts temporalSdkTimeouts) {
-    final InputStream clientCert = new ByteArrayInputStream(temporalCloudClientCert.getBytes(StandardCharsets.UTF_8));
-    final InputStream clientKey = new ByteArrayInputStream(temporalCloudClientKey.getBytes(StandardCharsets.UTF_8));
-    final WorkflowServiceStubsOptions.Builder optionBuilder;
-    try {
-      optionBuilder = WorkflowServiceStubsOptions.newBuilder()
-          .setRpcTimeout(temporalSdkTimeouts.getRpcTimeout())
-          .setRpcLongPollTimeout(temporalSdkTimeouts.getRpcLongPollTimeout())
-          .setRpcQueryTimeout(temporalSdkTimeouts.getRpcQueryTimeout())
-          .setSslContext(SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build())
-          .setTarget(temporalCloudHost);
-    } catch (final SSLException e) {
-      log.error("SSL Exception occurred attempting to establish Temporal Cloud options.");
-      throw new RuntimeException(e);
-    }
-
-    configureTemporalMeterRegistry(optionBuilder);
-    return optionBuilder.build();
-  }
-
-  private void configureTemporalMeterRegistry(final WorkflowServiceStubsOptions.Builder optionalBuilder) {
-    final MeterRegistry registry = MetricClientFactory.getMeterRegistry();
-    if (registry != null) {
-      final StatsReporter reporter = new MicrometerClientStatsReporter(registry);
-      final Scope scope = new RootScopeBuilder()
-          .reporter(reporter)
-          .reportEvery(com.uber.m3.util.Duration.ofSeconds(REPORT_INTERVAL_SECONDS));
-      optionalBuilder.setMetricsScope(scope);
-    }
-  }
-
   public String getNamespace() {
-    return temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE;
+    return temporalCloudEnabled ? temporalCloudConfig.getNamespace() : DEFAULT_NAMESPACE;
   }
 
   /**

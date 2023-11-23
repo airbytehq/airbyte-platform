@@ -97,14 +97,15 @@ const MainRoutes: React.FC = () => {
 };
 
 const CloudMainViewRoutes = () => {
-  const query = useQuery<{ from: string }>();
+  const { loginRedirect } = useQuery<{ loginRedirect: string }>();
+
+  if (loginRedirect) {
+    return <Navigate to={loginRedirect} replace />;
+  }
 
   return (
     <Routes>
       <Route path={RoutePaths.SpeakeasyRedirect} element={<SpeakeasyRedirectPage />} />
-      {[CloudRoutes.Login, CloudRoutes.Signup, CloudRoutes.FirebaseAction].map((r) => (
-        <Route key={r} path={`${r}/*`} element={query.from ? <Navigate to={query.from} replace /> : <DefaultView />} />
-      ))}
       <Route path={RoutePaths.Workspaces} element={<CloudWorkspacesPage />} />
       <Route path={CloudRoutes.AuthFlow} element={<CompleteOauthRequest />} />
       <Route
@@ -172,7 +173,8 @@ export const Routing: React.FC = () => {
   useAnalyticsIdentifyUser(user?.userId, userTraits);
 
   if (!inited) {
-    return <LoadingPage />;
+    // Using <LoadingPage /> here causes flickering, because Suspense will immediately render it again
+    return null;
   }
 
   return (

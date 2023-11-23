@@ -18,6 +18,7 @@ $icon-width: 10px;
   border: none;
   padding: 0;
   font-size: 13px;
+  max-width: 100%;
 }
 
 .buttonSection {
@@ -54,6 +55,9 @@ $icon-width: 10px;
 .label {
   color: inherit;
   font-size: inherit;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .icon {
@@ -80,4 +84,5 @@ $icon-width: 10px;
 
 .errorIndicator {
   margin-left: variables.$spacing-xs;
+  flex-shrink: 0;
 }

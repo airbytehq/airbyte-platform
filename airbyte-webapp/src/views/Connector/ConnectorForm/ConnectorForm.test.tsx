@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { act, getByTestId, screen, waitFor } from "@testing-library/react";
+import { getByTestId, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
@@ -68,9 +68,8 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
     const addButton = getByTestId(priceList, "addItemButton");
     await userEvent.click(addButton);
 
-    const arrayOfObjectsEditModal = getByTestId(document.body, "arrayOfObjects-editModal");
     const getPriceListInput = (index: number, key: string) =>
-      arrayOfObjectsEditModal.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
+      priceList.querySelector(`input[name='connectionConfiguration.priceList.${index}.${key}']`);
 
     // Type items into input
     const nameInput = getPriceListInput(index, "name");
@@ -79,20 +78,17 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
     const priceInput = getPriceListInput(index, "price");
     await userEvent.type(priceInput!, price);
 
-    const selectContainer = getByTestId(arrayOfObjectsEditModal, "connectionConfiguration.priceList.origin");
-    await act(async () => {
-      await selectEvent.select(selectContainer, originType, {
-        container: arrayOfObjectsEditModal,
-      });
-    });
+    const selectContainer = getByTestId(priceList, `connectionConfiguration.priceList.${index}.origin`);
+    await waitFor(() =>
+      selectEvent.select(selectContainer, originType, {
+        container: document.body,
+      })
+    );
 
-    const originInput = arrayOfObjectsEditModal.querySelector(
+    const originInput = priceList.querySelector(
       `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
     );
     await userEvent.type(originInput!, origin);
-
-    const doneButton = getByTestId(arrayOfObjectsEditModal, "done-button");
-    await waitFor(() => userEvent.click(doneButton));
 
     index++;
   };
@@ -194,6 +190,7 @@ const schema: AirbyteJSONSchema = {
       type: "array",
       items: {
         type: "object",
+        required: ["name", "price", "origin"],
         properties: {
           name: {
             type: "string",
@@ -207,7 +204,9 @@ const schema: AirbyteJSONSchema = {
             type: "object",
             oneOf: [
               {
+                type: "object",
                 title: "city",
+                required: ["type", "city"],
                 properties: {
                   type: {
                     type: "string",
@@ -220,7 +219,9 @@ const schema: AirbyteJSONSchema = {
                 },
               },
               {
+                type: "object",
                 title: "country",
+                required: ["type", "country"],
                 properties: {
                   type: {
                     type: "string",

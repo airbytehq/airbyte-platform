@@ -13,6 +13,7 @@ import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse;
 import io.temporal.client.BatchRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.workflow.Functions.Proc1;
 
 /**
  * Wrapper around a temporal.client.WorkflowClient. The interface is a subset of the methods that we
@@ -101,6 +102,13 @@ public class WorkflowClientWrapped {
   public WorkflowExecution signalWithStart(final BatchRequest batchRequest) {
     // NOTE we do not retry here because signals are not idempotent
     return temporalWorkflowClient.signalWithStart(batchRequest);
+  }
+
+  /**
+   * Asynchronously start a workflow.
+   */
+  public <A1> WorkflowExecution start(final Proc1<A1> workflow, final A1 a1) {
+    return WorkflowClient.start(workflow, a1);
   }
 
   /**

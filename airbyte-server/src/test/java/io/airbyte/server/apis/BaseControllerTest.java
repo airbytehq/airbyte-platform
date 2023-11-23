@@ -50,7 +50,6 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import javax.sql.DataSource;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.InstanceOfAssertFactory;
@@ -278,12 +277,6 @@ abstract class BaseControllerTest {
   @Named("configDatabase")
   Database mmDatabase() {
     return Mockito.mock(Database.class);
-  }
-
-  @MockBean(DataSource.class)
-  @Replaces(DataSource.class)
-  DataSource mmDataSource() {
-    return Mockito.mock(DataSource.class);
   }
 
   @MockBean(TrackingClient.class)

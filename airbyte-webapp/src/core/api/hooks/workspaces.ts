@@ -29,7 +29,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 export const workspaceKeys = {
   all: [SCOPE_USER, "workspaces"] as const,
   lists: () => [...workspaceKeys.all, "list"] as const,
-  list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
+  list: (filters: string | Record<string, string>) => [...workspaceKeys.lists(), { filters }] as const,
   allListUsers: [SCOPE_WORKSPACE, "users", "list"] as const,
   listUsers: (workspaceId: string) => [SCOPE_WORKSPACE, "users", "list", workspaceId] as const,
   detail: (workspaceId: string) => [...workspaceKeys.all, "details", workspaceId] as const,
@@ -149,25 +149,24 @@ export const useListUsersInWorkspace = (workspaceId: string) => {
   return useSuspenseQuery(queryKey, () => listUsersInWorkspace({ workspaceId }, requestOptions));
 };
 
-export const useListWorkspacesInfinite = (pageSize: number, keyword?: string) => {
+export const useListWorkspacesInfinite = (pageSize: number, nameContains: string) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
 
   return useInfiniteQuery(
-    workspaceKeys.list(`paginated`),
-    async ({ pageParam = 0 }: { pageParam?: number }) => {
+    workspaceKeys.list({ pageSize: pageSize.toString(), nameContains }),
+    async ({ pageParam = 0 }) => {
+      const rowOffset = pageParam * pageSize;
       return {
-        data: await listWorkspacesByUser(
-          { userId, pagination: { pageSize, rowOffset: pageParam * pageSize }, keyword },
-          requestOptions
-        ),
+        data: await listWorkspacesByUser({ userId, pagination: { pageSize, rowOffset }, nameContains }, requestOptions),
         pageParam,
       };
     },
     {
-      suspense: true,
+      suspense: false,
       getPreviousPageParam: (firstPage) => (firstPage.pageParam > 0 ? firstPage.pageParam - 1 : undefined),
       getNextPageParam: (lastPage) => (lastPage.data.workspaces.length < pageSize ? undefined : lastPage.pageParam + 1),
+      cacheTime: 10000,
     }
   );
 };

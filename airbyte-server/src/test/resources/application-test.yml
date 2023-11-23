@@ -22,6 +22,11 @@ datasources:
     driverClassName: org.h2.Driver
     username: sa
     password: ""
+  local-secrets:
+    url: jdbc:h2:mem:default
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
 
 flyway:
   enabled: true
@@ -43,6 +48,9 @@ jooq:
     jobs:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
+    local-secrets:
+      jackson-converter-enabled: true
+      sql-dialect: H2
 
 logger:
   levels:

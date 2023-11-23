@@ -21,7 +21,7 @@ export const SupportLevelBadge: React.FC<SupportLevelBadgeProps> = ({
   }
 
   const badgeComponent = (
-    <Badge variant={supportLevel === "certified" ? "blue" : "gray"}>
+    <Badge variant={supportLevel === "certified" ? "blue" : "grey"}>
       <FormattedMessage
         id={
           custom

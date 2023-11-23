@@ -19,6 +19,7 @@ import io.airbyte.server.repositories.domain.StreamStatus;
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.micronaut.transaction.jdbc.DelegatingDataSource;
 import java.io.IOException;
@@ -41,7 +42,11 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @MicronautTest
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class StreamStatusesRepositoryTest {
+
+  private static final String DATA_SOURCE_NAME = "config";
+  private static final String DATA_SOURCES = "datasources.";
 
   static ApplicationContext context;
 
@@ -61,15 +66,15 @@ class StreamStatusesRepositoryTest {
     // set the micronaut datasource properties to match our container we started up
     context = ApplicationContext.run(PropertySource.of(
         "test", Map.of(
-            "datasources.default.driverClassName", "org.postgresql.Driver",
-            "datasources.default.db-type", "postgres",
-            "datasources.default.dialect", "POSTGRES",
-            "datasources.default.url", container.getJdbcUrl(),
-            "datasources.default.username", container.getUsername(),
-            "datasources.default.password", container.getPassword())));
+            DATA_SOURCES + DATA_SOURCE_NAME + ".driverClassName", "org.postgresql.Driver",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".db-type", "postgres",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".dialect", "POSTGRES",
+            DATA_SOURCES + DATA_SOURCE_NAME + ".url", container.getJdbcUrl(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".username", container.getUsername(),
+            DATA_SOURCES + DATA_SOURCE_NAME + ".password", container.getPassword())));
 
     // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
-    final var dataSource = ((DelegatingDataSource) context.getBean(DataSource.class)).getTargetDataSource();
+    final var dataSource = ((DelegatingDataSource) context.getBean(DataSource.class, Qualifiers.byName(DATA_SOURCE_NAME))).getTargetDataSource();
     jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES);
     final var databaseProviders = new TestDatabaseProviders(dataSource, jooqDslContext);
 

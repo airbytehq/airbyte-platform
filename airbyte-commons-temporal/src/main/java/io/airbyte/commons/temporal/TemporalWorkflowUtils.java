@@ -8,11 +8,8 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowClientOptions;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.common.RetryOptions;
-import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import java.time.Duration;
 import java.util.UUID;
@@ -140,21 +137,6 @@ public class TemporalWorkflowUtils {
         .setRpcQueryTimeout(temporalSdkTimeouts.getRpcQueryTimeout())
         .setTarget(temporalHost)
         .build();
-  }
-
-  /**
-   * Create temporal workflow client.
-   *
-   * @param workflowServiceStubs workflow service client
-   * @param namespace temporal namespace
-   * @return workflow client
-   */
-  public static WorkflowClient createWorkflowClient(final WorkflowServiceStubs workflowServiceStubs, final String namespace) {
-    return WorkflowClient.newInstance(
-        workflowServiceStubs,
-        WorkflowClientOptions.newBuilder()
-            .setNamespace(namespace)
-            .build());
   }
 
 }

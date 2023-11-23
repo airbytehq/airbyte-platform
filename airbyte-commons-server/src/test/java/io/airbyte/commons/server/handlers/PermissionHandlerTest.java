@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
 import io.airbyte.api.model.generated.PermissionCreate;
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionUpdate;
@@ -126,17 +128,25 @@ class PermissionHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
-    @Test
-    void updatesPermission() throws Exception {
-      // mock the updated Permission that will be returned by the persistence layer when
-      // building a response
+    @BeforeEach
+    void setup() throws IOException {
       when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
           .thenReturn(Optional.of(new Permission()
               .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+              .withPermissionType(PermissionType.WORKSPACE_READER)
               .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
               .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
 
+      when(permissionPersistence.getPermission(PERMISSION_ORGANIZATION_ADMIN.getPermissionId()))
+          .thenReturn(Optional.of(new Permission()
+              .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+              .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+              .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId())
+              .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId())));
+    }
+
+    @Test
+    void updatesPermission() throws Exception {
       final PermissionUpdate update = new PermissionUpdate()
           .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
           .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN); // changing to workspace_admin
@@ -147,11 +157,23 @@ class PermissionHandlerTest {
           .userId(PERMISSION_WORKSPACE_READER.getUserId())
           .workspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId());
 
+      // after the update, getPermission will be called to build the response, so we need to mock it with
+      // the updated permission type
+      when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
+          .thenReturn(Optional.of(new Permission()
+              .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+              .withPermissionType(PermissionType.WORKSPACE_ADMIN) // updated
+              .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
+              .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
+
       final PermissionRead actualPermissionRead = permissionHandler.updatePermission(update);
 
       verify(permissionPersistence).writePermission(new Permission()
           .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-          .withPermissionType(PermissionType.WORKSPACE_ADMIN));
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN)
+          .withUserId(PERMISSION_WORKSPACE_READER.getUserId())
+          .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
+          .withOrganizationId(null));
       assertEquals(expectedPermissionRead, actualPermissionRead);
     }
 
@@ -171,6 +193,38 @@ class PermissionHandlerTest {
 
       doThrow(new DataAccessException(BLOCKED, new SQLOperationNotAllowedException(BLOCKED))).when(permissionPersistence).writePermission(any());
       assertThrows(OperationNotAllowedException.class, () -> permissionHandler.updatePermission(update));
+    }
+
+    @Test
+    void workspacePermissionUpdatesDoNotModifyIdFields()
+        throws JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException, IOException {
+      final PermissionUpdate workspacePermissionUpdate = new PermissionUpdate()
+          .permissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_EDITOR); // changing to workspace_editor
+
+      permissionHandler.updatePermission(workspacePermissionUpdate);
+
+      verify(permissionPersistence).writePermission(new Permission()
+          .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+          .withPermissionType(PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId()) // workspace ID preserved from original permission
+          .withUserId(PERMISSION_WORKSPACE_READER.getUserId())); // user ID preserved from original permission
+    }
+
+    @Test
+    void organizationPermissionUpdatesDoNotModifyIdFields()
+        throws JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException, IOException {
+      final PermissionUpdate orgPermissionUpdate = new PermissionUpdate()
+          .permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+          .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_EDITOR); // changing to organization_editor
+
+      permissionHandler.updatePermission(orgPermissionUpdate);
+
+      verify(permissionPersistence).writePermission(new Permission()
+          .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+          .withPermissionType(PermissionType.ORGANIZATION_EDITOR)
+          .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId()) // organization ID preserved from original permission
+          .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId())); // user ID preserved from original permission
     }
 
   }
@@ -591,6 +645,75 @@ class PermissionHandlerTest {
           .permissionType(Enums.convertTo(targetPermissionType, io.airbyte.api.model.generated.PermissionType.class))
           .userId(USER_ID)
           .organizationId(ORGANIZATION_ID);
+    }
+
+  }
+
+  @Nested
+  class DeleteUserFromWorkspace {
+
+    private static final UUID WORKSPACE_ID = UUID.randomUUID();
+    private static final UUID USER_ID = UUID.randomUUID();
+
+    @Test
+    void testDeleteUserFromWorkspace() throws IOException {
+      // should be deleted
+      final Permission workspacePermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      // should not be deleted, different workspace
+      final Permission otherWorkspacePermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(UUID.randomUUID())
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      // should not be deleted, org permission
+      final Permission orgPermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
+
+      // should not be deleted, different user
+      final Permission otherUserPermission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(UUID.randomUUID())
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(
+          List.of(workspacePermission, otherWorkspacePermission, orgPermission));
+
+      permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userIdToRemove(USER_ID).workspaceId(WORKSPACE_ID));
+
+      // verify the intended permission was deleted
+      verify(permissionPersistence).deletePermissionById(workspacePermission.getPermissionId());
+
+      // verify the other permissions were not deleted
+      verify(permissionPersistence, never()).deletePermissionById(otherWorkspacePermission.getPermissionId());
+      verify(permissionPersistence, never()).deletePermissionById(otherUserPermission.getPermissionId());
+      verify(permissionPersistence, never()).deletePermissionById(orgPermission.getPermissionId());
+    }
+
+    @Test
+    void testDeleteUserFromWorkspaceThrows() throws IOException {
+      final Permission permission = new Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID)
+          .withPermissionType(PermissionType.WORKSPACE_ADMIN);
+
+      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(permission));
+
+      doThrow(new IOException()).when(permissionPersistence).deletePermissionById(permission.getPermissionId());
+
+      assertThrows(RuntimeException.class, () -> permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody()
+          .userIdToRemove(USER_ID)
+          .workspaceId(WORKSPACE_ID)));
     }
 
   }

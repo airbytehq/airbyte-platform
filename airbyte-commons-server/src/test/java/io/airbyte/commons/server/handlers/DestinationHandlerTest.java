@@ -33,9 +33,8 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.SecretsRepositoryWriter;
-import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.data.services.DestinationService;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
@@ -49,8 +48,6 @@ import org.junit.jupiter.api.Test;
 class DestinationHandlerTest {
 
   private ConfigRepository configRepository;
-  private SecretsRepositoryReader secretsRepositoryReader;
-  private SecretsRepositoryWriter secretsRepositoryWriter;
   private StandardDestinationDefinition standardDestinationDefinition;
   private ActorDefinitionVersion destinationDefinitionVersion;
   private DestinationDefinitionSpecificationRead destinationDefinitionSpecificationRead;
@@ -68,13 +65,12 @@ class DestinationHandlerTest {
   // needs to match name of file in src/test/resources/icons
   private static final String ICON = "test-destination.svg";
   private static final String LOADED_ICON = DestinationDefinitionsHandler.loadIcon(ICON);
+  private DestinationService destinationService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
   void setUp() throws IOException {
     configRepository = mock(ConfigRepository.class);
-    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     validator = mock(JsonSchemaValidator.class);
     uuidGenerator = mock(Supplier.class);
     connectionsHandler = mock(ConnectionsHandler.class);
@@ -82,6 +78,7 @@ class DestinationHandlerTest {
     secretsProcessor = mock(JsonSecretsProcessor.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    destinationService = mock(DestinationService.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -103,19 +100,18 @@ class DestinationHandlerTest {
 
     destinationHandler =
         new DestinationHandler(configRepository,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
             validator,
             connectionsHandler,
             uuidGenerator,
             secretsProcessor,
             configurationUpdate,
             oAuthConfigSupplier,
-            actorDefinitionVersionHelper);
+            actorDefinitionVersionHelper, destinationService);
   }
 
   @Test
-  void testCreateDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCreateDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     when(uuidGenerator.get())
         .thenReturn(destinationConnection.getDestinationId());
     when(configRepository.getDestinationConnection(destinationConnection.getDestinationId()))
@@ -153,7 +149,7 @@ class DestinationHandlerTest {
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
     verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration());
-    verify(secretsRepositoryWriter).writeDestinationConnection(destinationConnection, connectorSpecification);
+    verify(destinationService).writeDestinationConnectionWithSecrets(destinationConnection, connectorSpecification);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
         destinationConnection.getWorkspaceId(), destinationConnection.getConfiguration(), destinationDefinitionVersion.getSpec());
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId());
@@ -162,7 +158,8 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testUpdateDestination() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testUpdateDestination()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put("apiKey", "987-xyz");
@@ -205,7 +202,7 @@ class DestinationHandlerTest {
     assertEquals(expectedDestinationRead, actualDestinationRead);
 
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification());
-    verify(secretsRepositoryWriter).writeDestinationConnection(expectedDestinationConnection, connectorSpecification);
+    verify(destinationService).writeDestinationConnectionWithSecrets(expectedDestinationConnection, connectorSpecification);
     verify(oAuthConfigSupplier).maskDestinationOAuthParameters(destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
         destinationConnection.getWorkspaceId(), newConfiguration, destinationDefinitionVersion.getSpec());
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
@@ -336,7 +333,8 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testCloneDestinationWithConfiguration() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCloneDestinationWithConfiguration()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection clonedConnection = DestinationHelpers.generateDestination(standardDestinationDefinition.getDestinationDefinitionId());
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(clonedConnection.getName())
@@ -359,7 +357,7 @@ class DestinationHandlerTest {
         .destinationCloneId(destinationRead.getDestinationId()).destinationConfiguration(destinationCloneConfiguration);
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getDestinationId());
-    when(secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
+    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(configRepository.getDestinationConnection(clonedConnection.getDestinationId())).thenReturn(clonedConnection);
 
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))
@@ -378,7 +376,8 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testCloneDestinationWithoutConfiguration() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testCloneDestinationWithoutConfiguration()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final DestinationConnection clonedConnection = DestinationHelpers.generateDestination(standardDestinationDefinition.getDestinationDefinitionId());
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(clonedConnection.getName())
@@ -400,7 +399,7 @@ class DestinationHandlerTest {
         new DestinationCloneRequestBody().destinationCloneId(destinationRead.getDestinationId());
 
     when(uuidGenerator.get()).thenReturn(clonedConnection.getDestinationId());
-    when(secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
+    when(destinationService.getDestinationConnectionWithSecrets(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(configRepository.getDestinationConnection(clonedConnection.getDestinationId())).thenReturn(clonedConnection);
 
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId()))

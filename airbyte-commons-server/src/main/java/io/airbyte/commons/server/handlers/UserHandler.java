@@ -4,8 +4,11 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AuthProvider;
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationUserRead;
 import io.airbyte.api.model.generated.OrganizationUserReadList;
@@ -21,13 +24,14 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoRead;
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
+import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserRead;
 import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.commons.auth.config.InitialUserConfiguration;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.support.JwtUserResolver;
+import io.airbyte.commons.server.support.UserAuthenticationResolver;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
@@ -65,7 +69,7 @@ public class UserHandler {
   private final WorkspacesHandler workspacesHandler;
   private final OrganizationPersistence organizationPersistence;
 
-  private final Optional<JwtUserResolver> jwtUserResolver;
+  private final Optional<UserAuthenticationResolver> userAuthenticationResolver;
   private final Optional<InitialUserConfiguration> initialUserConfiguration;
 
   @VisibleForTesting
@@ -76,7 +80,7 @@ public class UserHandler {
                      final PermissionHandler permissionHandler,
                      final WorkspacesHandler workspacesHandler,
                      final Supplier<UUID> uuidGenerator,
-                     final Optional<JwtUserResolver> jwtUserResolver,
+                     final Optional<UserAuthenticationResolver> userAuthenticationResolver,
                      final Optional<InitialUserConfiguration> initialUserConfiguration) {
     this.uuidGenerator = uuidGenerator;
     this.userPersistence = userPersistence;
@@ -84,7 +88,7 @@ public class UserHandler {
     this.permissionPersistence = permissionPersistence;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
-    this.jwtUserResolver = jwtUserResolver;
+    this.userAuthenticationResolver = userAuthenticationResolver;
     this.initialUserConfiguration = initialUserConfiguration;
   }
 
@@ -332,10 +336,11 @@ public class UserHandler {
   }
 
   private User resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) throws ConfigNotFoundException {
-    if (jwtUserResolver.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.USER, userAuthIdRequestBody.getAuthUserId());
+    final String authUserId = userAuthIdRequestBody.getAuthUserId();
+    if (userAuthenticationResolver.isEmpty()) {
+      throw new ConfigNotFoundException(ConfigSchema.USER, authUserId);
     }
-    final User incomingJwtUser = jwtUserResolver.get().resolveUser();
+    final User incomingJwtUser = userAuthenticationResolver.get().resolveUser(authUserId);
     if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
       throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
     }
@@ -368,22 +373,39 @@ public class UserHandler {
 
   private void handleSsoUser(final UserRead user, final Organization organization)
       throws IOException, JsonValidationException, ConfigNotFoundException {
-    final boolean isFirstOrgUser = permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId()).isEmpty();
-    if (isFirstOrgUser) {
-      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.of(organization));
-      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+    // look for any existing user permissions for this organization. exclude the default user that comes
+    // with the Airbyte installation, since we want the first real SSO user to be the org admin.
+    final List<UserPermission> orgPermissionsExcludingDefaultUser =
+        permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId())
+            .stream()
+            .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
+            .toList();
+
+    // If this is the first real user in the org, create a default workspace for them and make them an
+    // org admin.
+    if (orgPermissionsExcludingDefaultUser.isEmpty()) {
       createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_ADMIN);
     } else {
       createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
     }
+
+    // If this organization doesn't have a workspace yet, create one, and set it as the default
+    // workspace for this user.
+    final WorkspaceReadList orgWorkspaces = workspacesHandler.listWorkspacesInOrganization(
+        new ListWorkspacesInOrganizationRequestBody().organizationId(organization.getOrganizationId()));
+
+    if (orgWorkspaces.getWorkspaces().isEmpty()) {
+      final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.of(organization));
+      createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
+    }
   }
 
   private void handleNonSsoUser(final UserRead user) throws JsonValidationException, ConfigNotFoundException, IOException {
-    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceforUser(user, Optional.empty());
+    final WorkspaceRead defaultWorkspace = createDefaultWorkspaceForUser(user, Optional.empty());
     createPermissionForUserAndWorkspace(user.getUserId(), defaultWorkspace.getWorkspaceId(), PermissionType.WORKSPACE_ADMIN);
   }
 
-  private WorkspaceRead createDefaultWorkspaceforUser(final UserRead createdUser, final Optional<Organization> organization)
+  private WorkspaceRead createDefaultWorkspaceForUser(final UserRead createdUser, final Optional<Organization> organization)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
     final WorkspaceRead defaultWorkspace = workspacesHandler.createDefaultWorkspaceForUser(createdUser, organization);
@@ -398,7 +420,7 @@ public class UserHandler {
   }
 
   private Optional<Organization> getSsoOrganizationIfExists(final UUID userId) throws IOException, ConfigNotFoundException {
-    final String ssoRealm = jwtUserResolver.orElseThrow().resolveSsoRealm();
+    final String ssoRealm = userAuthenticationResolver.orElseThrow().resolveSsoRealm();
     if (ssoRealm != null) {
       final Optional<Organization> attachedOrganization = organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm);
       if (attachedOrganization.isPresent()) {
@@ -458,26 +480,28 @@ public class UserHandler {
   }
 
   private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
-
-    return new WorkspaceUserReadList().users(
-        userPermissions
-            .stream()
-            .map(userPermission -> new WorkspaceUserRead()
-                .userId(userPermission.getUser().getUserId())
-                .email(userPermission.getUser().getEmail())
-                .name(userPermission.getUser().getName())
-                .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
-                .workspaceId(workspaceId)
-                .permissionId(userPermission.getPermission().getPermissionId())
-                .permissionType(
-                    Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
-                        .get()))
-            .collect(Collectors.toList()));
+    // we exclude the default user from this list because we don't want to expose it in the UI
+    return new WorkspaceUserReadList().users(userPermissions
+        .stream()
+        .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
+        .map(userPermission -> new WorkspaceUserRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
+            .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
+            .workspaceId(workspaceId)
+            .permissionId(userPermission.getPermission().getPermissionId())
+            .permissionType(
+                Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
+                    .get()))
+        .collect(Collectors.toList()));
   }
 
   private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
+    // we exclude the default user from this list because we don't want to expose it in the UI
     return new OrganizationUserReadList().users(userPermissions
         .stream()
+        .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
         .map(userPermission -> new OrganizationUserRead()
             .userId(userPermission.getUser().getUserId())
             .email(userPermission.getUser().getEmail())

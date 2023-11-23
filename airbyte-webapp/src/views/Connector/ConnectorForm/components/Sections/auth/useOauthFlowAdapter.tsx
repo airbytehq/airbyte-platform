@@ -107,10 +107,13 @@ function useFormOauthAdapter(
       }
 
       const preparedValues = getValues<Credentials>(getRawValues());
-      const oauthInputParams = Object.entries(oauthInputProperties).reduce((acc, property) => {
-        acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));
-        return acc;
-      }, {} as Record<string, unknown>);
+      const oauthInputParams = Object.entries(oauthInputProperties).reduce(
+        (acc, property) => {
+          acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
 
       run(oauthInputParams);
     },

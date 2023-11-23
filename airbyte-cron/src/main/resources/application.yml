@@ -40,6 +40,22 @@ airbyte:
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
+  workload:
+    monitor:
+      enabled: ${WORKLOAD_MONITOR_ENABLED:false}
+      claim-check-rate: PT1M
+      claim-timeout: ${WORKLOAD_CLAIM_TIMEOUT:PT1H}
+      heartbeat-check-rate: PT1M
+      heartbeat-timeout: PT5M
+      not-started-check-rate: PT1M
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}

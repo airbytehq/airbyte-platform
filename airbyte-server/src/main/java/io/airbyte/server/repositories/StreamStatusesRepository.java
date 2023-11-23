@@ -25,7 +25,8 @@ import org.jooq.TableField;
 /**
  * Data Access layer for StreamStatus.
  */
-@JdbcRepository(dialect = Dialect.POSTGRES)
+@JdbcRepository(dialect = Dialect.POSTGRES,
+                dataSource = "config")
 public interface StreamStatusesRepository extends PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
 
   /**

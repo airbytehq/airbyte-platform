@@ -6,7 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { UpdateWorkspaceNameForm } from "area/workspace/components/UpdateWorkspaceNameForm";
 import { useCurrentWorkspace } from "core/api";
-import { useIntent } from "core/utils/rbac/intent";
+import { useIntent } from "core/utils/rbac";
 
 import { DeleteWorkspace } from "./components/DeleteWorkspace";
 

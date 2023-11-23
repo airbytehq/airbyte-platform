@@ -38,6 +38,7 @@ export const enum Action {
   DOWNLOAD_SERVER_LOGS = "DownloadServerLogs",
   DOWNLOAD_SCHEDULER_LOGS = "DownloadSchedulerLogs",
   UPGRADE_VERSION = "UpgradeVersion",
+  DISCOVER_SCHEMA = "DiscoverSchema",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

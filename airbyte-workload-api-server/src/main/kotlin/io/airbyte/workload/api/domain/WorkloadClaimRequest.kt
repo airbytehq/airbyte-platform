@@ -1,10 +1,10 @@
 package io.airbyte.workload.api.domain
 
-import io.swagger.annotations.ApiModelProperty
+import io.swagger.v3.oas.annotations.media.Schema
 
 data class WorkloadClaimRequest(
-  @ApiModelProperty(required = true)
+  @Schema(required = true)
   var workloadId: String = "",
-  @ApiModelProperty(required = true)
+  @Schema(required = true)
   var dataplaneId: String = "",
 )

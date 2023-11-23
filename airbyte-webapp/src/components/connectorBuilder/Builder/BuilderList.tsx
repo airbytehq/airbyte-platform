@@ -4,9 +4,9 @@ import React, { ReactElement, useMemo } from "react";
 import { useFieldArray } from "react-hook-form";
 
 import { Button } from "components/ui/Button";
+import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import styles from "./BuilderList.module.scss";
-import { RemoveButton } from "./RemoveButton";
 
 interface BuilderListProps {
   children: (props: { buildPath: (path: string) => string }) => ReactElement;

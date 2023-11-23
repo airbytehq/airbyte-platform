@@ -20,7 +20,7 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { SavingIndicator } from "./SavingIndicator";
-import { ReactComponent as SlackIcon } from "./slack-icon.svg";
+import SlackIcon from "./slack-icon.svg?react";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";

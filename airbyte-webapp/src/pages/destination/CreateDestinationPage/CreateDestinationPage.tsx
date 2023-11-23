@@ -64,27 +64,24 @@ export const CreateDestinationPage: React.FC = () => {
   };
 
   return (
-    <>
+    <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
       <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-
-      <ConnectorDocumentationWrapper>
-        <FormPageContent>
-          <FlexContainer justifyContent="flex-start">
-            <Box mb="md">
-              <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-                <FormattedMessage id="connectorBuilder.backButtonLabel" />
-              </Button>
-            </Box>
-          </FlexContainer>
-          <DestinationForm
-            onSubmit={onSubmitDestinationForm}
-            destinationDefinitions={destinationDefinitions}
-            selectedDestinationDefinitionId={destinationDefinitionId}
-          />
-          <CloudInviteUsersHint connectorType="destination" />
-        </FormPageContent>
-      </ConnectorDocumentationWrapper>
-    </>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <DestinationForm
+          onSubmit={onSubmitDestinationForm}
+          destinationDefinitions={destinationDefinitions}
+          selectedDestinationDefinitionId={destinationDefinitionId}
+        />
+        <CloudInviteUsersHint connectorType="destination" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
   );
 };

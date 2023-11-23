@@ -18,7 +18,10 @@ export class CommonRequestError<ErrorPayload extends ErrorDetails = ErrorDetails
   _status?: number;
   payload?: ErrorPayload;
 
-  constructor(protected response: Response | undefined, payload?: ErrorPayload) {
+  constructor(
+    protected response: Response | undefined,
+    payload?: ErrorPayload
+  ) {
     super(response?.statusText);
     this.response = response;
     this.message = payload?.message ?? JSON.stringify(payload?.detail) ?? "common.error";

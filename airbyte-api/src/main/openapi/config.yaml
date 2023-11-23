@@ -36,7 +36,10 @@ externalDocs:
   description: Find out more about Airbyte
   url: "https://airbyte.io"
 servers:
+  - url: "https://cloud.airbyte.com/api"
+    description: Airbyte Cloud
   - url: "http://localhost:8000/api"
+    description: Local Development
 tags:
   - name: workspace
     description: Workspace related resources.
@@ -276,6 +279,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkspaceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_organization_info:
+    post:
+      tags:
+        - workspace
+      summary: Retrieve a workspace's basic organization info that is accessible for all workspace members, regardless of organization membership.
+      operationId: getOrganizationInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceOrganizationInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3587,7 +3613,44 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
+  /v1/secrets_persistence_config/get:
+    post:
+      tags:
+        - secrets_persistence_config
+      summary: Get secrets persistence config
+      operationId: getSecretsPersistenceConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretPersistenceConfigGetRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretPersistenceConfig"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secrets_persistence_config/create_or_update:
+    post:
+      tags:
+        - secrets_persistence_config
+      summary: Create or update secrets persistence config
+      operationId: createOrUpdateSecretsPersistenceConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrUpdateSecretsPersistenceConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
@@ -3599,6 +3662,27 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/PermissionIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/delete_user_from_workspace:
+    post:
+      tags:
+        - permission
+      summary: Deletes all workspace-level permissions for a particular user and workspace
+      operationId: deleteUserFromWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionDeleteUserFromWorkspaceRequestBody"
         required: true
       responses:
         "204":
@@ -4381,6 +4465,24 @@ components:
             $ref: "#/components/schemas/WebhookConfigRead"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    WorkspaceOrganizationInfoRead:
+      type: object
+      description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
+      required:
+        - organizationId
+        - organizationName
+        - pba
+        - sso
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        pba:
+          type: boolean
+        sso:
+          type: boolean
     WebhookConfigRead:
       type: object
       description: the readable info for a webhook config; omits sensitive info e.g. auth token
@@ -5569,7 +5671,6 @@ components:
       type: object
       required:
         - streamName
-        - streamNamespace
       properties:
         streamName:
           type: string
@@ -6404,7 +6505,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     OrganizationUserReadList:
       type: object
@@ -6467,6 +6568,20 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+    PermissionDeleteUserFromWorkspaceRequestBody:
+      type: object
+      required:
+        - userIdToRemove
+        - workspaceId
+      properties:
+        userIdToRemove:
+          type: string
+          format: uuid
+          description: The user ID for which to remove workspace permissions
+        workspaceId:
+          type: string
+          format: uuid
+          description: The workspace ID from which to remove all workspace-level permissions for the indicated user
     PermissionRead:
       type: object
       required:
@@ -8504,7 +8619,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     ListWorkspacesByUserRequestBody:
       type: object
@@ -8516,7 +8631,7 @@ components:
           format: uuid
         pagination:
           $ref: "#/components/schemas/Pagination"
-        keyword:
+        nameContains:
           type: string
     WorkspaceUserRead:
       type: object
@@ -8687,6 +8802,59 @@ components:
         taskQueueName:
           description: Name of the temporal task queue.
           type: string
+    CreateOrUpdateSecretsPersistenceConfigRequestBody:
+      description: Object representing a secret persistence configuration create/update request
+      required:
+        - secretPersistenceType
+        - configuration
+        - scope
+        - scopeId
+      properties:
+        secretPersistenceType:
+          $ref: "#/components/schemas/SecretPersistenceType"
+        configuration:
+          type: object
+        scope:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    SecretPersistenceConfig:
+      description: Object representing a secret persistence configuration
+      required:
+        - secretPersistenceType
+        - configuration
+        - scopeType
+        - scopeId
+      properties:
+        secretPersistenceType:
+          $ref: "#/components/schemas/SecretPersistenceType"
+        configuration:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
+    SecretPersistenceType:
+      type: string
+      enum:
+        - testing
+        - google
+        - vault
+        - aws
+    SecretPersistenceConfigGetRequestBody:
+      description: Request body for getting secret persistence config
+      required:
+        - scopeType
+        - scopeId
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+    SecretPersistenceConfigurationJson:
+      type: object
 
   responses:
     NotFoundResponse:

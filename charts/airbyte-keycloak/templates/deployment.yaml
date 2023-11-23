@@ -16,7 +16,7 @@ spec:
     {{- if gt (int .Values.replicaCount) 1 }}
     rollingUpdate:
       maxSurge: 1
-      maxUnavailable: 1
+      maxUnavailable: 0
     {{- end }}
   selector:
     matchLabels:
@@ -94,6 +94,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-airbyte-env
                   key: KEYCLOAK_HOSTNAME_URL
+            - name: JAVA_OPTS_APPEND
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-airbyte-env
+                  key: KEYCLOAK_JAVA_OPTS_APPEND
             {{- end }}
             {{- if .Values.extraEnv }}
             {{ .Values.extraEnv | toYaml | nindent 12 }}
@@ -121,6 +126,7 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            - containerPort: 7800
           {{- if .Values.containerSecurityContext }}
           securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           {{- end }}

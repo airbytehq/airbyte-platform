@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
 
-import { ReactComponent as AirbyteLogo } from "components/illustrations/airbyte-logo.svg";
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -23,31 +23,40 @@ import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 
 import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 import styles from "./CloudWorkspacesPage.module.scss";
-import { ReactComponent as OctaviaThinking } from "./octavia-thinking-no-gears.svg";
+import OctaviaThinking from "./octavia-thinking-no-gears.svg?react";
 
 export const CloudWorkspacesPage: React.FC = () => {
   const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
+  const [isSearchEmpty, setIsSearchEmpty] = useState(true);
 
   const {
     data: workspacesData,
-    refetch,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, searchValue);
+    isFetching,
+  } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
-  const { organizationsMemberOnly, hasWorkspace } = useOrganizationsToCreateWorkspaces();
+  const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
 
   const { logout } = useAuthService();
 
+  const showNoWorkspacesContent =
+    !isFetching &&
+    !organizationsToCreateIn.length &&
+    organizationsMemberOnly.length > 0 &&
+    !workspaces.length &&
+    isSearchEmpty;
+
   useDebounce(
     () => {
-      setSearchValue(searchValue);
-      refetch();
+      setDebouncedSearchValue(searchValue);
+      setIsSearchEmpty(debouncedSearchValue === "");
     },
     250,
     [searchValue]
@@ -66,7 +75,7 @@ export const CloudWorkspacesPage: React.FC = () => {
       <Heading as="h1" size="lg" centered>
         <FormattedMessage id="workspaces.title" />
       </Heading>
-      {organizationsMemberOnly?.length > 0 && !hasWorkspace ? (
+      {showNoWorkspacesContent ? (
         <NoWorkspacePermissionsContent organizations={organizationsMemberOnly} />
       ) : (
         <>
@@ -97,7 +106,7 @@ export const CloudWorkspacesPage: React.FC = () => {
 
 const NoWorkspacePermissionsContent: React.FC<{ organizations: OrganizationRead[] }> = ({ organizations }) => {
   return (
-    <Box m="2xl" p="2xl">
+    <Box m="2xl" p="2xl" data-testid="noWorkspacePermissionsBanner">
       <FlexContainer direction="column" gap="2xl">
         <OctaviaThinking className={styles.cloudWorkspacesPage__illustration} />
         <div>
