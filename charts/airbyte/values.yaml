@@ -1452,6 +1452,7 @@ minio:
   auth:
     rootUser: minio
     rootPassword: minio123
+  ## storage.persistence retain minio log when airbyte restarts. (persistence: true)
   storage:
     volumeClaimValue: 500Mi
 
