@@ -11,7 +11,7 @@ import { useRequestOptions } from "../useRequestOptions";
 
 const DOCS_URL = /^https:\/\/docs\.airbyte\.(io|com)/;
 const LOCAL_DOCS_PATH = "/docs";
-const GITHUB_DOCS_INTEGRATIONS_URL = `${links.githubContent}/docs/integrations`;
+const GITHUB_DOCS_INTEGRATIONS_URL = `https://raw.githubusercontent.com/airbytehq/airbyte/master/docs/integrations`;
 export const GITHUB_DOCS_SOURCES_URL = `${GITHUB_DOCS_INTEGRATIONS_URL}/sources/`;
 export const GITHUB_DOCS_DESTINATIONS_URL = `${GITHUB_DOCS_INTEGRATIONS_URL}/destinations/`;
 export const REMOTE_DOCS_SOURCES_URL = `${links.docsLink}/integrations/sources/`;
