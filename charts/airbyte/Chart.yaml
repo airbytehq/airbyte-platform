@@ -77,3 +77,11 @@ dependencies:
     name: keycloak-setup
     repository: https://airbytehq.github.io/helm-charts/
     version: 0.50.2
+  - condition: workload-launcher.enabled
+    name: workload-launcher
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.50.2
+  - condition: workload-api.enabled
+    name: workload-api
+    repository: https://airbytehq.github.io/helm-charts/
+    version: 0.50.2
