@@ -11,6 +11,7 @@ import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.logging.LoggingHelper;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
@@ -42,7 +43,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteDestination.class);
   public static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
-      .setLogPrefix("destination")
+      .setLogPrefix(LoggingHelper.DESTINATION_LOGGER_PREFIX)
       .setPrefixColor(Color.YELLOW_BACKGROUND);
   static final Set<Integer> IGNORED_EXIT_CODES = Set.of(
       0, // Normal exit
