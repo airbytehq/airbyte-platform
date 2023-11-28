@@ -1,4 +1,4 @@
-package io.airbyte.workload.launcher.pipeline
+package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
 import io.airbyte.commons.temporal.queue.QueueActivity
@@ -7,7 +7,7 @@ import io.airbyte.commons.temporal.queue.QueueWorkflowBase
 import io.airbyte.config.messages.LauncherInputMessage
 
 /**
- * Launcher Workflow implemenation.
+ * Launcher Workflow implementation.
  *
  * Class needs to be
  */

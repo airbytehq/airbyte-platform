@@ -7,8 +7,8 @@ package io.airbyte.workload.launcher.client
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadRunningRequest
-import io.airbyte.workload.launcher.pipeline.StageError
 import io.airbyte.workload.launcher.pipeline.stages.StageName
+import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 

@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
-import io.airbyte.workload.launcher.pipeline.LauncherInput
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk

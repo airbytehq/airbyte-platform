@@ -7,14 +7,14 @@ package io.airbyte.workload.launcher.pipeline.stages
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.ClaimResponse
 import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
-import io.airbyte.workload.launcher.pipeline.LauncherInput
+import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import pipeline.SharedMocks.Companion.metricPublisher
 import javax.ws.rs.ClientErrorException
 
 class ClaimStageTest {

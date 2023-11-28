@@ -1,4 +1,4 @@
-package pipeline
+package io.airbyte.workload.launcher.fixtures
 
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.mockk.every

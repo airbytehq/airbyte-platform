@@ -7,16 +7,18 @@ import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.MUTEX_KEY_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
-import io.airbyte.workload.launcher.pipeline.LaunchStage
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.airbyte.workload.launcher.pods.PodLabeler
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
 @Singleton
+@Named("mutex")
 class EnforceMutexStage(
   private val launcher: KubePodClient,
   private val metricPublisher: CustomMetricPublisher,

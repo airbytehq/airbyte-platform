@@ -5,8 +5,8 @@ import io.airbyte.commons.temporal.queue.QueueActivity
 import io.airbyte.commons.temporal.queue.QueueActivityImpl
 import io.airbyte.config.messages.LauncherInputMessage
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
-import io.airbyte.workload.launcher.pipeline.LauncherMessageConsumer
-import io.airbyte.workload.launcher.pipeline.LauncherWorkflowImpl
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherMessageConsumer
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherWorkflowImpl
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.temporal.activity.ActivityOptions

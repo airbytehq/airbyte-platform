@@ -1,7 +1,8 @@
-package io.airbyte.workload.launcher.pipeline
+package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.commons.temporal.queue.MessageConsumer
 import io.airbyte.config.messages.LauncherInputMessage
+import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import jakarta.inject.Singleton
 
 @Singleton

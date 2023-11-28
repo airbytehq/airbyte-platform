@@ -1,6 +1,7 @@
-package io.airbyte.workload.launcher.pipeline
+package io.airbyte.workload.launcher.pipeline.stages.model
 
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
 /**
  * Input/Output object for LaunchPipeline.
@@ -9,10 +10,13 @@ import io.airbyte.persistence.job.models.ReplicationInput
  */
 sealed class StageIO {
   abstract val msg: LauncherInput
+  abstract val logPath: String
   var skip: Boolean = false
 }
 
 data class LaunchStageIO(
   override val msg: LauncherInput,
   var replicationInput: ReplicationInput? = null,
-) : StageIO()
+) : StageIO() {
+  override val logPath: String = msg.logPath
+}

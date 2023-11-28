@@ -8,8 +8,8 @@ import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.models.ReplicationActivityInput
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
-import io.airbyte.workload.launcher.pipeline.LauncherInput
+import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.serde.PayloadDeserializer
 import io.mockk.every
 import io.mockk.mockk

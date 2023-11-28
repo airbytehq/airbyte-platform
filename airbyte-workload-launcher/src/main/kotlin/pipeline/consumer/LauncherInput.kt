@@ -1,4 +1,4 @@
-package io.airbyte.workload.launcher.pipeline
+package io.airbyte.workload.launcher.pipeline.consumer
 
 data class LauncherInput(
   val workloadId: String,

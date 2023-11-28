@@ -7,15 +7,17 @@ import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_STAGE_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.WORKLOAD_ID_TAG
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
-import io.airbyte.workload.launcher.pipeline.LaunchStage
-import io.airbyte.workload.launcher.pipeline.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
+import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
 @Singleton
+@Named("check")
 class CheckStatusStage(
   private val statusClient: StatusUpdater,
   private val kubeClient: KubePodClient,
@@ -25,7 +27,7 @@ class CheckStatusStage(
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     return if (kubeClient.podsExistForWorkload(input.msg.workloadId)) {
       logger.info {
-        "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true"
+        "Found pods running for workload ${input.msg.workloadId}. Setting status to RUNNING and SKIP flag to true."
       }
       customMetricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_ALREADY_RUNNING, MetricAttribute(WORKLOAD_ID_TAG, input.msg.workloadId))
       statusClient.updateStatusToRunning(input.msg.workloadId)
