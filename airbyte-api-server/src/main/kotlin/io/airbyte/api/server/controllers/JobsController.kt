@@ -265,10 +265,12 @@ open class JobsController(
       if (!matcher.find()) {
         throw BadRequestProblem("Invalid order by clause provided: $orderBy")
       }
-      field = Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
-        .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
-      method = Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
-        .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
+      field =
+        Enums.toEnum(matcher.group(1), OrderByFieldEnum::class.java)
+          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
+      method =
+        Enums.toEnum(matcher.group(2), OrderByMethodEnum::class.java)
+          .orElseThrow { BadRequestProblem("Invalid order by clause provided: $orderBy") }
     }
     return Pair(field, method)
   }
