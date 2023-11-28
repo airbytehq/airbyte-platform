@@ -28,6 +28,9 @@ import com.google.api.client.util.Preconditions;
  * - Add units at name end if applicable. This is especially relevant for time units.
  * <p>
  * - Include the time period in the name if the metric is meant to be run at a certain interval.
+ * <p>
+ * Note: These names are used as metric name prefixes. Changing these names will affect
+ * dashboard/alerts and our public Datadog integration. Please consult the platform teams if unsure.
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
