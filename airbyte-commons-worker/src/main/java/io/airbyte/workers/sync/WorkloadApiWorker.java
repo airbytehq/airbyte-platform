@@ -4,6 +4,10 @@
 
 package io.airbyte.workers.sync;
 
+import io.airbyte.api.client.AirbyteApiClient;
+import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.Geography;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.featureflag.Connection;
@@ -37,6 +41,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.openapitools.client.infrastructure.ClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +55,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
   private final DocumentStoreClient documentStoreClient;
   private final OrchestratorNameGenerator orchestratorNameGenerator;
+  private final AirbyteApiClient apiClient;
   private final WorkloadApi workloadApi;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final ReplicationActivityInput input;
@@ -58,12 +64,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
 
   public WorkloadApiWorker(final DocumentStoreClient documentStoreClient,
                            final OrchestratorNameGenerator orchestratorNameGenerator,
+                           final AirbyteApiClient apiClient,
                            final WorkloadApi workloadApi,
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient) {
     this.documentStoreClient = documentStoreClient;
     this.orchestratorNameGenerator = orchestratorNameGenerator;
+    this.apiClient = apiClient;
     this.workloadApi = workloadApi;
     this.workloadIdGenerator = workloadIdGenerator;
     this.input = input;
@@ -82,6 +90,10 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
     log.info("Creating workload {}", workloadId);
 
     // TODO worker may resume, check if job exists first
+
+    // Ideally, this should be passed down to avoid the extra API call.
+    final Geography geo = getGeography(replicationInput.getConnectionId());
+
     // Create the workload
     createWorkload(new WorkloadCreateRequest(
         workloadId,
@@ -90,7 +102,8 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
             new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
         serializedInput,
-        jobRoot.toString()));
+        jobRoot.toString(),
+        geo.getValue()));
 
     // Wait until workload reaches a terminal status
     int i = 0;
@@ -123,6 +136,14 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private Geography getGeography(final UUID connectionId) throws WorkerException {
+    try {
+      return apiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody().connectionId(connectionId)).getGeography();
+    } catch (final ApiException e) {
+      throw new WorkerException("Unable to find geography of connection " + connectionId, e);
     }
   }
 

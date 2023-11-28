@@ -41,6 +41,7 @@ fun DomainWorkload.toApi(): ApiWorkload {
     labels = this.workloadLabels?.map { it.toApi() }?.toMutableList() ?: mutableListOf(),
     inputPayload = this.inputPayload,
     logPath = this.logPath,
+    geography = this.geography,
   )
 }
 
@@ -52,6 +53,7 @@ fun ApiWorkload.toDomain(): DomainWorkload {
     workloadLabels = this.labels?.map { it.toDomain() },
     inputPayload = this.inputPayload,
     logPath = this.logPath,
+    geography = this.geography,
   )
 }
 

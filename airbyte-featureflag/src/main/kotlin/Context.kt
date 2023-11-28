@@ -209,3 +209,7 @@ data class ImageName(override val key: String) : Context {
 data class ImageVersion(override val key: String) : Context {
   override val kind = "image-version"
 }
+
+data class Geography(override val key: String) : Context {
+  override val kind: String = "geography"
+}

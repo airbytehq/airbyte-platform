@@ -125,6 +125,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = labels,
         inputPayload = "",
         logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload)
     val persistedWorkload = workloadRepo.findById(workloadId)
@@ -159,6 +160,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload)
     workloadRepo.update(workloadId, WorkloadStatus.running)
@@ -185,6 +187,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload)
     val now = OffsetDateTime.now()
@@ -215,6 +218,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "",
+        geography = "AUTO",
       )
     workloadRepo.save(workload)
     workloadRepo.update(workloadId, "dataplaneId1", WorkloadStatus.running)
@@ -241,6 +245,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "",
+        geography = "AUTO",
       )
     val workload2 =
       Workload(
@@ -253,6 +258,7 @@ internal class WorkloadRepositoryTest {
         workloadLabels = null,
         inputPayload = "",
         logPath = "",
+        geography = "US",
       )
     workloadRepo.save(workload1)
     workloadRepo.save(workload2)
