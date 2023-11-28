@@ -104,6 +104,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
         }
 
         if (i % 5 == 0) {
+          i++;
           log.info("Workload {} is {}", workloadId, workload.getStatus());
         }
         i++;

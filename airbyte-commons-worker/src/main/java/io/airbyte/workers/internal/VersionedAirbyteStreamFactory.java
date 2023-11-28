@@ -90,6 +90,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   private final boolean failTooLongRecords;
 
+  private final boolean failMissingPks;
+
   /**
    * In some cases, we know the stream will never emit messages that need to be migrated. This is
    * particularly true for tests. This is a convenience method for those cases.
@@ -99,7 +101,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   @VisibleForTesting
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(final boolean failTooLongRecords) {
     return noMigrationVersionedAirbyteStreamFactory(LOGGER, MdcScope.DEFAULT_BUILDER, Optional.empty(), Runtime.getRuntime().maxMemory(),
-        failTooLongRecords);
+        failTooLongRecords, false);
   }
 
   /**
@@ -112,7 +114,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                                                                        final MdcScope.Builder mdcBuilder,
                                                                                        final Optional<Class<? extends RuntimeException>> clazz,
                                                                                        final long maxMemory,
-                                                                                       final boolean failTooLongRecords) {
+                                                                                       final boolean failTooLongRecords,
+                                                                                       final boolean failMissingPks) {
     final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
         List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
@@ -126,7 +129,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
 
     return new VersionedAirbyteStreamFactory<>(provider, fac, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, Optional.empty(), logger,
-        mdcBuilder, clazz, maxMemory, failTooLongRecords);
+        mdcBuilder, clazz, maxMemory, failTooLongRecords, failMissingPks);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -135,9 +138,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final boolean failTooLongRecords) {
+                                       final boolean failTooLongRecords,
+                                       final boolean failMissingPks) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
-        Runtime.getRuntime().maxMemory(), failTooLongRecords);
+        Runtime.getRuntime().maxMemory(), failTooLongRecords, failMissingPks);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -145,9 +149,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final boolean failTooLongRecords) {
+                                       final boolean failTooLongRecords,
+                                       final boolean failMissingPks) {
     this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, DEFAULT_LOGGER, DEFAULT_MDC_SCOPE, exceptionClass,
-        DEFAULT_MEMORY_LIMIT, failTooLongRecords);
+        DEFAULT_MEMORY_LIMIT, failTooLongRecords, failMissingPks);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -158,7 +163,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass,
                                        final long maxMemory,
-                                       final boolean failTooLongRecords) {
+                                       final boolean failTooLongRecords,
+                                       final boolean failMissingPks) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
@@ -171,6 +177,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     this.configuredAirbyteCatalog = configuredAirbyteCatalog;
     this.initializeForProtocolVersion(protocolVersion);
     this.failTooLongRecords = failTooLongRecords;
+    this.failMissingPks = failMissingPks;
   }
 
   /**
@@ -346,7 +353,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
 
     if (m.isPresent()) {
-      m = BasicAirbyteMessageValidator.validate(m.get());
+      m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog, failMissingPks);
 
       if (m.isEmpty()) {
         logger.error("Validation failed: {}", Jsons.serialize(line));

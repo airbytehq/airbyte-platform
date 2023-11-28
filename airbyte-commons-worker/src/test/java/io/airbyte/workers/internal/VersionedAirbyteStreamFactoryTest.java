@@ -162,7 +162,7 @@ class VersionedAirbyteStreamFactoryTest {
 
       final Stream<AirbyteMessage> messageStream =
           VersionedAirbyteStreamFactory
-              .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L, false)
+              .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L, false, false)
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
@@ -183,10 +183,10 @@ class VersionedAirbyteStreamFactoryTest {
       verify(logger).debug(invalidRecord);
     }
 
-    private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage) {
+    private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage, final boolean failMissingPks) {
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
-              failTooLongMessage);
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, failTooLongMessage,
+              failMissingPks);
     }
 
     private static final String VALID_MESSAGE_TEMPLATE =
@@ -197,26 +197,26 @@ class VersionedAirbyteStreamFactoryTest {
     @Test
     void testToAirbyteMessageValid() {
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).hasSize(1);
+      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).hasSize(1);
     }
 
     @Test
     void testToAirbyteMessageRandomLog() {
-      Assertions.assertThat(getFactory(false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
+      Assertions.assertThat(getFactory(false, false).toAirbyteMessage("I should not be send on the same channel than the airbyte messages"))
           .isEmpty();
     }
 
     @Test
     void testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      getFactory(false).toAirbyteMessage(messageLine);
+      getFactory(false, false).toAirbyteMessage(messageLine);
       verify(logger).debug(messageLine);
     }
 
     @Test
     void testToAirbyteMessageMixedUpRecordFailureDisable() {
       final String messageLine = "It shouldn't be here" + String.format(VALID_MESSAGE_TEMPLATE, "hello");
-      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     @Test
@@ -226,7 +226,7 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      assertThrows(RuntimeException.class, () -> getFactory(true).toAirbyteMessage(messageLine));
+      assertThrows(RuntimeException.class, () -> getFactory(true, false).toAirbyteMessage(messageLine));
     }
 
     @Test
@@ -236,14 +236,14 @@ class VersionedAirbyteStreamFactoryTest {
         longStringBuilder.append("a");
       }
       final String messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder);
-      Assertions.assertThat(getFactory(false).toAirbyteMessage(messageLine)).isEmpty();
+      Assertions.assertThat(getFactory(false, false).toAirbyteMessage(messageLine)).isEmpty();
     }
 
     private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
       final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, false)
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, false, false)
           .create(bufferedReader);
     }
 
@@ -275,7 +275,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreate() {
       final Version initialVersion = new Version("0.1.2");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false);
 
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
       streamFactory.create(bufferedReader);
@@ -287,7 +287,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetection() {
       final Version initialVersion = new Version("0.0.0");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
@@ -302,7 +302,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionFallback() {
       final Version initialVersion = new Version("0.0.6");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
@@ -317,7 +317,7 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionWithoutSpecMessage() {
       final Version initialVersion = new Version("0.0.1");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false)
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
               .withDetectVersion(true);
 
       final BufferedReader bufferedReader =

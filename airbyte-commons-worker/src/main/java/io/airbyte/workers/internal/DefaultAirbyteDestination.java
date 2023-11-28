@@ -67,7 +67,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this(integrationLauncher,
         VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(LOGGER, CONTAINER_LOG_MDC_BUILDER, Optional.empty(),
-            Runtime.getRuntime().maxMemory(), false),
+            Runtime.getRuntime().maxMemory(), false, false),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
         destinationTimeoutMonitor);

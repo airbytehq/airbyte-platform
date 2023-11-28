@@ -161,3 +161,5 @@ object UseNewCronScheduleCalculation : Temporary<Boolean>(key = "platform.use-ne
 object UseRuntimeSecretPersistence : Temporary<Boolean>(key = "platform.use-runtime-secret-persistence", default = false)
 
 object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", default = false)
+
+object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
