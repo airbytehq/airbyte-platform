@@ -2,7 +2,7 @@ package io.airbyte.workload.launcher.pipeline.handlers
 
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.workload.launcher.client.StatusUpdater
+import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
@@ -18,7 +18,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class FailureHandler(
-  private val statusUpdater: StatusUpdater,
+  private val apiClient: WorkloadApiClient,
   private val metricPublisher: CustomMetricPublisher,
   private val logMsgTemplate: (String) -> String = { id -> "Pipeline aborted after error for workload: $id." },
 ) {
@@ -31,7 +31,7 @@ class FailureHandler(
       ApmTraceUtils.addExceptionToTrace(e)
 
       if (e is StageError) {
-        statusUpdater.reportFailure(e)
+        apiClient.reportFailure(e)
       }
 
       metricPublisher.count(

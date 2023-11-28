@@ -6,7 +6,7 @@ package io.airbyte.workload.launcher.pipeline
 
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.launcher.ClaimedProcessor
-import io.airbyte.workload.launcher.client.StatusUpdater
+import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.fixtures.SharedMocks.Companion.metricPublisher
 import io.airbyte.workload.launcher.fixtures.TestStage
 import io.airbyte.workload.launcher.pipeline.LogPathTest.Fixtures.inputMsgs
@@ -108,7 +108,7 @@ class LogPathTest {
   }
 
   object Fixtures {
-    private val mockApiClient: StatusUpdater =
+    private val mockApiClient: WorkloadApiClient =
       mockk {
         every { reportFailure(any()) } returns Unit
       }
