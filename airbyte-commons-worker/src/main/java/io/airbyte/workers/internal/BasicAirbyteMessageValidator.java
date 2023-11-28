@@ -4,20 +4,16 @@
 
 package io.airbyte.workers.internal;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Iterables;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.workers.helper.AirbyteMessageExtractor;
 import io.airbyte.workers.internal.exception.SourceException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.jooq.tools.StringUtils;
 
 /**
  * Perform basic validation on an AirbyteMessage checking for the type field and the required fields
@@ -62,7 +58,7 @@ public class BasicAirbyteMessageValidator {
           return Optional.empty();
         }
         if (failMissingPks && catalog.isPresent()) {
-          final Optional<ConfiguredAirbyteStream> catalogStream = getCatalogStreamFromMessage(catalog.get(), record);
+          final Optional<ConfiguredAirbyteStream> catalogStream = AirbyteMessageExtractor.getCatalogStreamFromMessage(catalog.get(), record);
 
           if (catalogStream.isEmpty()) {
             throw new SourceException(String.format("Missing catalog stream for the stream (namespace: %s, name: %s",
@@ -70,13 +66,14 @@ public class BasicAirbyteMessageValidator {
           } else if (catalogStream.get().getSyncMode().equals(SyncMode.INCREMENTAL)
               && catalogStream.get().getDestinationSyncMode().equals(DestinationSyncMode.APPEND_DEDUP)) {
             // required PKs
-            final List<List<String>> pksList = getPks(catalogStream);
+            final List<List<String>> pksList = AirbyteMessageExtractor.getPks(catalogStream);
             if (pksList.isEmpty()) {
               throw new SourceException(String.format("Primary keys not found in catalog for the stream (namespace: %s, name: %s",
                   record.getStream(), record.getNamespace()));
             }
+
             final boolean containsAtLeastOneNonNullPk = Iterables.tryFind(pksList,
-                pks -> containsNonNullPK(pks, record.getData())).isPresent();
+                pks -> AirbyteMessageExtractor.containsNonNullPK(pks, record.getData())).isPresent();
 
             if (!containsAtLeastOneNonNullPk) {
               throw new SourceException(String.format("All the defined primary keys are null, the primary keys are: %s",
@@ -136,25 +133,6 @@ public class BasicAirbyteMessageValidator {
     }
 
     return Optional.of(message);
-  }
-
-  private static Optional<ConfiguredAirbyteStream> getCatalogStreamFromMessage(final ConfiguredAirbyteCatalog catalog,
-                                                                               final AirbyteRecordMessage message) {
-    return catalog.getStreams()
-        .stream()
-        .filter(configuredStream -> StringUtils.equals(configuredStream.getStream().getNamespace(), message.getNamespace())
-            && StringUtils.equals(configuredStream.getStream().getName(), message.getStream()))
-        .findFirst();
-  }
-
-  private static List<List<String>> getPks(final Optional<ConfiguredAirbyteStream> catalogStream) {
-    return catalogStream
-        .map(stream -> stream.getPrimaryKey())
-        .orElse(new ArrayList<>());
-  }
-
-  private static boolean containsNonNullPK(final List<String> pks, final JsonNode data) {
-    return Jsons.navigateTo(data, pks) != null;
   }
 
 }

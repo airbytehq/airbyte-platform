@@ -25,6 +25,7 @@ import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
 import io.airbyte.commons.version.Version;
 import io.airbyte.protocol.models.AirbyteLogMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -54,6 +55,8 @@ class VersionedAirbyteStreamFactoryTest {
 
   AirbyteMessageSerDeProvider serDeProvider;
   AirbyteProtocolVersionedMigratorFactory migratorFactory;
+
+  private final GsonPksExtractor gsonPksExtractor = mock(GsonPksExtractor.class);
 
   @Nested
   @DisplayName("Test Correct AirbyteMessage Parsing Behavior")
@@ -162,7 +165,8 @@ class VersionedAirbyteStreamFactoryTest {
 
       final Stream<AirbyteMessage> messageStream =
           VersionedAirbyteStreamFactory
-              .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L, false, false)
+              .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 1L,
+                  new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor)
               .create(bufferedReader);
 
       assertThrows(RuntimeException.class, () -> messageStream.toList());
@@ -185,8 +189,9 @@ class VersionedAirbyteStreamFactoryTest {
 
     private VersionedAirbyteStreamFactory getFactory(final boolean failTooLongMessage, final boolean failMissingPks) {
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, failTooLongMessage,
-              failMissingPks);
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(failTooLongMessage, failMissingPks, false),
+              gsonPksExtractor);
     }
 
     private static final String VALID_MESSAGE_TEMPLATE =
@@ -243,7 +248,9 @@ class VersionedAirbyteStreamFactoryTest {
       final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
       final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
       return VersionedAirbyteStreamFactory
-          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L, false, false)
+          .noMigrationVersionedAirbyteStreamFactory(logger, new Builder(), Optional.of(RuntimeException.class), 100000L,
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor)
           .create(bufferedReader);
     }
 
@@ -275,7 +282,9 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreate() {
       final Version initialVersion = new Version("0.1.2");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor);
 
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
       streamFactory.create(bufferedReader);
@@ -287,8 +296,10 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetection() {
       final Version initialVersion = new Version("0.0.0");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
-              .withDetectVersion(true);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor)
+                  .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
           getBuffereredReader("version-detection/logs-with-version.jsonl");
@@ -302,8 +313,10 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionFallback() {
       final Version initialVersion = new Version("0.0.6");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
-              .withDetectVersion(true);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor)
+                  .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
           getBuffereredReader("version-detection/logs-without-version.jsonl");
@@ -317,8 +330,10 @@ class VersionedAirbyteStreamFactoryTest {
     void testCreateWithVersionDetectionWithoutSpecMessage() {
       final Version initialVersion = new Version("0.0.1");
       final VersionedAirbyteStreamFactory<?> streamFactory =
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(), false, false)
-              .withDetectVersion(true);
+          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, initialVersion, Optional.empty(), Optional.empty(),
+              new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+              gsonPksExtractor)
+                  .withDetectVersion(true);
 
       final BufferedReader bufferedReader =
           getBuffereredReader("version-detection/logs-without-spec-message.jsonl");

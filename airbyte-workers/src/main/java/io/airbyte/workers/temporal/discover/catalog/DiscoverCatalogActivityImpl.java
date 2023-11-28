@@ -43,6 +43,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.general.DefaultDiscoverCatalogWorker;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.helpers.SecretPersistenceConfigHelper;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -83,6 +84,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final FeatureFlags featureFlags;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
+  private final GsonPksExtractor gsonPksExtractor;
 
   public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
                                      final ProcessFactory processFactory,
@@ -96,7 +98,8 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags,
                                      final MetricClient metricClient,
-                                     final FeatureFlagClient featureFlagClient) {
+                                     final FeatureFlagClient featureFlagClient,
+                                     final GsonPksExtractor gsonPksExtractor) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsRepositoryReader = secretsRepositoryReader;
@@ -110,6 +113,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     this.featureFlags = featureFlags;
     this.metricClient = metricClient;
     this.featureFlagClient = featureFlagClient;
+    this.gsonPksExtractor = gsonPksExtractor;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -185,7 +189,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
               featureFlags, Collections.emptyMap(), Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
-              Optional.empty(), false, false);
+              Optional.empty(), new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false), gsonPksExtractor);
       final ConnectorConfigUpdater connectorConfigUpdater =
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());
       return new DefaultDiscoverCatalogWorker(airbyteApiClient, integrationLauncher, connectorConfigUpdater, streamFactory);

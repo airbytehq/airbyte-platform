@@ -22,6 +22,7 @@ import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -66,8 +67,13 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher, final DestinationTimeoutMonitor destinationTimeoutMonitor) {
     this(integrationLauncher,
-        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(LOGGER, CONTAINER_LOG_MDC_BUILDER, Optional.empty(),
-            Runtime.getRuntime().maxMemory(), false, false),
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(
+            LOGGER,
+            CONTAINER_LOG_MDC_BUILDER,
+            Optional.empty(),
+            Runtime.getRuntime().maxMemory(),
+            new VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false, false, false),
+            new GsonPksExtractor()),
         new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer(),
         destinationTimeoutMonitor);

@@ -165,3 +165,5 @@ object UseWorkloadApi : Temporary<Boolean>(key = "platform.use-workload-api", de
 object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
 
 object FailMissingPks : Temporary<Boolean>(key = "platform.fail-missing-pks", default = false)
+
+object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)

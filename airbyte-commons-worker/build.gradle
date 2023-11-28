@@ -25,6 +25,7 @@ dependencies {
 
     implementation libs.bundles.kubernetes.client
     implementation 'com.auth0:java-jwt:3.19.2'
+    implementation libs.gson
     implementation libs.guava
     implementation(libs.temporal.sdk) {
         exclude module: 'guava'
