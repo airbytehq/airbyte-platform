@@ -6,7 +6,7 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { DevToolsToggle } from "components/DevToolsToggle";
 
-import { config } from "config";
+import { config, ConfigServiceProvider } from "config";
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
@@ -23,7 +23,6 @@ import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import LoadingPage from "./components/LoadingPage";
-import { ConfigServiceProvider } from "./config";
 import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
 import { theme } from "./theme";
@@ -34,8 +33,8 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <FeatureService features={defaultOssFeatures} instanceConfig={useGetInstanceConfiguration()}>
-    <OSSAuthService>
-      <NotificationService>
+    <NotificationService>
+      <OSSAuthService>
         <ConfirmationModalService>
           <ModalServiceProvider>
             <FormChangeTrackerService>
@@ -45,8 +44,8 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
             </FormChangeTrackerService>
           </ModalServiceProvider>
         </ConfirmationModalService>
-      </NotificationService>
-    </OSSAuthService>
+      </OSSAuthService>
+    </NotificationService>
   </FeatureService>
 );
 

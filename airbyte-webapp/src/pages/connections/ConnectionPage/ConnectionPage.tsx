@@ -52,7 +52,7 @@ export const ConnectionPage: React.FC = () => {
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", true);
   const ConnectionEditServiceContextProvider = doUseCreateConnectionHookForm
     ? ConnectionEditHookFormServiceProvider
     : ConnectionEditServiceProvider;

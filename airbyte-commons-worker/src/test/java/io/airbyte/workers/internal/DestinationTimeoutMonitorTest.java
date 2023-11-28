@@ -14,12 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import io.airbyte.featureflag.Context;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import java.time.Duration;
@@ -29,18 +24,17 @@ import org.junit.jupiter.api.Test;
 
 class DestinationTimeoutMonitorTest {
 
-  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final MetricClient metricClient = mock(MetricClient.class);
 
   @Test
   void testNoTimeout() {
     DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
-        Duration.ofMillis(500),
-        Duration.ofMinutes(5));
+        Duration.ofMinutes(5),
+        true,
+        Duration.ofMillis(500));
 
     destinationTimeoutMonitor.startAcceptTimer();
     destinationTimeoutMonitor.startNotifyEndOfInputTimer();
@@ -60,14 +54,12 @@ class DestinationTimeoutMonitorTest {
   @Test
   void testAcceptTimeout() {
     DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1));
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     destinationTimeoutMonitor.startAcceptTimer();
 
@@ -88,14 +80,12 @@ class DestinationTimeoutMonitorTest {
   @Test
   void testNotifyEndOfInputTimeout() {
     DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        true,
         Duration.ofSeconds(1));
-
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncOnDestinationTimeout.INSTANCE), any(Context.class))).thenReturn(true);
 
     destinationTimeoutMonitor.startNotifyEndOfInputTimer();
 
@@ -114,13 +104,13 @@ class DestinationTimeoutMonitorTest {
   }
 
   @Test
-  void testTimeoutNoExceptionWhenFeatureFlagDisabled() {
+  void testTimeoutNoException() {
     DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        featureFlagClient,
         UUID.randomUUID(),
         UUID.randomUUID(),
         metricClient,
         Duration.ofSeconds(1),
+        false,
         Duration.ofSeconds(1));
 
     destinationTimeoutMonitor.startAcceptTimer();

@@ -24,8 +24,7 @@ import {
   waitForUpdateConnectionRequest,
 } from "@cy/commands/interceptors";
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
-import { getSyncEnabledSwitch } from "@cy/pages/connection/connectionPageObject";
-import { visit } from "@cy/pages/connection/connectionPageObject";
+import { getSyncEnabledSwitch, visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
 import {
@@ -493,7 +492,7 @@ describe("Connection Configuration", () => {
       it("Cannot edit fields in Configuration section", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
           cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
-          cy.get(connectionForm.scheduleDropdown).within(() => cy.get("input").should("be.disabled"));
+          cy.get(connectionForm.scheduleTypeDropdown).within(() => cy.get("input").should("be.disabled"));
           cy.get(connectionForm.destinationNamespaceEditButton).should("be.disabled");
           cy.get(connectionForm.destinationPrefixEditButton).should("be.disabled");
           cy.get(replicationPage.nonBreakingChangesPreference).within(() => cy.get("input").should("be.disabled"));

@@ -12,9 +12,14 @@ import { Card } from "components/ui/Card";
 import { Link } from "components/ui/Link";
 
 import { useListJobs } from "core/api";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "core/services/analytics";
+import {
+  getFrequencyFromScheduleData,
+  Action,
+  Namespace,
+  useTrackPage,
+  PageTrackingCodes,
+  useAnalyticsService,
+} from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 

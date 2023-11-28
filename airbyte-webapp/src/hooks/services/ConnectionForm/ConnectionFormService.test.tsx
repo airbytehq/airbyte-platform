@@ -39,7 +39,13 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
 }));
 
-describe("ConnectionFormService", () => {
+/**
+ * TODO: remove the test file in 3rd PR of the cleanup
+ * This one needs to be disabled because it will fail due to the default usage of the use hook form
+ * @see ConnectionHookFormService.test.tsx
+ */
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip("ConnectionFormService", () => {
   const Wrapper: React.FC<React.PropsWithChildren<Parameters<typeof ConnectionFormServiceProvider>[0]>> = ({
     children,
     ...props

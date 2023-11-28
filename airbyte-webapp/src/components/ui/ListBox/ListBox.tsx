@@ -35,7 +35,7 @@ const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControl
         </Text>
       )}
 
-      <Icon type="caretDown" color="action" />
+      <Icon type="chevronDown" color="action" />
     </>
   );
 };
@@ -45,7 +45,7 @@ export interface Option<T> {
   value: T;
   icon?: React.ReactNode;
   disabled?: boolean;
-  testId?: string;
+  "data-testid"?: string;
 }
 
 export interface ListBoxProps<T> {
@@ -102,7 +102,12 @@ export const ListBox = <T,>({
   };
 
   return (
-    <div className={className} data-testid={testId}>
+    <div
+      className={className}
+      {...(testId && {
+        "data-testid": testId,
+      })}
+    >
       <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
         <Float
           adaptiveWidth={adaptiveWidth}
@@ -116,13 +121,16 @@ export const ListBox = <T,>({
           <Listbox.Button
             className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
             onClick={(e) => e.stopPropagation()}
+            {...(testId && {
+              "data-testid": `${testId}-listbox-button`,
+            })}
           >
             <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
           </Listbox.Button>
           <Listbox.Options className={classNames(styles.optionsMenu, optionsMenuClassName)}>
             {options.length > 0 && (
               <>
-                {options.map(({ label, value, icon, disabled, testId }, index) => (
+                {options.map(({ label, value, icon, disabled, ...restOptionProps }, index) => (
                   <Listbox.Option
                     key={typeof label === "string" ? label : index}
                     value={value}
@@ -131,7 +139,9 @@ export const ListBox = <T,>({
                       [styles.disabled]: disabled,
                     })}
                     onClick={(e) => e.stopPropagation()}
-                    {...(testId && { "data-testid": testId })}
+                    {...(restOptionProps["data-testid"] && {
+                      "data-testid": `${restOptionProps["data-testid"]}-option`,
+                    })}
                   >
                     {({ active, selected }) => (
                       <FlexContainer

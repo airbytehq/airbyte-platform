@@ -152,7 +152,7 @@ export const useConnectionEditService = () => {
    *TODO: remove conditional context after successful CreateConnectionForm migration
    *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
    */
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", true);
   const contextType = doUseCreateConnectionHookForm ? ConnectionEditHookFormContext : ConnectionEditContext;
   const context = useContext(contextType);
   if (context === null) {

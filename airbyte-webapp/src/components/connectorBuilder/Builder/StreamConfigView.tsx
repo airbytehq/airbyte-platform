@@ -1,8 +1,7 @@
 import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useMemo, useState } from "react";
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -12,8 +11,7 @@ import { CodeEditor } from "components/ui/CodeEditor";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { BuilderView, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 

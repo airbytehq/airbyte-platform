@@ -1,5 +1,6 @@
 import { FormikErrors } from "formik";
 import React, { createContext, useCallback, useContext, useState } from "react";
+import { FieldErrors } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import {
@@ -9,6 +10,7 @@ import {
   mapFormPropsToOperation,
   useInitialValues,
 } from "components/connection/ConnectionForm/formConfig";
+import { HookFormConnectionFormValues } from "components/connection/ConnectionForm/hookFormConfig";
 
 import {
   ConnectionValues,
@@ -84,7 +86,8 @@ interface ConnectionFormHook {
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (
     formValid: boolean,
-    errors?: FormikErrors<FormikConnectionFormValues>
+    // FIXME: temporary extend the type since we use it in both Formik and HookForm
+    errors?: FormikErrors<FormikConnectionFormValues> | FieldErrors<HookFormConnectionFormValues>
   ) => string | JSX.Element | null;
   refreshSchema: () => Promise<void>;
 }
@@ -175,7 +178,7 @@ export const useConnectionFormService = () => {
    *TODO: remove conditional context after successful CreateConnectionForm migration
    *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
    */
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", true);
   const contextType = doUseCreateConnectionHookForm ? ConnectionHookFormContext : ConnectionFormContext;
 
   const context = useContext(contextType as React.Context<ConnectionFormHook | null>);

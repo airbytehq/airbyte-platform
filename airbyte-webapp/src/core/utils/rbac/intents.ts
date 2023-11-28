@@ -2,7 +2,7 @@ export const intentToRbacQuery = {
   // instance
 
   // organization
-  ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "READER" },
+  ListOrganizationMembers: { resourceType: "ORGANIZATION", role: "MEMBER" },
   UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
   UpdateOrganizationPermissions: { resourceType: "ORGANIZATION", role: "ADMIN" },
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },

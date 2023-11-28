@@ -9,16 +9,17 @@ import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
 
 interface ConnectionsTableProps {
   connections: WebBackendConnectionListItem[];
+  variant?: React.ComponentProps<typeof ConnectionTable>["variant"];
 }
 
-const ConnectionsTable: React.FC<ConnectionsTableProps> = ({ connections }) => {
+const ConnectionsTable: React.FC<ConnectionsTableProps> = ({ connections, variant }) => {
   const navigate = useNavigate();
 
   const data = getConnectionTableData(connections, "connection");
 
   const clickRow = (source: ConnectionTableDataItem) => navigate(`${source.connectionId}`);
 
-  return <ConnectionTable data={data} onClickRow={clickRow} entity="connection" />;
+  return <ConnectionTable data={data} onClickRow={clickRow} entity="connection" variant={variant} />;
 };
 
 export default ConnectionsTable;

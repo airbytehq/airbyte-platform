@@ -26,9 +26,14 @@ import {
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
+import {
+  getFrequencyFromScheduleData,
+  Action,
+  Namespace,
+  PageTrackingCodes,
+  useAnalyticsService,
+  useTrackPage,
+} from "core/services/analytics";
 import { equal } from "core/utils/objects";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";

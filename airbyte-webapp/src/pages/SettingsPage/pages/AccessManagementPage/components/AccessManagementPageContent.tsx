@@ -1,9 +1,13 @@
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
+
+import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { useIntent } from "core/utils/rbac";
 
 import { AccessManagementCard } from "./AccessManagementCard";
 import styles from "./AccessManagementPageContent.module.scss";
@@ -19,6 +23,11 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
   accessUsers,
   pageResourceType,
 }) => {
+  const { formatMessage } = useIntl();
+  const workspace = useCurrentWorkspace();
+  const canListOrganizationUsers = useIntent("ListOrganizationMembers", { organizationId: workspace.organizationId });
+  const organizationInfo = useCurrentOrganizationInfo();
+
   return (
     <>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.accessManagement" }]} />
@@ -33,6 +42,17 @@ export const AccessManagementPageContent: React.FC<AccessManagementContentProps>
           const data = accessUsers[resourceType];
           const users = data?.users ?? [];
           const usersToAdd = data?.usersToAdd ?? [];
+
+          if (resourceType === "organization" && !canListOrganizationUsers) {
+            return (
+              <Message
+                text={formatMessage(
+                  { id: "settings.accessManagement.invisibleOrgUsers" },
+                  { organization: organizationInfo?.organizationName }
+                )}
+              />
+            );
+          }
 
           return (
             <AccessManagementCard

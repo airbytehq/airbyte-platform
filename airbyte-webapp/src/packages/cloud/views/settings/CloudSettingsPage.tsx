@@ -105,7 +105,8 @@ const CloudSettingsPage: React.FC = () => {
             },
           ],
         },
-        ...(canViewOrgSettings
+        // TODO: Org check can be removed once all workspaces are in an organization
+        ...(canViewOrgSettings && organization
           ? [
               {
                 category: <FormattedMessage id="settings.organizationSettings" />,
@@ -146,7 +147,7 @@ const CloudSettingsPage: React.FC = () => {
           : []),
       ],
     }),
-    [canViewOrgSettings, isSsoEnabled, supportsCloudDbtIntegration, supportsDataResidency]
+    [canViewOrgSettings, isSsoEnabled, organization, supportsCloudDbtIntegration, supportsDataResidency]
   );
 
   return <SettingsPageBase pageConfig={ssoPageConfig} />;

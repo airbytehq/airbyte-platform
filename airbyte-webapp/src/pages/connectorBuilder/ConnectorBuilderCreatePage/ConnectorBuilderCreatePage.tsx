@@ -20,8 +20,7 @@ import { Text } from "components/ui/Text";
 
 import { useListBuilderProjects } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";

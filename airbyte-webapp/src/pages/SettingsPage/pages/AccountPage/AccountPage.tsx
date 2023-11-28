@@ -10,7 +10,8 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { FeatureItem, useFeature } from "core/services/features";
 
-import AccountForm from "./components/AccountForm";
+import { AccountForm } from "./components/AccountForm";
+import { KeycloakAccountForm } from "./components/KeycloakAccountForm";
 
 export const AccountPage: React.FC = () => {
   const isKeycloakAuthenticationEnabled = useFeature(FeatureItem.KeycloakAuthentication);
@@ -19,9 +20,7 @@ export const AccountPage: React.FC = () => {
     <>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.account" }]} />
       <Card title={<FormattedMessage id="settings.accountSettings" />}>
-        <Box p="xl">
-          <AccountForm />
-        </Box>
+        <Box p="xl">{isKeycloakAuthenticationEnabled ? <KeycloakAccountForm /> : <AccountForm />}</Box>
       </Card>
       {isKeycloakAuthenticationEnabled && <SignoutButton />}
     </>

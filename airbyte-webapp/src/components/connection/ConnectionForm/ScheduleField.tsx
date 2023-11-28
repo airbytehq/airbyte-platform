@@ -11,8 +11,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleData, ConnectionScheduleType } from "core/request/AirbyteClient";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";

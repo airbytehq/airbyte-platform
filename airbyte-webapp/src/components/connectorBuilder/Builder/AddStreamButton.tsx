@@ -1,8 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
 import merge from "lodash/merge";
-import { useMemo, useState } from "react";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
@@ -11,8 +10,7 @@ import * as yup from "yup";
 import { Button } from "components/ui/Button";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";

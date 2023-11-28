@@ -1,6 +1,5 @@
 import classNames from "classnames";
-import React from "react";
-import { PropsWithChildren } from "react";
+import React, { PropsWithChildren } from "react";
 
 import styles from "./Box.module.scss";
 

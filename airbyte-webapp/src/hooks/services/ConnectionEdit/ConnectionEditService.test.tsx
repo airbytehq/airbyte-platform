@@ -60,8 +60,13 @@ const utils = {
     catalogId: `${mockConnection.catalogId}1`,
   }),
 };
-
-describe("ConnectionEditService", () => {
+/**
+ * TODO: remove the test file in 3rd PR of the cleanup
+ * This one needs to be disabled because it will fail due to the default usage of the use hook form
+ * @see ConnectionEditHookFormService.test.tsx
+ */
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip("ConnectionEditService", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>

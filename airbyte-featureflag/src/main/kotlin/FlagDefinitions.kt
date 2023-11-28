@@ -61,9 +61,11 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
-object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = false)
+object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = true)
 
-object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = false)
+object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = true)
+
+object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
 
 object UseActorScopedDefaultVersions : Temporary<Boolean>(key = "connectors.useActorScopedDefaultVersions", default = true)
 

@@ -5,9 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SyncSchema } from "core/domain/catalog";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { getFrequencyFromScheduleData, Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { RoutePaths } from "pages/routePaths";
 import { SCOPE_WORKSPACE } from "services/Scope";

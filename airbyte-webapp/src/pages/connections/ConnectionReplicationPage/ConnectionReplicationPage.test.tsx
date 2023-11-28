@@ -1,10 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import { render as tlr, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { Suspense } from "react";
-import selectEvent from "react-select-event";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
@@ -63,7 +59,13 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));
 
-describe("ConnectionReplicationPage", () => {
+/**
+ * TODO: remove the test file in 3rd PR of the cleanup
+ * This one needs to be disabled because it will fail due to the default usage of the use hook form
+ * @see ConnectionReplicationHookFormPage.test.tsx
+ */
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip("ConnectionReplicationPage", () => {
   const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <Suspense fallback={<div>I should not show up in a snapshot</div>}>
       <TestWrapper>
@@ -139,7 +141,8 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(renderResult.getByTestId("cron-option"));
 
       const cronExpressionInput = renderResult.getByTestId("cronExpression");
 
@@ -158,7 +161,8 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(renderResult.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(renderResult.getByTestId("cron-option"));
 
       const cronExpressionField = renderResult.getByTestId("cronExpression");
 
@@ -185,7 +189,8 @@ describe("ConnectionReplicationPage", () => {
 
       await userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
 
-      await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
+      await userEvent.click(container.getByTestId("schedule-type-listbox-button"));
+      await userEvent.click(container.getByTestId("cron-option"));
 
       const cronExpressionField = container.getByTestId("cronExpression");
 

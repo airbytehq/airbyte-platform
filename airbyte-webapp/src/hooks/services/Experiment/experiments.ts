@@ -13,6 +13,7 @@ export interface Experiments {
   "autopropagation.enabled": boolean;
   "billing.newTrialPolicy": boolean;
   "billing.autoRecharge": boolean;
+  "connections.summaryView": boolean;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;

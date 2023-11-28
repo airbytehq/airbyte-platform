@@ -5,8 +5,7 @@ import React from "react";
 import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { ConnectionRoutePaths } from "pages/routePaths";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionSettingsCell.module.scss";
 

@@ -9,8 +9,7 @@ import { useSuspenseQuery, useRemoveConnectionsFromList } from "core/api";
 import { useRequestOptions } from "core/api/useRequestOptions";
 import { SyncSchema } from "core/domain/catalog";
 import { SourceService } from "core/domain/connector/SourceService";
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
 

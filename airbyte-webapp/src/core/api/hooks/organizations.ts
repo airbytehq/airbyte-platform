@@ -72,9 +72,9 @@ export const useListOrganizationsById = (organizationIds: string[]) => {
   );
 };
 
-export const useListUsersInOrganization = (organizationId: string) => {
+export const useListUsersInOrganization = (organizationId: string, enabled: boolean = true) => {
   const requestOptions = useRequestOptions();
   const queryKey = organizationKeys.listUsers(organizationId);
 
-  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions));
+  return useSuspenseQuery(queryKey, () => listUsersInOrganization({ organizationId }, requestOptions), { enabled });
 };

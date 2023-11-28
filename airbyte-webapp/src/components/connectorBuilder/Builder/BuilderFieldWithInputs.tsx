@@ -1,7 +1,6 @@
 import { faPlus, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useContext, useMemo, useState } from "react";
-import React from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 

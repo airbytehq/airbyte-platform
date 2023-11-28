@@ -1,6 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useMemo, useState } from "react";
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";

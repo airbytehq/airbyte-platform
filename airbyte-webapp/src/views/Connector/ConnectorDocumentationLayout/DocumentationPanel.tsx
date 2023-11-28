@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import path from "path-browserify";
-import { useEffect, useMemo, useRef } from "react";
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
@@ -34,7 +33,12 @@ const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
 
 export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string => {
-  return env === "oss" ? markdown.replaceAll(CLOUD_ENV_MARKERS, "") : markdown.replaceAll(OSS_ENV_MARKERS, "");
+  // Remove any empty lines between <FieldAnchor> tags and their content, as this causes
+  // the content to be rendered as a raw string unless it contains a list, for reasons
+  // unknown.
+  const preprocessed = markdown.replace(/(<FieldAnchor.*?>)\n{2,}/g, "$1\n");
+
+  return env === "oss" ? preprocessed.replaceAll(CLOUD_ENV_MARKERS, "") : preprocessed.replaceAll(OSS_ENV_MARKERS, "");
 };
 
 const ImgRelativePathReplacer: React.FC<
@@ -90,6 +94,9 @@ const LinkRelativePathReplacer: React.FC<
 };
 
 const FieldAnchor: React.FC<React.PropsWithChildren<{ field: string }>> = ({ field, children }) => {
+  if (field === "username,password") {
+    console.log(children);
+  }
   const ref = useRef<HTMLDivElement>(null);
   const { focusedField } = useDocumentationPanelContext();
   const isFieldFocused = field

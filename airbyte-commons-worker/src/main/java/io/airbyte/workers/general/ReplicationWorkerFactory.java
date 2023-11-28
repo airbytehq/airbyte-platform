@@ -18,11 +18,13 @@ import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
+import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationWorkerImpl;
+import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.SourceType;
@@ -238,11 +240,16 @@ public class ReplicationWorkerFactory {
   private static DestinationTimeoutMonitor createDestinationTimeout(final FeatureFlagClient featureFlagClient,
                                                                     final ReplicationInput replicationInput,
                                                                     final MetricClient metricClient) {
+    Context context = new Multi(List.of(new Workspace(replicationInput.getWorkspaceId()), new Connection(replicationInput.getConnectionId())));
+    boolean throwExceptionOnDestinationTimeout = featureFlagClient.boolVariation(ShouldFailSyncOnDestinationTimeout.INSTANCE, context);
+    int destinationTimeoutSeconds = featureFlagClient.intVariation(DestinationTimeoutSeconds.INSTANCE, context);
+
     return new DestinationTimeoutMonitor(
-        featureFlagClient,
         replicationInput.getWorkspaceId(),
         replicationInput.getConnectionId(),
-        metricClient);
+        metricClient,
+        Duration.ofSeconds(destinationTimeoutSeconds),
+        throwExceptionOnDestinationTimeout);
   }
 
   /**

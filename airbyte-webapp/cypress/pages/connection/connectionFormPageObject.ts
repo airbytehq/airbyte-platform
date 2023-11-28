@@ -2,7 +2,8 @@ import { getTestId } from "utils/selectors";
 
 const connectionNameInput = getTestId("connectionName");
 const expandConfigurationIcon = getTestId("configuration-card-expand-arrow");
-export const scheduleDropdown = getTestId("scheduleData");
+export const scheduleTypeDropdown = getTestId("schedule-type-listbox-button");
+export const getScheduleTypeDropdownOption = (option: string) => `${getTestId(`${option.toLowerCase()}-option`)}`;
 
 export const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
 const destinationPrefixApplyButton = getTestId("destination-stream-names-apply-button");
@@ -24,8 +25,8 @@ export const enterConnectionName = (name: string) => {
 };
 
 export const selectSchedule = (value: string) => {
-  cy.get(scheduleDropdown).click();
-  cy.get(getTestId(value)).click();
+  cy.get(scheduleTypeDropdown).click();
+  cy.get(getScheduleTypeDropdownOption(value)).click();
 };
 
 export const expandConfigurationSection = () => {

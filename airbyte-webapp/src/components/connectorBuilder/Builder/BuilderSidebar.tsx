@@ -12,8 +12,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/services/analytics";
-import { useAnalyticsService } from "core/services/analytics";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 

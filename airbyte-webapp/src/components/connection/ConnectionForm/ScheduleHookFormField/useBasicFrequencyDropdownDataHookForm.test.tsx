@@ -4,8 +4,7 @@ import { TestWrapper as wrapper } from "test-utils/testutils";
 
 import { ConnectionScheduleTimeUnit } from "core/request/AirbyteClient";
 
-import { useBasicFrequencyDropdownDataHookForm } from "./useBasicFrequencyDropdownDataHookForm";
-import { frequencyConfig } from "./useBasicFrequencyDropdownDataHookForm";
+import { useBasicFrequencyDropdownDataHookForm, frequencyConfig } from "./useBasicFrequencyDropdownDataHookForm";
 
 describe("#useBasicFrequencyDropdownDataHookForm", () => {
   it("should return only default frequencies when no additional frequency is provided", () => {

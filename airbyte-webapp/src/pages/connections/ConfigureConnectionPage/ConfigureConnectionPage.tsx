@@ -18,7 +18,7 @@ export const ConfigureConnectionPage = () => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [searchParams] = useSearchParams();
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", true);
 
   const sourceId = searchParams.get("sourceId");
   const destinationId = searchParams.get("destinationId");

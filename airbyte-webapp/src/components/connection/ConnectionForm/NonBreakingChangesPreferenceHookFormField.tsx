@@ -47,7 +47,7 @@ export const NonBreakingChangesPreferenceHookFormField = () => {
     return supportedPreferences.map((value) => ({
       value,
       label: formatMessage({ id: `connectionForm.nonBreakingChangesPreference.${autoPropagationPrefix}${value}` }),
-      testId: `nonBreakingChangesPreference-${value}`,
+      "data-testid": value,
     }));
   }, [formatMessage, supportedPreferences, autoPropagationPrefix]);
 

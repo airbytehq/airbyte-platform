@@ -58,7 +58,13 @@ jest.mock("hooks/theme/useAirbyteTheme", () => ({
 
 jest.setTimeout(40000);
 
-describe("CreateConnectionForm", () => {
+/**
+ * TODO: remove the test file in 3rd PR of the cleanup
+ * This one needs to be disabled because it will fail due to the default usage of the use hook form
+ * @see CreateConnectionHookForm.test.tsx
+ */
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip("CreateConnectionForm", () => {
   const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <TestWrapper>
       <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>

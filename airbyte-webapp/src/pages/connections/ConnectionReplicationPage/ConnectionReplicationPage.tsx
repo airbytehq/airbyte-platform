@@ -20,9 +20,14 @@ import { Message } from "components/ui/Message/Message";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionValues, useGetStateTypeQuery } from "core/api";
 import { SchemaChange, WebBackendConnectionRead, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
-import { getFrequencyFromScheduleData } from "core/services/analytics";
-import { Action, Namespace } from "core/services/analytics";
-import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
+import {
+  getFrequencyFromScheduleData,
+  Action,
+  Namespace,
+  PageTrackingCodes,
+  useAnalyticsService,
+  useTrackPage,
+} from "core/services/analytics";
 import { equal } from "core/utils/objects";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -311,7 +316,7 @@ export const ConnectionReplicationPage: React.FC = () => {
    *https://github.com/airbytehq/airbyte-platform-internal/issues/8639
    * didn't want to add conditional logic to routes file, decided to do it here, since it's temporary
    */
-  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", false);
+  const doUseCreateConnectionHookForm = useExperiment("form.createConnectionHookForm", true);
   if (doUseCreateConnectionHookForm) {
     return <ConnectionReplicationHookFormPage />;
   }
