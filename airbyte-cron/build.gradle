@@ -43,6 +43,9 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+
+    testImplementation libs.bundles.junit
+    testImplementation libs.mockk
 }
 
 Properties env = new Properties()
