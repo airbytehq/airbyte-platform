@@ -49,4 +49,8 @@ public class LoggingHelper {
     return color.getCode() + msg + RESET;
   }
 
+  public static String platformLogSource() {
+    return applyColor(Color.CYAN_BACKGROUND, PLATFORM_LOGGER_PREFIX);
+  }
+
 }

@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.config.helpers.LogClientSingleton.fullLogPath;
+
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
@@ -102,7 +104,7 @@ public class WorkloadApiWorker implements Worker<ReplicationInput, ReplicationOu
             new WorkloadLabel("jobId", replicationInput.getJobRunConfig().getJobId()),
             new WorkloadLabel("attemptNumber", replicationInput.getJobRunConfig().getAttemptId().toString())),
         serializedInput,
-        jobRoot.toString(),
+        fullLogPath(jobRoot),
         geo.getValue()));
 
     // Wait until workload reaches a terminal status

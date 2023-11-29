@@ -26,7 +26,7 @@ class LaunchPodStageTest {
     val stage = LaunchPodStage(launcher)
     val workloadId = UUID.randomUUID().toString()
     val labels = mapOf("label_key" to "label_value")
-    val io = LaunchStageIO(msg = LauncherInput(workloadId, msgStr, labels, "/log/path"), replInput)
+    val io = LaunchStageIO(msg = LauncherInput(workloadId, msgStr, labels, "/log/path"), replicationInput = replInput)
 
     val result = stage.applyStage(io)
 

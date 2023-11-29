@@ -1,8 +1,8 @@
 package io.airbyte.workload.launcher.pipeline.stages.model
 
-import io.airbyte.workload.launcher.model.withMDCLogPath
 import io.airbyte.workload.launcher.pipeline.stages.StageName
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.withLoggingContext
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import java.util.function.Function
@@ -13,7 +13,7 @@ private val logger = KotlinLogging.logger {}
 
 interface Stage<T : StageIO> : StageFunction<T> {
   override fun apply(input: T): Mono<T> {
-    withMDCLogPath(input.logPath) {
+    withLoggingContext(input.logCtx) {
       if (skipStage(input)) {
         logger.info { "SKIP Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId})" }
         return input.toMono()

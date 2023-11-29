@@ -6,11 +6,10 @@ import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.metrics.WorkloadLauncherMetricMetadata
-import io.airbyte.workload.launcher.model.withMDCLogPath
-import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.StageError
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 
@@ -24,9 +23,9 @@ class FailureHandler(
 ) {
   fun apply(
     e: Throwable,
-    io: LauncherInput,
+    io: LaunchStageIO,
   ): Mono<LaunchStageIO> {
-    withMDCLogPath(io.logPath) {
+    withLoggingContext(io.logCtx) {
       logger.error(e) { ("Pipeline Error") }
       ApmTraceUtils.addExceptionToTrace(e)
 
@@ -36,9 +35,9 @@ class FailureHandler(
 
       metricPublisher.count(
         WorkloadLauncherMetricMetadata.WORKLOAD_PROCESSED_UNSUCCESSFULLY,
-        MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.workloadId),
+        MetricAttribute(MeterFilterFactory.WORKLOAD_ID_TAG, io.msg.workloadId),
       )
-      logger.info { logMsgTemplate(io.workloadId) }
+      logger.info { logMsgTemplate(io.msg.workloadId) }
     }
 
     return Mono.empty()

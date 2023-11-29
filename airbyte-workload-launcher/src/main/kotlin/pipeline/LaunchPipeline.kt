@@ -3,6 +3,7 @@ package io.airbyte.workload.launcher.pipeline
 import datadog.trace.api.Trace
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.workload.launcher.client.LogContextFactory
 import io.airbyte.workload.launcher.metrics.CustomMetricPublisher
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.DATA_PLANE_ID_TAG
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
@@ -34,6 +35,7 @@ class LaunchPipeline(
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
   private val metricPublisher: CustomMetricPublisher,
+  private val ctxFactory: LogContextFactory,
 ) {
   fun accept(msg: LauncherInput) {
     metricPublisher.count(WorkloadLauncherMetricMetadata.WORKLOAD_RECEIVED, MetricAttribute(WORKLOAD_ID_TAG, msg.workloadId))
@@ -45,15 +47,17 @@ class LaunchPipeline(
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun buildPipeline(msg: LauncherInput): Mono<LaunchStageIO> {
     addTagsToTrace(msg)
+    val loggingCtx = ctxFactory.create(msg)
+    val input = LaunchStageIO(msg, loggingCtx)
 
-    return LaunchStageIO(msg)
+    return input
       .toMono()
       .flatMap(claim)
       .flatMap(check)
       .flatMap(build)
       .flatMap(mutex)
       .flatMap(launch)
-      .onErrorResume { e -> failureHandler.apply(e, msg) }
+      .onErrorResume { e -> failureHandler.apply(e, input) }
       .doOnNext(successHandler::accept)
   }
 
