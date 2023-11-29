@@ -54,7 +54,11 @@ const destinationStreamNamesValidationSchema = yup.object().shape({
     .required("form.empty.error"),
   prefix: yup.string().when("streamNameDefinition", {
     is: StreamNameDefinitionValueType.Prefix,
-    then: yup.string().trim().required("form.empty.error"),
+    then: yup
+      .string()
+      .trim()
+      .required("form.empty.error")
+      .matches(/^[a-zA-Z0-9_]*$/, "form.invalidCharacters.alphanumericunder.error"),
   }),
 });
 

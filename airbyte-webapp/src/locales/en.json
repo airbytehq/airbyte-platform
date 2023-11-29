@@ -63,6 +63,7 @@
   "form.workspaceName": "Workspace name",
   "form.email.error": "Enter a valid email",
   "form.empty.error": "Required",
+  "form.invalidCharacters.alphanumericunder.error": "Invalid characters, only alphanumeric and underscores are allowed ",
   "form.selectValue": "Select a value",
   "form.selectConnector": "Type to search for a connector",
   "form.searchName": "search by name...",
