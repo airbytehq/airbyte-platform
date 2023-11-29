@@ -1,7 +1,7 @@
 plugins {
     id("io.airbyte.gradle.jvm.lib")
     id("io.airbyte.gradle.publish")
-    id("java-test-fixtures")
+    `java-test-fixtures`
     kotlin("jvm")
     kotlin("kapt")
 }
