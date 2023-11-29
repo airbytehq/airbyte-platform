@@ -12,8 +12,8 @@ import {
   useDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification,
-  useDestinationDefinition,
   useSourceDefinition,
+  useDestinationDefinition,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,

@@ -1,3 +1,5 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during form cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
 
@@ -28,6 +30,8 @@ import { useConnectionFormService } from "../ConnectionForm/ConnectionFormServic
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
   useGetConnectionQuery:
     () =>
     async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>
@@ -43,8 +47,6 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
-  useSourceDefinition: () => mockSourceDefinition,
-  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
 const utils = {
@@ -54,13 +56,8 @@ const utils = {
     catalogId: `${mockConnection.catalogId}1`,
   }),
 };
-/**
- * TODO: remove the test file in 3rd PR of the cleanup
- * This one needs to be disabled because it will fail due to the default usage of the use hook form
- * @see ConnectionEditHookFormService.test.tsx
- */
-// eslint-disable-next-line jest/no-disabled-tests
-describe.skip("ConnectionEditService", () => {
+
+describe("ConnectionEditHookFormServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
       <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>

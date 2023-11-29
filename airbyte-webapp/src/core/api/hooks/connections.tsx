@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { getFrequencyFromScheduleData, Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";

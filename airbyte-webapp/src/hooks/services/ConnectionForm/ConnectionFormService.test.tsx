@@ -1,6 +1,10 @@
+/* eslint-disable check-file/filename-blocklist */
+// temporary disable eslint rule for this file during cleanup
 import { act, renderHook } from "@testing-library/react";
 import React from "react";
+import { FieldErrors } from "react-hook-form";
 
+import { HookFormConnectionFormValues } from "components/connection/ConnectionForm/hookFormConfig";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -33,13 +37,7 @@ jest.mock("core/api", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-/**
- * TODO: remove the test file in 3rd PR of the cleanup
- * This one needs to be disabled because it will fail due to the default usage of the use hook form
- * @see ConnectionHookFormService.test.tsx
- */
-// eslint-disable-next-line jest/no-disabled-tests
-describe.skip("ConnectionFormService", () => {
+describe("ConnectionHookFormService", () => {
   const Wrapper: React.FC<React.PropsWithChildren<Parameters<typeof ConnectionFormServiceProvider>[0]>> = ({
     children,
     ...props
@@ -145,44 +143,44 @@ describe.skip("ConnectionFormService", () => {
       expect(result.current.getErrorMessage(true)).toBe(errMsg);
     });
 
-    // comment out the tests since there are type errors and the whole test suite is disabled
+    it("should return an error message if the streams field is invalid", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
 
-    // eslint-disable-next-line jest/no-commented-out-tests
-    // it("should return an error message if the streams field is invalid", async () => {
-    //   const { result } = renderHook(useConnectionFormService, {
-    //     wrapper: ({ children }) => (
-    //       <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
-    //         {children}
-    //       </Wrapper>
-    //     ),
-    //   });
-    //
-    //   const errors = {
-    //     syncCatalog: {
-    //       streams: "connectionForm.streams.required",
-    //     },
-    //   };
-    //
-    //   expect(result.current.getErrorMessage(false, errors)).toBe("Select at least 1 stream to sync.");
-    // });
+      const errors: FieldErrors<HookFormConnectionFormValues> = {
+        syncCatalog: {
+          streams: {
+            message: "connectionForm.streams.required",
+          },
+        },
+      };
 
-    // eslint-disable-next-line jest/no-commented-out-tests
-    // it("should not return an error message if the form is valid", async () => {
-    //   const { result } = renderHook(useConnectionFormService, {
-    //     wrapper: ({ children }) => (
-    //       <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
-    //         {children}
-    //       </Wrapper>
-    //     ),
-    //   });
-    //
-    //   const errors = {
-    //     syncCatalog: {
-    //       streams: "There's an error",
-    //     },
-    //   };
-    //
-    //   expect(result.current.getErrorMessage(true, errors)).toBe(null);
-    // });
+      expect(result.current.getErrorMessage(false, errors)).toBe("Select at least 1 stream to sync.");
+    });
+
+    it("should not return an error message if the form is valid", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
+
+      const errors: FieldErrors<HookFormConnectionFormValues> = {
+        syncCatalog: {
+          streams: {
+            message: "There's an error",
+          },
+        },
+      };
+
+      expect(result.current.getErrorMessage(true, errors)).toBe(null);
+    });
   });
 });
