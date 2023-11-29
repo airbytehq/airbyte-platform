@@ -19,6 +19,11 @@ import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Calls the workload broker to try and claim ownership of this workload. If we
+ * successfully claim the workload we continue, otherwise we no-op to the end of
+ * the pipeline.
+ */
 @Singleton
 @Named("claim")
 class ClaimStage(

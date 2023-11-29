@@ -11,6 +11,10 @@ import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Launches the pods for the workload, serializing and passing through input
+ * values via the injected pod client.
+ */
 @Singleton
 @Named("launch")
 class LaunchPodStage(private val launcher: KubePodClient) : LaunchStage {

@@ -17,6 +17,11 @@ import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Ensures mutual exclusion (mutex) of the underlying workload resource (e.g.
+ * connection). In practical terms, this kills any pods that exist for the
+ * supplied key, ensuring no two workloads operate for said key simultaneously.
+ */
 @Singleton
 @Named("mutex")
 class EnforceMutexStage(
