@@ -10,9 +10,9 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCreateConnection } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
-  ConnectionHookFormServiceProvider,
-  useConnectionHookFormService,
-} from "hooks/services/ConnectionForm/ConnectionHookFormService";
+  ConnectionFormServiceProvider,
+  useConnectionFormService,
+} from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useDiscoverSchema } from "hooks/services/useSourceHook";
@@ -34,7 +34,7 @@ const CreateConnectionFormInner: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
-  const { connection, initialValues, setSubmitError } = useConnectionHookFormService();
+  const { connection, initialValues, setSubmitError } = useConnectionFormService();
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
@@ -135,7 +135,7 @@ export const CreateConnectionHookForm: React.FC = () => {
   };
 
   return (
-    <ConnectionHookFormServiceProvider
+    <ConnectionFormServiceProvider
       connection={partialConnection}
       mode="create"
       refreshSchema={onDiscoverSchema}
@@ -148,6 +148,6 @@ export const CreateConnectionHookForm: React.FC = () => {
       ) : (
         <CreateConnectionFormInner />
       )}
-    </ConnectionHookFormServiceProvider>
+    </ConnectionFormServiceProvider>
   );
 };

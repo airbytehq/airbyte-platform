@@ -26,7 +26,6 @@ import {
   ConnectionOrPartialConnection,
   useConnectionFormService,
 } from "./ConnectionFormService";
-import { ConnectionHookFormServiceProvider } from "./ConnectionHookFormService";
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
@@ -44,7 +43,7 @@ describe("ConnectionHookFormService", () => {
     ...props
   }) => (
     <TestWrapper>
-      <ConnectionHookFormServiceProvider {...props}>{children}</ConnectionHookFormServiceProvider>
+      <ConnectionFormServiceProvider {...props}>{children}</ConnectionFormServiceProvider>
     </TestWrapper>
   );
 

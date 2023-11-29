@@ -12,16 +12,13 @@ import { OperationsSection } from "components/connection/ConnectionForm/Operatio
 import LoadingSchema from "components/LoadingSchema";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
-import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreateConnection } from "core/api";
+import { ConnectionValues, useCreateConnection } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import {
   ConnectionFormServiceProvider,
-  tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperimentContext } from "hooks/services/Experiment";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/services/useSourceHook";
 
 import styles from "./CreateConnectionForm.module.scss";
@@ -34,26 +31,25 @@ interface CreateConnectionPropsInner {
   schemaError: SchemaErrorType;
 }
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schemaError }) => {
   const navigate = useNavigate();
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
   const { mutateAsync: createConnection } = useCreateConnection();
-  const { clearFormChange } = useFormChangeTrackerService();
 
-  const workspaceId = useCurrentWorkspaceId();
-
-  const { connection, initialValues, mode, formId, getErrorMessage, setSubmitError } = useConnectionFormService();
+  const { connection, initialValues, mode, setSubmitError } = useConnectionFormService();
   const [editingTransformation, setEditingTransformation] = useState(false);
   const validationSchema = useConnectionValidationSchema({ mode });
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
   const onFormSubmit = useCallback(
     async (formValues: FormikConnectionFormValues, formikHelpers: FormikHelpers<FormikConnectionFormValues>) => {
-      const values = tidyConnectionFormValues(formValues, workspaceId, validationSchema);
-
       try {
         const createdConnection = await createConnection({
-          values,
+          // just a stub to fix the type errors
+          values: formValues as ConnectionValues,
           source: connection.source,
           destination: connection.destination,
           sourceDefinition: {
@@ -67,26 +63,13 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
         });
 
         formikHelpers.resetForm();
-        // We need to clear the form changes otherwise the dirty form intercept service will prevent navigation
-        clearFormChange(formId);
 
         navigate(`../../connections/${createdConnection.connectionId}`);
       } catch (e) {
         setSubmitError(e);
       }
     },
-    [
-      workspaceId,
-      validationSchema,
-      createConnection,
-      connection.source,
-      connection.destination,
-      connection.catalogId,
-      clearFormChange,
-      formId,
-      navigate,
-      setSubmitError,
-    ]
+    [createConnection, connection.source, connection.destination, connection.catalogId, navigate, setSubmitError]
   );
 
   if (schemaError) {
@@ -96,8 +79,13 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
   return (
     <Suspense fallback={<LoadingSchema />}>
       <div className={styles.connectionFormContainer}>
-        <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onFormSubmit}>
-          {({ isSubmitting, isValid, dirty, errors, validateForm }) => (
+        <Formik
+          // just a stub to fix the type errors
+          initialValues={initialValues as FormikConnectionFormValues}
+          validationSchema={validationSchema}
+          onSubmit={onFormSubmit}
+        >
+          {({ isSubmitting, isValid, dirty, validateForm }) => (
             <Form>
               <CreateConnectionNameField />
               {canEditDataGeographies && <DataResidency />}
@@ -109,7 +97,7 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
               <CreateControls
                 isSubmitting={isSubmitting}
                 isValid={isValid && !editingTransformation}
-                errorMessage={getErrorMessage(isValid, errors)}
+                // errorMessage={getErrorMessage(isValid, errors)}
               />
             </Form>
           )}
@@ -119,6 +107,9 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
   );
 };
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const CreateConnectionForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();

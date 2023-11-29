@@ -14,9 +14,13 @@ import { useModalService } from "hooks/services/Modal";
 
 import { FormikConnectionFormValues } from "./formConfig";
 import { FormFieldLayout } from "./FormFieldLayout";
+import { HookFormConnectionFormValues } from "./hookFormConfig";
 import { namespaceDefinitionOptions } from "./types";
 import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../DestinationNamespaceModal";
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const NamespaceDefinitionField = () => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
@@ -42,7 +46,9 @@ export const NamespaceDefinitionField = () => {
         content: () => (
           <DestinationNamespaceModal
             initialValues={{
-              namespaceDefinition: formikProps.values.namespaceDefinition,
+              // just a stub to fix the type errors
+              namespaceDefinition: formikProps.values
+                .namespaceDefinition as HookFormConnectionFormValues["namespaceDefinition"],
               namespaceFormat: formikProps.values.namespaceFormat,
             }}
             onCloseModal={closeModal}

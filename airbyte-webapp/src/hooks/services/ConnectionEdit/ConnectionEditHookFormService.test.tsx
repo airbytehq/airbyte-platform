@@ -24,8 +24,7 @@ import {
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
 
-import { ConnectionEditHookFormServiceProvider } from "./ConnectionEditHookFormService";
-import { useConnectionEditService } from "./ConnectionEditService";
+import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
 jest.mock("core/api", () => ({
@@ -61,10 +60,9 @@ const utils = {
 describe("ConnectionEditHookFormServiceProvider", () => {
   const Wrapper: React.FC<React.PropsWithChildren> = ({ children }) => (
     <TestWrapper>
-      {/* TODO: will be renamed to ConnectionEditServiceProvider*/}
-      <ConnectionEditHookFormServiceProvider connectionId={mockConnection.connectionId}>
+      <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
         {children}
-      </ConnectionEditHookFormServiceProvider>
+      </ConnectionEditServiceProvider>
     </TestWrapper>
   );
 

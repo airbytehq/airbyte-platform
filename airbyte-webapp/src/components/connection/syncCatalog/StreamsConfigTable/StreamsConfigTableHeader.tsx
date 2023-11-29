@@ -18,6 +18,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./StreamsConfigTableHeader.module.scss";
+import { HookFormConnectionFormValues } from "../../ConnectionForm/hookFormConfig";
 import { DestinationNamespaceModal, DestinationNamespaceFormValues } from "../../DestinationNamespaceModal";
 import {
   DestinationStreamNamesModal,
@@ -40,6 +41,9 @@ interface StreamsConfigTableHeaderProps {
   syncSwitchDisabled?: boolean;
 }
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> = ({
   streams,
   onStreamsChanged,
@@ -112,7 +116,9 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
               content: () => (
                 <DestinationNamespaceModal
                   initialValues={{
-                    namespaceDefinition: formikProps.values.namespaceDefinition,
+                    // just a stub to fix the type errors
+                    namespaceDefinition: formikProps.values
+                      .namespaceDefinition as HookFormConnectionFormValues["namespaceDefinition"],
                     namespaceFormat: formikProps.values.namespaceFormat,
                   }}
                   onCloseModal={closeModal}

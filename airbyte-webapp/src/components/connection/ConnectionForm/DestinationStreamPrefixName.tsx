@@ -19,6 +19,9 @@ import {
   StreamNameDefinitionValueType,
 } from "../DestinationStreamNamesModal";
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const DestinationStreamPrefixName = () => {
   const { mode } = useConnectionFormService();
   const { formatMessage } = useIntl();

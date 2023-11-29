@@ -115,6 +115,9 @@ const NonBreakingChanges: React.FC<{
   ) : null;
 };
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const ConnectionConfigurationFormPreview: React.FC = () => {
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
 

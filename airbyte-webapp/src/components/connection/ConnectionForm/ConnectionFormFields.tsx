@@ -28,11 +28,13 @@ interface ConnectionFormFieldsProps {
   dirty: boolean;
   validateForm?: () => void;
 }
-
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSubmitting, dirty, validateForm }) => {
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
 
-  const { mode, formId } = useConnectionFormService();
+  const { mode } = useConnectionFormService();
 
   const refreshSchema = useRefreshSourceSchemaWithConfirmationOnDirty(dirty);
 
@@ -48,7 +50,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
   return (
     <>
       {/* FormChangeTracker is here as it has access to everything it needs without being repeated */}
-      <FormChangeTracker changed={dirty} formId={formId} />
+      <FormChangeTracker changed={dirty} />
       <FlexContainer direction="column">
         <CollapsibleCard
           title={<FormattedMessage id="form.configuration" />}

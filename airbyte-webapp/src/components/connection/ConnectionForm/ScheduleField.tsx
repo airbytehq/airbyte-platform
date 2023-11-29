@@ -31,6 +31,9 @@ const CronErrorChatWithUsButton: React.FC<React.PropsWithChildren<unknown>> = ({
   return <ExternalLink href={links.contactSales}>{children}</ExternalLink>;
 };
 
+/**
+ * @deprecated the file will be removed in 3rd PR of the cleanup
+ */
 export const ScheduleField: React.FC = () => {
   const { formatMessage } = useIntl();
   const { connection, mode } = useConnectionFormService();

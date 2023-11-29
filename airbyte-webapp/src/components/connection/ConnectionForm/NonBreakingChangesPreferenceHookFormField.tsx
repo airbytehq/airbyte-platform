@@ -6,7 +6,7 @@ import { FormControl } from "components/forms";
 import { Message } from "components/ui/Message";
 
 import { NonBreakingChangesPreference } from "core/request/AirbyteClient";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { HookFormConnectionFormValues } from "./hookFormConfig";
@@ -14,7 +14,7 @@ import { HookFormFieldLayout } from "./HookFormFieldLayout";
 
 export const NonBreakingChangesPreferenceHookFormField = () => {
   const { formatMessage } = useIntl();
-  const { connection, mode } = useConnectionHookFormService();
+  const { connection, mode } = useConnectionFormService();
   const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
   const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
   const labelKey = autoPropagationEnabled

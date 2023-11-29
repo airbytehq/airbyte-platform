@@ -22,7 +22,7 @@ import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 import { useGetConnectionQuery } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { defaultOssFeatures, FeatureItem } from "core/services/features";
-import { ConnectionEditHookFormServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditHookFormService";
+import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { ConnectionReplicationHookFormPage } from "./ConnectionReplicationHookFormPage";
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
@@ -58,11 +58,11 @@ describe("ConnectionReplicationHookFormPage", () => {
   const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
     <Suspense fallback={<div>I should not show up in a snapshot</div>}>
       <TestWrapper>
-        <ConnectionEditHookFormServiceProvider connectionId={mockConnection.connectionId}>
+        <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
           <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
             {children}
           </VirtuosoMockContext.Provider>
-        </ConnectionEditHookFormServiceProvider>
+        </ConnectionEditServiceProvider>
       </TestWrapper>
     </Suspense>
   );
@@ -170,9 +170,9 @@ describe("ConnectionReplicationHookFormPage", () => {
 
       const container = tlr(
         <TestWrapper features={featuresToInject}>
-          <ConnectionEditHookFormServiceProvider connectionId={mockConnection.connectionId}>
+          <ConnectionEditServiceProvider connectionId={mockConnection.connectionId}>
             <ConnectionReplicationPage />
-          </ConnectionEditHookFormServiceProvider>
+          </ConnectionEditServiceProvider>
         </TestWrapper>
       );
 

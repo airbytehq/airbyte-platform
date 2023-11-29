@@ -22,6 +22,7 @@ import { Message } from "components/ui/Message/Message";
 
 import { ConnectionValues, useGetStateTypeQuery } from "core/api";
 import {
+  AirbyteStreamAndConfiguration,
   AirbyteStreamConfiguration,
   WebBackendConnectionRead,
   WebBackendConnectionUpdate,
@@ -39,7 +40,6 @@ import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useConnectionHookFormService } from "hooks/services/ConnectionForm/ConnectionHookFormService";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./ConnectionReplicationPage.module.scss";
@@ -108,7 +108,7 @@ export const ConnectionReplicationHookFormPage: React.FC = () => {
   const { openModal } = useModalService();
 
   const { connection, schemaRefreshing, updateConnection, discardRefreshedSchema } = useConnectionEditService();
-  const { initialValues, schemaError, setSubmitError, refreshSchema } = useConnectionHookFormService();
+  const { initialValues, schemaError, setSubmitError, refreshSchema } = useConnectionFormService();
   const validationSchema = useConnectionHookFormValidationSchema();
 
   const saveConnection = useCallback(
@@ -162,18 +162,17 @@ export const ConnectionReplicationHookFormPage: React.FC = () => {
       // for each form value stream, find the corresponding connection value stream
       // and remove `config.selected` from both before comparing
       // we need to reset if any of the streams are different
-      type SyncSchemaStream = (typeof values.syncCatalog.streams)[number];
-
-      const getStreamId = (stream: SyncSchemaStream) => {
+      const getStreamId = (stream: AirbyteStreamAndConfiguration) => {
         return `${stream.stream?.namespace ?? ""}-${stream.stream?.name}`;
       };
-      const lookupConnectionValuesStreamById = connection.syncCatalog.streams.reduce<Record<string, SyncSchemaStream>>(
-        (agg, stream) => {
-          agg[getStreamId(stream)] = stream;
-          return agg;
-        },
-        {}
-      );
+
+      const lookupConnectionValuesStreamById = connection.syncCatalog.streams.reduce<
+        Record<string, AirbyteStreamAndConfiguration>
+      >((agg, stream) => {
+        agg[getStreamId(stream)] = stream;
+        return agg;
+      }, {});
+
       const hasUserChangesInEnabledStreamsRequiringReset = values.syncCatalog.streams.some((_stream) => {
         const formStream = structuredClone(_stream);
         const connectionStream = structuredClone(lookupConnectionValuesStreamById[getStreamId(formStream)]);

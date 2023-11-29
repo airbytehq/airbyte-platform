@@ -7,15 +7,19 @@ import { useConfig } from "config";
 import { useSuspenseQuery, useRemoveConnectionsFromList } from "core/api";
 // eslint-disable-next-line import/no-restricted-paths
 import { useRequestOptions } from "core/api/useRequestOptions";
-import { SyncSchema } from "core/domain/catalog";
 import { SourceService } from "core/domain/connector/SourceService";
+import {
+  AirbyteCatalog,
+  SourceRead,
+  SynchronousJobRead,
+  WebBackendConnectionListItem,
+} from "core/request/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useInitService } from "services/useInitService";
 
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
-import { SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 
 export const sourcesKeys = {
@@ -170,13 +174,13 @@ const useDiscoverSchema = (
   disableCache?: boolean
 ): {
   isLoading: boolean;
-  schema: SyncSchema | undefined;
+  schema: AirbyteCatalog | undefined;
   schemaErrorStatus: SchemaError;
   catalogId: string | undefined;
   onDiscoverSchema: () => Promise<void>;
 } => {
   const service = useSourceService();
-  const [schema, setSchema] = useState<SyncSchema | undefined>(undefined);
+  const [schema, setSchema] = useState<AirbyteCatalog | undefined>(undefined);
   const [catalogId, setCatalogId] = useState<string | undefined>("");
   const [isLoading, setIsLoading] = useState(false);
   const [schemaErrorStatus, setSchemaErrorStatus] = useState<SchemaError>(null);

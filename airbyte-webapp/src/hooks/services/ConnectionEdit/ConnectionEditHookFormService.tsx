@@ -13,7 +13,7 @@ import {
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
 
-import { ConnectionHookFormServiceProvider } from "../ConnectionForm/ConnectionHookFormService";
+import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "../Notification/NotificationService";
 import { SchemaError } from "../useSourceHook";
 
@@ -138,14 +138,14 @@ export const ConnectionEditHookFormServiceProvider: React.FC<React.PropsWithChil
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
   return (
     <ConnectionEditHookFormContext.Provider value={data}>
-      <ConnectionHookFormServiceProvider
+      <ConnectionFormServiceProvider
         mode={data.connection.status === ConnectionStatus.deprecated ? "readonly" : "edit"}
         connection={data.connection}
         schemaError={schemaError as SchemaError}
         refreshSchema={refreshSchema}
       >
         {children}
-      </ConnectionHookFormServiceProvider>
+      </ConnectionFormServiceProvider>
     </ConnectionEditHookFormContext.Provider>
   );
 };

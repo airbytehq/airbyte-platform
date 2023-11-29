@@ -36,5 +36,4 @@ export interface Experiments {
   "settings.breakingChangeNotifications": boolean;
   "upcomingFeaturesPage.url": string;
   "settings.accessManagement": boolean;
-  "form.createConnectionHookForm": boolean;
 }
