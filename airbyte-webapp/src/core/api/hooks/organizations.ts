@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "services/Scope";
 
-import { useCurrentWorkspace } from "./workspaces";
+import { useGetWorkspace } from "./workspaces";
 import {
   getOrganization,
   getOrganizationInfo,
@@ -29,12 +30,13 @@ export const organizationKeys = {
  */
 export const useCurrentOrganizationInfo = () => {
   const requestOptions = useRequestOptions();
-  const workspace = useCurrentWorkspace();
-  return useSuspenseQuery(organizationKeys.info(workspace.organizationId), () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const workspace = useGetWorkspace(workspaceId, { enabled: !!workspaceId });
+  return useSuspenseQuery(organizationKeys.info(workspace?.organizationId ?? ""), () => {
     // TODO: Once all workspaces are in an organization this can be removed, but for now
     //       we guard against calling the endpoint if the workspace isn't in an organization
     //       to not cause too many 404 in the getOrganizationInfo endpoint.
-    if (!workspace.organizationId) {
+    if (!workspace?.organizationId) {
       return Promise.resolve(null);
     }
 

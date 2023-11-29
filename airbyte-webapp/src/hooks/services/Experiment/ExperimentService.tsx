@@ -8,6 +8,7 @@ import { isDevelopment } from "core/utils/isDevelopment";
 
 export type ContextKind =
   | "user"
+  | "organization"
   | "workspace"
   | "connection"
   | "source"
@@ -36,7 +37,7 @@ const debugContext = isDevelopment() ? (msg: string) => console.debug(`%c${msg}`
 
 /**
  * Registers a context with the experiment service (usually the LaunchDarkly client on Cloud),
- * potentialy causing new flags to be fetched. The context will be removed when the component unmounts,
+ * potentially causing new flags to be fetched. The context will be removed when the component unmounts,
  * or when a falsy key is passed.
  */
 export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: string | undefined) => {
