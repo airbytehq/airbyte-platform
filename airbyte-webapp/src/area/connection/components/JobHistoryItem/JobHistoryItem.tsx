@@ -5,12 +5,6 @@ import { Suspense, useCallback, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
-import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
-import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
-import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
-import { ResetStreamsDetails } from "components/JobItem/components/ResetStreamDetails";
-import { JobWithAttempts } from "components/JobItem/types";
-import { getJobAttempts } from "components/JobItem/utils";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
@@ -19,6 +13,12 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { AttemptDetails } from "area/connection/components/AttemptDetails";
+import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
+import { JobLogsModal } from "area/connection/components/JobLogsModal/JobLogsModal";
+import { JobWithAttempts } from "area/connection/types/jobs";
+import { buildAttemptLink, useAttemptLink } from "area/connection/utils/attemptLink";
+import { isJobPartialSuccess, getJobAttempts, getJobCreatedAt } from "area/connection/utils/jobs";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { copyToClipboard } from "core/utils/clipboard";
@@ -28,13 +28,11 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { isPartialSuccess } from "./isPartialSuccess";
-import { JobLogsModalContent } from "./JobLogsModalContent";
+import styles from "./JobHistoryItem.module.scss";
 import { JobStatusIcon } from "./JobStatusIcon";
 import { JobStatusLabel } from "./JobStatusLabel";
-import styles from "./NewJobItem.module.scss";
 
-interface NewJobItemProps {
+interface JobHistoryItemProps {
   jobWithAttempts: JobWithAttempts;
 }
 
@@ -44,7 +42,7 @@ enum ContextMenuOptions {
   DownloadLogs = "DownloadLogs",
 }
 
-export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
+export const JobHistoryItem: React.FC<JobHistoryItemProps> = ({ jobWithAttempts }) => {
   const { openModal } = useModalService();
   const attempts = getJobAttempts(jobWithAttempts);
   const attemptLink = useAttemptLink();
@@ -72,12 +70,12 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
         content: () => (
           <Suspense
             fallback={
-              <div className={styles.newJobItem__modalLoading}>
+              <div className={styles.jobHistoryItem__modalLoading}>
                 <Spinner />
               </div>
             }
           >
-            <JobLogsModalContent jobId={jobWithAttempts.job.id} initialAttemptId={initialAttemptId} />
+            <JobLogsModal jobId={jobWithAttempts.job.id} initialAttemptId={initialAttemptId} />
           </Suspense>
         ),
       });
@@ -94,7 +92,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
           text: (
             <FlexContainer alignItems="center">
               <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />
-              <div className={styles.newJobItem__spinnerContainer}>
+              <div className={styles.jobHistoryItem__spinnerContainer}>
                 <LoadingSpinner />
               </div>
             </FlexContainer>
@@ -165,16 +163,16 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   return (
     <div
       ref={wrapperRef}
-      className={classNames(styles.newJobItem, {
-        [styles["newJobItem--linked"]]: attemptLink.jobId === String(jobWithAttempts.job.id),
+      className={classNames(styles.jobHistoryItem, {
+        [styles["jobHistoryItem--linked"]]: attemptLink.jobId === String(jobWithAttempts.job.id),
       })}
       id={String(jobWithAttempts.job.id)}
     >
       <Box pr="xl">
         <JobStatusIcon job={jobWithAttempts} />
       </Box>
-      <FlexContainer justifyContent="space-between" alignItems="center" className={styles.newJobItem__main}>
-        <Box className={styles.newJobItem__summary}>
+      <FlexContainer justifyContent="space-between" alignItems="center" className={styles.jobHistoryItem__main}>
+        <Box className={styles.jobHistoryItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
           {jobWithAttempts.job.configType === "reset_connection" ? (
             <ResetStreamsDetails
@@ -187,12 +185,12 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
                 attempt={attempts[attempts.length - 1]}
                 hasMultipleAttempts={attempts.length > 1}
                 jobId={String(jobWithAttempts.job.id)}
-                isPartialSuccess={isPartialSuccess(jobWithAttempts.attempts)}
+                isPartialSuccess={isJobPartialSuccess(jobWithAttempts.attempts)}
               />
             )
           )}
         </Box>
-        <Box pr="lg" className={styles.newJobItem__timestamp}>
+        <Box pr="lg" className={styles.jobHistoryItem__timestamp}>
           <Text>
             <FormattedTimeParts value={getJobCreatedAt(jobWithAttempts) * 1000} hour="numeric" minute="2-digit">
               {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}

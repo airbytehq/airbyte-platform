@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -6,11 +5,12 @@ import { useLocation } from "react-router-dom";
 import { EmptyResourceBlock } from "components/common/EmptyResourceBlock";
 import { ConnectionSyncButtons } from "components/connection/ConnectionSync/ConnectionSyncButtons";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { useAttemptLink } from "components/JobItem/attemptLinkUtils";
+import { PageContainer } from "components/PageContainer";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Link } from "components/ui/Link";
 
+import { useAttemptLink } from "area/connection/utils/attemptLink";
 import { useListJobs } from "core/api";
 import {
   getFrequencyFromScheduleData,
@@ -21,7 +21,6 @@ import {
   useAnalyticsService,
 } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
@@ -46,7 +45,6 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       pageSize: jobPageSize,
     },
   });
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
   const moreJobPagesAvailable = !linkedJobNotFound && jobPageSize < totalJobCount;
@@ -67,7 +65,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className={classNames(searchableJobLogsEnabled && styles.narrowTable)}>
+    <PageContainer centered>
       <ConnectionSyncContextProvider>
         <Card
           title={
@@ -102,6 +100,6 @@ export const ConnectionJobHistoryPage: React.FC = () => {
           </footer>
         )}
       </ConnectionSyncContextProvider>
-    </div>
+    </PageContainer>
   );
 };

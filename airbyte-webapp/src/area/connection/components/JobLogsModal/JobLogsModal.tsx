@@ -2,28 +2,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
-import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
-import { LinkToAttemptButton } from "components/JobItem/components/LinkToAttemptButton";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 
+import { AttemptDetails } from "area/connection/components/AttemptDetails";
+import { LogSearchInput } from "area/connection/components/JobHistoryItem/LogSearchInput";
+import { useCleanLogs } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
+import { LinkToAttemptButton } from "area/connection/components/JobLogsModal/LinkToAttemptButton";
 import { useAttemptForJob, useJobInfoWithoutLogs } from "core/api";
 
+import { AttemptStatusIcon } from "./AttemptStatusIcon";
 import { DownloadLogsButton } from "./DownloadLogsButton";
-import styles from "./JobLogsModalContent.module.scss";
+import styles from "./JobLogsModal.module.scss";
 import { JobLogsModalFailureMessage } from "./JobLogsModalFailureMessage";
-import { AttemptStatusIcon } from "./JobStatusIcon";
-import { LogSearchInput } from "./LogSearchInput";
-import { useCleanLogs } from "./useCleanLogs";
-import { VirtualLogs } from "./VirtualLogs";
 
-interface JobLogsModalContentProps {
+interface JobLogsModalProps {
   jobId: number;
   initialAttemptId?: number;
 }
 
-export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId, initialAttemptId }) => {
+export const JobLogsModal: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptId }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const job = useJobInfoWithoutLogs(jobId);

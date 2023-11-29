@@ -18,6 +18,8 @@ import {
   useSourceDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification,
+  useDestinationDefinition,
+  useSourceDefinition,
 } from "core/api";
 import {
   ActorDefinitionVersionRead,
@@ -30,8 +32,6 @@ import {
   WebBackendConnectionRead,
 } from "core/api/types/AirbyteClient";
 import { FormError, generateMessageFromError } from "core/utils/errorStatusMessage";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import { ConnectionHookFormContext } from "./ConnectionHookFormService";
 import { useExperiment } from "../Experiment";

@@ -24,7 +24,7 @@ import { CloudWorkspacesCreateControl } from "./CloudWorkspacesCreateControl";
 import styles from "./CloudWorkspacesPage.module.scss";
 
 export const CloudWorkspacesPage: React.FC = () => {
-  const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
+  const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
@@ -36,6 +36,7 @@ export const CloudWorkspacesPage: React.FC = () => {
     fetchNextPage,
     isFetchingNextPage,
     isFetching,
+    isLoading,
   } = useListCloudWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const { organizationsMemberOnly, organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
@@ -59,13 +60,14 @@ export const CloudWorkspacesPage: React.FC = () => {
     250,
     [searchValue]
   );
+  console.log({ showNoWorkspacesContent });
 
   return (
     <div className={styles.cloudWorkspacesPage__container}>
       <FlexContainer justifyContent="space-between">
         <AirbyteLogo className={styles.cloudWorkspacesPage__logo} />
         {logout && (
-          <Button variant="clear" onClick={() => handleLogout()} isLoading={isLoading}>
+          <Button variant="clear" onClick={() => handleLogout()} isLoading={isLogoutLoading}>
             <FormattedMessage id="settings.accountSettings.logoutText" />
           </Button>
         )}
@@ -89,12 +91,17 @@ export const CloudWorkspacesPage: React.FC = () => {
             <CloudWorkspacesCreateControl />
           </Box>
           <Box pb="2xl">
-            <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
-            {isFetchingNextPage && (
+            <WorkspacesList
+              workspaces={workspaces}
+              isLoading={isLoading}
+              fetchNextPage={fetchNextPage}
+              hasNextPage={hasNextPage}
+            />
+            {isFetchingNextPage ? (
               <Box py="2xl" className={styles.cloudWorkspacesPage__loadingSpinner}>
                 <LoadingSpinner />
               </Box>
-            )}
+            ) : null}
           </Box>
         </>
       )}

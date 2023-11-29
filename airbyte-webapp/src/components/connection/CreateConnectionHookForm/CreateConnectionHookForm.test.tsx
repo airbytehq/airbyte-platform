@@ -23,14 +23,6 @@ import * as sourceHook from "hooks/services/useSourceHook";
 
 import { CreateConnectionHookForm } from "./CreateConnectionHookForm";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
 }));
@@ -43,6 +35,8 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
 jest.mock("area/connector/utils", () => ({

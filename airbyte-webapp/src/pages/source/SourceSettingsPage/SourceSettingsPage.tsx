@@ -5,12 +5,16 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useGetSourceFromParams } from "area/connector/utils";
-import { useConnectionList, useSourceDefinitionVersion, useGetSourceDefinitionSpecification } from "core/api";
+import {
+  useConnectionList,
+  useSourceDefinitionVersion,
+  useGetSourceDefinitionSpecification,
+  useSourceDefinition,
+} from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 

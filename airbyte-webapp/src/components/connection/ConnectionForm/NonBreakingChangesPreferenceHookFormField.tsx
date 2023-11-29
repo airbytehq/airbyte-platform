@@ -34,10 +34,10 @@ export const NonBreakingChangesPreferenceHookFormField = () => {
   const supportedPreferences = useMemo(() => {
     if (autoPropagationEnabled) {
       return [
-        NonBreakingChangesPreference.ignore,
-        NonBreakingChangesPreference.disable,
         NonBreakingChangesPreference.propagate_columns,
         NonBreakingChangesPreference.propagate_fully,
+        NonBreakingChangesPreference.ignore,
+        NonBreakingChangesPreference.disable,
       ];
     }
     return [NonBreakingChangesPreference.ignore, NonBreakingChangesPreference.disable];

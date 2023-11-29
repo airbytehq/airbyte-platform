@@ -7,9 +7,8 @@ import { useDebounce } from "react-use";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { buildAttemptLink } from "area/connection/utils/attemptLink";
 import { copyToClipboard } from "core/utils/clipboard";
-
-import { buildAttemptLink } from "../attemptLinkUtils";
 
 interface Props {
   jobId: string | number;

@@ -13,11 +13,11 @@ import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useDestinationDefinitionList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 export const CreateDestinationPage: React.FC = () => {

@@ -12,11 +12,11 @@ import { Icon } from "components/ui/Icon";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useSourceDefinitionList } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourcePaths, RoutePaths } from "pages/routePaths";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import { SourceForm } from "./SourceForm";

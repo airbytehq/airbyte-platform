@@ -1,4 +1,4 @@
-import { useLatestDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
+import { useLatestDestinationDefinitionList } from "core/api";
 
 import { VersionCell, VersionCellProps } from "./VersionCell";
 

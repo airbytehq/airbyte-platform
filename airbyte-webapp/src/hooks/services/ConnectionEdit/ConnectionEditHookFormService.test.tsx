@@ -28,17 +28,11 @@ import { ConnectionEditHookFormServiceProvider } from "./ConnectionEditHookFormS
 import { useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
   useGetConnectionQuery:
     () =>
     async ({ withRefreshedCatalog }: WebBackendConnectionRequestBody) =>

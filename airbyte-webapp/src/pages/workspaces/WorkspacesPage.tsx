@@ -28,7 +28,7 @@ import styles from "./WorkspacesPage.module.scss";
 export const WORKSPACE_LIST_LENGTH = 50;
 
 const WorkspacesPage: React.FC = () => {
-  const { isLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
+  const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const [searchValue, setSearchValue] = useState("");
   const [isSearchEmpty, setIsSearchEmpty] = useState(true);
@@ -41,6 +41,7 @@ const WorkspacesPage: React.FC = () => {
     fetchNextPage,
     isFetchingNextPage,
     isFetching,
+    isLoading,
   } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, debouncedSearchValue);
 
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
@@ -66,7 +67,7 @@ const WorkspacesPage: React.FC = () => {
         <FlexContainer justifyContent="space-between" alignItems="center">
           <AirbyteLogo width={110} />
           {logout && (
-            <Button variant="clear" onClick={() => handleLogout()} isLoading={isLoading}>
+            <Button variant="clear" onClick={() => handleLogout()} isLoading={isLogoutLoading}>
               <FormattedMessage id="settings.accountSettings.logoutText" />
             </Button>
           )}
@@ -99,7 +100,12 @@ const WorkspacesPage: React.FC = () => {
             <Box pb="lg">
               <WorkspacesCreateControl createWorkspace={createWorkspace} />
             </Box>
-            <WorkspacesList workspaces={workspaces} fetchNextPage={fetchNextPage} hasNextPage={hasNextPage} />
+            <WorkspacesList
+              workspaces={workspaces}
+              isLoading={isLoading}
+              fetchNextPage={fetchNextPage}
+              hasNextPage={hasNextPage}
+            />
             {isFetchingNextPage && (
               <Box py="2xl">
                 <LoadingSpinner />

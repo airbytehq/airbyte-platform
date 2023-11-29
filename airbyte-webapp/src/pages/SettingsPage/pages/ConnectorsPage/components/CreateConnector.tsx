@@ -9,11 +9,10 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCreateDestinationDefinition, useCreateSourceDefinition } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
-import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
-import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import BuilderIcon from "./builder-icon.svg?react";
 import CreateConnectorModal from "./CreateConnectorModal";

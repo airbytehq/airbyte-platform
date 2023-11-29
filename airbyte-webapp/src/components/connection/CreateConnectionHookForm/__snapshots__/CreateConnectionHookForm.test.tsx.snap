@@ -473,7 +473,7 @@ exports[`CreateConnectionHookForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          Ignore
+                          Detect changes and manually approve
                         </span>
                       </span>
                       <div

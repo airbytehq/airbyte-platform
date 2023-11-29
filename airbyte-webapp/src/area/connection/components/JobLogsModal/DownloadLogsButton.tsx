@@ -1,25 +1,24 @@
-import { faFileDownload } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 import { useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
+import { Icon } from "components/ui/Icon";
 
+import { CleanedLogLines } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { useCurrentWorkspace } from "core/api";
-import { JobDebugInfoRead } from "core/request/AirbyteClient";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 
 interface DownloadButtonProps {
-  jobDebugInfo: JobDebugInfoRead;
+  logLines: CleanedLogLines;
   fileName: string;
 }
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ jobDebugInfo, fileName }) => {
+export const DownloadLogsButton: React.FC<DownloadButtonProps> = ({ logLines, fileName }) => {
   const { formatMessage } = useIntl();
   const { name } = useCurrentWorkspace();
 
   const downloadFileWithLogs = () => {
-    const file = new Blob([jobDebugInfo.attempts.flatMap((info) => info.logs.logLines).join("\n")], {
+    const file = new Blob([logLines.map((logLine) => logLine.text).join("\n")], {
       type: FILE_TYPE_DOWNLOAD,
     });
     downloadFile(file, fileizeString(`${name}-${fileName}.txt`));
@@ -30,11 +29,9 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobDebugInfo, fileName 
       onClick={downloadFileWithLogs}
       variant="secondary"
       title={formatMessage({
-        id: "sources.downloadLogs",
+        id: "jobHistory.logs.downloadLogs",
       })}
-      icon={<FontAwesomeIcon icon={faFileDownload} />}
+      icon={<Icon type="download" />}
     />
   );
 };
-
-export default DownloadButton;

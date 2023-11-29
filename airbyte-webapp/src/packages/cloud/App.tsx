@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
+import { DeployPreviewMessage } from "components/DeployPreviewMessage";
 import { DevToolsToggle } from "components/DevToolsToggle";
 import LoadingPage from "components/LoadingPage";
 
@@ -66,6 +67,7 @@ const App: React.FC = () => {
                       <AppMonitoringServiceProvider>
                         <ApiErrorBoundary>
                           <Services>
+                            <DeployPreviewMessage />
                             <Routing />
                           </Services>
                         </ApiErrorBoundary>

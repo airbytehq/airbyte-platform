@@ -96,7 +96,7 @@ exports[`ConnectionReplicationHookFormPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-type="text"
                       >
-                        Ignore
+                        Detect changes and manually approve
                       </p>
                     </div>
                   </div>

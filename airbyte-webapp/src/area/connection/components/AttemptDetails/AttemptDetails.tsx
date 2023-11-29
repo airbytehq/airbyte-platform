@@ -5,11 +5,15 @@ import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "re
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { AttemptRead, AttemptStatus } from "core/request/AirbyteClient";
+import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/request/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 
 import styles from "./AttemptDetails.module.scss";
-import { getFailureFromAttempt, isCancelledAttempt } from "../utils";
+
+const getFailureFromAttempt = (attempt: AttemptRead): FailureReason | undefined => attempt.failureSummary?.failures[0];
+
+const isCancelledAttempt = (attempt: AttemptRead): boolean =>
+  attempt.failureSummary?.failures.some(({ failureType }) => failureType === FailureType.manual_cancellation) ?? false;
 
 interface AttemptDetailsProps {
   className?: string;

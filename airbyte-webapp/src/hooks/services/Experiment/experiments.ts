@@ -18,7 +18,6 @@ export interface Experiments {
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
-  "connection.searchableJobLogs": boolean;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;

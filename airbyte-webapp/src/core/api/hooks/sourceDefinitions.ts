@@ -2,21 +2,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
-import { useSuspenseQuery, connectorDefinitionKeys } from "core/api";
-// eslint-disable-next-line import/no-restricted-paths
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { SourceDefinitionService } from "core/domain/connector/SourceDefinitionService";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useInitService } from "services/useInitService";
+import { SCOPE_WORKSPACE } from "services/Scope";
 
+import { connectorDefinitionKeys } from "./connectorUpdates";
 import {
-  SourceDefinitionCreate,
-  SourceDefinitionRead,
-  SourceDefinitionReadList,
-} from "../../core/request/AirbyteClient";
-import { SCOPE_WORKSPACE } from "../Scope";
+  createCustomSourceDefinition,
+  getSourceDefinitionForWorkspace,
+  listLatestSourceDefinitions,
+  listSourceDefinitionsForWorkspace,
+  updateSourceDefinition,
+} from "../generated/AirbyteClient";
+import { SourceDefinitionCreate, SourceDefinitionRead, SourceDefinitionReadList } from "../types/AirbyteClient";
+import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const sourceDefinitionKeys = {
   all: [SCOPE_WORKSPACE, "sourceDefinition"] as const,
@@ -25,27 +25,23 @@ export const sourceDefinitionKeys = {
   detail: (id: string) => [...sourceDefinitionKeys.all, "details", id] as const,
 };
 
-export function useGetSourceDefinitionService(): SourceDefinitionService {
-  const { apiUrl } = useConfig();
-
-  const requestOptions = useRequestOptions();
-
-  return useInitService(() => new SourceDefinitionService(requestOptions), [apiUrl, requestOptions]);
-}
-
 interface SourceDefinitions {
   sourceDefinitions: SourceDefinitionRead[];
   sourceDefinitionMap: Map<string, SourceDefinitionRead>;
 }
 
 export const useSourceDefinitionList = (): SourceDefinitions => {
-  const service = useGetSourceDefinitionService();
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
     sourceDefinitionKeys.lists(),
     async () => {
-      const { sourceDefinitions } = await service.list(workspaceId);
+      const { sourceDefinitions } = await listSourceDefinitionsForWorkspace({ workspaceId }, requestOptions).then(
+        ({ sourceDefinitions }) => ({
+          sourceDefinitions: sourceDefinitions.sort((a, b) => a.name.localeCompare(b.name)),
+        })
+      );
       const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
       sourceDefinitions.forEach((sourceDefinition) => {
         sourceDefinitionMap.set(sourceDefinition.sourceDefinitionId, sourceDefinition);
@@ -76,20 +72,22 @@ export const useSourceDefinitionMap = (): Map<string, SourceDefinitionRead> => {
  * This hook calls the list_latest endpoint, which is not needed under most circumstances. Only use this hook if you need the latest source definitions available, for example when prompting the user to update a connector version.
  */
 export const useLatestSourceDefinitionList = (): SourceDefinitionReadList => {
-  const service = useGetSourceDefinitionService();
-
-  return useSuspenseQuery(sourceDefinitionKeys.listLatest(), () => service.listLatest(), { staleTime: 60_000 });
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(sourceDefinitionKeys.listLatest(), () => listLatestSourceDefinitions(requestOptions), {
+    staleTime: 60_000,
+  });
 };
 
 export const useSourceDefinition = <T extends string | undefined>(
   sourceDefinitionId: T
 ): T extends string ? SourceDefinitionRead : SourceDefinitionRead | undefined => {
-  const service = useGetSourceDefinitionService();
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(
     sourceDefinitionKeys.detail(sourceDefinitionId || ""),
-    () => service.get({ workspaceId, sourceDefinitionId: sourceDefinitionId || "" }),
+    () =>
+      getSourceDefinitionForWorkspace({ workspaceId, sourceDefinitionId: sourceDefinitionId || "" }, requestOptions),
     {
       enabled: isDefined(sourceDefinitionId),
     }
@@ -97,12 +95,12 @@ export const useSourceDefinition = <T extends string | undefined>(
 };
 
 export const useCreateSourceDefinition = () => {
-  const service = useGetSourceDefinitionService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<SourceDefinitionRead, Error, SourceDefinitionCreate>(
-    (sourceDefinition) => service.createCustom({ workspaceId, sourceDefinition }),
+    (sourceDefinition) => createCustomSourceDefinition({ workspaceId, sourceDefinition }, requestOptions),
     {
       onSuccess: (data) => {
         queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
@@ -119,7 +117,7 @@ export const useCreateSourceDefinition = () => {
 };
 
 export const useUpdateSourceDefinition = () => {
-  const service = useGetSourceDefinitionService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const { trackError } = useAppMonitoringService();
 
@@ -130,7 +128,7 @@ export const useUpdateSourceDefinition = () => {
       sourceDefinitionId: string;
       dockerImageTag: string;
     }
-  >((sourceDefinition) => service.update(sourceDefinition), {
+  >((sourceDefinition) => updateSourceDefinition(sourceDefinition, requestOptions), {
     onSuccess: (data) => {
       queryClient.setQueryData(sourceDefinitionKeys.detail(data.sourceDefinitionId), data);
 

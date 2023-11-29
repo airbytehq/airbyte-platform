@@ -27,14 +27,6 @@ import { ConnectionEditHookFormServiceProvider } from "hooks/services/Connection
 import { ConnectionReplicationHookFormPage } from "./ConnectionReplicationHookFormPage";
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.setTimeout(40000);
 
 jest.mock("area/workspace/utils", () => ({
@@ -54,6 +46,8 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({

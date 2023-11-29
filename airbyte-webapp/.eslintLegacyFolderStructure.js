@@ -1,14 +1,11 @@
 // A list of all files that existed still in the old folder structure
 module.exports = [
   // src/services
-  "src/services/connector/SourceDefinitionService.ts",
-  "src/services/connector/DestinationDefinitionService.ts",
   "src/services/connectorBuilder/ConnectorBuilderTestInputService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderStateService.tsx",
   "src/services/connectorBuilder/ConnectorBuilderLocalStorageService.tsx",
   "src/services/connectorBuilder/SchemaWorker.ts",
   "src/services/useInitService.tsx",
-  "src/services/useDefaultRequestMiddlewares.tsx",
   "src/services/Scope.ts",
   // src/hooks
   "src/hooks/useDeleteModal.tsx",

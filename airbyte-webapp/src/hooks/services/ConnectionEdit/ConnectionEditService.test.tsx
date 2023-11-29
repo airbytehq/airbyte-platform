@@ -25,14 +25,6 @@ import {
 import { ConnectionEditServiceProvider, useConnectionEditService } from "./ConnectionEditService";
 import { useConnectionFormService } from "../ConnectionForm/ConnectionFormService";
 
-jest.mock("services/connector/SourceDefinitionService", () => ({
-  useSourceDefinition: () => mockSourceDefinition,
-}));
-
-jest.mock("services/connector/DestinationDefinitionService", () => ({
-  useDestinationDefinition: () => mockDestinationDefinition,
-}));
-
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetConnection: () => mockConnection,
@@ -51,6 +43,8 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useSourceDefinition: () => mockSourceDefinition,
+  useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
 const utils = {

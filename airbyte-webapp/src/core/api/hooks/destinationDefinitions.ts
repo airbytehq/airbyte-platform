@@ -1,21 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useConfig } from "config";
-import { useSuspenseQuery, connectorDefinitionKeys } from "core/api";
-// eslint-disable-next-line import/no-restricted-paths
-import { useRequestOptions } from "core/api/useRequestOptions";
-import { DestinationDefinitionService } from "core/domain/connector/DestinationDefinitionService";
 import { isDefined } from "core/utils/common";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useInitService } from "services/useInitService";
+import { SCOPE_WORKSPACE } from "services/Scope";
 
+import { connectorDefinitionKeys } from "./connectorUpdates";
+import {
+  createCustomDestinationDefinition,
+  getDestinationDefinitionForWorkspace,
+  listDestinationDefinitionsForWorkspace,
+  listLatestDestinationDefinitions,
+  updateDestinationDefinition,
+} from "../generated/AirbyteClient";
 import {
   DestinationDefinitionCreate,
   DestinationDefinitionRead,
   DestinationDefinitionReadList,
-} from "../../core/request/AirbyteClient";
-import { SCOPE_WORKSPACE } from "../Scope";
+} from "../types/AirbyteClient";
+import { useRequestOptions } from "../useRequestOptions";
+import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationDefinitionKeys = {
   all: [SCOPE_WORKSPACE, "destinationDefinition"] as const,
@@ -24,21 +28,17 @@ export const destinationDefinitionKeys = {
   detail: (id: string) => [...destinationDefinitionKeys.all, "details", id] as const,
 };
 
-export function useGetDestinationDefinitionService(): DestinationDefinitionService {
-  const { apiUrl } = useConfig();
-
-  const requestOptions = useRequestOptions();
-
-  return useInitService(() => new DestinationDefinitionService(requestOptions), [apiUrl, requestOptions]);
-}
-
 /**
  * This hook calls the list_latest endpoint, which is not needed under most circumstances. Only use this hook if you need the latest destination definitions available, for example when prompting the user to update a connector version.
  */
 export const useLatestDestinationDefinitionList = (): DestinationDefinitionReadList => {
-  const service = useGetDestinationDefinitionService();
+  const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(destinationDefinitionKeys.listLatest(), () => service.listLatest(), { staleTime: 60_000 });
+  return useSuspenseQuery(
+    destinationDefinitionKeys.listLatest(),
+    () => listLatestDestinationDefinitions(requestOptions),
+    { staleTime: 60_000 }
+  );
 };
 
 interface DestinationDefinitions {
@@ -47,13 +47,19 @@ interface DestinationDefinitions {
 }
 
 export const useDestinationDefinitionList = (): DestinationDefinitions => {
-  const service = useGetDestinationDefinitionService();
+  const requestOptions = useRequestOptions();
+
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
     destinationDefinitionKeys.lists(),
     async () => {
-      const { destinationDefinitions } = await service.list(workspaceId);
+      const { destinationDefinitions } = await listDestinationDefinitionsForWorkspace(
+        { workspaceId },
+        requestOptions
+      ).then(({ destinationDefinitions }) => ({
+        destinationDefinitions: destinationDefinitions.sort((a, b) => a.name.localeCompare(b.name)),
+      }));
       const destinationDefinitionMap = new Map<string, DestinationDefinitionRead>();
       destinationDefinitions.forEach((destinationDefinition) => {
         destinationDefinitionMap.set(destinationDefinition.destinationDefinitionId, destinationDefinition);
@@ -70,12 +76,16 @@ export const useDestinationDefinitionList = (): DestinationDefinitions => {
 export const useDestinationDefinition = <T extends string | undefined>(
   destinationDefinitionId: T
 ): T extends string ? DestinationDefinitionRead : DestinationDefinitionRead | undefined => {
-  const service = useGetDestinationDefinitionService();
+  const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(
     destinationDefinitionKeys.detail(destinationDefinitionId || ""),
-    () => service.get({ workspaceId, destinationDefinitionId: destinationDefinitionId || "" }),
+    () =>
+      getDestinationDefinitionForWorkspace(
+        { workspaceId, destinationDefinitionId: destinationDefinitionId || "" },
+        requestOptions
+      ),
     {
       enabled: isDefined(destinationDefinitionId),
     }
@@ -83,12 +93,13 @@ export const useDestinationDefinition = <T extends string | undefined>(
 };
 
 export const useCreateDestinationDefinition = () => {
-  const service = useGetDestinationDefinitionService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<DestinationDefinitionRead, Error, DestinationDefinitionCreate>(
-    (destinationDefinition) => service.createCustom({ workspaceId, destinationDefinition }),
+    (destinationDefinition) =>
+      createCustomDestinationDefinition({ workspaceId, destinationDefinition }, requestOptions),
     {
       onSuccess: (data) => {
         queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
@@ -105,7 +116,7 @@ export const useCreateDestinationDefinition = () => {
 };
 
 export const useUpdateDestinationDefinition = () => {
-  const service = useGetDestinationDefinitionService();
+  const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const { trackError } = useAppMonitoringService();
 
@@ -116,7 +127,7 @@ export const useUpdateDestinationDefinition = () => {
       destinationDefinitionId: string;
       dockerImageTag: string;
     }
-  >((destinationDefinition) => service.update(destinationDefinition), {
+  >((destinationDefinition) => updateDestinationDefinition(destinationDefinition, requestOptions), {
     onSuccess: (data) => {
       queryClient.setQueryData(destinationDefinitionKeys.detail(data.destinationDefinitionId), data);
 

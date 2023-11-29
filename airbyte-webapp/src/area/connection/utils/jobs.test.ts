@@ -2,11 +2,11 @@ import { mockAttempt } from "test-utils/mock-data/mockAttempt";
 
 import { AttemptRead, JobStatus } from "core/request/AirbyteClient";
 
-import { isPartialSuccess } from "./isPartialSuccess";
+import { isJobPartialSuccess } from "./jobs";
 
-describe(`${isPartialSuccess.name}`, () => {
+describe(`${isJobPartialSuccess.name}`, () => {
   it("should return false if attempts is undefined", () => {
-    expect(isPartialSuccess(undefined)).toBe(false);
+    expect(isJobPartialSuccess(undefined)).toBe(false);
   });
 
   it("should return true if at least one attempt is a partial success", () => {
@@ -25,7 +25,7 @@ describe(`${isPartialSuccess.name}`, () => {
       },
     ];
 
-    expect(isPartialSuccess(attempts)).toBe(true);
+    expect(isJobPartialSuccess(attempts)).toBe(true);
   });
 
   it("should return false if no attempts are a partial success", () => {
@@ -40,6 +40,6 @@ describe(`${isPartialSuccess.name}`, () => {
       },
     ];
 
-    expect(isPartialSuccess(attempts)).toBe(false);
+    expect(isJobPartialSuccess(attempts)).toBe(false);
   });
 });
