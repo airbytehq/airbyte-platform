@@ -17,7 +17,7 @@ import jakarta.inject.Singleton
 private val logger = KotlinLogging.logger {}
 
 /**
- * Checks if pods with a given workload id already exist. If they are, we don't
+ * Checks if pods with a given workload id already exist. If they do, we don't
  * need to do anything, so we no-op and skip to the end of the pipeline.
  */
 @Singleton

@@ -15,7 +15,7 @@ import jakarta.inject.Singleton
 private val logger = KotlinLogging.logger {}
 
 /**
- * Deserializes input payloads and performs and necessary hydration from other
+ * Deserializes input payloads and performs any necessary hydration from other
  * sources. When complete, a fully formed workload input should be attached to
  * the IO.
  */
