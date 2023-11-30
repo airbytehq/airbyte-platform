@@ -291,7 +291,8 @@ public class CustomerioNotificationClient extends NotificationClient {
         LOGGER.info("Successful notification ({}): {}", response.code(), response.body());
         return true;
       } else {
-        final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.code(), response.body());
+        final String body = response.body() != null ? response.body().string() : "";
+        final String errorMessage = String.format("Failed to deliver notification (%s): %s", response.code(), body);
         throw new IOException(errorMessage);
       }
     }
