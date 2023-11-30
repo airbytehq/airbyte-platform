@@ -109,6 +109,11 @@ public class OrganizationsHandler {
       organization.setOrgLevelBilling(organizationUpdateRequestBody.getOrgLevelBilling());
       hasChanged = true;
     }
+    if (organizationUpdateRequestBody.getEmail() != null && !organizationUpdateRequestBody.getEmail()
+        .equals(organization.getEmail())) {
+      organization.setEmail(organizationUpdateRequestBody.getEmail());
+      hasChanged = true;
+    }
     if (hasChanged) {
       organizationPersistence.updateOrganization(organization);
     }

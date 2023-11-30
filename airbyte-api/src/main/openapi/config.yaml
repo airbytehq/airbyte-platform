@@ -6449,6 +6449,8 @@ components:
           type: boolean
         orgLevelBilling:
           type: boolean
+        email:
+          type: string
     OrganizationCreateRequestBody:
       type: object
       required:

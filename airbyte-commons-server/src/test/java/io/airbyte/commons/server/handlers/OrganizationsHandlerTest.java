@@ -83,17 +83,24 @@ class OrganizationsHandlerTest {
 
   @Test
   void testUpdateOrganization() throws Exception {
+    // test updating org name and email
     final String newName = "new name";
+    final String newEmail = "new email";
     when(organizationPersistence.getOrganization(ORGANIZATION_ID_1))
         .thenReturn(Optional.of(new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME)));
 
-    when(organizationPersistence.updateOrganization(ORGANIZATION.withName(newName)))
-        .thenReturn(ORGANIZATION.withName(newName));
+    when(organizationPersistence.updateOrganization(ORGANIZATION
+        .withName(newName)
+        .withEmail(newEmail)))
+            .thenReturn(ORGANIZATION.withName(newName).withEmail(newEmail));
     final OrganizationRead result =
-        organizationsHandler.updateOrganization(new OrganizationUpdateRequestBody().organizationId(ORGANIZATION_ID_1).organizationName(newName));
+        organizationsHandler.updateOrganization(new OrganizationUpdateRequestBody()
+            .organizationId(ORGANIZATION_ID_1)
+            .organizationName(newName)
+            .email(newEmail));
     assertEquals(ORGANIZATION_ID_1, result.getOrganizationId());
     assertEquals(newName, result.getOrganizationName());
-    assertEquals(ORGANIZATION_EMAIL, result.getEmail());
+    assertEquals(newEmail, result.getEmail());
   }
 
   @Test
