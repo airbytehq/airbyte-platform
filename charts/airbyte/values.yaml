@@ -422,7 +422,7 @@ pod-sweeper:
   image:
     repository: bitnami/kubectl
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: 1.28.4
 
   ##  podSweeper.podAnnotations [object] Add extra annotations to the podSweeper pod
   ##
@@ -1411,7 +1411,7 @@ postgresql:
   containerSecurityContext:
     runAsNonRoot: true
   commonAnnotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: pre-install
     helm.sh/hook-weight: "-1"
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
@@ -1447,7 +1447,7 @@ minio:
   ## image.tag Minio tag image
   image:
     repository: minio/minio
-    tag: latest
+    tag: RELEASE.2023-11-20T22-40-07Z
 
   auth:
     rootUser: minio
