@@ -56,7 +56,11 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       className={hasMultipleStreams ? styles.multiStreams : undefined}
     >
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
-      <BuilderTitle path={streamFieldPath("name")} label="Stream Name" size="md" />
+      <BuilderTitle
+        path={streamFieldPath("name")}
+        label={formatMessage({ id: "connectorBuilder.streamConfigView.name" })}
+        size="md"
+      />
       <StreamControls
         streamNum={streamNum}
         selectedTab={selectedTab}
@@ -80,15 +84,15 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
-              label="Record Selector"
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.fieldPointer" })}
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
             <BuilderField
               type="array"
               path={streamFieldPath("primaryKey")}
-              label="Primary Key"
-              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
               directionalStyle={false}
               optional
             />
@@ -258,7 +262,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   return (
     <>
       <BuilderField
-        label="Automatically import detected schema"
+        label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
         path={autoImportSchemaFieldPath}
         type="boolean"
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}

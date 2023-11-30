@@ -201,7 +201,13 @@ export const StreamTester: React.FC<{
                     children: <LogsDisplay logs={streamReadData?.logs ?? []} error={errorMessage} />,
                     minWidth: 0,
                     flex: logsFlex,
-                    splitter: <Splitter label="Connector Logs" num={nonErrorLogs.length} errorNum={errorLogs.length} />,
+                    splitter: (
+                      <Splitter
+                        label={formatMessage({ id: "connectorBuilder.connectorLogs" })}
+                        num={nonErrorLogs.length}
+                        errorNum={errorLogs.length}
+                      />
+                    ),
                     className: styles.secondaryPanel,
                   },
                 ]

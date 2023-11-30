@@ -11,7 +11,7 @@ import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf } from "./BuilderOneOf";
-import { InjectIntoFields } from "./InjectIntoFields";
+import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { LIST_PARTITION_ROUTER, StreamPathFn, BuilderParameterizedRequests } from "../types";
 
@@ -35,8 +35,8 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
   return (
     <BuilderCard
       docLink={links.connectorBuilderParameterizedRequests}
-      label="Parameterized Requests"
-      tooltip="Configure how to parameterize requests with a list of values. This means that for each value in the list, a separate request will be made for the current stream with the list value injected into the request."
+      label={formatMessage({ id: "connectorBuilder.parameterizedRequests.label" })}
+      tooltip={formatMessage({ id: "connectorBuilder.parameterizedRequests.tooltip" })}
       toggleConfig={{
         path: streamFieldPath("parameterizedRequests"),
         defaultValue: [EMPTY_PARAMETERIZED_REQUEST],
@@ -49,7 +49,7 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
       }}
     >
       <BuilderList
-        addButtonLabel={formatMessage({ id: "connectorBuilder.addNewParameterizedRequest" })}
+        addButtonLabel={formatMessage({ id: "connectorBuilder.parameterizedRequest.addButton" })}
         basePath={streamFieldPath("parameterizedRequests")}
         emptyItem={EMPTY_PARAMETERIZED_REQUEST}
       >
@@ -58,29 +58,39 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
             <BuilderOneOf<BuilderParameterizedRequests["values"]>
               path={buildPath("values")}
               manifestPath="ListPartitionRouter.properties.values"
-              label="Parameter Values"
+              label={formatMessage({ id: "connectorBuilder.parameterizedRequests.values" })}
               options={[
                 {
-                  label: "Value List",
+                  label: formatMessage({ id: "connectorBuilder.parameterizedRequests.values.list" }),
                   default: { type: "list", value: [] },
-                  children: <BuilderField type="array" path={buildPath("values.value")} label="Value List" />,
+                  children: (
+                    <BuilderField
+                      type="array"
+                      path={buildPath("values.value")}
+                      label={formatMessage({ id: "connectorBuilder.parameterizedRequests.values.list" })}
+                    />
+                  ),
                 },
                 {
-                  label: "User Input",
+                  label: formatMessage({ id: "connectorBuilder.parameterizedRequests.values.userInput" }),
                   default: { type: "variable", value: "" },
                   children: (
                     <BuilderFieldWithInputs
                       type="string"
                       path={buildPath("values.value")}
-                      label="Value"
+                      label={formatMessage({
+                        id: "connectorBuilder.parameterizedRequests.values.userInput.value.label",
+                      })}
                       tooltip={
                         <ReactMarkdown>
-                          {
-                            "Reference an array user input here to allow the user to specify the values to iterate over, e.g. `{{ config['user_input_name'] }}`"
-                          }
+                          {formatMessage({
+                            id: "connectorBuilder.parameterizedRequests.values.userInput.value.tooltip",
+                          })}
                         </ReactMarkdown>
                       }
-                      pattern={"{{ config['user_input_name'] }}"}
+                      pattern={formatMessage({
+                        id: "connectorBuilder.parameterizedRequests.values.userInput.value.pattern",
+                      })}
                     />
                   ),
                 },
@@ -89,18 +99,16 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
             <BuilderFieldWithInputs
               type="string"
               path={buildPath("cursor_field")}
-              label="Current Parameter Value Identifier"
+              label={formatMessage({ id: "connectorBuilder.parameterizedRequests.cursorField.label" })}
               tooltip={
                 <ReactMarkdown>
-                  {
-                    "The name of field used to reference a parameter value. The parameter value can be accessed with string interpolation, e.g. `{{ stream_partition['my_key'] }}` where `my_key` is the Current Parameter Value Identifier."
-                  }
+                  {formatMessage({ id: "connectorBuilder.parameterizedRequests.cursorField.tooltip" })}
                 </ReactMarkdown>
               }
             />
             <ToggleGroupField<RequestOption>
-              label="Inject Parameter Value into outgoing HTTP Request"
-              tooltip="Optionally configures how the parameter value will be sent in requests to the source API"
+              label={formatMessage({ id: "connectorBuilder.parameterizedRequests.requestOption.label" })}
+              tooltip={formatMessage({ id: "connectorBuilder.parameterizedRequests.requestOption.tooltip" })}
               fieldPath={buildPath("request_option")}
               initialValues={{
                 inject_into: "request_parameter",
@@ -108,9 +116,9 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
                 field_name: "",
               }}
             >
-              <InjectIntoFields
+              <BuilderRequestInjection
                 path={buildPath("request_option")}
-                descriptor="parameter value"
+                descriptor={formatMessage({ id: "connectorBuilder.parameterizedRequests.requestOption.descriptor" })}
                 excludeValues={["path"]}
               />
             </ToggleGroupField>
